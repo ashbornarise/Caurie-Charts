@@ -1,0 +1,36 @@
+# Secrets et configuration locale
+.env
+
+# Dépendances
+/vendor/
+
+# Données générées à l'exécution
+/storage/logs/*
+/storage/cache/*
+/storage/uploads/*
+/storage/backups/*
+!/storage/**/.gitkeep
+
+# Éditeurs et système
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store
+
+# Vignettes et logos générés ou envoyés
+/public/media/
+
+# Réglages locaux de Claude Code (permissions sur ce PC)
+.claude/settings.local.json
+
+# Paquets de mise en ligne (contiennent la base)
+/deploy/out/
+
+# Site Django : environnements locaux (Python, PostgreSQL portable) et fichiers compilés
+/django/.venv/
+/django/.pg/
+/django/staticfiles/
+__pycache__/
+*.pyc
+.pytest_cache/

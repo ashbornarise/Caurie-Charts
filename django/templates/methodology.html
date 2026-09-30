@@ -1,0 +1,79 @@
+{%- set w = formula.weights -%}
+{%- set group = config('app.group_label.name') -%}
+<article class="prose">
+    <p class="eyebrow">{{ t('methodology.eyebrow') }}</p>
+    <h1>{{ t('methodology.heading', {'brand': brand()}) }}</h1>
+    <p class="lead">{{ t('methodology.intro', {'brand': brand()}) }}</p>
+
+    <h2>{{ t('methodology.sources_title') }}</h2>
+    <p>{{ t('methodology.sources_text') }}</p>
+
+    <h2>{{ t('methodology.score_title') }}</h2>
+    <p>{{ t('methodology.score_text') }}</p>
+    <table class="data-table">
+        <caption>{{ t('methodology.weights_caption', {'version': formula.version}) }}</caption>
+        <thead><tr><th scope="col">{{ t('methodology.source') }}</th><th scope="col">{{ t('methodology.weight') }}</th></tr></thead>
+        <tbody>
+            <tr><td>{{ t('methodology.w_audio') }}</td><td>{{ number_format(w.audio, 1, ',', '') }}</td></tr>
+            <tr><td>{{ t('methodology.w_youtube') }}</td><td>{{ number_format(w.youtube, 1, ',', '') }}</td></tr>
+            <tr><td>{{ t('methodology.w_declaration') }}</td><td>{{ number_format(w.declaration, 1, ',', '') }}</td></tr>
+            {% for source, cw in (formula.chart_weights or {}).items() if cw > 0 %}
+            <tr><td>{{ t('methodology.w_chart', {'platform': platform_name(source)}) }}</td><td>{{ number_format(cw, 0, ',', ' ') }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p>{{ t('methodology.chart_positions', {'depth': (formula.chart_depth or 100)|int}) }}</p>
+    <p>{{ t('methodology.diversity', {'top': formula.diversity.top, 'sources': formula.diversity.min_sources}) }}</p>
+    <p>{{ t('methodology.ties') }}</p>
+    {% for u in upcoming %}
+        <p class="notice">{{ t('methodology.upcoming', {'version': u.version, 'date': fmt_date(u.effective_from)}) }} {{ u.note or '' }}</p>
+    {% endfor %}
+
+    <h2>{{ t('methodology.charts_title') }}</h2>
+    <ul>
+        {% for code, c in config('charts').items() if c.public %}
+            <li><strong>{{ c.name }}</strong> : {{ t('chart.short.' ~ code) }}</li>
+        {% endfor %}
+    </ul>
+    <p>{{ t('methodology.country_rule') }}</p>
+    <p>{{ t('methodology.calendar') }}</p>
+
+    <h2>{{ t('methodology.checks_title') }}</h2>
+    <p>{{ t('methodology.checks_text', {'factor': formula.anti_fraud.spike_factor|int, 'tolerance': php_round(formula.anti_fraud.declaration_tolerance * 100)|int}) }}</p>
+
+    <h2 id="independance">{{ t('methodology.position_title') }}</h2>
+    <p>{{ t('methodology.position_text', {'brand': brand(), 'label': group}) }}</p>
+
+    <h2>{{ t('methodology.contest_title') }}</h2>
+    <p>{{ t('methodology.contest_text') }} <a href="{{ path('contact', {'type': 'contestation'}) }}">{{ t('chart.contest') }}</a></p>
+
+    <h2>{{ t('methodology.exclusions_title') }}</h2>
+    {% if exclusions %}
+        <table class="data-table">
+            <thead><tr><th scope="col">{{ t('track.week') }}</th><th scope="col">{{ t('methodology.track') }}</th><th scope="col">{{ t('methodology.reason') }}</th></tr></thead>
+            <tbody>
+            {% for x in exclusions %}
+                <tr>
+                    <td>{{ fmt_date(x.week_start) }} · {{ x.country_code }}</td>
+                    <td><a href="{{ path('titre/' ~ x.slug) }}">{{ x.title }}</a> · {{ x.artist_name }}</td>
+                    <td>{{ x.reason }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="empty">{{ t('methodology.no_exclusions') }}</p>
+    {% endif %}
+
+    {% if corrections %}
+    <h2>{{ t('methodology.corrections_title') }}</h2>
+    <ul>
+        {% for c in corrections %}
+            <li>{{ c.chart_name }} {{ c.country_code }} {{ c.period_key }}, {{ fmt_date(c.corrected_at[:10]) }} : {{ c.correction_note }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <p class="fineprint">{{ t('methodology.attribution') }}</p>
+    <p class="fineprint">{{ t('methodology.version', {'version': config('app.methodology_version')}) }}</p>
+</article>

@@ -1,0 +1,10 @@
+<section class="admin-form narrow">
+    <h1>{{ t('admin.2fa_title') }}</h1>
+    <p>{{ t('admin.2fa_text') }}</p>
+    {% if error %}<p class="flash flash--error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ path('admin/2fa') }}">
+        {{ csrf_field() }}
+        <div class="field"><label for="code">{{ t('admin.2fa_code') }}</label><input id="code" type="text" name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" autocomplete="one-time-code" required autofocus></div>
+        <button class="button" type="submit">{{ t('admin.2fa_verify') }}</button>
+    </form>
+</section>

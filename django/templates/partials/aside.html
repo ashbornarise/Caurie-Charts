@@ -1,0 +1,73 @@
+{#- Encadré latéral. aside = {country, insights, news, dyk} -#}
+{%- set country = aside.country -%}
+{%- set facts = aside.insights.facts -%}
+{%- set next = aside.insights.next -%}
+{%- macro track_link(e) %}<a href="{{ path('titre/' ~ e.track_slug) }}">{{ e.title }}</a>{% endmacro -%}
+{%- macro artist_link(e) %}<a href="{{ path('artiste/' ~ e.artist_slug) }}">{{ e.artist_name }}</a>{% endmacro -%}
+<aside class="page-aside" aria-label="{{ t('aside.label') }}">
+    {% if facts %}
+    <section class="aside-card aside-card--glass">
+        <h2 class="aside-card__title">{{ t('aside.facts_title', {'country': country_name(country.code)}) }}</h2>
+        <ul class="facts">
+            {% for f in facts %}{% set e = f.entry %}
+            <li class="fact">
+                <span class="fact__label">{{ t('aside.fact_' ~ f.type) }}</span>
+                <span class="fact__text">
+                {% if f.type == 'number_one' %}
+                        {{ track_link(e) }} · {{ artist_link(e) }}
+                        <small>{{ t('aside.weeks_at_one', {'n': f.value}) if f.value > 1 else t('aside.first_week_at_one') }}</small>
+                {% elif f.type == 'climber' %}
+                        {{ track_link(e) }} <small>{{ t('aside.climb', {'from': e.previous_position, 'to': e.position}) }}</small>
+                {% elif f.type == 'best_new' %}
+                        {{ track_link(e) }} <small>{{ t('aside.enters_at', {'n': e.position}) }} · {{ t('aside.new_count', {'n': f.value}) }}</small>
+                {% elif f.type == 'buzz' %}
+                        {{ track_link(e) }} <small>+{{ fmt_number(f.value) }} %</small>
+                {% elif f.type == 'most_tracks' %}
+                        {{ artist_link(e) }} <small>{{ t('aside.tracks_in_chart', {'n': f.value}) }}</small>
+                {% endif %}
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% if next %}<p class="aside-card__foot">{{ t('aside.next', {'date': fmt_date(next, false)}) }}</p>{% endif %}
+    </section>
+    {% endif %}
+
+    {% if aside.news %}
+    <section class="aside-card">
+        <h2 class="aside-card__title">{{ t('news.title') }}</h2>
+        <ul class="news-list news-list--thumbs">
+            {% for n in aside.news %}
+            {%- set external = (n.origin or 'manual') == 'feed' and n.source_url -%}
+            {%- set href = n.source_url if external else path('actualites/' ~ n.slug) -%}
+            <li class="news-thumb news-card--tone-{{ loop.index0 % 6 }}">
+                <a class="news-thumb__img" href="{{ href }}"{% if external %} target="_blank" rel="noopener noreferrer"{% endif %} tabindex="-1" aria-hidden="true">
+                    {% if n.image_path %}
+                        <img src="/media/news/{{ rawurlencode(n.image_path.split('/')[-1]) }}" alt="" width="72" height="54" loading="lazy">
+                    {% else %}
+                        <span>{{ initials(n.source_name or brand()) }}</span>
+                    {% endif %}
+                </a>
+                <span class="news-thumb__text">
+                    <span class="news-list__meta"><span class="news-card__tag">{{ t('news.cat_' ~ n.category) }}</span> {{ fmt_date(n.published_at[:10], false) }}</span>
+                    <a class="news-list__title" href="{{ href }}"{% if external %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ n.title }}</a>
+                    {% if external %}<small class="news-thumb__source">{{ n.source_name }} ↗</small>{% endif %}
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+        <a class="link-arrow" href="{{ path('actualites') }}">{{ t('news.all') }}</a>
+    </section>
+    {% endif %}
+
+    <section class="aside-card aside-card--quiet">
+        <h2 class="aside-card__title">{{ t('aside.dyk_title') }}</h2>
+        <p>{{ aside.dyk }}</p>
+    </section>
+
+    <section class="aside-card aside-card--cta">
+        <h2 class="aside-card__title">{{ t('aside.cta_title') }}</h2>
+        <p>{{ t('aside.cta_text') }}</p>
+        <a class="button" href="{{ path('declarer') }}">{{ t('nav.submit') }}</a>
+    </section>
+</aside>

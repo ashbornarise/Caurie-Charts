@@ -1,0 +1,18 @@
+{#- Playlist Spotify : le lecteur (qui dépose ses propres cookies) ne se charge qu'au clic ou après consentement. -#}
+<section class="spotify-block" aria-labelledby="spotify-title">
+    <div class="partners__head">
+        <div>
+            <h2 id="spotify-title">{{ t('spotify.title') }}</h2>
+            <p class="partners__lead">{{ t('spotify.lead') }}</p>
+        </div>
+    </div>
+    <div class="spotify" data-spotify-playlist="{{ playlist }}" data-spotify-title="{{ t('spotify.title') }}">
+        <button class="spotify__play" type="button" data-spotify-play>
+            <span class="spotify__icon" aria-hidden="true">▶</span>
+            <span>{{ t('spotify.play') }}</span>
+        </button>
+        <p class="spotify__notice">{{ t('spotify.notice') }}
+            <a href="https://open.spotify.com/playlist/{{ rawurlencode(playlist) }}" target="_blank" rel="noopener nofollow">{{ t('spotify.open') }}</a>
+        </p>
+    </div>
+</section>

@@ -1,0 +1,25 @@
+<h1>{{ t('admin.nav_submissions') }}</h1>
+<nav class="chips">
+    {% for s in ['pending', 'validated', 'rejected'] %}
+        <a class="chip" href="{{ path('admin/declarations', {'statut': s}) }}" {{ Markup('aria-current="page"') if s == status }}>{{ t('admin.review_' ~ s) }}</a>
+    {% endfor %}
+</nav>
+{% if not rows %}<p class="muted">{{ t('admin.none') }}</p>{% else %}
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.received') }}</th><th>{{ t('admin.track') }}</th><th>{{ t('submit.platform') }}</th><th>{{ t('admin.period') }}</th><th class="num">{{ t('submit.streams') }}</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+        <tr>
+            <td>{{ fmt_date(r.created_at[:10]) }}</td>
+            <td>{{ r.submitted_track_title }}<br><small class="muted">{{ r.submitted_artist_name }}{{ ' · ' ~ t('admin.linked') if r.track_id else ' · ' ~ t('admin.not_linked') }}</small></td>
+            <td>{{ platform_name(r.platform) }}</td>
+            <td>{{ fmt_date(r.period_start, false) }} → {{ fmt_date(r.period_end) }}</td>
+            <td class="num">{{ fmt_number(r.streams|int) }}</td>
+            <td><a href="{{ path('admin/declarations/' ~ r.id) }}">{{ t('admin.open') }}</a></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}

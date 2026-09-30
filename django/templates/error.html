@@ -1,0 +1,7 @@
+<section class="wrap prose error-page">
+    <p class="error-page__code">{{ status|int }}</p>
+    <h1>{{ t('error.' ~ status) }}</h1>
+    <p>{{ t('error.text') }}</p>
+    {% if debug %}<pre class="debug">{{ debug }}</pre>{% endif %}
+    <p><a class="button" href="{{ path('/') }}">{{ t('error.home') }}</a></p>
+</section>

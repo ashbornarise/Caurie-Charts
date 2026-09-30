@@ -1,0 +1,70 @@
+<?php
+use Cauri\Core\Config;
+use Cauri\Core\Session;
+
+$t = Config::get('app.tracking');
+$optional = $t['ga_id'] !== '' || $t['meta_pixel_id'] !== '';
+?>
+<?php if ($optional): ?>
+<p class="lead">Aucun cookie de mesure d'audience ou de publicité n'est déposé sans votre accord. Vous choisissez dans le bandeau qui s'affiche lors de votre première visite, et vous pouvez changer d'avis à tout moment : <a href="#" data-consent-open>gérer mes cookies</a>.</p>
+<?php else: ?>
+<p class="lead"><?= e(brand()) ?> n'utilise actuellement aucun cookie de mesure d'audience ni de publicité : c'est pourquoi aucun bandeau de consentement ne s'affiche.</p>
+<?php endif; ?>
+
+<h2>Cookies strictement nécessaires (toujours actifs)</h2>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th scope="col">Nom</th><th scope="col">Rôle</th><th scope="col">Durée</th></tr></thead>
+    <tbody>
+        <tr>
+            <td><code><?= e(Session::COOKIE) ?></code></td>
+            <td>Session : protège les formulaires contre les envois frauduleux, garde le choix de langue et la connexion à l'administration. Déposé seulement si vous envoyez un formulaire, changez de langue ou vous connectez.</td>
+            <td>Fermeture du navigateur</td>
+        </tr>
+        <?php if ($optional): ?>
+        <tr>
+            <td><code>cauri_consent</code></td>
+            <td>Mémorise vos choix de cookies, pour ne pas vous les redemander à chaque page.</td>
+            <td><?= (int) $t['consent_months'] ?> mois</td>
+        </tr>
+        <?php endif; ?>
+    </tbody>
+</table>
+</div>
+<p>Ces cookies sont indispensables au service demandé : la réglementation n'impose pas de recueillir votre consentement pour eux.</p>
+
+<?php if ($t['ga_id'] !== ''): ?>
+<h2>Mesure d'audience : Google Analytics (avec votre accord)</h2>
+<p>Nous permet de compter les visites et de savoir quelles pages sont consultées, pour améliorer le site. Adresse IP anonymisée. Les données sont traitées par Google Ireland Limited et peuvent être transférées aux États-Unis dans le cadre du Data Privacy Framework.</p>
+<table class="data-table">
+    <thead><tr><th scope="col">Nom</th><th scope="col">Rôle</th><th scope="col">Durée</th></tr></thead>
+    <tbody>
+        <tr><td><code>_ga</code></td><td>Distingue les visiteurs</td><td>13 mois maximum</td></tr>
+        <tr><td><code>_ga_*</code></td><td>Conserve l'état de la visite</td><td>13 mois maximum</td></tr>
+    </tbody>
+</table>
+<?php endif; ?>
+
+<?php if ($t['meta_pixel_id'] !== ''): ?>
+<h2>Publicité : Meta Pixel (avec votre accord)</h2>
+<p>Mesure l'efficacité de nos campagnes sur Facebook et Instagram (par exemple, combien de personnes arrivent sur le site après avoir vu une publicité). Les données sont traitées par Meta Platforms Ireland Limited et peuvent être transférées aux États-Unis dans le cadre du Data Privacy Framework.</p>
+<table class="data-table">
+    <thead><tr><th scope="col">Nom</th><th scope="col">Rôle</th><th scope="col">Durée</th></tr></thead>
+    <tbody>
+        <tr><td><code>_fbp</code></td><td>Associe les visites aux campagnes publicitaires</td><td>3 mois</td></tr>
+        <tr><td><code>_fbc</code></td><td>Mémorise le clic sur une publicité</td><td>3 mois</td></tr>
+    </tbody>
+</table>
+<?php endif; ?>
+
+<?php if ($t['youtube_embeds']): ?>
+<h2>Vidéos YouTube (au clic)</h2>
+<p>Les clips affichés sur les fiches titres utilisent la version « confidentialité renforcée » de YouTube (youtube-nocookie.com). Rien n'est chargé depuis YouTube, pas même l'image d'aperçu, tant que vous n'avez pas cliqué sur le bouton de lecture. Au clic, YouTube peut stocker des informations dans votre navigateur pendant la lecture, selon sa propre politique. Vous pouvez aussi autoriser d'avance le chargement des vidéos dans vos choix de cookies.</p>
+<?php endif; ?>
+<?php if (!empty($t['spotify_playlist'])): ?>
+<h2>Lecteur Spotify (au clic)</h2>
+<p>La page d'accueil propose d'écouter une playlist dans le lecteur de Spotify (open.spotify.com). Rien n'est chargé depuis Spotify tant que vous n'avez pas cliqué sur « Afficher le lecteur Spotify ». Au clic, Spotify peut stocker des informations dans votre navigateur selon sa propre politique de confidentialité. Vous pouvez aussi autoriser d'avance son chargement dans vos choix de cookies (« Vidéos et musique »).</p>
+<?php endif; ?>
+
+<h2>Refuser ou retirer votre accord</h2>
+<p>Refuser n'empêche pas d'utiliser le site. Si vous retirez un accord donné, les cookies concernés sont effacés et les outils ne se chargent plus. Vous pouvez aussi supprimer les cookies depuis les réglages de votre navigateur.</p>

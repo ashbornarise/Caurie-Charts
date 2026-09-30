@@ -1,0 +1,76 @@
+"""Routes : mêmes adresses que public/index.php (site PHP de référence)."""
+from django.urls import path, re_path
+
+from core import views
+from core.backoffice import views as admin
+
+P = r"(?P<period>semaine|mois|annee)"
+K = r"(?P<key>\d{4}(?:-W\d{2}|-\d{2})?)"
+
+urlpatterns = [
+    path("", views.home),
+    re_path(r"^classements/afrique-de-l-ouest$", views.regional),
+    re_path(rf"^classements/afrique-de-l-ouest/{P}$", views.regional),
+    re_path(rf"^classements/afrique-de-l-ouest/{P}/{K}$", views.regional),
+    re_path(r"^classements/(?P<country>[a-z]{2})/(?P<chart>[a-z-]+)$", views.show),
+    re_path(rf"^classements/(?P<country>[a-z]{{2}})/(?P<chart>[a-z-]+)/{P}$", views.show),
+    re_path(rf"^classements/(?P<country>[a-z]{{2}})/(?P<chart>[a-z-]+)/{P}/{K}$", views.show),
+    re_path(r"^artiste/(?P<slug>[a-z0-9-]+)$", views.artist),
+    re_path(r"^titre/(?P<slug>[a-z0-9-]+)$", views.track),
+    path("methodologie", views.methodology),
+    path("a-propos", views.about),
+    path("contact", views.contact),
+    path("declarer", views.submit),
+    path("mentions-legales", views.legal),
+    path("confidentialite", views.legal),
+    path("cookies", views.legal),
+    path("conditions", views.legal),
+    path("actualites", views.news),
+    re_path(r"^actualites/(?P<slug>[a-z0-9-]+)$", views.news_item),
+    path("partenaires", views.partners),
+    re_path(r"^langue/(?P<loc>[a-z]{2})$", views.set_locale_view),
+    re_path(r"^partage/(?P<run_id>\d+)-(?P<fmt>square|story)$", views.share_image),
+    path("robots.txt", views.robots),
+    path("sitemap.xml", views.sitemap),
+    # Administration
+    path("admin/connexion", admin.login),
+    path("admin/2fa", admin.two_factor),
+    path("admin/deconnexion", admin.logout),
+    path("admin", admin.dashboard),
+    path("admin/classements", admin.charts),
+    re_path(r"^admin/classements/(?P<rid>\d+)$", admin.chart_run),
+    path("admin/signalements", admin.decide),
+    path("admin/publier", admin.publish),
+    path("admin/recalculer", admin.recompute),
+    path("admin/formule", admin.formula),
+    path("admin/declarations", admin.submissions),
+    re_path(r"^admin/declarations/(?P<sid>\d+)$", admin.submission),
+    re_path(r"^admin/declarations/(?P<sid>\d+)/capture$", admin.screenshot),
+    path("admin/releves", admin.snapshots),
+    path("admin/catalogue", admin.catalog),
+    re_path(r"^admin/artistes/(?P<aid>\d+|nouveau)$", admin.artist_form),
+    re_path(r"^admin/titres/(?P<tid>\d+|nouveau)$", admin.track_form),
+    re_path(r"^admin/pays/(?P<cid>\d+)$", admin.save_country),
+    path("admin/import", admin.imports),
+    path("admin/import/lancer", admin.import_run),
+    re_path(r"^admin/import/artiste/(?P<aid>\d+)$", admin.import_artist),
+    re_path(r"^admin/import/clip/(?P<pid>\d+)$", admin.import_clip),
+    re_path(r"^admin/import/clip-manuel/(?P<tid>\d+)$", admin.import_manual_clip),
+    path("admin/import/csv", admin.import_csv),
+    path("admin/actualites", admin.news_list),
+    re_path(r"^admin/actualites/(?P<nid>\d+|nouveau)$", admin.news_form),
+    path("admin/posts", admin.posts),
+    path("admin/posts/generer", admin.posts_generate),
+    re_path(r"^admin/posts/(?P<pid>\d+)$", admin.post_status),
+    path("admin/partenaires", admin.partners_list),
+    re_path(r"^admin/partenaires/(?P<pid>\d+|nouveau)$", admin.partner_form),
+    re_path(r"^admin/partenaires/(?P<pid>\d+)/supprimer$", admin.partner_delete),
+    path("admin/journal", admin.audit_log),
+    path("admin/messages", admin.messages),
+    re_path(r"^admin/messages/(?P<mid>\d+)$", admin.message_status),
+    re_path(r"^media/(?P<file_path>.+)$", views.media),
+    re_path(r"^(?P<unmatched>.*)$", views.not_found_fallback),
+]
+
+handler404 = "core.views_errors.not_found"
+handler500 = "core.views_errors.server_error"

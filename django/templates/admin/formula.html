@@ -1,0 +1,49 @@
+<h1>{{ t('admin.nav_formula') }}</h1>
+<p class="muted">{{ t('admin.formula_intro') }}</p>
+
+<h2>{{ t('admin.formula_versions') }}</h2>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>v</th><th>{{ t('admin.effective_from') }}</th><th>{{ t('admin.weights') }}</th><th>{{ t('admin.note') }}</th><th>{{ t('admin.author') }}</th></tr></thead>
+    <tbody>
+    {% for v in versions %}{% set f = from_json(v.formula_json) or {} %}
+        <tr>
+            <td><strong>{{ v.version|int }}</strong>{% if v.version|int == current.version|int %} <span class="status status--published">{{ t('admin.in_force') }}</span>{% endif %}</td>
+            <td>{{ fmt_date(v.effective_from) }}</td>
+            <td><small>audio {{ php_str(f.weights.audio) }} · youtube {{ php_str(f.weights.youtube) }} · décl. {{ php_str(f.weights.declaration) }}{% if f.country_weights %}<br>{{ to_json(f.country_weights) }}{% endif %}</small></td>
+            <td>{{ v.note or '' }}</td>
+            <td>{{ v.author or '—' }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<h2>{{ t('admin.formula_new') }}</h2>
+<form method="post" action="{{ path('admin/formule') }}" class="admin-form box">
+    {{ csrf_field() }}
+    <div class="field-row">
+        <div class="field"><label for="w_audio">{{ t('methodology.w_audio') }}</label><input id="w_audio" name="w_audio" inputmode="decimal" value="{{ php_str(current.weights.audio) }}" required></div>
+        <div class="field"><label for="w_youtube">{{ t('methodology.w_youtube') }}</label><input id="w_youtube" name="w_youtube" inputmode="decimal" value="{{ php_str(current.weights.youtube) }}" required></div>
+        <div class="field"><label for="w_declaration">{{ t('methodology.w_declaration') }}</label><input id="w_declaration" name="w_declaration" inputmode="decimal" value="{{ php_str(current.weights.declaration) }}" required></div>
+    </div>
+    <fieldset>
+        <legend>{{ t('admin.country_weights') }}</legend>
+        <p class="field__hint">{{ t('admin.country_weights_hint') }}</p>
+        {% for c in countries %}{% set cw = (current.country_weights or {}).get(c.code) or {} %}
+        <div class="field-row">
+            <div class="field"><label for="cw_{{ c.code }}_audio">{{ c.code }} · audio</label><input id="cw_{{ c.code }}_audio" name="cw_{{ c.code }}_audio" inputmode="decimal" value="{{ php_str(cw.get('audio', '')) }}"></div>
+            <div class="field"><label for="cw_{{ c.code }}_youtube">{{ c.code }} · youtube</label><input id="cw_{{ c.code }}_youtube" name="cw_{{ c.code }}_youtube" inputmode="decimal" value="{{ php_str(cw.get('youtube', '')) }}"></div>
+        </div>
+        {% endfor %}
+    </fieldset>
+    <div class="field-row">
+        <div class="field"><label for="spike_factor">{{ t('admin.spike_factor') }}</label><input id="spike_factor" name="spike_factor" inputmode="decimal" value="{{ php_str(current.anti_fraud.spike_factor) }}" required></div>
+        <div class="field"><label for="declaration_tolerance">{{ t('admin.declaration_tolerance') }}</label><input id="declaration_tolerance" name="declaration_tolerance" inputmode="decimal" value="{{ php_str(current.anti_fraud.declaration_tolerance) }}" required></div>
+    </div>
+    <div class="field"><label for="effective_from">{{ t('admin.effective_from') }}</label>
+        <input id="effective_from" type="date" name="effective_from" min="{{ minDate }}" value="{{ nextMonday }}" required>
+        <p class="field__hint">{{ t('admin.formula_date_rule') }}</p></div>
+    <div class="field"><label for="note">{{ t('admin.note') }}</label><textarea id="note" name="note" rows="2" required></textarea></div>
+    <button class="button" type="submit">{{ t('admin.formula_create') }}</button>
+</form>

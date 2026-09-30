@@ -1,0 +1,12 @@
+<article class="prose legal">
+    <p class="eyebrow">{{ t('legal.eyebrow') }}</p>
+    <h1>{{ t('legal.' ~ pages[slug]) }}</h1>
+    <p class="fineprint">{{ t('legal.updated', {'date': fmt_date(config('app.legal.updated')|string)}) }}</p>
+    {% if locale() != 'fr' %}<p class="notice">{{ t('legal.french_only') }}</p>{% endif %}
+    <nav class="chips" aria-label="{{ t('legal.eyebrow') }}">
+        {% for s, key in pages.items() %}
+            <a class="chip" href="{{ path(s) }}" {{ Markup('aria-current="page"') if s == slug }}>{{ t('legal.' ~ key) }}</a>
+        {% endfor %}
+    </nav>
+    {{ body }}
+</article>

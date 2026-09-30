@@ -1,0 +1,64 @@
+{%- set all_platforms = ['youtube', 'audiomack', 'boomplay', 'spotify', 'apple_music', 'deezer'] -%}
+<h1>{{ t('admin.nav_catalog') }}</h1>
+<form method="get" action="{{ path('admin/catalogue') }}" class="toolbar">
+    <label class="visually-hidden" for="q">{{ t('admin.search') }}</label>
+    <input id="q" type="search" name="q" value="{{ q }}" placeholder="{{ t('admin.search') }}">
+    <button class="button button--small" type="submit">{{ t('admin.search') }}</button>
+    <a class="button button--small button--ghost" href="{{ path('admin/artistes/nouveau') }}">{{ t('admin.new_artist') }}</a>
+    <a class="button button--small button--ghost" href="{{ path('admin/titres/nouveau') }}">{{ t('admin.new_track') }}</a>
+</form>
+
+<h2>{{ t('admin.countries') }}</h2>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.country') }}</th><th>{{ t('admin.chart_size') }}</th><th>{{ t('admin.platforms') }}</th><th>{{ t('admin.locale') }}</th><th>{{ t('admin.active') }}</th><th></th></tr></thead>
+    <tbody>
+    {% for c in countries %}{% set active = c.platforms.split(',') %}{% set form_id = 'country-' ~ c.id %}
+        <tr>
+            <td><strong>{{ c.code }}</strong> {{ country_name(c.code) }}{{ ' · ' ~ t('admin.pilot') if c.is_pilot }}</td>
+            <td><input form="{{ form_id }}" type="number" name="chart_size" value="{{ c.chart_size|int }}" min="5" max="100" class="num"></td>
+            <td class="checks">{% for p in all_platforms %}<label><input form="{{ form_id }}" type="checkbox" name="platforms[]" value="{{ p }}" {{ 'checked' if p in active }}> {{ platform_name(p) }}</label>{% endfor %}</td>
+            <td><select form="{{ form_id }}" name="locale"><option value="fr" {{ 'selected' if c.locale == 'fr' }}>fr</option><option value="en" {{ 'selected' if c.locale == 'en' }}>en</option></select></td>
+            <td><input form="{{ form_id }}" type="checkbox" name="is_active" value="1" {{ 'checked' if c.is_active }}></td>
+            <td>{% if user.role == 'admin' %}<form id="{{ form_id }}" method="post" action="{{ path('admin/pays/' ~ c.id) }}">{{ csrf_field() }}<button class="button button--small" type="submit">{{ t('admin.save') }}</button></form>{% endif %}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<p class="fineprint">{{ t('admin.spotify_note') }}</p>
+
+<h2>{{ t('admin.artists') }} ({{ artists|length }})</h2>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.artist') }}</th><th>{{ t('admin.country') }}</th><th>{{ t('admin.label') }}</th><th class="num">{{ t('admin.tracks') }}</th><th></th></tr></thead>
+    <tbody>
+    {% for a in artists %}
+        <tr>
+            <td><a href="{{ path('artiste/' ~ a.slug) }}" target="_blank" rel="noopener">{{ a.name }}</a>{% if a.is_emerging %} <span class="tag">{{ t('artist.emerging') }}</span>{% endif %}</td>
+            <td>{{ a.code }}</td>
+            <td>{% if a.label_owner %}<span class="badge">{{ a.label_owner }}</span>{% else %}—{% endif %}</td>
+            <td class="num">{{ a.tracks|int }}</td>
+            <td><a href="{{ path('admin/artistes/' ~ a.id) }}">{{ t('admin.edit') }}</a> · <a href="{{ path('admin/titres/nouveau', {'artist': a.id}) }}">{{ t('admin.add_track') }}</a></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<h2>{{ t('admin.tracks') }} ({{ tracks|length }})</h2>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.track') }}</th><th>{{ t('track.release') }}</th><th>{{ t('admin.platforms') }}</th><th></th></tr></thead>
+    <tbody>
+    {% for tr in tracks %}
+        <tr>
+            <td><a href="{{ path('titre/' ~ tr.slug) }}" target="_blank" rel="noopener">{{ tr.title }}</a> <span class="muted">· {{ tr.artist_name }}</span>{% if not tr.is_active %} <span class="tag">{{ t('admin.inactive') }}</span>{% endif %}</td>
+            <td>{{ tr.release_date or '—' }}</td>
+            <td><small>{{ (tr.platforms or '').replace(',', ', ') }}</small></td>
+            <td><a href="{{ path('admin/titres/' ~ tr.id) }}">{{ t('admin.edit') }}</a></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>

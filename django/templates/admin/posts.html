@@ -1,0 +1,59 @@
+{%- set themes = {'classement': 'Tendances', 'artiste': 'Artiste de la semaine', 'weekend': 'Spécial week-end'} -%}
+{%- macro media(f) %}{{ '/media/social/' ~ rawurlencode(f.split('/')[-1]) if f else '' }}{% endmacro -%}
+<h1>{{ t('admin.nav_posts') }}</h1>
+<p class="muted">{{ t('admin.posts_intro') }}</p>
+{% if exportDir %}<p class="muted">{{ t('admin.posts_folder', {'dir': exportDir}) }}</p>{% endif %}
+
+<form method="post" action="{{ path('admin/posts/generer') }}" class="toolbar box box--accent">
+    {{ csrf_field() }}
+    <strong>{{ t('admin.posts_generate') }}</strong>
+    <button class="button button--small" name="theme" value="tous" type="submit">{{ t('admin.posts_generate_all') }}</button>
+    {% for k, label in themes.items() %}
+        <button class="button button--small button--ghost" name="theme" value="{{ k }}" type="submit">{{ label }}</button>
+    {% endfor %}
+    <small class="muted">{{ t('admin.posts_generate_note') }}</small>
+</form>
+
+{% if not posts %}<p class="empty">{{ t('admin.posts_none') }}</p>{% endif %}
+<div class="posts">
+{% for p in posts %}
+    <article class="post-card post-card--{{ p.status }}" id="post-{{ p.id|int }}">
+        <header class="post-card__head">
+            <div>
+                <span class="tag">{{ themes.get(p.theme, p.theme) }}</span>
+                <small class="muted">{{ fmt_date(p.slot_date) }}</small>
+                <h2 class="post-card__title">{{ p.title }}</h2>
+            </div>
+            <span class="status status--{{ 'published' if p.status == 'published' else ('rejected' if p.status == 'rejected' else 'draft') }}">{{ t('admin.post_status_' ~ p.status) }}</span>
+        </header>
+
+        {% if p.slides %}
+        <ol class="post-card__slides">
+            {% for s in p.slides %}
+            <li><a href="{{ media(s.file) }}" target="_blank" rel="noopener" title="{{ s.label }}">
+                <img src="{{ media(s.file) }}" alt="{{ s.label or 'Diapositive ' ~ loop.index }}" loading="lazy" width="120" height="150">
+                <span>{{ '%02d'|format(loop.index) }}</span>
+            </a></li>
+            {% endfor %}
+        </ol>
+        {% endif %}
+        <p class="post-card__files">
+            {% if p.image_square %}<a href="{{ media(p.image_square) }}" target="_blank" rel="noopener">{{ t('admin.post_square') }}</a>{% endif %}
+            {% if p.image_story %}<a href="{{ media(p.image_story) }}" target="_blank" rel="noopener">{{ t('admin.post_story') }}</a>{% endif %}
+            {% if p.video %}<a href="{{ media(p.video) }}" target="_blank" rel="noopener">{{ t('admin.post_video') }}</a>{% endif %}
+        </p>
+
+        <label class="post-card__caption-label" for="caption-{{ p.id|int }}">{{ t('admin.post_caption') }}</label>
+        <textarea class="post-card__caption" id="caption-{{ p.id|int }}" rows="8" readonly>{{ p.caption ~ "\n\n" ~ p.hashtags }}</textarea>
+        <div class="toolbar">
+            <button class="button button--small" type="button" data-copy="caption-{{ p.id|int }}">{{ t('admin.post_copy') }}</button>
+            <form method="post" action="{{ path('admin/posts/' ~ p.id) }}" class="toolbar">
+                {{ csrf_field() }}
+                {% if p.status != 'published' %}<button class="button button--small button--ghost" name="status" value="published" type="submit">{{ t('admin.post_mark_published') }}</button>{% endif %}
+                {% if p.status != 'rejected' %}<button class="button button--small button--ghost" name="status" value="rejected" type="submit">{{ t('admin.post_reject') }}</button>{% endif %}
+                {% if p.status != 'draft' %}<button class="button button--small button--ghost" name="status" value="draft" type="submit">{{ t('admin.post_back_draft') }}</button>{% endif %}
+            </form>
+        </div>
+    </article>
+{% endfor %}
+</div>

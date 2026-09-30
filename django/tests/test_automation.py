@@ -1,0 +1,98 @@
+"""Automatismes : classement des artistes, IA, SSRF, scène, posts (traduction de tests/AutomationTest.php)."""
+from core.services import ai
+from core.services.imports.channel_sync import YouTubeChannelSync
+from core.services.imports.classifier import ArtistClassifier
+from core.services.imports.matching import SceneSignals
+from core.services.imports.sources import DeezerPopularitySource
+from core.services.imports.watch import WikidataLookup
+from core.services.news import http_get, is_public_host
+from core.services.social.generator import PostGenerator
+
+COVERED = ["TG", "BJ", "GH", "CI", "SN"]
+
+
+def test_carriere_dans_un_pays_couvert():
+    assert ArtistClassifier.decide({"nationality": "GH", "base_country": "GH", "confidence": 0.9}, COVERED, 0.85) == "active"
+
+
+def test_artiste_etranger():
+    assert ArtistClassifier.decide({"nationality": "CA", "base_country": "CA", "confidence": 0.9}, COVERED, 0.85) == "out_of_scope"
+
+
+def test_diaspora_decision_humaine():
+    assert ArtistClassifier.decide({"nationality": "SN", "base_country": "FR", "confidence": 0.95}, COVERED, 0.85) == "pending"
+
+
+def test_confiance_insuffisante_ou_inconnu():
+    assert ArtistClassifier.decide({"nationality": "CI", "base_country": "CI", "confidence": 0.6}, COVERED, 0.85) == "pending"
+    assert ArtistClassifier.decide({"nationality": None, "base_country": None, "confidence": 0.9}, COVERED, 0.85) == "pending"
+    assert ArtistClassifier.decide(None, COVERED, 0.85) == "pending"
+
+
+def test_musicbrainz_et_wikidata_en_desaccord():
+    mb = {"nationality": "GH", "base_country": "GH", "confidence": 0.9, "source": "musicbrainz", "note": "mb"}
+    wd = {"nationality": "NG", "base_country": "NG", "confidence": 0.9, "source": "wikidata", "note": "wd"}
+    assert ArtistClassifier.decide(ArtistClassifier.combine(mb, wd), COVERED, 0.85) == "pending"
+    assert ArtistClassifier.combine(mb, mb)["confidence"] == 0.95
+    assert ArtistClassifier.decide(ArtistClassifier.combine(None, wd), COVERED, 0.85) == "out_of_scope"
+
+
+def test_ia_non_recoupee_plafonnee():
+    v = {"nationality": "SN", "base_country": "SN", "confidence": 0.95, "source": "ia", "note": ""}
+    assert ArtistClassifier.decide(ArtistClassifier.corroborate(v, None, ""), COVERED, 0.85) == "pending"
+    assert ArtistClassifier.decide(ArtistClassifier.corroborate(v, "SN", ""), COVERED, 0.85) == "active"
+    assert ArtistClassifier.decide(ArtistClassifier.corroborate(v, None, "chanteur sénégalais de mbalax"), COVERED, 0.85) == "active"
+    assert ArtistClassifier.decide(ArtistClassifier.corroborate(v, "FR", ""), COVERED, 0.85) == "pending"
+
+
+def test_ssrf_adresses_locales_ou_privees():
+    for host in ("localhost", "127.0.0.1", "192.168.1.10", "169.254.169.254"):
+        assert is_public_host(host) is False
+    assert http_get("http://127.0.0.1:8000/") is None
+
+
+def test_scene_marqueurs_locaux():
+    assert SceneSignals.dominant(SceneSignals.score("Nouveau clip tourné à Lomé 228 ! Togo to the world, en éwé")) == "TG"
+    assert SceneSignals.dominant(SceneSignals.score("Paris, New York, London")) is None
+
+
+def test_chaine_youtube_rattachement():
+    tracks = [{"id": 1, "title": "Bra"}, {"id": 2, "title": "Bra (Remix)"}, {"id": 3, "title": "Bombele"}]
+
+    def m(t):
+        return YouTubeChannelSync.match_track(t, tracks)
+    assert m("Kweku Smoke - Bombele (Official Music Video)") == 3
+    assert m("Kweku Smoke - Bra (Audio Visualizer)") == 1
+    assert m("Kweku Smoke - Bombele (Teaser)") is None
+    assert m("Kweku Smoke live at Afrochella") is None
+    assert m("Brazil vlog") is None
+
+
+def test_popularite_deezer():
+    r = DeezerPopularitySource.rank([{"rank_score": 100, "title": "B", "artist": "X"}, {"rank_score": 900, "title": "A", "artist": "Y"}], 10)
+    assert r["rows"][0]["title"] == "A"
+    assert r["rows"][1]["position"] == 2
+    assert "rank_score" not in r["rows"][0]
+
+
+def test_wikidata_gentile():
+    assert WikidataLookup.demonym("rappeur ivoirien") == "CI"
+    assert WikidataLookup.demonym("Ghanaian rapper and songwriter") == "GH"
+    assert WikidataLookup.demonym("village in Belarus") is None
+
+
+def test_ia_extraction_json():
+    j = ai.extract_json('Voici :\n```json\n{"base_country": "SN", "confidence": 0.92, "x": {"a": 1}}\n```')
+    assert j["base_country"] == "SN"
+    assert j["x"]["a"] == 1
+
+
+def test_posts_texte_modele_factuel():
+    facts = {"kind": "artist", "headline": "Artiste de la semaine", "source": "Classements Deezer",
+             "artist": {"name": "Himra", "country": "CI", "deezer_fans": 52534, "profile": "/artiste/himra"},
+             "tracks": [{"title": "PLUS DE LOVE", "seen": [{"platform": "Deezer", "country": "CI", "position": 4}]}]}
+    post = PostGenerator.template(facts)
+    assert post["title"] == "Himra"
+    assert "Deezer CI n°4" in post["caption"]
+    assert "52 534 fans" in post["caption"]
+    assert "Source : Classements Deezer" in post["caption"]

@@ -1,0 +1,17 @@
+<article class="prose">
+    <p><a href="{{ path('actualites') }}">← {{ t('news.title') }}</a></p>
+    <p class="news-list__meta">
+        <span class="tag tag--{{ item.category }}">{{ t('news.cat_' ~ item.category) }}</span>
+        {{ fmt_date(item.published_at[:10]) }}{{ ' · ' ~ country_name(item.country_code) if item.country_code }}
+    </p>
+    <h1>{{ item.title }}</h1>
+    <p class="lead">{{ item.summary }}</p>
+    {% if item.body %}
+        {% for para in paragraphs(item.body) %}
+            <p>{{ nl2br(para) }}</p>
+        {% endfor %}
+    {% endif %}
+    {% if item.source_url %}
+        <p class="fineprint">{{ t('news.source') }} : <a href="{{ item.source_url }}" rel="noopener nofollow" target="_blank">{{ item.source_name or url_host(item.source_url) }}</a></p>
+    {% endif %}
+</article>

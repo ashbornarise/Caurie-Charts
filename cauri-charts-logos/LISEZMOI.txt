@@ -1,0 +1,23 @@
+CAURI CHARTS : LOGOS (29 septembre 2026)
+
+Tailles : versions horizontales 3000 x 1500 px, versions monogramme 3000 x 3000 px.
+Formats : SVG (vectoriel, redimensionnable sans perte), PNG, WebP, PDF (vectoriel),
+JPG (seulement pour les versions avec fond plein).
+
+Versions
+01  Horizontal noir, fond transparent
+02  Horizontal blanc, fond transparent (pour fonds sombres)
+03  Horizontal noir sur fond blanc
+04  Horizontal blanc sur fond noir
+05  Monogramme C, cercle violet, coins transparents (photo de profil)
+06  Monogramme C, carre violet plein (les reseaux decoupent eux-memes en cercle)
+07  Monogramme C noir, fond transparent
+08  Monogramme C blanc, fond transparent
+
+Couleurs : noir #111111, blanc #FFFFFF, violet #8B52FF.
+
+Notes
+- Les logos ont ete vectorises a partir d'une image generee par IA. Les versions
+  sont reconstruites a partir du meme trace, donc coherentes entre elles.
+- Pour un favicon, utiliser le monogramme (05, 07 ou 08) reduit a 32 px.
+- Verifier la marque (OMPI, TMview, OAPI) avant de deposer ou d'imprimer en serie.

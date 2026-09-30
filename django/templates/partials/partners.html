@@ -1,0 +1,34 @@
+{#- Section « Partenaires officiels ». Sans partenaire enregistré, elle invite à le devenir (aucun nom inventé). -#}
+<section class="partners" id="partenaires" aria-labelledby="partners-title">
+    <div class="partners__head">
+        <div>
+            <h2 id="partners-title">{{ t('partners.title') }}</h2>
+            <p class="partners__lead">{{ t('partners.lead') }}</p>
+        </div>
+        {% if compact and partners %}<a class="link-arrow" href="{{ path('partenaires') }}">{{ t('partners.all') }}</a>{% endif %}
+    </div>
+    <ul class="partners__grid">
+        {% for p in partners %}{% set tag = 'a' if p.url else 'div' %}
+        <li>
+            <{{ tag }} class="partner-card"{% if p.url %} href="{{ p.url }}" target="_blank" rel="noopener sponsored"{% endif %}>
+                {% if p.logo_path %}
+                <img class="partner-card__logo" src="/media/partners/{{ rawurlencode(p.logo_path.split('/')[-1]) }}" alt="{{ p.name }}" loading="lazy">
+                {% else %}
+                <span class="partner-card__name">{{ p.name }}</span>
+                {% endif %}
+                <span class="partner-card__tier">{{ t('partners.tier_' ~ p.tier) }}</span>
+                {% if not compact and p.description %}<p class="partner-card__desc">{{ p.description }}</p>{% endif %}
+            </{{ tag }}>
+        </li>
+        {% endfor %}
+        <li class="{{ '' if partners else 'partner-card--span' }}">
+            <div class="partner-card partner-card--invite{{ '' if partners else ' partner-card--wide' }}">
+                <div>
+                    <span class="partner-card__name">{{ t('partners.empty_title') }}</span>
+                    <p class="partner-card__desc">{{ t('partners.empty_text') }}</p>
+                </div>
+                <a class="button button--small" href="{{ path('contact', {'sujet': 'partenariat'}) }}">{{ t('partners.cta') }}</a>
+            </div>
+        </li>
+    </ul>
+</section>

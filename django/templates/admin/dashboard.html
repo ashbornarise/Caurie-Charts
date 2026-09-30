@@ -1,0 +1,54 @@
+<h1>{{ t('admin.nav_dashboard') }}</h1>
+<div class="cards">
+    <a class="card{{ ' card--alert' if pending }}" href="{{ path('admin/classements') }}">
+        <span class="card__value">{{ pending|sum(attribute='n') }}</span>
+        <span class="card__label">{{ t('admin.card_flags') }}</span>
+    </a>
+    <a class="card" href="{{ path('admin/classements') }}">
+        <span class="card__value">{{ drafts|length }}</span>
+        <span class="card__label">{{ t('admin.card_drafts') }}</span>
+    </a>
+    <a class="card{{ ' card--alert' if submissions }}" href="{{ path('admin/declarations') }}">
+        <span class="card__value">{{ submissions }}</span>
+        <span class="card__label">{{ t('admin.card_submissions') }}</span>
+    </a>
+    <a class="card" href="{{ path('admin/messages') }}">
+        <span class="card__value">{{ messages }}</span>
+        <span class="card__label">{{ t('admin.card_messages') }}</span>
+    </a>
+    <div class="card">
+        <span class="card__value">{{ fmt_date(lastSnapshot, false) if lastSnapshot else '—' }}</span>
+        <span class="card__label">{{ t('admin.card_last_snapshot') }}{{ ' · ' ~ t('admin.quota_used', {'n': quota.units_used}) if quota }}</span>
+    </div>
+</div>
+
+{% if pending %}
+<h2>{{ t('admin.flags_to_review') }}</h2>
+<ul>
+    {% for p in pending %}
+        <li>{{ p.code }}, {{ t('admin.week_of', {'date': fmt_date(p.week_start)}) }} : <strong>{{ p.n|int }}</strong></li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<h2>{{ t('admin.drafts') }}</h2>
+{% if drafts %}
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.country') }}</th><th>{{ t('admin.period') }}</th><th>{{ t('admin.runs') }}</th><th></th></tr></thead>
+    <tbody>
+    {% for d in drafts %}
+        <tr><td>{{ d.code }}</td><td>{{ d.period_key }}</td><td>{{ d.runs|int }}</td><td><a href="{{ path('admin/classements/' ~ d.first_id) }}">{{ t('admin.open') }}</a></td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}<p class="muted">{{ t('admin.no_drafts') }}</p>{% endif %}
+
+<div class="box box--accent">
+    <h2 class="flush">{{ t('admin.weekly_routine') }}</h2>
+    <ol>
+        <li>{{ t('admin.routine_1') }}</li>
+        <li>{{ t('admin.routine_2') }}</li>
+        <li>{{ t('admin.routine_3') }}</li>
+        <li>{{ t('admin.routine_4') }}</li>
+    </ol>
+</div>

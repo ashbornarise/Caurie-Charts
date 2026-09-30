@@ -1,0 +1,85 @@
+{%- set points = [] -%}
+{%- for p in positions %}{% do points.append({'label': fmt_date(p.period_end, false), 'position': p.position|int}) %}{% endfor -%}
+{%- set size = positions[-1].chart_size|int if positions else 20 -%}
+<article class="profile">
+    <header class="profile__head">
+        <span class="cover cover--large" aria-hidden="true">
+            {% if track.cover_url %}
+                <img src="{{ track.cover_url }}" alt="" width="160" height="160">
+            {% else %}
+                <span class="cover__initials">{{ initials(track.title) }}</span>
+            {% endif %}
+        </span>
+        <div>
+            <p class="eyebrow">{{ t('track.eyebrow', {'country': country_name(track.country_code)}) }}</p>
+            <h1 class="profile__title">{{ track.title }}</h1>
+            <p class="profile__sub">
+                <a href="{{ path('artiste/' ~ track.artist_slug) }}">{{ track.artist_name }}</a>
+                {% if track.featuring %} <span class="feat">feat. {{ track.featuring }}</span>{% endif %}
+                {% if is_group_label(track.label_owner) %}
+                    <a class="badge" href="{{ path('methodologie') }}#independance" title="{{ t('badge.title') }}">{{ config('app.group_label.name') }}</a>
+                {% endif %}
+            </p>
+        </div>
+    </header>
+
+    <dl class="stats">
+        <div><dt>{{ t('track.peak') }}</dt><dd>{{ '#' ~ peak if peak else '—' }}</dd></div>
+        <div><dt>{{ t('track.weeks') }}</dt><dd>{{ positions|length }}</dd></div>
+        <div><dt>{{ t('track.release') }}</dt><dd>{{ fmt_date(track.release_date) if track.release_date else '—' }}</dd></div>
+    </dl>
+
+    <section class="panel">
+        <h2 class="section-title">{{ t('track.curve', {'chart': chart_name('prime')}) }}</h2>
+        {% if points %}
+            {{ rank_chart_svg(points, size, t('track.curve', {'chart': chart_name('prime')})) }}
+            <details class="table-view">
+                <summary>{{ t('track.table') }}</summary>
+                <table>
+                    <thead><tr><th scope="col">{{ t('track.week') }}</th><th scope="col">{{ t('track.position') }}</th></tr></thead>
+                    <tbody>
+                    {% for p in positions|reverse %}
+                        <tr><td><a href="{{ chart_path(track.country_code, 'prime', 'week', p.period_key) }}">{{ period_label(dict(p, period_type=p.period_type or 'week')) }}</a></td><td>#{{ p.position|int }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </details>
+        {% else %}
+            <p class="empty">{{ t('track.never_charted') }}</p>
+        {% endif %}
+    </section>
+
+    {%- set clip = (links|selectattr('platform', 'equalto', 'youtube')|first) if links else none %}
+    {% if clip and config('app.tracking.youtube_embeds') %}
+    <section class="panel">
+        <h2 class="section-title">{{ t('track.clip') }}</h2>
+        <!-- Rien n'est chargé depuis YouTube avant le clic (ni lecteur, ni miniature) -->
+        <div class="video" data-yt-id="{{ clip.external_id }}" data-yt-title="{{ track.title }}">
+            <button class="video__play" type="button" data-yt-play>
+                <span class="video__icon" aria-hidden="true">▶</span>
+                <span>{{ t('track.clip_play') }}</span>
+            </button>
+            <p class="video__notice">{{ t('track.clip_notice') }} <a href="{{ clip.url }}" rel="noopener nofollow" target="_blank">{{ t('track.clip_open') }}</a></p>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="panel">
+        <h2 class="section-title">{{ t('track.listen') }}</h2>
+        {% if spotify %}
+        <p class="spotify-figure">
+            <span class="source source--spotify"><span class="source__name">Spotify</span></span>
+            <strong>{{ fmt_number(spotify.streams|int) }}</strong> {{ t('track.spotify_streams', {'start': fmt_date(spotify.start, false), 'end': fmt_date(spotify.end, false)}) }}
+        </p>
+        {% endif %}
+        <ul class="platform-links">
+            <li><a class="platform-links__spotify" href="{{ spotify_url(track.artist_spotify, track.artist_name, track.title) }}" rel="noopener nofollow" target="_blank">Spotify</a></li>
+            {% for l in links if l.platform != 'spotify' %}
+                <li><a href="{{ l.url }}" rel="noopener nofollow" target="_blank">{{ platform_name(l.platform) }}</a></li>
+            {% endfor %}
+        </ul>
+        {% if not spotify %}
+        <p class="fineprint">{{ t('track.spotify_cta') }} <a href="{{ path('declarer') }}">{{ t('track.spotify_cta_link') }}</a></p>
+        {% endif %}
+    </section>
+</article>

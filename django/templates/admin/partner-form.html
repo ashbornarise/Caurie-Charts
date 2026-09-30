@@ -1,0 +1,32 @@
+<h1>{{ t('admin.partners_edit') if item.id else t('admin.partners_new') }}</h1>
+<form method="post" action="{{ path('admin/partenaires/' ~ (item.id or 'nouveau')) }}" enctype="multipart/form-data" class="admin-form">
+    {{ csrf_field() }}
+    <div class="field"><label for="p-name">{{ t('admin.partner_name') }}</label>
+        <input id="p-name" name="name" required maxlength="120" value="{{ item.name }}"></div>
+    <div class="field"><label for="p-url">{{ t('admin.partner_url') }}</label>
+        <input id="p-url" name="url" type="url" maxlength="300" placeholder="https://" value="{{ item.url or '' }}"></div>
+    <div class="field"><label for="p-tier">{{ t('admin.partner_tier') }}</label>
+        <select id="p-tier" name="tier">
+            {% for tier in tiers %}
+                <option value="{{ tier }}" {{ 'selected' if item.tier == tier }}>{{ t('partners.tier_' ~ tier) }}</option>
+            {% endfor %}
+        </select></div>
+    <div class="field"><label for="p-desc">{{ t('admin.partner_description') }}</label>
+        <textarea id="p-desc" name="description" maxlength="240" rows="3">{{ item.description or '' }}</textarea></div>
+    <div class="field"><label for="p-logo">{{ t('admin.partner_logo') }}</label>
+        {% if item.logo_path %}<p><img src="/media/partners/{{ rawurlencode(item.logo_path.split('/')[-1]) }}" alt="" height="60" class="partner-thumb"></p>{% endif %}
+        <input id="p-logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp"></div>
+    <div class="field"><label for="p-order">{{ t('admin.partner_order') }}</label>
+        <input id="p-order" name="sort_order" type="number" value="{{ item.sort_order|int }}"></div>
+    <div class="field"><label><input type="checkbox" name="is_active" value="1" {{ 'checked' if item.is_active }}> {{ t('admin.partner_active') }}</label></div>
+    <p class="toolbar">
+        <button class="button" type="submit">{{ t('admin.save') }}</button>
+        <a class="button button--ghost" href="{{ path('admin/partenaires') }}">{{ t('admin.cancel') }}</a>
+    </p>
+</form>
+{% if item.id %}
+<form method="post" action="{{ path('admin/partenaires/' ~ item.id ~ '/supprimer') }}" class="toolbar">
+    {{ csrf_field() }}
+    <button class="button button--small button--danger" type="submit">{{ t('admin.delete') }}</button>
+</form>
+{% endif %}

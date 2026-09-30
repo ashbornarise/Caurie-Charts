@@ -1,0 +1,70 @@
+<?php use Cauri\Core\Config; $r = Config::get('app.retention'); ?>
+<p class="lead">Nous collectons le moins de données possible. La simple consultation des classements ne nécessite aucun compte<?= Config::get('app.tracking.ga_id') || Config::get('app.tracking.meta_pixel_id') ? ', et les outils de mesure ou de publicité ne se chargent qu\'avec votre accord' : ', aucun cookie de mesure d\'audience et aucun cookie publicitaire' ?>.</p>
+<?php if (Config::get('app.tracking.ga_id') || Config::get('app.tracking.meta_pixel_id')): ?>
+<p>Si vous acceptez la mesure d'audience ou la publicité dans le bandeau cookies, Google (Analytics) ou Meta (Pixel) reçoivent des données de navigation (pages vues, identifiant de cookie, adresse IP). Détails et durées : <a href="<?= path('cookies') ?>">politique cookies</a>.</p>
+<?php endif; ?>
+
+<h2>Responsable du traitement</h2>
+<p><?= legal('publisher') ?>, <?= legal('address') ?>. Contact pour toute question sur vos données : <?= legal('privacy_email') ?>.</p>
+
+<h2>Quelles données, pour quoi faire</h2>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th scope="col">Situation</th><th scope="col">Données</th><th scope="col">Finalité et base légale</th><th scope="col">Durée</th></tr></thead>
+    <tbody>
+        <tr>
+            <td>Consultation du site</td>
+            <td>Aucune donnée collectée par <?= e(brand()) ?>. L'hébergeur conserve des journaux techniques (adresse IP, page demandée) pour la sécurité du serveur.</td>
+            <td>Sécurité et bon fonctionnement (intérêt légitime)</td>
+            <td>Selon la politique de l'hébergeur</td>
+        </tr>
+        <tr>
+            <td>Déclaration de chiffres</td>
+            <td>Nom, e-mail, titre, plateforme, période, nombre d'écoutes, répartition par pays, capture d'écran, empreinte chiffrée de l'adresse IP</td>
+            <td>Vérifier la déclaration et l'intégrer au calcul (votre demande) ; limiter les abus (intérêt légitime)</td>
+            <td>Capture : <?= (int) $r['screenshots'] ?> mois après traitement. Nom et e-mail : <?= (int) $r['submission_contact'] ?> mois. Les chiffres validés sont conservés pour que les classements restent reproductibles.</td>
+        </tr>
+        <tr>
+            <td>Formulaire de contact ou de contestation</td>
+            <td>Nom, e-mail, sujet, message, empreinte chiffrée de l'adresse IP</td>
+            <td>Répondre à votre demande (votre demande) ; limiter les abus (intérêt légitime)</td>
+            <td><?= (int) $r['contact_messages'] ?> mois après la clôture</td>
+        </tr>
+        <tr>
+            <td>Fiches artistes et titres</td>
+            <td>Nom d'artiste, pays de soumission, statistiques publiques d'écoute, pays d'écoute principal s'il a été déclaré</td>
+            <td>Informer le public sur les classements musicaux (intérêt légitime)</td>
+            <td>Tant que les classements concernés sont publiés</td>
+        </tr>
+        <tr>
+            <td>Équipe d'administration</td>
+            <td>Nom, e-mail, mot de passe chiffré, journal des actions et des connexions (adresse IP)</td>
+            <td>Sécurité et traçabilité des décisions (intérêt légitime)</td>
+            <td>Tentatives de connexion : <?= (int) $r['login_attempts'] ?> mois. Adresse IP du journal : <?= (int) $r['audit_ip'] ?> mois.</td>
+        </tr>
+    </tbody>
+</table>
+</div>
+<p>L'empreinte chiffrée de l'adresse IP est une valeur calculée qui ne permet pas de retrouver l'adresse d'origine : elle sert uniquement à limiter le nombre d'envois par jour.</p>
+
+<h2>Qui voit ces données</h2>
+<p>Uniquement l'équipe de <?= e(brand()) ?> chargée des vérifications, et l'hébergeur pour le stockage. Les données ne sont ni vendues, ni louées, ni partagées avec le label <?= e(Config::get('app.group_label.name')) ?>. Les captures d'écran ne sont jamais publiées.</p>
+<p>Les liens vers YouTube, Spotify, Audiomack ou Boomplay ouvrent le site de la plateforme, qui applique alors sa propre politique. Certaines pochettes peuvent être affichées depuis les serveurs de Spotify ou d'Apple : votre navigateur contacte alors ces serveurs pour charger l'image.</p>
+
+<h2>Où sont stockées les données</h2>
+<p>Sur des serveurs situés en France (Union européenne), chez l'hébergeur indiqué dans les <a href="<?= path('mentions-legales') ?>">mentions légales</a>.</p>
+
+<h2>Vos droits</h2>
+<p>Vous pouvez demander l'accès à vos données, leur rectification, leur effacement, la limitation du traitement, leur portabilité, ou vous opposer au traitement fondé sur l'intérêt légitime. Un artiste peut demander la correction de sa fiche. Écrivez à <?= legal('privacy_email') ?> ou via le <a href="<?= path('contact') ?>">formulaire de contact</a> ; nous répondons sous un mois.</p>
+<p>Vous pouvez aussi saisir l'autorité de protection des données de votre pays, par exemple :</p>
+<ul>
+    <li>Togo : Instance de protection des données à caractère personnel (IPDCP), loi n° 2019-014 du 29 octobre 2019 ;</li>
+    <li>France et Union européenne : CNIL, règlement général sur la protection des données (RGPD) ;</li>
+    <li>Bénin : Autorité de protection des données à caractère personnel (APDP), Code du numérique ;</li>
+    <li>Côte d'Ivoire : ARTCI, loi n° 2013-450 ;</li>
+    <li>Sénégal : Commission des données personnelles (CDP), loi n° 2008-12 ;</li>
+    <li>Ghana : Data Protection Commission, Data Protection Act 2012 (Act 843).</li>
+</ul>
+
+<h2>Cookies</h2>
+<p>Voir la <a href="<?= path('cookies') ?>">politique cookies</a>.</p>

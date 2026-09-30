@@ -1,0 +1,35 @@
+{#- « Artistes du moment » : artistes confirmés classés par leur présence dans les classements des plateformes (7 jours). -#}
+{%- set sources = {'apple_music': 'Apple Music', 'deezer': 'Deezer', 'youtube_trending': 'YouTube'} -%}
+<section class="hot-artists" aria-labelledby="hot-artists-title">
+    <div class="partners__head">
+        <div>
+            <h2 id="hot-artists-title">{{ t('home.hot_title') }}</h2>
+            <p class="partners__lead">{{ t('home.hot_lead') }}</p>
+        </div>
+    </div>
+    <ul class="hot-artists__grid">
+        {% for a in artists %}
+        <li>
+            <a class="hot-artist" href="{{ path('artiste/' ~ a.slug) }}">
+                <span class="hot-artist__photo">
+                    {% if a.image_url %}
+                    <img src="{{ a.image_url }}" alt="" loading="lazy" width="160" height="160">
+                    {% else %}
+                    <span class="cover__initials">{{ initials(a.name) }}</span>
+                    {% endif %}
+                    <span class="hot-artist__flag">{{ flag(a.country_code, 14) }}</span>
+                </span>
+                <span class="hot-artist__name">{{ a.name }}</span>
+                <span class="hot-artist__meta">
+                    {% if a.best %}
+                        {{ t('home.hot_best', {'n': a.best|int, 'source': sources.get(a.best_source, '')}) }}
+                        {% if a.charts > 1 %} · {{ t('home.hot_charts', {'n': a.charts|int}) }}{% endif %}
+                    {% elif a.fans %}
+                        {{ t('home.hot_fans', {'n': fmt_number(a.fans|int)}) }}
+                    {% endif %}
+                </span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>

@@ -1,0 +1,117 @@
+{%- set is_admin = user.role == 'admin' -%}
+{%- macro breakdown(js) -%}
+{%- set d = from_json(js) or {} -%}
+{%- set parts = [] -%}
+{%- for k, v in (d.items() if d is mapping else []) %}{% do parts.append(platform_name(k.split(':')[0]) ~ (' (' ~ t('admin.declared') ~ ')' if ':' in k else '') ~ ' ' ~ fmt_number(v.delta) ~ ' × ' ~ v.weight) %}{% endfor -%}
+{{ parts|join(' · ') }}
+{%- endmacro -%}
+<p><a href="{{ path('admin/classements') }}">← {{ t('admin.nav_charts') }}</a></p>
+<h1>{{ chart_name(run.chart_code) }} · {{ run.country_code }} · {{ run.period_key }}</h1>
+<p>
+    <span class="status status--{{ run.status }}">{{ t('admin.status_' ~ run.status) }}</span>
+    <span class="muted">{{ period_label(run) }} · {{ t('admin.formula_v', {'v': run.formula_version}) }} · {{ t('admin.computed_at', {'date': run.computed_at}) }} UTC</span>
+</p>
+
+<nav class="chips">
+    {% for s in siblings %}
+        <a class="chip" href="{{ path('admin/classements/' ~ s.id) }}" {{ Markup('aria-current="page"') if s.id|int == run.id|int }}>{{ s.name }}</a>
+    {% endfor %}
+</nav>
+
+{% if run.correction_note %}
+    <p class="notice">{{ t('admin.correction_note') }} : {{ run.correction_note }}</p>
+{% endif %}
+
+{% if is_admin %}
+<div class="toolbar">
+    {% if run.status == 'draft' and run.period_type == 'week' %}
+    <form method="post" action="{{ path('admin/publier') }}" class="inline">
+        {{ csrf_field() }}
+        <input type="hidden" name="run_id" value="{{ run.id|int }}">
+        <input type="hidden" name="country" value="{{ run.country_code }}">
+        <input type="hidden" name="period_type" value="{{ run.period_type }}">
+        <input type="hidden" name="period_key" value="{{ run.period_key }}">
+        <button class="button" type="submit" {{ 'disabled' if pending }}>{{ t('admin.publish_all', {'n': siblings|length}) }}</button>
+    </form>
+    {% if pending %}<span class="status status--pending">{{ t('admin.publish_blocked', {'n': pending}) }}</span>{% endif %}
+    {% endif %}
+    <details>
+        <summary class="button button--ghost button--small">{{ t('admin.recompute') }}</summary>
+        <form method="post" action="{{ path('admin/recalculer') }}" class="box admin-form">
+            {{ csrf_field() }}
+            <input type="hidden" name="run_id" value="{{ run.id|int }}">
+            <input type="hidden" name="country" value="{{ run.country_code }}">
+            <input type="hidden" name="period_type" value="{{ run.period_type }}">
+            <input type="hidden" name="period_key" value="{{ run.period_key }}">
+            {% if run.status == 'published' %}
+                <div class="field"><label for="correction">{{ t('admin.correction_reason') }}</label>
+                <textarea id="correction" name="correction" required rows="2"></textarea>
+                <p class="field__hint">{{ t('admin.correction_hint') }}</p></div>
+            {% endif %}
+            <button class="button button--small" type="submit">{{ t('admin.recompute_now') }}</button>
+        </form>
+    </details>
+</div>
+{% endif %}
+
+{% if flagged %}
+<h2>{{ t('admin.flagged_tracks') }}</h2>
+<p class="muted">{{ t('admin.flagged_intro') }}</p>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.track') }}</th><th class="num">{{ t('admin.score') }}</th><th>{{ t('admin.flags') }}</th><th>{{ t('admin.sources') }}</th><th>{{ t('admin.decision') }}</th></tr></thead>
+    <tbody>
+    {% for f in flagged %}{% set flags = from_json(f.flags) or [] %}
+        <tr>
+            <td><a href="{{ path('titre/' ~ f.slug) }}" target="_blank" rel="noopener">{{ f.title }}</a><br><small class="muted">{{ f.artist_name }}</small></td>
+            <td class="num">{{ fmt_number(f.score|float) }}</td>
+            <td>{% for fl in flags %}<span class="flag{{ ' flag--blocking' if fl in blocking }}" title="{{ t('flag.' ~ fl) }}">{{ fl }}</span>{% endfor %}
+                <br><span class="status status--{{ f.review_status }}">{{ t('admin.review_' ~ f.review_status) }}</span></td>
+            <td><small>{{ breakdown(f.breakdown) }}</small></td>
+            <td>
+                {% if f.decision %}
+                    <strong>{{ t('admin.review_' ~ f.decision) }}</strong> <span class="muted">({{ f.decided_by or '' }})</span><br><small>{{ f.reason }}</small>
+                {% endif %}
+                {% if is_admin and (flags|select('in', blocking)|list) %}
+                <form method="post" action="{{ path('admin/signalements') }}" class="decision">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="run_id" value="{{ run.id|int }}">
+                    <input type="hidden" name="track_id" value="{{ f.track_id|int }}">
+                    <input type="hidden" name="week_start" value="{{ f.week_start }}">
+                    <label class="visually-hidden" for="reason-{{ f.track_id|int }}">{{ t('admin.reason') }}</label>
+                    <textarea id="reason-{{ f.track_id|int }}" name="reason" rows="2" required placeholder="{{ t('admin.reason_placeholder') }}"></textarea>
+                    <div class="decision__buttons">
+                        <button class="button button--small" name="decision" value="validated" type="submit">{{ t('admin.validate') }}</button>
+                        <button class="button button--small button--danger" name="decision" value="excluded" type="submit">{{ t('admin.exclude') }}</button>
+                    </div>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+<h2>{{ t('admin.entries') }}</h2>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>#</th><th>{{ t('admin.track') }}</th><th class="num">{{ t('admin.score') }}</th><th class="num">{{ t('admin.prev') }}</th><th class="num">{{ t('chart.peak') }}</th><th class="num">{{ t('chart.weeks') }}</th><th class="num">{{ t('admin.sources') }}</th><th>{{ t('admin.flags') }}</th></tr></thead>
+    <tbody>
+    {% for e in entries %}{% set flags = from_json(e.flags) or [] %}
+        <tr>
+            <td><strong>{{ e.position|int }}</strong></td>
+            <td>{{ e.title if e.track_id else e.artist_name }}{% if e.track_id %}<br><small class="muted">{{ e.artist_name }}</small>{% endif %}
+                {% if is_group_label(e.label_owner) %} <span class="badge">{{ config('app.group_label.name') }}</span>{% endif %}</td>
+            <td class="num">{{ fmt_number(e.score|float) }}{% if e.growth_pct is not none %}<br><small>+{{ fmt_number(e.growth_pct|float) }} %</small>{% endif %}</td>
+            <td class="num">{{ e.previous_position if e.previous_position is not none else '—' }}</td>
+            <td class="num">{{ e.peak_position|int }}</td>
+            <td class="num">{{ e.weeks_on_chart|int }}</td>
+            <td class="num">{{ e.sources_count|int }}</td>
+            <td>{% for fl in flags %}<span class="flag{{ ' flag--blocking' if fl in blocking or fl == 'pending_review' }}" title="{{ t('flag.' ~ fl) }}">{{ fl }}</span>{% endfor %}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>

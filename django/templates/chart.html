@@ -1,0 +1,110 @@
+{%- set code = country.code -%}
+{%- set SOURCES = live_sources() -%}
+{%- set is_prime = chartCode in ('prime', 'prime-wa') -%}
+<div class="wrap page-grid">
+<div class="page-main">
+<section class="chart-hero">
+    <nav class="country-switch" aria-label="{{ t('nav.countries') }}">
+        <a href="{{ chart_path('WA', 'prime-wa') }}" {{ Markup('aria-current="page"') if regional }}>{{ t('chart.region_short') }}</a>
+        {% for c in countries %}
+            <a href="{{ chart_path(c.code, 'prime' if regional else chartCode, periodType if periodType in chart.periods else 'week') }}" {{ Markup('aria-current="page"') if c.code == code }} title="{{ country_name(c.code) }}">{{ flag(c.code, 14) }}{{ c.code }}</a>
+        {% endfor %}
+    </nav>
+    <nav class="chips" aria-label="{{ t('chart.choose') }}">
+        {% for c, def in config('charts').items() if def.public and not def.regional %}{% set target = 'prime-wa' if regional and c == 'prime' else c %}
+            <a class="chip" href="{{ chart_path('WA' if regional else code, target) }}" {{ Markup('aria-current="page"') if target == chartCode }}>{{ def.name }}</a>
+        {% endfor %}
+    </nav>
+    <p class="eyebrow">{% if regional %}{% for c in countries %}{{ flag(c.code, 14) }}{% endfor %}{% endif %}{{ flag(code, 16) }}{{ country_name(code) }}</p>
+    <h1 class="chart-hero__title">{{ chart.name }}</h1>
+    <p class="chart-hero__lead">{{ t('chart.description.' ~ chartCode, {'country': country_name(code)}) }}</p>
+
+    {% if view != 'official' and is_prime %}
+        {#- Vue en direct : semaine (7 jours), mois (30 jours), année (12 mois) et tout temps -#}
+        {% set vue_q = 'direct' if view == 'live' else view %}
+        {% macro live_link(p) %}{{ url_with(chart_path(code, chartCode, 'week'), {'vue': vue_q, 'periode': 'tout'}) if p == 'all' else url_with(chart_path(code, chartCode, p), {'vue': vue_q}) }}{% endmacro %}
+        {{ partial('partials/period-tabs', periodType=livePeriod, periods=['week', 'month', 'year', 'all'], link=live_link) }}
+    {% elif chart.periods|length > 1 %}
+        {% macro official_link(p) %}{{ url_with(chart_path(code, chartCode, p), {'vue': 'officiel'}) }}{% endmacro %}
+        {{ partial('partials/period-tabs', periodType=periodType, periods=chart.periods, link=official_link) }}
+    {% endif %}
+
+    {% if run %}
+    <div class="chart-meta">
+        <p class="chart-hero__period">{{ period_label(run) }}</p>
+        {% if history|length > 1 %}
+        <form class="history" method="get" action="{{ chart_path(code, chartCode, periodType) }}" data-history>
+            <label for="history-select" class="visually-hidden">{{ t('chart.history') }}</label>
+            <select id="history-select" name="k" data-history-select>
+                {% for h in history %}
+                    <option value="{{ chart_path(code, chartCode, periodType, h.period_key) }}" {{ 'selected' if h.period_key == run.period_key }}>
+                        {{ period_label(dict(h, period_type=h.period_type or periodType)) }}
+                    </option>
+                {% endfor %}
+            </select>
+            <noscript><button class="button button--small" type="submit">{{ t('chart.go') }}</button></noscript>
+        </form>
+        {% endif %}
+    </div>
+    {% if run.correction_note %}
+        <p class="notice"><strong>{{ t('chart.corrected', {'date': fmt_date(run.corrected_at[:10])}) }}</strong> {{ run.correction_note }}</p>
+    {% endif %}
+    {% endif %}
+</section>
+
+{% if chartCode in ('prime', 'prime-wa', 'buzz', 'fresh', 'icon', 'legend') %}
+{%- set base = chart_path(code, chartCode, periodType) -%}
+{%- set tabs = [('officiel', t('chart.view_official')), ('direct', t('chart.view_live'))] -%}
+{%- for s in liveSources %}{% do tabs.append((s, SOURCES[s])) %}{% endfor -%}
+{%- set current = {'official': 'officiel', 'live': 'direct'}.get(view, view) -%}
+<nav class="view-tabs" aria-label="{{ t('chart.view_label') }}">
+    {% for k, label in tabs %}
+        <a class="view-tab{{ ' view-tab--soon' if k == 'officiel' and not run }}" href="{{ url_with(base, dict({'vue': k}, **({'periode': 'tout'} if livePeriod == 'all' else {}))) }}" {{ Markup('aria-current="page"') if k == current }}>{{ label }}</a>
+    {% endfor %}
+</nav>
+{% endif %}
+
+{% if view != 'official' and live is not none %}
+<section>
+    <p class="notice notice--live">
+        {{ (t('chart.live_intro' if is_prime else 'chart.live_intro_' ~ chartCode)) if view == 'live' else t('chart.source_intro', {'source': SOURCES[view], 'country': country_name(code)}) }}
+        {% if live.day %}<strong>{{ t('chart.live_day', {'date': fmt_date(live.day)}) }}</strong>{% endif %}
+        {% if not run %}<br>{{ t('chart.official_soon') }}{% endif %}
+    </p>
+    {% if not live.rows %}
+        <p class="empty">{{ t('chart.live_empty') }}</p>
+    {% else %}
+        <ol class="chart-list chart-list--long">
+            {% for e in live.rows %}
+                {{ partial('partials/live-entry', e=e, showSourceCountry=(regional or view == 'live')) }}
+            {% endfor %}
+        </ol>
+    {% endif %}
+</section>
+{% else %}
+<section>
+    {% if not entries %}
+        <p class="empty">{{ t('chart.empty_legend') if chartCode == 'legend' else t('chart.empty') }}</p>
+    {% else %}
+        <ol class="chart-list">
+            {% for e in entries %}
+                {{ partial('partials/entry', e=e, showCountry=regional) }}
+            {% endfor %}
+        </ol>
+        <div class="chart-actions">
+            <a class="button button--ghost" href="{{ share_url(run.id, 'square') }}" download>{{ t('share.square') }}</a>
+            <a class="button button--ghost" href="{{ share_url(run.id, 'story') }}" download>{{ t('share.story') }}</a>
+        </div>
+        <p class="fineprint">{{ t('chart.fineprint', {'version': run.methodology_version, 'formula': run.formula_version}) }}
+            <a href="{{ path('methodologie') }}">{{ t('nav.methodology') }}</a> ·
+            <a href="{{ path('contact', {'type': 'contestation'}) }}">{{ t('chart.contest') }}</a>
+        </p>
+    {% endif %}
+</section>
+{% endif %}
+
+{{ partial('partials/method-block') }}
+</div>
+{{ partial('partials/aside', aside=aside) }}
+</div>
+<script src="{{ asset('js/app.js') }}" defer></script>

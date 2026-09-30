@@ -1,0 +1,65 @@
+{#- Une ligne de classement (titre ou artiste). e : entrée enrichie ; compact : encarts de l'accueil ; showCountry : drapeau (régional) -#}
+{%- set m = movement(e) -%}
+{%- set is_artist = e.track_id is none -%}
+{%- set name = e.artist_name if is_artist else e.title -%}
+{%- set href = path('artiste/' ~ e.artist_slug) if is_artist else path('titre/' ~ e.track_slug) -%}
+{%- set move_label = {'up': t('move.up', {'n': m.value}), 'down': t('move.down', {'n': m.value}), 'same': t('move.same'), 'new': t('move.new'), 're': t('move.re')}[m.type] -%}
+<li class="entry{{ ' entry--top' if e.position == 1 }}{{ ' entry--compact' if compact }}">
+    {% if e.position == 1 %}
+    <!-- N° 1 : particules décoratives (CSS seul, figées si l'utilisateur réduit les animations) -->
+    <span class="particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    {% endif %}
+    <span class="entry__rank">{{ e.position|int }}</span>
+    <span class="cover" aria-hidden="true">
+        {% if e.cover_url %}
+            <img src="{{ e.cover_url }}" alt="" width="56" height="56" loading="lazy">
+        {% else %}
+            <span class="cover__initials">{{ initials(name) }}</span>
+        {% endif %}
+    </span>
+    <span class="entry__main">
+        <a class="entry__title" href="{{ href }}">{{ name }}</a>
+        {% if not is_artist %}
+        <span class="entry__artist">
+            {% if showCountry and e.artist_country %}<span class="entry__country" title="{{ country_name(e.artist_country) }}">{{ flag(e.artist_country, 12) }}</span>{% endif %}
+            <a href="{{ path('artiste/' ~ e.artist_slug) }}">{{ e.artist_name }}</a>{% if e.featuring %} <span class="feat">feat. {{ e.featuring }}</span>{% endif %}
+        </span>
+        {% else %}
+        <span class="entry__artist">{{ t('chart.tracks_count', {'n': e.sources_count}) }}</span>
+        {% endif %}
+        {% if is_group_label(e.label_owner) %}
+            <a class="badge" href="{{ path('methodologie') }}#independance" title="{{ t('badge.title') }}">{{ config('app.group_label.name') }}</a>
+        {% endif %}
+        {% if not compact and e.sources %}
+        <ul class="sources" aria-label="{{ t('chart.sources_label') }}">
+            {% for platform, s in e.sources.items() %}{% set detail = t('chart.src_' ~ s.kind, {'n': fmt_number(s.value)}) %}
+            <li class="source source--{{ platform }}" title="{{ platform_name(platform) ~ ' : ' ~ detail }}">
+                <span class="source__name">{{ platform_name(platform) }}</span>
+                <span class="source__value">{{ '#' ~ s.value if s.kind == 'chart' else fmt_number(s.value) }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </span>
+    {% if not compact and ((e.streams or 0) > 0 or (e.views or 0) > 0) %}
+    <span class="entry__figures">
+        {% if e.streams > 0 %}
+        <span class="figure figure--main" title="{{ t('chart.streams_long') }}"><strong>{{ fmt_number(e.streams) }}</strong> {{ t('chart.streams') }}</span>
+        {% endif %}
+        {% if e.views > 0 %}
+        <span class="figure{{ '' if e.streams > 0 else ' figure--main' }}" title="{{ t('chart.views_long') }}"><strong>{{ fmt_number(e.views) }}</strong> {{ t('chart.views') }}</span>
+        {% endif %}
+    </span>
+    {% endif %}
+    <span class="move move--{{ m.type }}" title="{{ move_label }}">
+        <span class="visually-hidden">{{ move_label }}</span>
+        <span aria-hidden="true">{{ {'up': '▲ ' ~ m.value, 'down': '▼ ' ~ m.value, 'same': '=', 'new': t('move.new_short'), 're': t('move.re_short')}[m.type] }}</span>
+    </span>
+    {% if not compact %}
+    <span class="entry__stats">
+        <span><abbr title="{{ t('chart.peak_long') }}">{{ t('chart.peak') }}</abbr> {{ e.peak_position|int }}</span>
+        <span><abbr title="{{ t('chart.weeks_long') }}">{{ t('chart.weeks') }}</abbr> {{ e.weeks_on_chart|int }}</span>
+        {% if e.growth_pct is not none %}<span>+{{ fmt_number(e.growth_pct|float) }} %</span>{% endif %}
+    </span>
+    {% endif %}
+</li>

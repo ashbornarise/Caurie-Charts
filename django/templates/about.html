@@ -1,0 +1,12 @@
+<article class="prose">
+    <p class="eyebrow">{{ t('about.eyebrow') }}</p>
+    <h1>{{ t('about.title') }}</h1>
+    <p class="lead">{{ t('about.lead', {'brand': brand()}) }}</p>
+    <h2>{{ t('about.name_title') }}</h2>
+    <p>{{ t('about.name_text') }}</p>
+    <h2>{{ t('about.countries_title') }}</h2>
+    <p>{{ t('about.countries_text') }}</p>
+    <h2>{{ t('about.group_title') }}</h2>
+    <p>{{ t('about.group_text', {'brand': brand(), 'label': config('app.group_label.name')}) }}</p>
+    <p><a class="button" href="{{ path('contact') }}">{{ t('about.contact') }}</a></p>
+</article>

@@ -1,0 +1,49 @@
+{%- set platform_options = {} -%}
+{%- for p in platforms %}{% do platform_options.update({p: platform_name(p)}) %}{% endfor -%}
+{%- set max_date = 'max="' ~ today() ~ '"' -%}
+<article class="prose">
+    <p class="eyebrow">{{ t('submit.eyebrow') }}</p>
+    <h1>{{ t('submit.title') }}</h1>
+    <p class="lead">{{ t('submit.intro') }}</p>
+    <ol class="steps">
+        <li>{{ t('submit.step1') }}</li>
+        <li>{{ t('submit.step2') }}</li>
+        <li>{{ t('submit.step3') }}</li>
+    </ol>
+
+    <form class="form" method="post" action="{{ path('declarer') }}" enctype="multipart/form-data" novalidate>
+        {{ csrf_field() }}
+        <div class="hp" aria-hidden="true"><label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <fieldset>
+            <legend>{{ t('submit.section_track') }}</legend>
+            {{ partial('partials/field', name='artist', label=t('submit.artist'), attrs='maxlength="150"', old=old, errors=errors) }}
+            {{ partial('partials/field', name='track', label=t('submit.track'), attrs='maxlength="200"', old=old, errors=errors) }}
+        </fieldset>
+        <fieldset>
+            <legend>{{ t('submit.section_data') }}</legend>
+            {{ partial('partials/field', name='platform', label=t('submit.platform'), type='select', options=platform_options, old=old, errors=errors) }}
+            <div class="field-row">
+                {{ partial('partials/field', name='period_start', label=t('submit.period_start'), type='date', attrs=max_date, old=old, errors=errors) }}
+                {{ partial('partials/field', name='period_end', label=t('submit.period_end'), type='date', attrs=max_date, old=old, errors=errors) }}
+            </div>
+            {{ partial('partials/field', name='streams', label=t('submit.streams'), type='number', attrs='min="1" step="1" inputmode="numeric"', old=old, errors=errors) }}
+            {{ partial('partials/field', name='breakdown', label=t('submit.breakdown'), required=false, hint=t('submit.breakdown_hint'), old=old, errors=errors) }}
+            <div class="field{{ ' field--error' if 'screenshot' in errors }}">
+                <label for="f-screenshot">{{ t('submit.screenshot') }}</label>
+                <p class="field__hint" id="f-screenshot-hint">{{ t('submit.screenshot_hint') }}</p>
+                <input id="f-screenshot" type="file" name="screenshot" accept="image/png,image/jpeg,image/webp" required aria-describedby="f-screenshot-hint">
+                {% if 'screenshot' in errors %}<p class="field__error">{{ errors.screenshot }}</p>{% endif %}
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>{{ t('submit.section_contact') }}</legend>
+            {{ partial('partials/field', name='contact_name', label=t('form.name'), attrs='autocomplete="name" maxlength="150"', old=old, errors=errors) }}
+            {{ partial('partials/field', name='email', label=t('form.email'), type='email', attrs='autocomplete="email" maxlength="190"', old=old, errors=errors) }}
+        </fieldset>
+        <div class="field{{ ' field--error' if 'consent' in errors }}">
+            <label class="check"><input type="checkbox" name="consent" value="1" required> <span>{{ t('submit.consent') }} <a href="{{ path('confidentialite') }}" target="_blank">{{ t('legal.confidentialite') }}</a>, <a href="{{ path('conditions') }}" target="_blank">{{ t('legal.conditions') }}</a>.</span></label>
+            {% if 'consent' in errors %}<p class="field__error">{{ errors.consent }}</p>{% endif %}
+        </div>
+        <button class="button" type="submit">{{ t('submit.send') }}</button>
+    </form>
+</article>

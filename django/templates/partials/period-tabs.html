@@ -1,0 +1,5 @@
+<nav class="tabs" aria-label="{{ t('period.choose') }}">
+    {% for p in periods %}
+        <a class="tabs__item" href="{{ link(p) }}" {{ Markup('aria-current="page"') if p == periodType }}>{{ t('period.' ~ p) }}</a>
+    {% endfor %}
+</nav>

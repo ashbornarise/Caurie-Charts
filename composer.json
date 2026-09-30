@@ -1,0 +1,26 @@
+{
+    "name": "novaluz/cauricharts",
+    "description": "Classements musicaux hebdomadaires, mensuels et annuels pour l'Afrique de l'Ouest",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-mbstring": "*",
+        "ext-json": "*"
+    },
+    "suggest": {
+        "ext-gd": "Génère les images de partage en PNG (sinon SVG)",
+        "ext-curl": "Appels aux API YouTube et Spotify"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cauri\\": "src/"
+        }
+    },
+    "scripts": {
+        "test": "php tests/run.php",
+        "serve": "php -S localhost:8000 -t public"
+    }
+}

@@ -1,0 +1,98 @@
+{%- set current = request_path() -%}
+{%- set other_locale = 'en' if locale() == 'fr' else 'fr' -%}
+{%- set tracking = config('app.tracking') -%}
+{%- set ask_consent = tracking.ga_id != '' or tracking.meta_pixel_id != '' -%}
+<!doctype html>
+<html lang="{{ locale() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ meta.title }}</title>
+    <meta name="description" content="{{ meta.description }}">
+    <link rel="canonical" href="{{ meta.url }}">
+    <meta property="og:site_name" content="{{ brand() }}">
+    <meta property="og:title" content="{{ meta.title }}">
+    <meta property="og:description" content="{{ meta.description }}">
+    <meta property="og:type" content="{{ meta.type }}">
+    <meta property="og:url" content="{{ meta.url }}">
+    {% if meta.image %}
+    <meta property="og:image" content="{{ meta.image }}">
+    <meta name="twitter:image" content="{{ meta.image }}">
+    {% endif %}
+    <meta property="og:locale" content="{{ 'fr_FR' if locale() == 'fr' else 'en_GB' }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="theme-color" content="#111111">
+    <link rel="icon" href="{{ asset('img/brand/monogram.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ asset('img/brand/favicon-32.png') }}" type="image/png" sizes="32x32">
+    <link rel="apple-touch-icon" href="{{ asset('img/brand/apple-touch-icon.png') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+</head>
+<body data-ga="{{ tracking.ga_id }}" data-pixel="{{ tracking.meta_pixel_id }}" data-consent-months="{{ tracking.consent_months|int }}">
+<a class="skip" href="#contenu">{{ t('nav.skip') }}</a>
+
+<header class="site-header">
+    <div class="wrap site-header__inner">
+        <a class="brand" href="{{ path('/') }}" aria-label="{{ brand() }}">
+            <!-- Logo : public/assets/img/brand/logo.svg (généré par bin/build-brand-assets.php) -->
+            <img class="brand__logo" src="{{ asset('img/brand/logo.svg') }}" alt="{{ brand() }}" width="100" height="44">
+        </a>
+        <nav class="site-nav" aria-label="{{ t('nav.main') }}">
+            <a href="{{ chart_path('WA', 'prime-wa') }}" {{ Markup('aria-current="page"') if current.startswith('/classements') }}>{{ t('nav.charts') }}</a>
+            <a href="{{ path('methodologie') }}" {{ Markup('aria-current="page"') if current == '/methodologie' }}>{{ t('nav.methodology') }}</a>
+            <a href="{{ path('a-propos') }}" {{ Markup('aria-current="page"') if current == '/a-propos' }}>{{ t('nav.about') }}</a>
+            <a class="site-nav__cta" href="{{ path('declarer') }}">{{ t('nav.submit') }}</a>
+        </nav>
+    </div>
+</header>
+
+<main id="contenu">
+    {% for f in flash %}
+        <div class="wrap"><p class="flash flash--{{ f.type }}" role="status">{{ f.message }}</p></div>
+    {% endfor %}
+    {% if asideWrap %}
+        <div class="wrap page-grid">
+            <div class="page-main">{{ content|safe }}</div>
+            {{ partial('partials/aside', aside=aside) }}
+        </div>
+    {% else %}
+        {{ content|safe }}
+    {% endif %}
+</main>
+
+<footer class="site-footer">
+    <div class="wrap">
+        <img class="site-footer__logo" src="{{ asset('img/brand/logo.svg') }}" alt="{{ brand() }}" width="120" height="53" loading="lazy">
+        {% if countries %}
+        <nav class="country-picker" aria-label="{{ t('nav.countries') }}">
+            <h2 class="country-picker__title">{{ t('footer.countries') }}</h2>
+            <ul>
+                {% for c in countries %}
+                <li><a href="{{ chart_path(c.code, 'prime') }}">{{ flag(c.code, 16) }} {{ country_name(c.code) }}</a></li>
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+        <div class="site-footer__cols">
+            <p class="site-footer__about">{{ t('footer.about', {'brand': brand()}) }}</p>
+            <ul class="site-footer__links">
+                <li><a href="{{ path('methodologie') }}">{{ t('nav.methodology') }}</a></li>
+                <li><a href="{{ path('a-propos') }}">{{ t('nav.about') }}</a></li>
+                <li><a href="{{ path('contact') }}">{{ t('nav.contact') }}</a></li>
+                <li><a href="{{ path('declarer') }}">{{ t('nav.submit') }}</a></li>
+                <li><a href="{{ path('langue/' ~ other_locale, {'retour': current}) }}" hreflang="{{ other_locale }}">{{ t('footer.switch_locale') }}</a></li>
+            </ul>
+        </div>
+        <ul class="site-footer__links site-footer__links--legal">
+            <li><a href="{{ path('mentions-legales') }}">{{ t('legal.mentions') }}</a></li>
+            <li><a href="{{ path('confidentialite') }}">{{ t('legal.confidentialite') }}</a></li>
+            <li><a href="{{ path('cookies') }}">{{ t('legal.cookies') }}</a></li>
+            <li><a href="{{ path('conditions') }}">{{ t('legal.conditions') }}</a></li>
+            {% if ask_consent %}<li><a href="{{ path('cookies') }}" data-consent-open>{{ t('consent.manage') }}</a></li>{% endif %}
+        </ul>
+        <p class="site-footer__legal">&copy; {{ now_year() }} {{ brand() }}. {{ t('footer.legal') }} {{ t('footer.no_tracking') }}</p>
+    </div>
+</footer>
+{% if ask_consent %}{{ partial('partials/consent') }}{% endif %}
+<script src="{{ asset('js/consent.js') }}" defer></script>
+</body>
+</html>

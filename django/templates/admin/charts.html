@@ -1,0 +1,23 @@
+<h1>{{ t('admin.nav_charts') }}</h1>
+<p class="muted">{{ t('admin.charts_intro') }}</p>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr>
+        <th>{{ t('admin.period') }}</th><th>{{ t('admin.country') }}</th><th>{{ t('admin.status') }}</th>
+        <th>{{ t('admin.flags') }}</th><th>{{ t('admin.published_at') }}</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+        <tr>
+            <td><strong>{{ r.period_key }}</strong> <span class="muted">{{ t('period.' ~ r.period_type) }}{{ ' · ' ~ t('period.provisional') if r.provisional }}</span><br>
+                <small class="muted">{{ fmt_date(r.period_start, false) }} → {{ fmt_date(r.period_end) }}</small></td>
+            <td>{{ r.code }}</td>
+            <td><span class="status status--{{ r.status }}">{{ t('admin.status_' ~ r.status) }}</span>{% if r.corrected_at %} <span class="muted">{{ t('admin.corrected') }}</span>{% endif %}</td>
+            <td>{% if r.pending %}<span class="status status--pending">{{ r.pending|int }} {{ t('admin.to_review') }}</span>{% else %}—{% endif %}</td>
+            <td>{{ fmt_date(r.published_at[:10]) if r.published_at else '—' }}</td>
+            <td>{% if r.prime_id %}<a href="{{ path('admin/classements/' ~ r.prime_id) }}">{{ t('admin.open') }}</a>{% endif %}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>

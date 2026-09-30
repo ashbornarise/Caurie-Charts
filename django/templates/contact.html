@@ -1,0 +1,15 @@
+<article class="prose">
+    <h1>{{ t('contact.title') }}</h1>
+    <p class="lead">{{ t('contact.contest_intro') if type == 'contestation' else t('contact.intro') }}</p>
+    <form class="form" method="post" action="{{ path('contact') }}" novalidate>
+        {{ csrf_field() }}
+        <div class="hp" aria-hidden="true"><label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        {{ partial('partials/field', name='type', label=t('contact.type'), type='select', options={'contact': t('contact.type_contact'), 'contestation': t('contact.type_contest')}, old=old, errors=errors) }}
+        {{ partial('partials/field', name='name', label=t('form.name'), attrs='autocomplete="name" maxlength="150"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='email', label=t('form.email'), type='email', attrs='autocomplete="email" maxlength="190"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='subject', label=t('contact.subject'), attrs='maxlength="200"', hint=(t('contact.contest_hint') if type == 'contestation' else none), old=old, errors=errors) }}
+        {{ partial('partials/field', name='message', label=t('contact.message'), type='textarea', attrs='maxlength="5000"', old=old, errors=errors) }}
+        <p class="fineprint">{{ t('contact.privacy') }} <a href="{{ path('confidentialite') }}">{{ t('legal.confidentialite') }}</a>.</p>
+        <button class="button" type="submit">{{ t('form.send') }}</button>
+    </form>
+</article>

@@ -1,0 +1,47 @@
+<p><a href="{{ path('admin/catalogue') }}">← {{ t('admin.nav_catalog') }}</a></p>
+<h1>{{ track.title if track.id else t('admin.new_track') }}</h1>
+<form method="post" action="{{ path('admin/titres/' ~ (track.id or 'nouveau')) }}" class="admin-form">
+    {{ csrf_field() }}
+    <div class="field"><label for="title">{{ t('admin.track') }}</label><input id="title" name="title" value="{{ track.title }}" maxlength="200" required></div>
+    <div class="field"><label for="artist_id">{{ t('admin.main_artist') }}</label>
+        <select id="artist_id" name="artist_id" required>
+            <option value="">{{ t('form.choose') }}</option>
+            {% for a in artists %}
+                <option value="{{ a.id|int }}" {{ 'selected' if a.id|int == track.artist_id|int }}>{{ a.name ~ ' (' ~ a.code ~ ')' }}</option>
+            {% endfor %}
+        </select></div>
+    <div class="field-row">
+        <div class="field"><label for="featuring">{{ t('admin.featuring') }} <span class="optional">{{ t('form.optional') }}</span></label><input id="featuring" name="featuring" value="{{ track.featuring or '' }}" maxlength="255"></div>
+        <div class="field"><label for="release_date">{{ t('track.release') }}</label><input id="release_date" type="date" name="release_date" value="{{ track.release_date or '' }}"></div>
+    </div>
+    <div class="field"><label for="cover_url">{{ t('admin.cover_url') }} <span class="optional">{{ t('form.optional') }}</span></label><input id="cover_url" type="url" name="cover_url" value="{{ track.cover_url or '' }}" placeholder="https://"></div>
+    <div class="field"><label class="check"><input type="checkbox" name="is_active" value="1" {{ 'checked' if track.is_active }}> {{ t('admin.active') }}</label></div>
+
+    <fieldset>
+        <legend>{{ t('admin.platform_ids') }}</legend>
+        <p class="field__hint">{{ t('admin.platform_ids_hint') }}</p>
+        {% if platformIds %}
+        <table class="data-table">
+            <thead><tr><th>{{ t('admin.platform') }}</th><th>{{ t('admin.external_id') }}</th><th>{{ t('admin.kind') }}</th><th>{{ t('admin.delete') }}</th></tr></thead>
+            <tbody>
+            {% for p in platformIds %}
+                <tr><td>{{ platform_name(p.platform) }}</td><td>{% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.external_id }}</a>{% else %}{{ p.external_id }}{% endif %}</td><td>{{ p.kind }}</td>
+                    <td><input type="checkbox" name="delete_pid[]" value="{{ p.id|int }}" aria-label="{{ t('admin.delete') }}"></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        <div class="field-row">
+            <div class="field"><label for="new_platform">{{ t('admin.platform') }}</label>
+                <select id="new_platform" name="new_platform"><option value="">—</option>{% for p in platforms %}<option value="{{ p }}">{{ platform_name(p) }}</option>{% endfor %}</select></div>
+            <div class="field"><label for="new_external_id">{{ t('admin.external_id') }}</label><input id="new_external_id" name="new_external_id" maxlength="191"></div>
+            <div class="field"><label for="new_kind">{{ t('admin.kind') }}</label>
+                <select id="new_kind" name="new_kind">{% for k in ['clip', 'audio', 'art_track', 'lyrics', 'live', 'remix', 'main'] %}<option value="{{ k }}">{{ k }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="field-row">
+            <div class="field"><label for="new_url">URL</label><input id="new_url" type="url" name="new_url" placeholder="https://"></div>
+            <div class="field"><label for="new_published_at">{{ t('admin.published_on_platform') }}</label><input id="new_published_at" type="date" name="new_published_at"></div>
+        </div>
+    </fieldset>
+    <button class="button" type="submit">{{ t('admin.save') }}</button>
+</form>

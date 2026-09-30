@@ -1,0 +1,128 @@
+{%- macro country_options(selected) -%}
+<option value="">{{ t('form.choose') }}</option>
+{%- for c in countries %}<option value="{{ c.id|int }}"{{ ' selected' if c.id|int == (selected or 0)|int }}>{{ c.code ~ ' · ' ~ country_name(c.code) }}</option>{% endfor -%}
+{%- endmacro -%}
+<h1>{{ t('admin.nav_import') }}</h1>
+<p class="muted">{{ t('admin.import_intro') }}</p>
+
+{% if user.role == 'admin' %}
+<form method="post" action="{{ path('admin/import/lancer') }}" class="toolbar box box--accent">
+    {{ csrf_field() }}
+    <button class="button" type="submit">{{ t('admin.import_run') }}</button>
+    <label class="checks">{{ t('admin.import_youtube') }} <input type="number" name="youtube" value="0" min="0" max="90" class="num"></label>
+    <span class="fineprint">{{ t('admin.import_youtube_hint') }}</span>
+</form>
+{% endif %}
+
+<h2>{{ t('admin.import_coverage') }}</h2>
+{% if not coverage %}<p class="muted">{{ t('admin.none') }}</p>{% else %}
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.platform') }}</th><th>{{ t('admin.country') }}</th><th>{{ t('admin.import_last') }}</th><th class="num">{{ t('admin.import_days') }}</th><th class="num">{{ t('admin.import_rows') }}</th></tr></thead>
+    <tbody>
+    {% for c in coverage %}
+        <tr><td>{{ platform_name(c.source) }}</td><td>{{ c.code }}</td><td>{{ fmt_date(c.last_day) }}</td><td class="num">{{ c.days|int }}</td><td class="num">{{ c.rows_count|int }}</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<h2 id="artistes">{{ t('admin.import_pending', {'n': pending|length}) }}</h2>
+<p class="muted">{{ t('admin.import_pending_intro') }}</p>
+{% if pending %}
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.artist') }}</th><th>{{ t('admin.import_seen_in') }}</th><th class="num">{{ t('admin.import_best') }}</th><th>{{ t('admin.decision') }}</th></tr></thead>
+    <tbody>
+    {% for a in pending %}
+        <tr>
+            <td>
+                <div class="candidate">
+                    {% if a.image_url %}<img class="candidate__photo" src="{{ a.image_url }}" alt="" width="52" height="52" loading="lazy">{% endif %}
+                    <div>
+                        <strong><a href="{{ path('artiste/' ~ a.slug) }}" target="_blank" rel="noopener">{{ a.name }}</a></strong><br>
+                        <small class="muted">{{ a.a_track or '' }}</small>
+                        <p class="candidate__fans">
+                            {% if a.fans %}<span><strong>{{ fmt_number(a.fans|int) }}</strong> fans Deezer</span>{% endif %}
+                            {% if a.youtube_subscribers %}<span><strong>{{ fmt_number(a.youtube_subscribers|int) }}</strong> abonnés YouTube</span>{% endif %}
+                        </p>
+                        {% if a.discovered_via %}<small class="muted">{{ a.discovered_via }}</small>{% endif %}
+                    </div>
+                </div>
+                {% if a.base_country %}
+                <p class="suggestion">
+                    <strong>{{ t('admin.import_suggestion', {'country': a.base_country, 'pct': php_round((a.origin_confidence or 0) * 100)|int}) }}</strong>
+                    <small>{{ (a.origin_note or '')[:260] }}</small>
+                </p>
+                {% endif %}
+            </td>
+            <td><small>{{ a.seen_in or '' }}</small><br><small class="muted">{{ t('admin.import_observations', {'n': a.obs}) }}</small></td>
+            <td class="num">{{ '#' ~ a.best_position|int if a.best_position else '—' }}</td>
+            <td>
+                <form method="post" action="{{ path('admin/import/artiste/' ~ a.id) }}" class="toolbar">
+                    {{ csrf_field() }}
+                    <label class="visually-hidden" for="c-{{ a.id|int }}">{{ t('admin.submission_country') }}</label>
+                    <select id="c-{{ a.id|int }}" name="country_id">{{ country_options(a.suggested_country_id or a.guessed_country_id) }}</select>
+                    <button class="button button--small" name="action" value="confirm" type="submit">{{ t('admin.import_confirm_country') }}</button>
+                    <button class="button button--small button--ghost" name="action" value="out" type="submit">{{ t('admin.import_out_of_scope') }}</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+<h2 id="clips">{{ t('admin.import_auto_clips', {'n': autoClips|length}) }}</h2>
+{% if not autoClips %}<p class="muted">{{ t('admin.import_auto_clips_empty') }}</p>{% else %}
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.track') }}</th><th>{{ t('track.clip') }}</th><th></th></tr></thead>
+    <tbody>
+    {% for c in autoClips %}
+        <tr>
+            <td>{{ c.title }} <span class="muted">· {{ c.artist }}</span></td>
+            <td><a href="{{ c.url or '' }}" target="_blank" rel="noopener">{{ c.external_id }}</a></td>
+            <td><form method="post" action="{{ path('admin/import/clip/' ~ c.id) }}" class="toolbar">{{ csrf_field() }}
+                <button class="button button--small" name="action" value="confirm" type="submit">{{ t('admin.validate') }}</button>
+                <button class="button button--small button--danger" name="action" value="remove" type="submit">{{ t('admin.delete') }}</button></form></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<h2 id="sans-clip">{{ t('admin.import_no_clip', {'n': noClip|length}) }}</h2>
+<p class="muted">{{ t('admin.import_no_clip_intro') }}</p>
+{% if noClip %}
+<div class="table-scroll">
+<table class="data-table">
+    <tbody>
+    {% for tr in noClip %}
+        <tr>
+            <td>{{ tr.title }} <span class="muted">· {{ tr.artist }} ({{ tr.code }})</span></td>
+            <td><form method="post" action="{{ path('admin/import/clip-manuel/' ~ tr.id) }}" class="toolbar">{{ csrf_field() }}
+                <label class="visually-hidden" for="v-{{ tr.id|int }}">{{ t('admin.import_video') }}</label>
+                <input id="v-{{ tr.id|int }}" name="video" placeholder="https://www.youtube.com/watch?v=…" required>
+                <button class="button button--small" type="submit">{{ t('admin.save') }}</button></form></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+<h2 id="csv">{{ t('admin.import_csv') }}</h2>
+<p class="muted">{{ t('admin.import_csv_intro') }}</p>
+<form method="post" action="{{ path('admin/import/csv') }}" class="admin-form box">
+    {{ csrf_field() }}
+    <div class="field-row">
+        <div class="field"><label for="csv-source">{{ t('admin.platform') }}</label>
+            <select id="csv-source" name="source">{% for s in sources %}<option value="{{ s }}">{{ platform_name(s) }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="csv-country">{{ t('admin.country') }}</label><select id="csv-country" name="country_id" required>{{ country_options(none) }}</select></div>
+        <div class="field"><label for="csv-day">{{ t('admin.import_chart_date') }}</label><input id="csv-day" type="date" name="observed_on" value="{{ today }}" max="{{ today }}" required></div>
+    </div>
+    <div class="field"><label for="csv-rows">{{ t('admin.import_rows_label') }}</label>
+        <textarea id="csv-rows" name="rows" rows="8" required placeholder="1;GTA;Seyi Vibez&#10;2;Baba;Hotkeed feat. Zlatan&#10;3;Migbo;Sethlo"></textarea>
+        <p class="field__hint">{{ t('admin.import_rows_hint') }}</p></div>
+    <button class="button" type="submit">{{ t('admin.import_csv_button') }}</button>
+</form>

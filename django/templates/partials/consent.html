@@ -1,0 +1,34 @@
+{#- Bandeau de consentement : affiché seulement si Google Analytics ou Meta Pixel est configuré. -#}
+{%- set tr = config('app.tracking') -%}
+<div id="consent" class="consent" role="dialog" aria-labelledby="consent-title" aria-describedby="consent-text" hidden>
+    <div class="consent__inner">
+        <h2 id="consent-title" class="consent__title">{{ t('consent.title') }}</h2>
+        <p id="consent-text">{{ t('consent.text', {'brand': brand()}) }} <a href="{{ path('cookies') }}">{{ t('consent.more') }}</a></p>
+
+        <div class="consent__panel" data-consent-panel hidden>
+            <label class="consent__option consent__option--locked">
+                <input type="checkbox" checked disabled>
+                <span><strong>{{ t('consent.cat_necessary') }}</strong> {{ t('consent.cat_necessary_text') }}</span>
+            </label>
+            {% if tr.ga_id %}
+            <label class="consent__option"><input type="checkbox" name="analytics">
+                <span><strong>{{ t('consent.cat_analytics') }}</strong> {{ t('consent.cat_analytics_text') }}</span></label>
+            {% endif %}
+            {% if tr.meta_pixel_id %}
+            <label class="consent__option"><input type="checkbox" name="ads">
+                <span><strong>{{ t('consent.cat_ads') }}</strong> {{ t('consent.cat_ads_text') }}</span></label>
+            {% endif %}
+            {% if tr.youtube_embeds %}
+            <label class="consent__option"><input type="checkbox" name="media">
+                <span><strong>{{ t('consent.cat_media') }}</strong> {{ t('consent.cat_media_text') }}</span></label>
+            {% endif %}
+            <button class="button button--small" type="button" data-consent-save>{{ t('consent.save') }}</button>
+        </div>
+
+        <div class="consent__actions">
+            <button class="button button--ghost" type="button" data-consent-refuse>{{ t('consent.refuse') }}</button>
+            <button class="button button--ghost" type="button" data-consent-custom aria-expanded="false">{{ t('consent.customize') }}</button>
+            <button class="button button--ghost" type="button" data-consent-accept>{{ t('consent.accept') }}</button>
+        </div>
+    </div>
+</div>

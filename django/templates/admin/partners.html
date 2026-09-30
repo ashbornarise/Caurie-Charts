@@ -1,0 +1,26 @@
+<h1>{{ t('admin.nav_partners') }}</h1>
+<p class="muted">{{ t('admin.partners_intro') }}</p>
+<p>
+    <a class="button button--small" href="{{ path('admin/partenaires/nouveau') }}">{{ t('admin.partners_new') }}</a>
+    <a class="button button--small button--ghost" href="{{ path('partenaires') }}" target="_blank" rel="noopener">{{ t('admin.view_site') }}</a>
+</p>
+{% if not rows %}<p class="empty">{{ t('admin.partners_none') }}</p>{% endif %}
+{% if rows %}
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.partner_logo_short') }}</th><th>{{ t('admin.partner_name') }}</th><th>{{ t('admin.partner_tier') }}</th><th class="num">{{ t('admin.partner_order') }}</th><th>{{ t('admin.status') }}</th><th></th></tr></thead>
+    <tbody>
+    {% for p in rows %}
+        <tr>
+            <td>{% if p.logo_path %}<img src="/media/partners/{{ rawurlencode(p.logo_path.split('/')[-1]) }}" alt="" height="36" class="partner-thumb">{% endif %}</td>
+            <td><strong>{{ p.name }}</strong>{% if p.url %}<br><small class="muted">{{ p.url }}</small>{% endif %}</td>
+            <td>{{ t('partners.tier_' ~ p.tier) }}</td>
+            <td class="num">{{ p.sort_order|int }}</td>
+            <td><span class="status status--{{ 'published' if p.is_active else 'draft' }}">{{ t('admin.partner_shown') if p.is_active else t('admin.partner_hidden') }}</span></td>
+            <td><a href="{{ path('admin/partenaires/' ~ p.id) }}">{{ t('admin.edit') }}</a></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}

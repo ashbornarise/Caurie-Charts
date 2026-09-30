@@ -1,0 +1,12 @@
+# Site Django de Cauri Charts (Vercel et GitHub Actions)
+Django==6.1.1
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+psycopg[binary]==3.3.6
+pillow==12.3.0
+requests==2.34.2
+whitenoise==6.12.0
+argon2-cffi==25.1.0
+bcrypt==5.0.0
+defusedxml==0.7.1
+Unidecode==1.4.0

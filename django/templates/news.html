@@ -1,0 +1,17 @@
+<section class="prose news-page">
+    <p class="eyebrow">{{ brand() }}</p>
+    <h1>{{ t('news.title') }}</h1>
+    <p class="news-page__note">{{ t('news.feed_note') }}</p>
+    {% if not items %}<p class="empty">{{ t('news.empty') }}</p>{% endif %}
+    <ul class="news-grid">
+        {% for n in items %}
+        {{ partial('partials/news-card', n=n, i=loop.index0) }}
+        {% endfor %}
+    </ul>
+    {% if pages > 1 %}
+    <nav class="toolbar">
+        {% if page > 1 %}<a class="button button--ghost button--small" href="{{ path('actualites', {'page': page - 1}) }}">← {{ t('news.newer') }}</a>{% endif %}
+        {% if page < pages %}<a class="button button--ghost button--small" href="{{ path('actualites', {'page': page + 1}) }}">{{ t('news.older') }} →</a>{% endif %}
+    </nav>
+    {% endif %}
+</section>

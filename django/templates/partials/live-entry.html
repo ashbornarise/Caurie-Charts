@@ -1,0 +1,47 @@
+{#- Ligne d'un classement des plateformes (vue en direct ou vue d'une plateforme). -#}
+{%- set SOURCES = live_sources() -%}
+{%- set is_artist = e.is_artist -%}
+{%- set cover = (e.artist_image or e.cover_url) if is_artist else (e.cover_url or e.artist_image) -%}
+<li class="entry entry--live{{ ' entry--top' if e.rank == 1 }}{{ ' entry--compact' if compact }}">
+    {% if e.rank == 1 %}
+    <span class="particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    {% endif %}
+    <span class="entry__rank">{{ e.rank|int }}</span>
+    <span class="cover{{ ' cover--round' if is_artist }}" aria-hidden="true">
+        {% if cover %}
+            <img src="{{ cover }}" alt="" width="56" height="56" loading="lazy">
+        {% else %}
+            <span class="cover__initials">{{ initials(e.title) }}</span>
+        {% endif %}
+    </span>
+    <span class="entry__main">
+        {% if is_artist %}
+        <a class="entry__title" href="{{ path('artiste/' ~ e.artist_slug) }}">{% if e.artist_country %}{{ flag(e.artist_country, 12) }} {% endif %}{{ e.artist_name }}</a>
+        <span class="entry__artist">{{ t('chart.icon_line', {'n': e.titles, 'title': e.top_title}) }}</span>
+        {% else %}
+        <a class="entry__title" href="{{ path('titre/' ~ e.track_slug) }}">{{ e.title }}</a>
+        <span class="entry__artist">
+            {% if e.artist_country %}<span class="entry__country" title="{{ country_name(e.artist_country) }}">{{ flag(e.artist_country, 12) }}</span>{% endif %}
+            <a href="{{ path('artiste/' ~ e.artist_slug) }}">{{ e.artist_name }}</a>{% if e.featuring %} <span class="feat">feat. {{ e.featuring }}</span>{% endif %}
+        </span>
+        {% endif %}
+        {% if not compact %}
+        <ul class="sources" aria-label="{{ t('chart.sources_label') }}">
+            {% for s in e.seen[:5] %}
+            <li class="source source--{{ 'youtube' if s.source in ('youtube_trending', 'youtube_discovery') else s.source }}" title="{{ SOURCES[s.source] ~ ' ' ~ country_name(s.country) ~ ' : n° ' ~ s.position }}">
+                <span class="source__name">{{ SOURCES[s.source] }}{{ ' ' ~ s.country if showSourceCountry }}</span>
+                <span class="source__value">#{{ s.position|int }}</span>
+            </li>
+            {% endfor %}
+            {% set sp = e.spotify_declared %}
+            <li>
+                <a class="source source--spotify source--link" href="{{ spotify_url(e.artist_spotify, e.artist_name, none if is_artist else e.title) }}" target="_blank" rel="noopener nofollow"
+                   title="{{ t('chart.spotify_declared_long', {'n': fmt_number(sp.streams|int), 'start': fmt_date(sp.start, false), 'end': fmt_date(sp.end, false)}) if sp else t('chart.spotify_listen') }}">
+                    <span class="source__name">Spotify</span>
+                    <span class="source__value">{{ t('chart.spotify_declared', {'n': fmt_number(sp.streams|int)}) if sp else '↗' }}</span>
+                </a>
+            </li>
+        </ul>
+        {% endif %}
+    </span>
+</li>

@@ -1,0 +1,32 @@
+<h1>{{ t('admin.nav_snapshots') }}</h1>
+<p class="muted">{{ t('admin.snapshots_intro') }}</p>
+
+<form method="post" action="{{ path('admin/releves') }}" class="admin-form box box--accent">
+    {{ csrf_field() }}
+    <div class="field"><label for="tpi">{{ t('admin.content') }}</label>
+        <select id="tpi" name="track_platform_id" required>
+            <option value="">{{ t('form.choose') }}</option>
+            {% for p in platformIds %}
+                <option value="{{ p.id|int }}">{{ p.code ~ ' · ' ~ p.artist_name ~ ' · ' ~ p.title ~ ' · ' ~ platform_name(p.platform) ~ (' (' ~ t('admin.last', {'v': p.last}) ~ ')' if p.last else '') }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="field-row">
+        <div class="field"><label for="captured_on">{{ t('admin.snapshot_day') }}</label><input id="captured_on" type="date" name="captured_on" value="{{ today }}" max="{{ today }}" required></div>
+        <div class="field"><label for="plays">{{ t('admin.snapshot_plays') }}</label><input id="plays" type="number" name="plays" min="0" step="1" required></div>
+    </div>
+    <p class="field__hint">{{ t('admin.snapshot_hint') }}</p>
+    <button class="button" type="submit">{{ t('admin.save') }}</button>
+</form>
+
+<h2>{{ t('admin.recent_manual') }}</h2>
+{% if not recent %}<p class="muted">{{ t('admin.none') }}</p>{% else %}
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.snapshot_day') }}</th><th>{{ t('admin.track') }}</th><th class="num">{{ t('admin.snapshot_plays') }}</th><th>{{ t('admin.author') }}</th></tr></thead>
+    <tbody>
+    {% for r in recent %}
+        <tr><td>{{ r.captured_on }}</td><td>{{ r.title }} · {{ platform_name(r.platform) }}</td><td class="num">{{ fmt_number(r.plays|int) }}</td><td>{{ r.user_name or '' }}</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}

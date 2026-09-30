@@ -1,0 +1,23 @@
+<h1>{{ t('admin.nav_audit') }}</h1>
+<p class="muted">{{ t('admin.audit_intro') }}</p>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.date') }}</th><th>{{ t('admin.author') }}</th><th>{{ t('admin.action') }}</th><th>{{ t('admin.entity') }}</th><th>{{ t('admin.reason') }}</th><th>{{ t('admin.data') }}</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+        <tr>
+            <td><small>{{ r.created_at }}</small></td>
+            <td>{{ r.user_name or t('admin.system') }}</td>
+            <td><code>{{ r.action }}</code></td>
+            <td><small>{{ ((r.entity_type or '') ~ ' ' ~ (r.entity_id or ''))|trim }}</small></td>
+            <td>{{ r.reason or '' }}</td>
+            <td>{% if r.data %}<pre class="json">{{ r.data }}</pre>{% endif %}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<div class="toolbar">
+    {% if page > 1 %}<a class="button button--small button--ghost" href="{{ path('admin/journal', {'page': page - 1}) }}">←</a>{% endif %}
+    {% if rows|length == 100 %}<a class="button button--small button--ghost" href="{{ path('admin/journal', {'page': page + 1}) }}">→</a>{% endif %}
+</div>

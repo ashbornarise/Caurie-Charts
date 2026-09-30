@@ -1,0 +1,19 @@
+<h1>{{ t('admin.nav_news') }}</h1>
+<p class="muted">{{ t('admin.news_intro') }}</p>
+<p><a class="button button--small" href="{{ path('admin/actualites/nouveau') }}">{{ t('admin.news_new') }}</a></p>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>{{ t('admin.date') }}</th><th>{{ t('admin.news_title') }}</th><th>{{ t('admin.country') }}</th><th>{{ t('admin.status') }}</th><th></th></tr></thead>
+    <tbody>
+    {% for n in rows %}
+        <tr>
+            <td><small>{{ n.published_at or '' }}</small></td>
+            <td>{{ n.title }} <span class="tag">{{ t('news.cat_' ~ n.category) }}</span>{% if n.source_url %} <small class="muted">{{ t('news.source') }} : {{ n.source_name or '' }}</small>{% endif %}</td>
+            <td>{{ n.code or t('admin.all_countries') }}</td>
+            <td><span class="status status--{{ 'published' if n.status == 'published' else 'draft' }}">{{ t('admin.status_' ~ n.status) }}</span></td>
+            <td><a href="{{ path('admin/actualites/' ~ n.id) }}">{{ t('admin.edit') }}</a>{% if n.status == 'published' %} · <a href="{{ path('actualites/' ~ n.slug) }}" target="_blank" rel="noopener">{{ t('admin.view_site') }}</a>{% endif %}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>

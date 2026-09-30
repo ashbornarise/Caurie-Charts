@@ -1,0 +1,20 @@
+<h2>Éditeur du site</h2>
+<p>Le site {{ url_host(config('app.url')) }} est édité par {{ legal('publisher') }}, {{ legal('status') }}, immatriculée sous le numéro {{ legal('registration') }}, dont le siège est situé {{ legal('address') }}.</p>
+<p>Directeur ou directrice de la publication : {{ legal('director') }}.</p>
+<p>Contact : <a href="{{ path('contact') }}">formulaire de contact</a>{{ ' ou ' ~ config('app.contact_email') if config('app.contact_email') }}.</p>
+
+<h2>Hébergement</h2>
+<p>Le site est hébergé par {{ legal('host_name') }}, {{ legal('host_address') }} ({{ legal('host_contact') }}). Les serveurs sont situés en France.</p>
+
+<h2>Lien avec le label {{ config('app.group_label.name') }}</h2>
+<p>{{ brand() }} est un média distinct du label {{ config('app.group_label.name') }}, au sein du même groupe. Les artistes du label portent un badge visible et suivent exactement les mêmes règles de calcul. Le détail figure sur la page <a href="{{ path('methodologie') }}#independance">Méthodologie</a>.</p>
+
+<h2>Propriété intellectuelle</h2>
+<p>La marque {{ brand() }}, le logo, la mise en page du site, les textes et la méthodologie appartiennent à l'éditeur. Toute reproduction sans autorisation est interdite, sauf le partage des images de classement prévu par les <a href="{{ path('conditions') }}">conditions d'utilisation</a>.</p>
+<p>Les noms d'artistes, titres, pochettes et visuels restent la propriété de leurs ayants droit. Ils sont cités à titre d'information, pour identifier les œuvres classées. Un ayant droit qui s'oppose à l'affichage d'un visuel peut écrire via le formulaire de contact : le visuel est retiré sous sept jours.</p>
+
+<h2>Sources des données</h2>
+<p>Les classements sont calculés à partir des compteurs publics des plateformes et de déclarations vérifiées. Les statistiques YouTube sont obtenues via les services d'API YouTube ; {{ brand() }} n'est ni affilié à YouTube, Google, Spotify, Audiomack ou Boomplay, ni soutenu par eux. Les noms de ces plateformes sont des marques de leurs propriétaires respectifs.</p>
+
+<h2>Signaler un contenu</h2>
+<p>Pour signaler une erreur, un contenu illicite ou contester une position : <a href="{{ path('contact', {'type': 'contestation'}) }}">formulaire de contestation</a>. Réponse sous sept jours.</p>

@@ -1,0 +1,18 @@
+<h1>{{ t('admin.nav_messages') }}</h1>
+<p class="muted">{{ t('admin.messages_intro') }}</p>
+{% if not rows %}<p class="muted">{{ t('admin.none') }}</p>{% endif %}
+{% for m in rows %}
+    <article class="box{{ ' box--accent' if m.type == 'contestation' }}">
+        <p><strong>{{ m.subject }}</strong> · <span class="tag">{{ t('contact.type_' ~ ('contest' if m.type == 'contestation' else 'contact')) }}</span>
+            <span class="status status--{{ 'pending' if m.status == 'new' else 'ok' }}">{{ t('admin.msg_' ~ m.status) }}</span></p>
+        <p class="muted">{{ m.name }} · <a href="mailto:{{ m.email }}">{{ m.email }}</a> · {{ m.created_at }}
+            {% if m.type == 'contestation' and m.status == 'new' %} · {{ t('admin.answer_before', {'date': fmt_date(add_days(m.created_at, 7))}) }}{% endif %}</p>
+        <p>{{ nl2br(m.message) }}</p>
+        <form method="post" action="{{ path('admin/messages/' ~ m.id) }}" class="toolbar">
+            {{ csrf_field() }}
+            {% for s in ['answered', 'closed', 'new'] if s != m.status %}
+                <button class="button button--small button--ghost" name="status" value="{{ s }}" type="submit">{{ t('admin.mark_' ~ s) }}</button>
+            {% endfor %}
+        </form>
+    </article>
+{% endfor %}

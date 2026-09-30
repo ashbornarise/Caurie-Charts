@@ -1,0 +1,120 @@
+{#- Fiche artiste : chiffres réels en avant, puis ses titres, puis son historique au classement officiel. -#}
+{%- set SOURCES = live_sources() -%}
+{%- set points = [] -%}
+{%- for p in iconHistory %}{% do points.append({'label': fmt_date(p.period_end, false), 'position': p.position|int}) %}{% endfor -%}
+{%- set best = live.positions[0] if live.positions else none -%}
+{%- set confirmed = artist.status == 'active' -%}
+{%- set country_code = artist.country_code if confirmed else (artist.base_country or none) -%}
+<article class="profile profile--rich">
+    <header class="artist-hero">
+        <span class="artist-hero__photo" aria-hidden="true">
+            {% if artist.image_url %}
+                <img src="{{ artist.image_url }}" alt="" width="220" height="220">
+            {% else %}
+                <span class="cover__initials">{{ initials(artist.name) }}</span>
+            {% endif %}
+        </span>
+        <div class="artist-hero__text">
+            <p class="eyebrow">
+                {% if country_code and country_code|length == 2 and country_code in ('TG', 'BJ', 'GH', 'CI', 'SN') %}{{ flag(country_code, 14) }} {{ t('artist.eyebrow', {'country': country_name(country_code)}) }}
+                {% else %}{{ t('artist.eyebrow_unknown') }}{% endif %}
+            </p>
+            <h1 class="profile__title">{{ artist.name }}</h1>
+            {% if iconRank %}
+                <p class="artist-hero__rank">{{ t('artist.icon_rank', {'n': iconRank}) }}</p>
+            {% endif %}
+            <p class="artist-hero__links">
+                <a class="button button--small platform-links__spotify" href="{{ spotify_url(artist.spotify_id, artist.name) }}" target="_blank" rel="noopener nofollow">Spotify</a>
+                {% if artist.deezer_id %}<a class="button button--small button--ghost" href="https://www.deezer.com/artist/{{ artist.deezer_id|int }}" target="_blank" rel="noopener nofollow">Deezer</a>{% endif %}
+                {% if artist.youtube_channel_id %}<a class="button button--small button--ghost" href="https://www.youtube.com/channel/{{ rawurlencode(artist.youtube_channel_id) }}" target="_blank" rel="noopener nofollow">YouTube</a>{% endif %}
+            </p>
+            {% if not confirmed %}<p class="fineprint">{{ t('artist.pending_note') }}</p>{% endif %}
+            {% if is_group_label(artist.label_owner) %}
+                <a class="badge" href="{{ path('methodologie') }}#independance" title="{{ t('badge.title') }}">{{ config('app.group_label.name') }}</a>
+            {% endif %}
+            {% if artist.bio %}<p>{{ nl2br(artist.bio) }}</p>{% endif %}
+        </div>
+    </header>
+
+    <dl class="stat-tiles">
+        <div class="stat-tile stat-tile--accent">
+            <dt>{{ t('artist.stat_best') }}</dt>
+            <dd>{{ '#' ~ best.best|int if best else '—' }}</dd>
+            {% if best %}<small>{{ SOURCES[best.source] ~ ' · ' ~ country_name(best.country) }}</small>{% endif %}
+        </div>
+        <div class="stat-tile">
+            <dt>{{ t('artist.stat_charts') }}</dt>
+            <dd>{{ live.charts_count|int }}</dd>
+            <small>{{ t('artist.stat_charts_note') }}</small>
+        </div>
+        <div class="stat-tile">
+            <dt>{{ t('artist.stat_views') }}</dt>
+            <dd>{{ fmt_number(live.views_total) if live.views_total is not none else '—' }}</dd>
+            <small>{{ t('artist.stat_views_week', {'n': fmt_number(live.views_week)}) if live.views_week else t('artist.stat_views_note') }}</small>
+        </div>
+        <div class="stat-tile">
+            <dt>{{ t('artist.stat_fans') }}</dt>
+            <dd>{{ fmt_number(artist.fans|int) if artist.fans else '—' }}</dd>
+            <small>Deezer</small>
+        </div>
+    </dl>
+
+    {% if live.positions %}
+    <section class="panel">
+        <h2 class="section-title">{{ t('artist.this_week') }}</h2>
+        <div class="table-scroll">
+        <table class="data-table data-table--positions">
+            <thead><tr><th>{{ t('artist.col_position') }}</th><th>{{ t('artist.col_chart') }}</th><th>{{ t('artist.col_title') }}</th></tr></thead>
+            <tbody>
+            {% for p in live.positions[:12] %}
+                <tr>
+                    <td class="num"><strong>#{{ p.best|int }}</strong></td>
+                    <td><span class="source source--{{ 'youtube' if p.source.startswith('youtube') else p.source }}"><span class="source__name">{{ SOURCES[p.source] }}</span></span> {{ flag(p.country, 12) }} {{ country_name(p.country) }}</td>
+                    <td><a href="{{ path('titre/' ~ p.track_slug) }}">{{ p.title }}</a></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="panel">
+        <h2 class="section-title">{{ t('artist.tracks') }}</h2>
+        <ul class="artist-tracks">
+            {% for tr in live.tracks %}
+            <li>
+                <span class="cover" aria-hidden="true">
+                    {% if tr.cover_url %}<img src="{{ tr.cover_url }}" alt="" width="48" height="48" loading="lazy">
+                    {% else %}<span class="cover__initials">{{ initials(tr.title) }}</span>{% endif %}
+                </span>
+                <span class="artist-tracks__main">
+                    <a href="{{ path('titre/' ~ tr.slug) }}" class="track-table__title">{{ tr.title }}{% if tr.featuring %} <span class="feat">feat. {{ tr.featuring }}</span>{% endif %}</a>
+                    <small class="muted">
+                        {% if tr.best_ever %}{{ t('artist.track_best', {'n': tr.best_ever|int, 'chart': SOURCES.get(tr.best_source, tr.best_source), 'country': tr.best_country}) }}{% endif %}
+                        {% if tr.release_date %} · {{ t('artist.track_released', {'date': fmt_date(tr.release_date)}) }}{% endif %}
+                    </small>
+                </span>
+                <span class="artist-tracks__views">{% if tr.views is not none %}<strong>{{ fmt_number(tr.views) }}</strong> {{ t('chart.views') }}{% endif %}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% if live.measured_on %}<p class="fineprint">{{ t('artist.views_source', {'date': fmt_date(live.measured_on)}) }}</p>{% endif %}
+    </section>
+
+    <section class="panel">
+        <h2 class="section-title">{{ t('artist.official') }}</h2>
+        <dl class="stats">
+            <div><dt>{{ t('artist.best') }}</dt><dd>{{ '#' ~ bestPeak if bestPeak else '—' }}</dd></div>
+            <div><dt>{{ t('artist.weeks') }}</dt><dd>{{ totalWeeks|int }}</dd></div>
+            <div>
+                <dt>{{ t('artist.top_country') }}</dt>
+                <dd>{{ country_name(artist.top_country_code) if artist.top_country_code else '—' }}</dd>
+            </div>
+        </dl>
+        <p class="fineprint">{{ t('artist.country_rule', {'country': country_name(artist.country_code)}) if bestPeak else t('artist.official_soon') }}</p>
+        {% if points|length > 1 %}
+            {{ rank_chart_svg(points, 10, t('artist.icon_curve', {'chart': chart_name('icon')})) }}
+        {% endif %}
+    </section>
+</article>

@@ -1,0 +1,24 @@
+{#- Carte d'actualité (six teintes en rotation selon i). Les actualités importées renvoient vers l'article du média. -#}
+{%- set external = (n.origin or 'manual') == 'feed' and n.source_url -%}
+{%- set href = n.source_url if external else path('actualites/' ~ n.slug) -%}
+<li class="news-card news-card--tone-{{ i % 6 }}">
+    <a class="news-card__media" href="{{ href }}"{% if external %} target="_blank" rel="noopener noreferrer"{% endif %} tabindex="-1" aria-hidden="true">
+        {% if n.image_path %}
+        <img src="/media/news/{{ rawurlencode(n.image_path.split('/')[-1]) }}" alt="" loading="lazy" width="720" height="405">
+        {% else %}
+        <span class="news-card__placeholder">{{ initials(n.source_name or brand()) }}</span>
+        {% endif %}
+    </a>
+    <div class="news-card__body">
+        <p class="news-card__meta">
+            <span class="news-card__tag">{{ t('news.cat_' ~ n.category) }}</span>
+            <span>{{ fmt_date(n.published_at[:10], false) }}</span>
+            {% if n.country_code %}<span>{{ flag(n.country_code, 12) }} {{ country_name(n.country_code) }}</span>{% endif %}
+        </p>
+        <h3 class="news-card__title"><a href="{{ href }}"{% if external %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ n.title }}</a></h3>
+        <p class="news-card__summary">{{ n.summary }}</p>
+        <p class="news-card__source">
+            {{ t('news.read_on', {'source': n.source_name}) ~ ' ↗' if external else t('news.read') ~ ' →' }}
+        </p>
+    </div>
+</li>

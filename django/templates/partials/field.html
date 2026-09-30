@@ -1,0 +1,24 @@
+{#- Champ de formulaire avec libellé et erreur. type : text|email|date|number|textarea|select -#}
+{%- set ftype = type or 'text' -%}
+{%- set freq = true if required is undefined else required -%}
+{%- set value = old.get(name, '') if old else '' -%}
+{%- set error = errors.get(name) if errors else none -%}
+{%- set id = 'f-' ~ name -%}
+{%- set described_by = trim((id ~ '-hint ' if hint else '') ~ (id ~ '-error' if error else '')) -%}
+<div class="field{{ ' field--error' if error }}">
+    <label for="{{ id }}">{{ label }}{% if not freq %} <span class="optional">{{ t('form.optional') }}</span>{% endif %}</label>
+    {% if hint %}<p class="field__hint" id="{{ id }}-hint">{{ hint }}</p>{% endif %}
+    {% if ftype == 'textarea' %}
+        <textarea id="{{ id }}" name="{{ name }}" rows="5" {{ 'required' if freq }} {% if described_by %}aria-describedby="{{ described_by }}"{% endif %} {{ Markup(attrs or '') }}>{{ value }}</textarea>
+    {% elif ftype == 'select' %}
+        <select id="{{ id }}" name="{{ name }}" {{ 'required' if freq }} {% if described_by %}aria-describedby="{{ described_by }}"{% endif %}>
+            <option value="">{{ t('form.choose') }}</option>
+            {% for v, l in options.items() %}
+                <option value="{{ v }}" {{ 'selected' if value|string == v|string }}>{{ l }}</option>
+            {% endfor %}
+        </select>
+    {% else %}
+        <input id="{{ id }}" type="{{ ftype }}" name="{{ name }}" value="{{ value }}" {{ 'required' if freq }} {% if described_by %}aria-describedby="{{ described_by }}"{% endif %} {{ Markup(attrs or '') }}>
+    {% endif %}
+    {% if error %}<p class="field__error" id="{{ id }}-error">{{ error }}</p>{% endif %}
+</div>

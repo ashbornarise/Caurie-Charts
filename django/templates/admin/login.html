@@ -1,0 +1,10 @@
+<section class="admin-form narrow">
+    <h1>{{ t('admin.login') }}</h1>
+    {% if error %}<p class="flash flash--error" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ path('admin/connexion') }}">
+        {{ csrf_field() }}
+        <div class="field"><label for="email">{{ t('form.email') }}</label><input id="email" type="email" name="email" value="{{ email or '' }}" autocomplete="username" required autofocus></div>
+        <div class="field"><label for="password">{{ t('admin.password') }}</label><input id="password" type="password" name="password" autocomplete="current-password" required></div>
+        <button class="button" type="submit">{{ t('admin.login_button') }}</button>
+    </form>
+</section>

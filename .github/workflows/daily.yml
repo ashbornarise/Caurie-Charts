@@ -1,0 +1,70 @@
+# Chaîne quotidienne de Cauri Charts (remplace la tâche planifiée du serveur PHP).
+# Classements des plateformes, découverte et pays des artistes, clips et vues YouTube, actualités,
+# classement officiel le lundi (brouillon à publier dans l'admin), posts lundi, mercredi et vendredi.
+#
+# Secrets à créer dans GitHub (Settings > Secrets and variables > Actions) :
+#   DATABASE_URL (Neon, avec ?sslmode=require), DJANGO_SECRET_KEY, APP_URL,
+#   YOUTUBE_API_KEY, GEMINI_API_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, BLOB_READ_WRITE_TOKEN
+name: Chaîne quotidienne
+
+on:
+  schedule:
+    - cron: "30 3 * * *"   # 3 h 30 UTC = 3 h 30 à Lomé
+  workflow_dispatch:
+    inputs:
+      args:
+        description: "Options (ex. --weekly --posts)"
+        required: false
+        default: ""
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TIMEZONE: Africa/Lome
+      TZ: Africa/Lome
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+      SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Dépendances (Python, ffmpeg, polices)
+        run: |
+          pip install -r requirements.txt
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core > /dev/null
+      - name: Mémoire des tâches (chaînes suivies, découvertes)
+        uses: actions/cache@v4
+        with:
+          path: storage/cache
+          key: cauri-cache-${{ github.run_id }}
+          restore-keys: cauri-cache-
+      - name: Chaîne quotidienne
+        working-directory: django
+        run: python manage.py daily ${{ github.event.inputs.args }}
+      - name: Conservation des données personnelles
+        working-directory: django
+        run: python manage.py purge
+      - name: Journaux
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journaux-${{ github.run_id }}
+          path: storage/logs/
+          retention-days: 14
+          if-no-files-found: ignore

@@ -1,0 +1,46 @@
+{%- set breakdown = from_json(s.country_breakdown) or {} -%}
+{%- set gap = ((s.streams|int - public)|abs / [1, public]|max * 100) if public else none -%}
+<p><a href="{{ path('admin/declarations') }}">← {{ t('admin.nav_submissions') }}</a></p>
+<h1>{{ s.submitted_track_title }} · {{ s.submitted_artist_name }}</h1>
+<p><span class="status status--{{ s.status }}">{{ t('admin.review_' ~ s.status) }}</span>
+    {% if s.reviewer %}<span class="muted">{{ s.reviewer }}, {{ s.reviewed_at or '' }} : {{ s.review_note or '' }}</span>{% endif %}</p>
+
+<div class="two-cols">
+    <div class="box">
+        <dl>
+            <dt>{{ t('submit.platform') }}</dt><dd>{{ platform_name(s.platform) }}</dd>
+            <dt>{{ t('admin.period') }}</dt><dd>{{ fmt_date(s.period_start) }} → {{ fmt_date(s.period_end) }}</dd>
+            <dt>{{ t('submit.streams') }}</dt><dd><strong>{{ fmt_number(s.streams|int) }}</strong></dd>
+            <dt>{{ t('admin.public_data') }}</dt>
+            <dd>{{ fmt_number(public) ~ ' (' ~ t('admin.gap', {'n': fmt_number(gap|float)}) ~ ')' if public is not none else t('admin.no_public_data') }}</dd>
+            <dt>{{ t('submit.breakdown') }}</dt>
+            <dd>{% if breakdown %}{% for k, v in breakdown.items() %}{{ k }} {{ v }} %{{ ', ' if not loop.last }}{% endfor %}{% else %}—{% endif %}</dd>
+            <dt>{{ t('admin.contact') }}</dt><dd>{{ s.contact_name }} · <a href="mailto:{{ s.contact_email }}">{{ s.contact_email }}</a></dd>
+        </dl>
+    </div>
+    <div class="box">
+        <a href="{{ path('admin/declarations/' ~ s.id ~ '/capture') }}" target="_blank" rel="noopener">
+            <img class="screenshot" src="{{ path('admin/declarations/' ~ s.id ~ '/capture') }}" alt="{{ t('submit.screenshot') }}">
+        </a>
+    </div>
+</div>
+
+{% if s.status == 'pending' %}
+<form method="post" action="{{ path('admin/declarations/' ~ s.id) }}" class="admin-form box box--accent">
+    {{ csrf_field() }}
+    <div class="field"><label for="track_id">{{ t('admin.link_track') }}</label>
+        <select id="track_id" name="track_id">
+            <option value="">{{ t('form.choose') }}</option>
+            {% for tr in tracks %}
+                <option value="{{ tr.id|int }}" {{ 'selected' if tr.id|int == s.track_id|int }}>{{ tr.artist_name ~ ' · ' ~ tr.title }}</option>
+            {% endfor %}
+        </select>
+        <p class="field__hint">{{ t('admin.link_track_hint') }}</p>
+    </div>
+    <div class="field"><label for="note">{{ t('admin.note') }}</label><textarea id="note" name="note" rows="2"></textarea></div>
+    <div class="decision__buttons">
+        <button class="button" name="decision" value="validated" type="submit">{{ t('admin.validate') }}</button>
+        <button class="button button--danger" name="decision" value="rejected" type="submit">{{ t('admin.reject') }}</button>
+    </div>
+</form>
+{% endif %}
