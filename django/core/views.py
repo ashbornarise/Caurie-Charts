@@ -519,8 +519,7 @@ def not_found_fallback(request, unmatched: str = ""):
 
 
 def media(request, file_path: str):
-    """Médias générés (vignettes, logos, posts) : fichier local, sinon Vercel Blob (BLOB_PUBLIC_URL)."""
-    from core import env
+    """Médias générés (vignettes, logos, posts) : fichier local, sinon Vercel Blob."""
     from django.http import FileResponse
     safe = file_path.replace("\\", "/").lstrip("/")
     if ".." in safe.split("/"):
@@ -528,7 +527,7 @@ def media(request, file_path: str):
     local = storage.MEDIA / safe
     if local.is_file():
         return FileResponse(open(local, "rb"))
-    base = (env.get("BLOB_PUBLIC_URL", "") or "").rstrip("/")
+    base = storage.blob_public_url()
     if base:
         return redirect(f"{base}/media/{safe}", 302)
     raise Http404

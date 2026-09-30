@@ -41,7 +41,7 @@ Le site PHP reste en place en local tant que la version Django n'est pas en lign
    | `APP_URL` | `https://cauricharts.com` |
    | `APP_ENV` | `production` |
    | `APP_DEBUG` | `false` |
-   | `BLOB_PUBLIC_URL` | adresse publique du Blob (étape 2) |
+   | `BLOB_PUBLIC_URL` | facultatif : déduite de `BLOB_READ_WRITE_TOKEN` si absente |
    | `APP_KEY` | même valeur que dans le `.env` actuel (empreintes des adresses IP) |
 
    Les clés d'API (YouTube, Gemini, Spotify) ne sont pas utiles au site : elles servent à la chaîne quotidienne (GitHub).

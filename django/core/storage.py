@@ -24,6 +24,17 @@ def _blob_token() -> str:
     return env.get("BLOB_READ_WRITE_TOKEN", "") or ""
 
 
+def blob_public_url() -> str:
+    """Adresse publique du Blob : BLOB_PUBLIC_URL, sinon déduite du jeton (vercel_blob_rw_<store>_<secret>)."""
+    base = (env.get("BLOB_PUBLIC_URL", "") or "").rstrip("/")
+    if base:
+        return base
+    parts = _blob_token().split("_")
+    if len(parts) >= 5 and parts[3]:
+        return f"https://{parts[3].lower()}.public.blob.vercel-storage.com"
+    return ""
+
+
 def _blob_put(pathname: str, data: bytes, content_type: str) -> str:
     r = requests.put(f"https://blob.vercel-storage.com/{pathname}", data=data, timeout=30, headers={
         "authorization": f"Bearer {_blob_token()}", "x-api-version": "7", "x-content-type": content_type,
