@@ -26,22 +26,26 @@ from core.services.social import image as PI
 
 FORMATS = {"feed": ((1080, 1350), None), "tiktok": ((1080, 1920), PI.SAFE_916)}
 VIDEO = "tiktok"  # la vidéo reprend les diapositives 9:16
+MAX_SLIDES = 20  # limite d'Instagram pour un carrousel
 
 
 def render(facts: dict, cover: dict, items: list, name: str) -> dict:
-    """{"slides": [4:5], "slides_916": [9:16], "video": mp4 9:16 ou None}."""
+    """{"slides": [4:5], "slides_916": [9:16], "video": mp4 9:16 ou None, "cover": bool}.
+    Instagram accepte 20 images par carrousel : à partir de 20 titres, pas de couverture, tous les titres passent."""
+    with_cover = len(items) < MAX_SLIDES
     f = PI.style(name)
     if not f:
-        return {"slides": [], "slides_916": [], "video": None}
+        return {"slides": [], "slides_916": [], "video": None, "cover": with_cover}
     PI.DIR.mkdir(parents=True, exist_ok=True)
+    items = items[:MAX_SLIDES]
     total = len(items) + 1
     cover_photo = facts.get("image") or (items[0].get("image") if items else None)
     out, segments = {}, []
     for fmt, (size, safe) in FORMATS.items():
         fr = PI.Frame(*size, safe)
         suffix = "" if fmt == "feed" else "-916"
-        slides = [PI.save_jpeg(_cover_slide(fr, f, cover, cover_photo, total), PI.DIR / f"{name}-1{suffix}.jpg")]
-        if fmt == VIDEO:
+        slides = [PI.save_jpeg(_cover_slide(fr, f, cover, cover_photo, total), PI.DIR / f"{name}-1{suffix}.jpg")] if with_cover else []
+        if fmt == VIDEO and slides:
             segments.append({"image": slides[0]})
         for i, item in enumerate(items):
             slide = PI.save_jpeg(_item_slide(fr, f, item, i + 2, total, facts["source"]), PI.DIR / f"{name}-{i + 2}{suffix}.jpg")
@@ -58,7 +62,8 @@ def render(facts: dict, cover: dict, items: list, name: str) -> dict:
                 segments.append({"image": slide})
         out[fmt] = [os.path.basename(s) for s in slides if s]
     fr = PI.Frame(*FORMATS[VIDEO][0])
-    return {"slides": out["feed"], "slides_916": out["tiktok"], "video": _video(segments, PI.DIR / f"{name}.mp4", fr.w, fr.h)}
+    return {"slides": out["feed"], "slides_916": out["tiktok"], "video": _video(segments, PI.DIR / f"{name}.mp4", fr.w, fr.h),
+            "cover": with_cover}
 
 
 def clips_dir() -> str:

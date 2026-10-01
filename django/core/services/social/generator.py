@@ -68,10 +68,11 @@ class PostGenerator:
         items = self._carousel_items(facts)
         car = PC.render(facts, cover, items, name)
         # Chaque diapositive porte un libellé : couverture, puis « N°1 - Artiste - Titre »… (noms des fichiers exportés)
-        labels = [f"Couverture - {cover['kicker']} {cover['headline']}"] + [f"N°{it['rank']} - {it['artist']} - {it['title']}" for it in items]
+        shift = 1 if car.get("cover", True) else 0  # Top 20 : pas de couverture, la 1re diapositive est le n°1
+        labels = [f"Couverture - {cover['kicker']} {cover['headline']}"] * shift + [f"N°{it['rank']} - {it['artist']} - {it['title']}" for it in items]
         slides = []
         for i, file in enumerate(car["slides"]):
-            item = items[i - 1] if i > 0 and i - 1 < len(items) else None
+            item = items[i - shift] if i >= shift and i - shift < len(items) else None
             # « file » : diapositive 4:5 (Instagram, Facebook) ; « tiktok » : la même en 9:16
             slides.append({"file": file, "tiktok": car["slides_916"][i] if i < len(car["slides_916"]) else None,
                            "label": labels[i] if i < len(labels) else "",
@@ -140,7 +141,7 @@ class PostGenerator:
         else:
             rows = [{**e, "image": e.get("image_url") or (facts.get("image") if facts["kind"] == "ranking" else None)} for e in facts["top"]]
         items = []
-        for i, r in enumerate(rows[:7]):
+        for i, r in enumerate(rows[:20]):
             if "figure_value" in r or not r.get("track_id"):
                 # Rubrique qui fournit son chiffre exact (vues, fans, n°1…), ou entrée sans titre (artiste, actualité)
                 items.append({"rank": i + 1, "title": r["title"], "artist": r["artist"], "image": r.get("image"),

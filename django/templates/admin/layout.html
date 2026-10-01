@@ -3,7 +3,7 @@
                ('admin/import', t('admin.nav_import')), ('admin/releves', t('admin.nav_snapshots')), ('admin/catalogue', t('admin.nav_catalog')),
                ('admin/actualites', t('admin.nav_news')), ('admin/posts', t('admin.nav_posts')), ('admin/partenaires', t('admin.nav_partners')),
                ('admin/messages', t('admin.nav_messages'))] -%}
-{%- if user and user.role == 'admin' %}{% do nav.extend([('admin/formule', t('admin.nav_formula')), ('admin/journal', t('admin.nav_audit'))]) %}{% endif -%}
+{%- if user and user.role == 'admin' %}{% do nav.extend([('admin/formule', t('admin.nav_formula')), ('admin/journal', t('admin.nav_audit')), ('admin/equipe', 'Équipe')]) %}{% endif -%}
 <!doctype html>
 <html lang="fr">
 <head>

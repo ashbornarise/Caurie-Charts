@@ -2,6 +2,7 @@
 from django.urls import path, re_path
 
 from core import views, views_claim, views_widget
+from core.backoffice import team
 from core.backoffice import views as admin
 
 P = r"(?P<period>semaine|mois|annee)"
@@ -62,6 +63,8 @@ urlpatterns = [
     path("admin/import/csv", admin.import_csv),
     path("admin/actualites", admin.news_list),
     re_path(r"^admin/actualites/(?P<nid>\d+|nouveau)$", admin.news_form),
+    path("admin/equipe", team.team),
+    re_path(r"^admin/equipe/(?P<member_id>\d+)$", team.member),
     path("admin/posts", admin.posts),
     path("admin/posts/generer", admin.posts_generate),
     path("admin/posts/demande", admin.posts_request),

@@ -70,3 +70,6 @@ pre.json { white-space: pre-wrap; font-size: .75rem; margin: 0; max-width: 360px
 /* Posts : demande en langage naturel */
 .post-request textarea { display: block; width: 100%; margin: 8px 0; font: inherit; padding: 8px 10px; border: 1px solid var(--ink-2); border-radius: var(--radius); }
 .post-request p { margin: 0; }
+
+/* Équipe : mot de passe affiché une fois */
+.secret { font: 600 1.05rem ui-monospace, Consolas, monospace; padding: 2px 8px; background: #fff; border: 1px solid var(--line); border-radius: 4px; user-select: all; }

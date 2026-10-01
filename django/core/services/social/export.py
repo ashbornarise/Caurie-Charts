@@ -73,9 +73,13 @@ def contents(post: dict, clips_folder: str = "") -> tuple:
         add(f, os.path.join(META, "Carrousel 4-5"), f"{i + 1:02d} - {file_name(label)}")
         if isinstance(slide, dict):
             add(slide.get("tiktok"), os.path.join(TIKTOK, "Carrousel photo 9-16"), f"{i + 1:02d} - {file_name(label)}")
-        if i == 1:
-            leader = " - " + file_name(label)
-    count = max(0, len(slides) - 1)
+    # Diapositives de titres (« N°1 - … ») : avec ou sans couverture (un Top 20 n'en a pas)
+    item_slides = [s for s in slides if isinstance(s, dict) and str(s.get("label") or "").startswith("N°")]
+    if item_slides:
+        leader = " - " + file_name(item_slides[0]["label"])
+    elif len(slides) > 1:
+        leader = " - " + file_name(slides[1]["label"] if isinstance(slides[1], dict) else "Diapositive")
+    count = len(item_slides) or max(0, len(slides) - 1)
 
     # Clips officiels : ceux qui manquent pour la vidéo (30 s de clip par titre), avec le lien de référence
     missing = [s for s in slides if isinstance(s, dict) and s.get("clip") is False]
@@ -99,7 +103,7 @@ def contents(post: dict, clips_folder: str = "") -> tuple:
         texts["00 - Clips à demander.txt"] = CRLF.join(lines) + CRLF
     add(post.get("image_square"), META, f"Post unique 4-5{leader}")
     add(post.get("image_story"), META, f"Story 9-16{leader}")
-    with_clips = len(slides) - 1 - len(missing)
+    with_clips = count - len(missing)
     sound = (f" avec {with_clips} clip(s), son inclus" if with_clips > 0 else " (sans son, musique à ajouter dans l'application)")
     add(post.get("video"), META, f"Reel 9-16 - Vidéo du Top {count}{sound}")
     add(post.get("video"), TIKTOK, f"Vidéo 9-16 - Top {count}{sound}")

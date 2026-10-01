@@ -307,21 +307,38 @@ def render(facts: dict, text: dict, name: str) -> dict:
         y = h - fr.bottom - L["foot"]
         fr.text(draw, 17, pad, y, soft, f["sans"], fr.fit("Source : " + facts["source"], f["sans"], 17, w - 2 * pad))
         y -= L["src_gap"]
-        rows = rows_all[: L["rows"]]
-        row_h = L["row_h"]
-        rank_px, rank_dy = L["rank"]
-        title_px, title_dy = L["title"]
-        detail_px, detail_dy = L["detail"]
-        list_top = y - len(rows) * row_h
-        for i, row in enumerate(rows):
-            ry = list_top + i * row_h
-            if i > 0:
-                fr.rect(draw, pad, ry, w - pad, ry + 1, (255, 255, 255, gd_alpha(100)))
-            fr.text(draw, rank_px, pad, ry + rank_dy, violet, f["display"], str(row["rank"]))
-            tx = pad + L["tx"]
-            max_w = w - tx - pad
-            fr.text(draw, title_px, tx, ry + title_dy, white, f["bold"], fr.fit(row["title"], f["bold"], title_px, max_w))
-            fr.text(draw, detail_px, tx, ry + detail_dy, soft, f["sans"], fr.fit(row["detail"], f["sans"], detail_px, max_w))
+        if len(rows_all) > L["rows"]:
+            # Liste longue (Top 20 demandé) : tous les titres, en deux colonnes compactes, sans détail
+            rows = rows_all[:20]
+            half = (len(rows) + 1) // 2
+            row_h, gap = (44 if fmt == "post" else 52), 28
+            col_w = (w - 2 * pad - gap) / 2
+            list_top = y - half * row_h
+            for i, row in enumerate(rows):
+                cx, ry = pad + (i // half) * (col_w + gap), list_top + (i % half) * row_h
+                if i % half:
+                    fr.rect(draw, cx, ry, cx + col_w, ry + 1, (255, 255, 255, gd_alpha(100)))
+                px = 22 if fmt == "post" else 25
+                fr.text(draw, px + 6, cx, ry + row_h * 0.72, violet, f["display"], str(row["rank"]))
+                num_w = fr.width("20", f["display"], px + 6) + 12  # place du rang à deux chiffres, quelle que soit la police
+                tx = cx + num_w
+                fr.text(draw, px, tx, ry + row_h * 0.72, white, f["bold"], fr.fit(row["title"], f["bold"], px, col_w - num_w))
+        else:
+            rows = rows_all[: L["rows"]]
+            row_h = L["row_h"]
+            rank_px, rank_dy = L["rank"]
+            title_px, title_dy = L["title"]
+            detail_px, detail_dy = L["detail"]
+            list_top = y - len(rows) * row_h
+            for i, row in enumerate(rows):
+                ry = list_top + i * row_h
+                if i > 0:
+                    fr.rect(draw, pad, ry, w - pad, ry + 1, (255, 255, 255, gd_alpha(100)))
+                fr.text(draw, rank_px, pad, ry + rank_dy, violet, f["display"], str(row["rank"]))
+                tx = pad + L["tx"]
+                max_w = w - tx - pad
+                fr.text(draw, title_px, tx, ry + title_dy, white, f["bold"], fr.fit(row["title"], f["bold"], title_px, max_w))
+                fr.text(draw, detail_px, tx, ry + detail_dy, soft, f["sans"], fr.fit(row["detail"], f["sans"], detail_px, max_w))
         y = list_top - L["sub_gap"]
         if subtitle != "":
             size = L["sub"]
@@ -333,7 +350,7 @@ def render(facts: dict, text: dict, name: str) -> dict:
         big_lines = fr.wrap(head.upper(), f["display"], big, w - 2 * pad, 2)
         if len(big_lines) > 1 or fr.width(big_lines[0] if big_lines else "", f["display"], big) > w - 2 * pad:
             big = int(big * 0.78)
-            big_lines = fr.wrap(head.upper(), f["display"], big, w - 2 * pad, 2)
+            big_lines = fr.wrap(head.upper(), f["display"], big, w - 2 * pad, 3)  # titre long : trois lignes plutôt que coupé
         for line in reversed(big_lines):
             fr.text(draw, big, pad - 4, y, white, f["display"], line)
             y -= int(big * 1.05)

@@ -1,0 +1,51 @@
+<h1>Équipe</h1>
+<p class="muted">Comptes qui peuvent se connecter à l’administration. Seuls les administrateurs voient cette page.</p>
+
+{% if shown %}
+<div class="box box--accent" role="status">
+    <p><strong>{{ 'Compte créé' if shown.created else 'Nouveau mot de passe' }} pour {{ shown.name }}</strong> ({{ shown.email }})</p>
+    <p>Mot de passe, affiché <strong>une seule fois</strong> : <code class="secret">{{ shown.password }}</code></p>
+    <p class="muted">Transmettez-le à la personne par un canal privé (en main propre, message direct). Elle se connecte sur
+        <a href="{{ path('admin/connexion') }}">{{ url('admin/connexion') }}</a>. Rechargez la page : il ne sera plus visible.</p>
+</div>
+{% endif %}
+
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Double authentification</th><th>Dernière connexion</th><th>Statut</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for u in rows %}
+        <tr>
+            <td><strong>{{ u.name }}</strong>{% if u.id == me %} <small class="muted">(vous)</small>{% endif %}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ 'Administrateur' if u.role == 'admin' else 'Éditeur' }}</td>
+            <td>{{ 'Activée' if u.has_2fa else '—' }}</td>
+            <td>{{ fmt_date(u.last_login_at) if u.last_login_at else 'Jamais' }}</td>
+            <td><span class="status status--{{ 'published' if u.is_active else 'rejected' }}">{{ 'Actif' if u.is_active else 'Désactivé' }}</span></td>
+            <td>
+                <form method="post" action="{{ path('admin/equipe/' ~ u.id) }}" class="toolbar">
+                    {{ csrf_field() }}
+                    {% if u.role == 'editor' %}<button class="button button--small button--ghost" name="action" value="admin" type="submit">Passer administrateur</button>
+                    {% elif u.id != me %}<button class="button button--small button--ghost" name="action" value="editor" type="submit">Passer éditeur</button>{% endif %}
+                    <button class="button button--small button--ghost" name="action" value="mot-de-passe" type="submit">Nouveau mot de passe</button>
+                    {% if u.id != me %}
+                        {% if u.is_active %}<button class="button button--small button--danger" name="action" value="desactiver" type="submit">Désactiver</button>
+                        {% else %}<button class="button button--small" name="action" value="activer" type="submit">Réactiver</button>{% endif %}
+                    {% endif %}
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<h2>Ajouter un membre</h2>
+<form method="post" action="{{ path('admin/equipe') }}" class="admin-form box" novalidate>
+    {{ csrf_field() }}
+    {{ partial('partials/field', name='name', label='Nom', attrs='maxlength="150" autocomplete="off"', old=old, errors=errors) }}
+    {{ partial('partials/field', name='email', label='E-mail', type='email', attrs='maxlength="190" autocomplete="off"', old=old, errors=errors) }}
+    {{ partial('partials/field', name='role', label='Rôle', type='select', options=roles, old=old, errors=errors) }}
+    <button class="button" type="submit">Créer le compte</button>
+    <p class="muted">Un mot de passe solide est généré et affiché une seule fois. Conseillez à chaque membre d’activer la double authentification.</p>
+</form>

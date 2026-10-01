@@ -110,16 +110,23 @@ def send_post(post: dict, force: bool = False, http: HttpClient | None = None) -
     except ValueError:
         slides = []
     files = [s["file"] if isinstance(s, dict) else s for s in slides] or [post.get("image_square")]
-    photos = [f"{base}/media/social/{f}" for f in files if f][:10]  # un album Telegram compte 10 images au plus
+    photos = [f"{base}/media/social/{f}" for f in files if f][:20]
     if not photos:
         return "pas d’image pour ce post"
     chat, caption = env.get("TELEGRAM_CHAT_ID"), post_caption(post)
     if len(photos) == 1:
         call("sendPhoto", {"chat_id": chat, "photo": photos[0], "caption": caption, "parse_mode": "HTML"}, http)
     else:
-        media = [{"type": "photo", "media": p} for p in photos]
-        media[0].update({"caption": caption, "parse_mode": "HTML"})
-        call("sendMediaGroup", {"chat_id": chat, "media": media}, http)
+        # Un album Telegram compte 10 images au plus : un Top 20 part en deux albums, légende sur le premier
+        for k in range(0, len(photos), 10):
+            chunk = photos[k:k + 10]
+            if len(chunk) == 1:
+                call("sendPhoto", {"chat_id": chat, "photo": chunk[0]}, http)
+                continue
+            media = [{"type": "photo", "media": p} for p in chunk]
+            if k == 0:
+                media[0].update({"caption": caption, "parse_mode": "HTML"})
+            call("sendMediaGroup", {"chat_id": chat, "media": media}, http)
     audit.log(None, "telegram.post", "social_post", post["id"], key, {"images": len(photos)}, None)
     return f"envoyé ({key}, {len(photos)} images)"
 
