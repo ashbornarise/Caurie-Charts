@@ -65,3 +65,25 @@ def test_spotify_metadonnees_seulement():
     assert s["plays"] == 0
     assert s["popularity"] == 42
     assert http.calls[1]["headers"]["Authorization"] == "Bearer tok"
+
+
+def test_ia_groq_prend_le_relais_quand_gemini_est_a_court_de_quota():
+    from core.services.ai import FallbackClient, GeminiClient, GroqClient
+
+    def responder(method, url, headers, body):
+        if "googleapis" in url:
+            return {"status": 429, "body": json.dumps({"error": {"message": "quota"}})}
+        return {"status": 200, "body": json.dumps({"choices": [{"message": {"content": "<think>…</think>{\"ok\": 1}"}}]})}
+
+    http = FakeHttp(responder)
+    client = FallbackClient([GeminiClient(http, "g"), GroqClient(http, "q", "openai/gpt-oss-120b")])
+    assert client.ask("système", "question")["text"] == '{"ok": 1}'
+    groq = [c for c in http.calls if "groq" in c["url"]][0]
+    assert groq["headers"]["Authorization"] == "Bearer q"
+    assert json.loads(groq["body"])["model"] == "openai/gpt-oss-120b"
+
+
+def test_ia_sans_cle_groq_reste_sur_gemini_seul():
+    from core.services.ai import FallbackClient, GeminiClient, GroqClient
+    http = FakeHttp(lambda *a: {"status": 200, "body": "{}"})
+    assert len(FallbackClient([GeminiClient(http, "g"), GroqClient(http, "")]).clients) == 1
