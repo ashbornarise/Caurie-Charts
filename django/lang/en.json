@@ -186,6 +186,8 @@
     "methodology.w_audio": "Audio streams (Audiomack, Boomplay, others)",
     "methodology.w_youtube": "Official YouTube views",
     "methodology.w_declaration": "Validated, cross-checked declarations",
+    "methodology.country_cap": "In the West Africa chart, at most :cap songs by artists from the same country make the Top :size; that country's next songs move down just below the Top. No country, not even the biggest market, takes all the room.",
+    "flag.country_capped": "Capped: this country already has the maximum number of songs in the regional Top",
     "methodology.diversity": "To enter a country's Top :top, a song needs data from at least :sources sources. Otherwise it is capped just below.",
     "methodology.ties": "Ties are broken by number of sources, then biggest weekly growth, then last week's score.",
     "methodology.upcoming": "Announced change: formula v:version takes effect on :date.",

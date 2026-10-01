@@ -24,6 +24,7 @@
     </table>
     <p>{{ t('methodology.chart_positions', {'depth': (formula.chart_depth or 100)|int}) }}</p>
     <p>{{ t('methodology.diversity', {'top': formula.diversity.top, 'sources': formula.diversity.min_sources}) }}</p>
+    <p>{{ t('methodology.country_cap', {'cap': config('charts.prime-wa.country_cap'), 'size': config('charts.prime-wa.size')}) }}</p>
     <p>{{ t('methodology.ties') }}</p>
     {% for u in upcoming %}
         <p class="notice">{{ t('methodology.upcoming', {'version': u.version, 'date': fmt_date(u.effective_from)}) }} {{ u.note or '' }}</p>

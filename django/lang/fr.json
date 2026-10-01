@@ -186,6 +186,8 @@
     "methodology.w_audio": "Streams audio (Audiomack, Boomplay, autres)",
     "methodology.w_youtube": "Vues YouTube officielles",
     "methodology.w_declaration": "Déclarations validées et recoupées",
+    "methodology.country_cap": "Dans le classement Afrique de l’Ouest, au plus :cap titres d’artistes d’un même pays entrent dans le Top :size : les titres suivants de ce pays descendent juste après le Top. Aucun pays, même le plus grand marché, ne prend toute la place.",
+    "flag.country_capped": "Plafonné : déjà le maximum de titres de ce pays dans le Top régional",
     "methodology.diversity": "Pour entrer dans le Top :top d'un pays, un titre doit avoir des données sur au moins :sources sources. Sinon, il est plafonné juste après.",
     "methodology.ties": "En cas d'égalité : nombre de sources différentes, puis meilleure progression sur la semaine, puis score de la semaine précédente.",
     "methodology.upcoming": "Changement annoncé : la formule v:version entre en vigueur le :date.",

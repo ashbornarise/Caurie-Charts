@@ -54,7 +54,8 @@ def _all() -> dict:
             "icon": {"name": "Icon Chart", "kind": "artists", "public": True, "computed": True, "size": 10, "periods": ["week"]},
             "legend": {"name": "Legend Chart", "kind": "tracks", "public": True, "computed": True, "size": None, "periods": ["week"]},
             "vintage": {"name": "Vintage Chart", "kind": "tracks", "public": False, "computed": False, "size": None, "periods": ["year"]},
-            "prime-wa": {"name": "Prime Chart Afrique de l'Ouest", "kind": "tracks", "public": True, "computed": True, "size": 20,
+            # country_cap : au plus 5 titres d'artistes d'un même pays dans le Top 20 régional (diversité de la région)
+            "prime-wa": {"name": "Prime Chart Afrique de l'Ouest", "kind": "tracks", "public": True, "computed": True, "size": 20, "country_cap": 5,
                          "periods": ["week", "month", "year"], "regional": True},
         },
         "formula": {

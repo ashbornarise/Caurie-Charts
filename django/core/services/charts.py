@@ -105,6 +105,7 @@ class Flags:
     DECLARATION_UNCORROBORATED = "declaration_uncorroborated"
     DIVERSITY_CAPPED = "diversity_capped"
     DIVERSITY_FALLBACK = "diversity_fallback"
+    COUNTRY_CAPPED = "country_capped"
     BLOCKING = [SPIKE, DECLARATION_MISMATCH, YOUTUBE_RATIO]
 
     @classmethod
@@ -280,9 +281,28 @@ class ChartRanker:
     def eligible(items: list) -> list:
         return [i for i in items if i["score"] > 0 and (i.get("review_status") or "ok") != "excluded"]
 
-    def prime(self, items: list, size: int, previous: dict | None = None) -> list:
+    def prime(self, items: list, size: int, previous: dict | None = None, country_cap: int | None = None) -> list:
         ordered = self.apply_diversity(sorted(self.eligible(items), key=self.sort_key))
+        if country_cap:
+            ordered = self.cap_per_country(ordered, size, country_cap)
         return self._finalize(ordered[:size], previous or {}, "track_id")
+
+    @staticmethod
+    def cap_per_country(ordered: list, size: int, cap: int) -> list:
+        """Classement régional : au plus `cap` titres d'artistes d'un même pays dans le Top `size`. Les titres en trop
+        descendent juste après le Top, dans leur ordre (marqués country_capped). Artiste sans pays connu : pas de plafond."""
+        head, rest, count = [], [], {}
+        for item in ordered:
+            c = item.get("country")
+            if len(head) < size and (not c or count.get(c, 0) < cap):
+                head.append(item)
+                if c:
+                    count[c] = count.get(c, 0) + 1
+            elif len(head) < size:
+                rest.append({**item, "flags": list(item.get("flags") or []) + [Flags.COUNTRY_CAPPED]})
+            else:
+                rest.append(item)
+        return head + rest
 
     def apply_diversity(self, sorted_items: list) -> list:
         top, mn = int(self.formula["diversity"]["top"]), int(self.formula["diversity"]["min_sources"])
@@ -359,10 +379,12 @@ class ChartRanker:
                 t["best"] = min(t["best"], e["position"])
         return sorted(totals.values(), key=lambda a: (-a["points"], -a["countries"], a["best"], a["track_id"]))
 
-    def summed_points(self, totals: dict, size: int, previous: dict | None = None) -> list:
+    def summed_points(self, totals: dict, size: int, previous: dict | None = None, country_cap: int | None = None) -> list:
         items = [{"track_id": tid, "artist_id": t["artist_id"], "score": float(t["score"]), "sources_count": int(t["countries"]),
-                  "flags": [], "breakdown": []} for tid, t in totals.items()]
+                  "country": t.get("country"), "flags": [], "breakdown": []} for tid, t in totals.items()]
         items.sort(key=lambda a: (-a["score"], -a["sources_count"], a["track_id"]))
+        if country_cap:
+            items = self.cap_per_country(items, size, country_cap)
         return self._finalize(items[:size], previous or {}, "track_id")
 
     @staticmethod

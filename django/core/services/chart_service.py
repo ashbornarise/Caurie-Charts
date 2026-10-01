@@ -281,18 +281,19 @@ class ChartService:
         if not published:
             return None
         rows = db.all(
-            f"""SELECT ws.track_id, t.artist_id, t.release_date, ws.score, ws.sources_count, ws.breakdown,
+            f"""SELECT ws.track_id, t.artist_id, t.release_date, ws.score, ws.sources_count, ws.breakdown, a.base_country AS country,
                    (SELECT p.score FROM weekly_scores p WHERE p.track_id = ws.track_id AND p.week_start = ?) AS prev_score
-                FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id
+                FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id JOIN artists a ON a.id = t.artist_id
                 WHERE ws.week_start = ? AND ws.country_id IN ({', '.join(['?'] * len(published))}) AND ws.review_status <> 'excluded'""",
             [_minus_days(week.start, 7), week.start] + published)
         items = [{"track_id": int(r["track_id"]), "artist_id": int(r["artist_id"]), "score": float(r["score"]),
                   "sources_count": int(r["sources_count"]), "prev_score": float(r["prev_score"] or 0), "release_date": r["release_date"],
-                  "is_emerging": False, "flags": [], "review_status": "ok",
+                  "is_emerging": False, "flags": [], "review_status": "ok", "country": r["country"],
                   "breakdown": json.loads(r["breakdown"] or "[]") or []} for r in rows]
         complete = len(published) == countries
         formula = formula_effective_for(week.start)
-        entries = ChartRanker(formula).prime(items, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, "week", week.start))
+        entries = ChartRanker(formula).prime(items, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, "week", week.start),
+                                             conf.get("charts.prime-wa.country_cap"))
         with db.atomic():
             self._save_run("prime-wa", None, week, formula, entries, not complete, None, user_id, True)
             if complete:
@@ -304,20 +305,22 @@ class ChartService:
 
     def compute_regional_aggregate(self, period: Period, user_id=None):
         type_id = self.chart_types["prime-wa"]
-        rows = db.all("""SELECT ws.track_id, t.artist_id, SUM(ws.score) AS score, MAX(ws.sources_count) AS countries
-                         FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id
+        rows = db.all("""SELECT ws.track_id, t.artist_id, a.base_country AS country, SUM(ws.score) AS score, MAX(ws.sources_count) AS countries
+                         FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id JOIN artists a ON a.id = t.artist_id
                          JOIN chart_runs r ON r.chart_type_id = ? AND r.country_id IS NULL AND r.period_type = 'week'
                             AND r.status = 'published' AND r.period_start = ws.week_start
                          WHERE ws.week_start BETWEEN ? AND ? AND ws.review_status <> 'excluded'
-                         GROUP BY ws.track_id, t.artist_id""", [type_id, period.start, period.end])
+                         GROUP BY ws.track_id, t.artist_id, a.base_country""", [type_id, period.start, period.end])
         weeks = int(db.value("""SELECT COUNT(*) FROM chart_runs WHERE chart_type_id = ? AND country_id IS NULL AND period_type = 'week'
                                 AND status = 'published' AND period_start BETWEEN ? AND ?""", [type_id, period.start, period.end]))
         provisional = weeks < len(period.week_starts())
         if not rows or (period.type == "month" and provisional):
             return None
-        totals = {int(r["track_id"]): {"score": float(r["score"]), "artist_id": int(r["artist_id"]), "countries": int(r["countries"])} for r in rows}
+        totals = {int(r["track_id"]): {"score": float(r["score"]), "artist_id": int(r["artist_id"]), "countries": int(r["countries"]),
+                                       "country": r["country"]} for r in rows}
         formula = formula_effective_for(period.end)
-        entries = ChartRanker(formula).summed_points(totals, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, period.type, period.start))
+        entries = ChartRanker(formula).summed_points(totals, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, period.type, period.start),
+                                                     conf.get("charts.prime-wa.country_cap"))
         with db.atomic():
             self._save_run("prime-wa", None, period, formula, entries, provisional, None, user_id, True)
             self._publish_regional(period)

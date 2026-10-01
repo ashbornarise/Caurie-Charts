@@ -11,7 +11,7 @@ from datetime import date, timedelta
 from django.core.cache import cache
 
 from core import clock
-from core import db
+from core import conf, db
 
 SOURCES = {
     "apple_music": "Apple Music",
@@ -106,6 +106,11 @@ def _compute(country_id, source, limit, mode, top_size, period) -> dict:
 
     by_points = lambda t: (-t["points"], -len(t["seen"]), t["best"])  # noqa: E731
     items.sort(key=by_points)
+    if mode == "prime" and country_id is None and source is None and conf.get("charts.prime-wa.country_cap"):
+        # Classement régional : au plus N titres d'artistes d'un même pays dans le Top (même règle que le classement officiel)
+        from core.services.charts import ChartRanker
+        items = ChartRanker.cap_per_country([{**t, "country": t.get("artist_country")} for t in items], top_size,
+                                            int(conf.get("charts.prime-wa.country_cap")))
 
     if mode == "buzz":
         top_size = min(top_size, len(items) // 2)

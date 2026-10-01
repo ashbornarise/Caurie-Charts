@@ -218,3 +218,18 @@ def test_regional_points():
 def test_mediane():
     assert ScoreCalculator.median([3, 1, 2]) == 2.0
     assert ScoreCalculator.median([4, 1, 2, 3]) == 2.5
+
+
+def test_classement_regional_au_plus_cinq_titres_par_pays():
+    from core.services.charts import ChartRanker, Flags
+    items = [{"track_id": i, "country": "NG"} for i in range(8)] + [{"track_id": 100 + i, "country": "GH"} for i in range(3)]
+    out = ChartRanker.cap_per_country(items, 6, 5)
+    top = out[:6]
+    assert [t["country"] for t in top].count("NG") == 5 and top[5]["track_id"] == 100
+    assert Flags.COUNTRY_CAPPED in out[6]["flags"] and out[6]["track_id"] == 5
+
+
+def test_plafond_par_pays_ignore_les_artistes_sans_pays():
+    from core.services.charts import ChartRanker
+    items = [{"track_id": i, "country": None} for i in range(7)]
+    assert [t["track_id"] for t in ChartRanker.cap_per_country(items, 7, 2)] == list(range(7))
