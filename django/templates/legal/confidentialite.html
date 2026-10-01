@@ -48,11 +48,21 @@
 <p>L'empreinte chiffrée de l'adresse IP est une valeur calculée qui ne permet pas de retrouver l'adresse d'origine : elle sert uniquement à limiter le nombre d'envois par jour.</p>
 
 <h2>Qui voit ces données</h2>
-<p>Uniquement l'équipe de {{ brand() }} chargée des vérifications, et l'hébergeur pour le stockage. Les données ne sont ni vendues, ni louées, ni partagées avec le label {{ config('app.group_label.name') }}. Les captures d'écran ne sont jamais publiées.</p>
+<p>Uniquement l'équipe de {{ brand() }} chargée des vérifications, et les prestataires techniques ci-dessous, qui agissent sur nos instructions. Les données ne sont ni vendues, ni louées, ni partagées avec le label {{ config('app.group_label.name') }}. Les captures d'écran ne sont jamais publiées.</p>
+<table class="table">
+    <thead><tr><th>Prestataire</th><th>Rôle</th><th>Lieu</th></tr></thead>
+    <tbody>
+        <tr><td>Vercel Inc.</td><td>Hébergement du site et des fichiers envoyés (captures, images)</td><td>Union européenne (Francfort, Paris) ; société établie aux États-Unis</td></tr>
+        <tr><td>Neon Inc.</td><td>Base de données</td><td>Union européenne (Francfort)</td></tr>
+        <tr><td>GitHub Inc.</td><td>Tâches automatiques quotidiennes (calcul des classements, relevés)</td><td>États-Unis</td></tr>
+        <tr><td>Google (Gemini) et Groq</td><td>Rédaction assistée des posts et classement des artistes par pays : ces services ne reçoivent que des données publiques (classements, noms d'artistes), jamais de données personnelles</td><td>États-Unis</td></tr>
+    </tbody>
+</table>
 <p>Les liens vers YouTube, Spotify, Audiomack ou Boomplay ouvrent le site de la plateforme, qui applique alors sa propre politique. Certaines pochettes peuvent être affichées depuis les serveurs de Spotify ou d'Apple : votre navigateur contacte alors ces serveurs pour charger l'image.</p>
 
 <h2>Où sont stockées les données</h2>
-<p>Sur des serveurs situés en France (Union européenne), chez l'hébergeur indiqué dans les <a href="{{ path('mentions-legales') }}">mentions légales</a>.</p>
+<p>Les données sont stockées dans l'Union européenne : base de données à Francfort (Allemagne), fichiers envoyés à Paris (France), chez les prestataires indiqués ci-dessus et dans les <a href="{{ path('mentions-legales') }}">mentions légales</a>.</p>
+<p>Vercel et GitHub sont des sociétés établies aux États-Unis et peuvent accéder aux données pour assurer leur service. Ces transferts hors de l'Union européenne sont encadrés par les garanties prévues dans leurs accords de traitement des données (clauses contractuelles types de la Commission européenne).</p>
 
 <h2>Vos droits</h2>
 <p>Vous pouvez demander l'accès à vos données, leur rectification, leur effacement, la limitation du traitement, leur portabilité, ou vous opposer au traitement fondé sur l'intérêt légitime. Un artiste peut demander la correction de sa fiche. Écrivez à {{ legal('privacy_email') }} ou via le <a href="{{ path('contact') }}">formulaire de contact</a> ; nous répondons sous un mois.</p>

@@ -4,7 +4,7 @@
 <p>Contact : <a href="{{ path('contact') }}">formulaire de contact</a>{{ ' ou ' ~ config('app.contact_email') if config('app.contact_email') }}.</p>
 
 <h2>Hébergement</h2>
-<p>Le site est hébergé par {{ legal('host_name') }}, {{ legal('host_address') }} ({{ legal('host_contact') }}). Les serveurs sont situés en France.</p>
+<p>Le site est hébergé par {{ legal('host_name') }}, {{ legal('host_address') }} ({{ legal('host_contact') }}). Les pages sont servies depuis l'Union européenne (Francfort) et le réseau mondial de Vercel. La base de données est hébergée par Neon Inc. dans l'Union européenne (Francfort, Allemagne).</p>
 
 <h2>Lien avec le label {{ config('app.group_label.name') }}</h2>
 <p>{{ brand() }} est un média distinct du label {{ config('app.group_label.name') }}, au sein du même groupe. Les artistes du label portent un badge visible et suivent exactement les mêmes règles de calcul. Le détail figure sur la page <a href="{{ path('methodologie') }}#independance">Méthodologie</a>.</p>
