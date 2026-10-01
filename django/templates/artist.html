@@ -29,6 +29,7 @@
                 {% if artist.youtube_channel_id %}<a class="button button--small button--ghost" href="https://www.youtube.com/channel/{{ rawurlencode(artist.youtube_channel_id) }}" target="_blank" rel="noopener nofollow">YouTube</a>{% endif %}
             </p>
             {% if not confirmed %}<p class="fineprint">{{ t('artist.pending_note') }}</p>{% endif %}
+            <p class="fineprint">Vous êtes {{ artist.name }} ou son équipe ? <a href="{{ path('artiste/' ~ artist.slug ~ '/revendiquer') }}">Revendiquer cette fiche</a></p>
             {% if is_group_label(artist.label_owner) %}
                 <a class="badge" href="{{ path('methodologie') }}#independance" title="{{ t('badge.title') }}">{{ config('app.group_label.name') }}</a>
             {% endif %}

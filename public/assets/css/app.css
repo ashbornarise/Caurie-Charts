@@ -590,3 +590,7 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .news-thumb .news-list__title { font-size: .86rem; overflow-wrap: anywhere; }
 .news-thumb__source { font-size: .72rem; color: var(--tone-ink); font-weight: 700; }
 .news-card--tone-0 { --tone: #8B52FF; --tone-soft: #F3EDFF; --tone-ink: #3E1A9E; }
+
+/* Page « Intégrer le classement » */
+.embed-code { width: 100%; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+.embed-preview { display: block; border: 0; max-width: 440px; }

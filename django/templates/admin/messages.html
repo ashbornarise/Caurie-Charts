@@ -3,7 +3,7 @@
 {% if not rows %}<p class="muted">{{ t('admin.none') }}</p>{% endif %}
 {% for m in rows %}
     <article class="box{{ ' box--accent' if m.type == 'contestation' }}">
-        <p><strong>{{ m.subject }}</strong> · <span class="tag">{{ t('contact.type_' ~ ('contest' if m.type == 'contestation' else 'contact')) }}</span>
+        <p><strong>{{ m.subject }}</strong> · <span class="tag">{{ 'Revendication de fiche' if m.type == 'claim' else t('contact.type_' ~ ('contest' if m.type == 'contestation' else 'contact')) }}</span>
             <span class="status status--{{ 'pending' if m.status == 'new' else 'ok' }}">{{ t('admin.msg_' ~ m.status) }}</span></p>
         <p class="muted">{{ m.name }} · <a href="mailto:{{ m.email }}">{{ m.email }}</a> · {{ m.created_at }}
             {% if m.type == 'contestation' and m.status == 'new' %} · {{ t('admin.answer_before', {'date': fmt_date(add_days(m.created_at, 7))}) }}{% endif %}</p>

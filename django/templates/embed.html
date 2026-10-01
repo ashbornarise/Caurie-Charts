@@ -1,0 +1,27 @@
+<h1>Intégrer le classement</h1>
+<p class="lead">Affichez le classement musical sur votre blog, votre site de radio ou de média. Il se met à jour tout seul, chaque jour, à partir des mêmes données que {{ brand() }}. Gratuit, sans inscription.</p>
+
+<form method="get" action="{{ path('integrer') }}" class="toolbar box">
+    <label>Pays
+        <select name="pays">{% for k, label in countries.items() %}<option value="{{ k }}"{{ ' selected' if k == code }}>{{ label }}</option>{% endfor %}</select>
+    </label>
+    <label>Titres
+        <select name="n">{% for s in sizes %}<option value="{{ s }}"{{ ' selected' if s == n }}>Top {{ s }}</option>{% endfor %}</select>
+    </label>
+    <label>Thème
+        <select name="theme"><option value="clair"{{ ' selected' if theme == 'clair' }}>Clair</option><option value="sombre"{{ ' selected' if theme == 'sombre' }}>Sombre</option></select>
+    </label>
+    <button class="button button--small" type="submit">Mettre à jour l’aperçu</button>
+</form>
+
+<h2>Code à copier</h2>
+<p>Collez ce code dans votre page (bloc « HTML personnalisé » sur WordPress, Blogger ou Wix). Gardez le lien sous le classement : il permet à vos lecteurs de retrouver le classement complet.</p>
+<textarea id="embed-code" class="embed-code" rows="5" readonly>{{ snippet }}</textarea>
+<p><button class="button button--small" type="button" data-copy="embed-code">Copier le code</button></p>
+
+<h2>Aperçu</h2>
+<iframe src="{{ src }}" width="100%" height="{{ height }}" class="embed-preview" loading="lazy" title="Aperçu du widget"></iframe>
+
+<h2>Conditions</h2>
+<p>Le widget est gratuit pour tout site, commercial ou non. Ne modifiez pas les positions affichées et laissez visible le lien vers {{ brand() }}. Le détail des règles figure dans les <a href="{{ path('conditions') }}">conditions d’utilisation</a>.</p>
+<script src="{{ asset('js/embed.js') }}" defer></script>

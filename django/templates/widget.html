@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="{{ locale() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>{{ data.name }} · {{ brand() }}</title>
+    <link rel="stylesheet" href="{{ asset('css/widget.css') }}">
+</head>
+<body class="cw cw--{{ theme }}">
+<header class="cw__head">
+    <a class="cw__brand" href="{{ home }}?{{ utm }}" target="_blank" rel="noopener">
+        <img src="{{ asset('img/brand/monogram.svg') }}" alt="" width="28" height="28">
+        <span><strong>{{ data.name }}</strong><small>{{ 'Classement officiel ' ~ brand() if data.official else 'Tendances des plateformes' }}{{ ' · ' ~ fmt_date(data.until) if data.until }}</small></span>
+    </a>
+</header>
+{% if data.rows %}
+<ol class="cw__list">
+    {% for r in data.rows %}
+    <li class="cw__row">
+        <span class="cw__rank">{{ r.rank }}</span>
+        {% if r.cover and r.cover.startswith('https://') %}<img class="cw__cover" src="{{ r.cover }}" alt="" width="36" height="36" loading="lazy">{% else %}<span class="cw__cover"></span>{% endif %}
+        <a class="cw__text" href="{{ url('titre/' ~ r.track_slug) }}?{{ utm }}" target="_blank" rel="noopener">
+            <strong>{{ r.title }}</strong><span>{{ r.artist }}</span>
+        </a>
+    </li>
+    {% endfor %}
+</ol>
+{% else %}
+<p class="cw__empty">Classement en cours de préparation.</p>
+{% endif %}
+<footer class="cw__foot"><a href="{{ home }}?{{ utm }}" target="_blank" rel="noopener">Classement complet sur {{ brand() }} →</a></footer>
+</body>
+</html>

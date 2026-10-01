@@ -22,6 +22,7 @@ from core.services.imports.service import COMPUTED, ImportService
 from core.services.imports.watch import ArtistWatch
 from core.services.news import FeedImporter
 from core.services.platforms import CollectService, HttpClient, clients, log_write
+from core.services import telegram
 from core.services.social.generator import PostGenerator, purge_orphans
 
 
@@ -86,6 +87,10 @@ class DailyPipeline:
                     return ["aucune rubrique n’a assez de données réelles aujourd’hui"]
                 return [f"{post['theme']} : {post['title']}" + (f" → {post['folder']}" if post.get("folder") else "")]
             self._step("8. Posts réseaux sociaux", posts)
+
+        if weekday == 1 and telegram.configured():
+            # Lundi : Top 10 de la semaine dans la chaîne Telegram (tendances tant qu'aucun classement officiel n'est publié)
+            self._step("8 bis. Chaîne Telegram", lambda: [telegram.send_chart()])
 
         def cleanup():
             live_chart.clear_cache()

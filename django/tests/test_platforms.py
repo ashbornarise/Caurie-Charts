@@ -87,3 +87,21 @@ def test_ia_sans_cle_groq_reste_sur_gemini_seul():
     from core.services.ai import FallbackClient, GeminiClient, GroqClient
     http = FakeHttp(lambda *a: {"status": 200, "body": "{}"})
     assert len(FallbackClient([GeminiClient(http, "g"), GroqClient(http, "")]).clients) == 1
+
+
+def test_telegram_message_du_classement_cite_sa_source_et_echappe_le_html():
+    from core.services.telegram import chart_message
+    data = {"code": "wa", "name": "Afrique de l’Ouest", "official": False, "since": "2026-09-24", "until": "2026-09-30",
+            "rows": [{"rank": 1, "title": "Bra <3", "artist": "Kweku Smoke", "track_slug": "kweku-smoke-bra"}]}
+    text = chart_message(data)
+    assert "Tendances de la semaine" in text and "Classement officiel" not in text
+    assert "Bra &lt;3" in text and "titre/kweku-smoke-bra" in text
+    assert "Apple Music, Deezer, Shazam et YouTube" in text
+
+
+def test_telegram_appel_api_avec_le_jeton(monkeypatch):
+    from core.services import telegram
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123:abc")
+    http = FakeHttp(lambda *a: {"status": 200, "body": json.dumps({"ok": True, "result": {"username": "cauri_bot"}})})
+    assert telegram.call("getMe", {}, http)["username"] == "cauri_bot"
+    assert http.calls[0]["url"] == "https://api.telegram.org/bot123:abc/getMe"

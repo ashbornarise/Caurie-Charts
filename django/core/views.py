@@ -503,7 +503,7 @@ def sitemap(request):
             if ch["public"] and not ch.get("regional"):
                 for p in ch["periods"]:
                     urls.append(url(chart_path(c["code"], code, p)))
-    urls += [url(p) for p in ("actualites", "partenaires", "mentions-legales", "confidentialite", "cookies")]
+    urls += [url(p) for p in ("actualites", "partenaires", "integrer", "mentions-legales", "confidentialite", "cookies")]
     data = repos.sitemap_entries()
     dated = {url("artiste/" + a["slug"]): a["updated_at"] for a in data["artists"]}
     dated.update({url("actualites/" + n["slug"]): n["published_at"] for n in data["news"]})

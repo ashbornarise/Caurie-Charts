@@ -1,0 +1,16 @@
+<h1>Revendiquer la fiche de {{ artist.name }}</h1>
+<p class="lead">Vous êtes {{ artist.name }}, son management ou son label ? Une fois votre identité vérifiée, vous pourrez nous faire corriger la photo, la biographie, le pays et les liens officiels de la fiche.</p>
+<p class="muted">Les positions et les chiffres ne se modifient jamais à la demande : ils viennent des plateformes et de la <a href="{{ path('methodologie') }}">méthodologie publique</a>.</p>
+
+<form method="post" action="{{ path('artiste/' ~ artist.slug ~ '/revendiquer') }}" class="form" novalidate>
+    {{ csrf_field() }}
+    <div class="hp" aria-hidden="true"><label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+    {{ partial('partials/field', name='name', label='Votre nom', attrs='autocomplete="name" maxlength="150"', old=old, errors=errors) }}
+    {{ partial('partials/field', name='email', label=t('form.email'), type='email', attrs='autocomplete="email" maxlength="190"', hint='De préférence une adresse officielle (domaine du label ou de l’artiste).', old=old, errors=errors) }}
+    {{ partial('partials/field', name='role', label='Votre lien avec l’artiste', type='select', options=roles, old=old, errors=errors) }}
+    {{ partial('partials/field', name='phone', label='Téléphone ou WhatsApp', type='tel', required=false, attrs='autocomplete="tel" maxlength="40"', old=old, errors=errors) }}
+    {{ partial('partials/field', name='proof', label='Comptes officiels pour vérifier', type='textarea', hint='Liens vers les comptes officiels (Instagram, YouTube, TikTok, Facebook…). Nous pourrons vous demander un message depuis l’un d’eux.', attrs='maxlength="2000"', old=old, errors=errors) }}
+    {{ partial('partials/field', name='message', label='Ce que vous souhaitez corriger ou ajouter', type='textarea', required=false, attrs='maxlength="3000"', old=old, errors=errors) }}
+    <p class="muted">Vos coordonnées servent uniquement à traiter cette demande (<a href="{{ path('confidentialite') }}">confidentialité</a>).</p>
+    <button class="button" type="submit">Envoyer la demande</button>
+</form>

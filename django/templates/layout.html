@@ -82,6 +82,8 @@
                 <li><a href="{{ path('a-propos') }}">{{ t('nav.about') }}</a></li>
                 <li><a href="{{ path('contact') }}">{{ t('nav.contact') }}</a></li>
                 <li><a href="{{ path('declarer') }}">{{ t('nav.submit') }}</a></li>
+                <li><a href="{{ path('integrer') }}">Intégrer le classement</a></li>
+                {% if config('app.telegram_url') %}<li><a href="{{ config('app.telegram_url') }}" target="_blank" rel="noopener">Chaîne Telegram</a></li>{% endif %}
                 <li><a href="{{ path('langue/' ~ other_locale, {'retour': current}) }}" hreflang="{{ other_locale }}">{{ t('footer.switch_locale') }}</a></li>
             </ul>
         </div>

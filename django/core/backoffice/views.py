@@ -240,7 +240,16 @@ def publish(request):
     run_id = int(req_str(request, "run_id") or 0)
     try:
         n = ChartService().publish(req_str(request, "country"), req_str(request, "period_type"), req_str(request, "period_key"), uid(request), ip(request))
-        return back(request, path(f"admin/classements/{run_id}"), "success", t("admin.published", n=n))
+        msg = t("admin.published", n=n)
+        if req_str(request, "period_type") == "week":
+            # Classement officiel publié : envoyé dans la chaîne Telegram (une seule fois)
+            from core.services import telegram
+            try:
+                country = req_str(request, "country").lower()
+                msg += " Telegram : " + telegram.send_chart("wa" if country in ("", "wa") else country)
+            except Exception as exc:  # noqa: BLE001
+                msg += f" Telegram : échec ({exc})"
+        return back(request, path(f"admin/classements/{run_id}"), "success", msg)
     except Exception as exc:  # noqa: BLE001
         return back(request, path(f"admin/classements/{run_id}"), "error", str(exc))
 

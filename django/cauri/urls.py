@@ -1,7 +1,7 @@
 """Routes : mêmes adresses que public/index.php (site PHP de référence)."""
 from django.urls import path, re_path
 
-from core import views
+from core import views, views_claim, views_widget
 from core.backoffice import views as admin
 
 P = r"(?P<period>semaine|mois|annee)"
@@ -16,7 +16,10 @@ urlpatterns = [
     re_path(rf"^classements/(?P<country>[a-z]{{2}})/(?P<chart>[a-z-]+)/{P}$", views.show),
     re_path(rf"^classements/(?P<country>[a-z]{{2}})/(?P<chart>[a-z-]+)/{P}/{K}$", views.show),
     re_path(r"^artiste/(?P<slug>[a-z0-9-]+)$", views.artist),
+    re_path(r"^artiste/(?P<slug>[a-z0-9-]+)/revendiquer$", views_claim.claim),
     re_path(r"^titre/(?P<slug>[a-z0-9-]+)$", views.track),
+    re_path(r"^widget/(?P<code>[a-z]{2})$", views_widget.widget),
+    path("integrer", views_widget.embed),
     path("methodologie", views.methodology),
     path("a-propos", views.about),
     path("contact", views.contact),
