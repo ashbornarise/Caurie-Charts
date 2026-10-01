@@ -25,6 +25,9 @@ SYSTEM = """Tu es rédacteur en chef social media de Cauri Charts, le classement
 dans l'esprit des posts de Billboard : accroche forte dès la première ligne, chiffres mis en avant, fierté pour les artistes, ton enthousiaste mais crédible.
 Règles absolues :
 - Utilise UNIQUEMENT les faits fournis. N'invente aucun chiffre, aucune position, aucun record, aucune citation, aucune date de sortie.
+- N'attribue aucun genre, ambiance ou style (« gothique », « sombre », « romantique »…) : les faits n'en contiennent pas.
+- Recopie les noms d'artistes et de titres EXACTEMENT comme dans les faits (orthographe, majuscules, « feat. »).
+- Le titre du visuel reprend le champ "headline" des faits, sans rien y ajouter.
 - Cite toujours d'où viennent les chiffres (champ "source"). Si ce ne sont pas des classements Cauri Charts, ne dis pas « classement Cauri Charts » : dis « dans les classements Apple Music / Deezer / YouTube ».
 - Français, 2 à 4 emojis maximum, phrases courtes, lisible sur mobile. Termine par une question qui invite à commenter.
 - 3 à 5 hashtags pertinents (artistes, pays, genres), sans #CauriCharts (ajouté automatiquement).
@@ -53,6 +56,8 @@ class PostGenerator:
             except Exception as exc:  # noqa: BLE001
                 log_write("social", "error", str(exc))
         text = text or self.template(facts)
+        if facts.get("request"):
+            text["title"] = facts["headline"]  # post sur demande : titre construit par le site, jamais par l'IA
         text["hashtags"] = list(dict.fromkeys(list(conf.get("ai.social.hashtags_base")) + list(text.get("hashtags") or [])))
 
         name = f"{day}-{theme}-{secrets.token_hex(4)[:6]}"
@@ -98,7 +103,9 @@ class PostGenerator:
         return None
 
     def _write(self, facts: dict) -> dict:
-        answer = self.ai.ask(SYSTEM, "Faits (JSON) :\n" + json.dumps(facts, ensure_ascii=False, indent=4), 1500)
+        # La phrase de la demande et l'explication interne ne sont pas des faits : l'IA ne les voit pas
+        shown = {k: v for k, v in facts.items() if k not in ("request", "explanation", "measure", "unsupported", "style")}
+        answer = self.ai.ask(SYSTEM, "Faits (JSON) :\n" + json.dumps(shown, ensure_ascii=False, indent=4, default=str), 1500)
         j = ai.extract_json(answer["text"])
         if not j or not j.get("title") or not j.get("caption"):
             raise RuntimeError("Réponse IA inexploitable")

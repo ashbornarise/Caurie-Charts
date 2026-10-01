@@ -921,8 +921,9 @@ def posts_request(request):
         traceback.print_exc(file=sys.stderr)
         return back(request, path("admin/posts"), "error", f"Génération impossible : {type(exc).__name__} : {exc}")
     audit.log(uid(request), "social.request", "social_post", post["id"], text, {"params": {k: v for k, v in params.items() if k != "request"}}, ip(request))
-    return back(request, path("admin/posts") + f"#post-{int(post['id'])}", "success",
-                f"Post créé : « {post['title']} ». {params['explanation']}")
+    warn = (" Impossible avec nos données, donc non pris en compte : " + ", ".join(params["unsupported"]) + ".") if params["unsupported"] else ""
+    return back(request, path("admin/posts") + f"#post-{int(post['id'])}", "error" if warn else "success",
+                f"Post créé : « {post['title']} ». {params['explanation']}{warn}")
 
 
 @admin_view()

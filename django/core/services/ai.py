@@ -96,6 +96,8 @@ class GeminiClient:
 class GroqClient:
     """API Groq (offre gratuite, format OpenAI) ; modèle suivant de la liste en cas de 404/429/500/503.
     Pas de recherche web : web_searches est ignoré (le classement des artistes s'appuie alors sur les faits fournis)."""
+    NAME = "Groq"
+    TRY_NEXT_ON_ANY_ERROR = False
     URL = "https://api.groq.com/openai/v1/chat/completions"
 
     def __init__(self, http: HttpClient, api_key: str | None = None, model: str | None = None):
@@ -109,11 +111,13 @@ class GroqClient:
 
     def ask(self, system: str, prompt: str, max_tokens: int = 1500, web_searches: int = 0) -> dict:
         if not self.is_available():
-            raise PlatformException("GROQ_API_KEY absente")
+            raise PlatformException(f"{self.NAME} : clé absente")
         last = "aucun modèle disponible"
         for model in self.models:
-            body = {"model": model, "max_tokens": max(max_tokens, 2048), "temperature": 0.1 if web_searches > 0 else 0.8,
+            body = {"model": model, "max_tokens": max(max_tokens, 6000), "temperature": 0.1 if web_searches > 0 else 0.5,
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}]}
+            if "gpt-oss" in model and self.NAME == "Groq":
+                body["reasoning_effort"] = "low"  # modèle qui réfléchit avant de répondre : réflexion courte, place pour la réponse
             resp = self.http.request("POST", self.URL, {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
                                      json.dumps(body, ensure_ascii=False).encode())
             try:
@@ -121,12 +125,49 @@ class GroqClient:
             except ValueError:
                 data = {}
             if resp["status"] == 200 and (data.get("choices") or [None])[0]:
-                text = ((data["choices"][0].get("message") or {}).get("content") or "")
-                return {"text": re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip(), "sources": []}
+                text = re.sub(r"<think>.*?</think>", "", (data["choices"][0].get("message") or {}).get("content") or "", flags=re.S).strip()
+                if text:
+                    return {"text": text, "sources": []}
+                last = f"réponse vide de {model}"  # réflexion trop longue : modèle suivant
+                continue
             last = (data.get("error") or {}).get("message") or f"HTTP {resp['status']}"
-            if resp["status"] not in (404, 429, 500, 503):
+            if not self.TRY_NEXT_ON_ANY_ERROR and resp["status"] not in (404, 429, 500, 503):
                 break
-        raise PlatformException("Groq : " + last)
+        raise PlatformException(f"{self.NAME} : " + last)
+
+
+class OpenRouterClient(GroqClient):
+    """OpenRouter, modèles gratuits uniquement (identifiants en « :free ») : 3e secours, même format qu'OpenAI.
+    La clé est réglée sur une limite de dépense de 0 $ : un modèle payant serait refusé."""
+    NAME = "OpenRouter"
+    TRY_NEXT_ON_ANY_ERROR = True  # modèles gratuits parfois réservés à certaines applications : on passe au suivant
+    URL = "https://openrouter.ai/api/v1/chat/completions"
+    MODELS_URL = "https://openrouter.ai/api/v1/models"
+
+    def __init__(self, http: HttpClient, api_key: str | None = None, model: str | None = None):
+        self.http = http
+        self.api_key = api_key if api_key is not None else env.get("OPENROUTER_API_KEY", "")
+        self.fixed = model or env.get("OPENROUTER_MODEL", "")
+        self._models = None
+
+    @property
+    def models(self) -> list:
+        """Modèles gratuits du moment (la liste change souvent), les plus grands contextes d'abord ; 4 essais au plus."""
+        if self._models is None:
+            found = []
+            if self.api_key:
+                try:
+                    data = json.loads(self.http.request("GET", self.MODELS_URL, {}, None)["body"]).get("data") or []
+                    free = [m for m in data if str(m.get("id", "")).endswith(":free")]
+                    found = [m["id"] for m in sorted(free, key=lambda m: -(m.get("context_length") or 0))]
+                except (ValueError, KeyError, PlatformException):
+                    found = []
+            self._models = list(dict.fromkeys([m for m in [self.fixed] if m] + found))[:6]
+        return self._models
+
+    @models.setter
+    def models(self, value):
+        self._models = value
 
 
 class FallbackClient:
@@ -157,7 +198,8 @@ def make():
         client = ClaudeClient(http)
     else:
         pair = [GeminiClient(http), GroqClient(http)]
-        client = FallbackClient(pair[::-1] if provider == "groq" else pair)
+        # OpenRouter (modèles gratuits) en dernier recours, quel que soit le fournisseur principal
+        client = FallbackClient((pair[::-1] if provider == "groq" else pair) + [OpenRouterClient(http)])
     return client if client.is_available() else None
 
 

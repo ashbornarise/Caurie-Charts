@@ -36,7 +36,7 @@
                 <small class="muted">{{ fmt_date(p.slot_date) }}</small>
                 <h2 class="post-card__title">{{ p.title }}</h2>
                 {% set pf = from_json(p.facts) if p.facts else {} %}
-                {% if pf and pf.request %}<p class="muted">Demande : « {{ pf.request }} » · mesure : {{ pf.measure }}{% if pf.explanation %}<br>{{ pf.explanation }}{% endif %}</p>{% endif %}
+                {% if pf and pf.request %}<p class="muted">Demande : « {{ pf.request }} » · mesure : {{ pf.measure }}{% if pf.explanation %}<br>{{ pf.explanation }}{% endif %}{% if pf.unsupported %}<br><strong>Non pris en compte (pas de données) : {{ pf.unsupported|join(', ') }}</strong>{% endif %}</p>{% endif %}
             </div>
             <span class="status status--{{ 'published' if p.status == 'published' else ('rejected' if p.status == 'rejected' else 'draft') }}">{{ t('admin.post_status_' ~ p.status) }}</span>
         </header>
