@@ -66,3 +66,7 @@ pre.json { white-space: pre-wrap; font-size: .75rem; margin: 0; max-width: 360px
 .post-card__caption { width: 100%; font: inherit; font-size: .88rem; padding: 10px; border: 1px solid #E5E5E5; border-radius: 8px; background: #FAFAFA; resize: vertical; }
 .status--rejected { background: #F3F3F3; color: #6B6B6B; }
 .partner-thumb { max-width: 140px; object-fit: contain; }
+
+/* Posts : demande en langage naturel */
+.post-request textarea { display: block; width: 100%; margin: 8px 0; font: inherit; padding: 8px 10px; border: 1px solid var(--ink-2); border-radius: var(--radius); }
+.post-request p { margin: 0; }

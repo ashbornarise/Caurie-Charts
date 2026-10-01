@@ -258,6 +258,11 @@ def labels() -> dict:
     return {k: v["label"] for k, v in THEMES.items()}
 
 
+def label(key: str) -> str:
+    """Libellé d'une rubrique, y compris les posts « sur demande » (demande-xxxxxx)."""
+    return "Sur demande" if str(key).startswith("demande") else labels().get(key, key)
+
+
 def facts(key: str):
     """Faits d'une nouvelle rubrique, ou None (rubrique inconnue, historique, ou sans données)."""
     th = THEMES.get(key)

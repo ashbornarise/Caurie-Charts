@@ -3,7 +3,15 @@
 <p class="muted">{{ t('admin.posts_intro') }}</p>
 {% if exportDir %}<p class="muted">{{ t('admin.posts_folder', {'dir': exportDir}) }}</p>{% endif %}
 
-<form method="post" action="{{ path('admin/posts/generer') }}" class="toolbar box box--accent">
+<form method="post" action="{{ path('admin/posts/demande') }}" class="box box--accent post-request">
+    {{ csrf_field() }}
+    <label for="post-demande"><strong>Demander un post à l’IA</strong></label>
+    <textarea id="post-demande" name="demande" rows="2" maxlength="500" required
+              placeholder="Ex. : un post des 20 titres les plus écoutés de cette année · les clips les plus vus au Ghana · les artistes nigérians les plus suivis sur Deezer"></textarea>
+    <p><button class="button button--small" type="submit">Générer ce post</button>
+       <small class="muted">L’IA choisit la mesure, le pays et la période ; les chiffres viennent toujours de la base. Ce qui n’existe pas (nombre exact de streams…) est signalé.</small></p>
+</form>
+<form method="post" action="{{ path('admin/posts/generer') }}" class="toolbar box">
     {{ csrf_field() }}
     <strong>{{ t('admin.posts_generate') }}</strong>
     <button class="button button--small" name="theme" value="rotation" type="submit">{{ t('admin.posts_generate_all') }}</button>
@@ -24,9 +32,11 @@
     <article class="post-card post-card--{{ p.status }}" id="post-{{ p.id|int }}">
         <header class="post-card__head">
             <div>
-                <span class="tag">{{ themes.get(p.theme, p.theme) }}</span>
+                <span class="tag">{{ themes.get(p.theme) or ('Sur demande' if p.theme.startswith('demande') else p.theme) }}</span>
                 <small class="muted">{{ fmt_date(p.slot_date) }}</small>
                 <h2 class="post-card__title">{{ p.title }}</h2>
+                {% set pf = from_json(p.facts) if p.facts else {} %}
+                {% if pf and pf.request %}<p class="muted">Demande : « {{ pf.request }} » · mesure : {{ pf.measure }}{% if pf.explanation %}<br>{{ pf.explanation }}{% endif %}</p>{% endif %}
             </div>
             <span class="status status--{{ 'published' if p.status == 'published' else ('rejected' if p.status == 'rejected' else 'draft') }}">{{ t('admin.post_status_' ~ p.status) }}</span>
         </header>

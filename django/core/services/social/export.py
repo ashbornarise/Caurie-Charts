@@ -15,7 +15,7 @@ from datetime import date, timedelta
 from core import env
 from core.services.social import image as PI
 from core.services.social.carousel import clips_dir
-from core.services.social.themes import labels
+from core.services.social.themes import label
 
 DAYS = {1: "Lundi", 2: "Mardi", 3: "Mercredi", 4: "Jeudi", 5: "Vendredi", 6: "Samedi", 7: "Dimanche"}
 # Sous-dossiers par plateforme (Instagram et Facebook ont les mêmes formats : 4:5 au fil, 9:16 en story et en Reel)
@@ -42,7 +42,7 @@ def folder_name(post: dict) -> tuple:
     monday = d - timedelta(days=d.isoweekday() - 1)
     iso_year, iso_week, _ = d.isocalendar()
     week = f"Semaine {iso_week:02d} ({_short(monday)} - {_short(monday + timedelta(days=6))})"
-    rubric = labels().get(post["theme"], post["theme"])
+    rubric = label(post["theme"])
     # Espaces insécables de la typographie française → espaces simples, pour reconnaître la rubrique
     title = re.sub(r"[  \t ]+", " ", PI.clean(post["title"]))
     title = re.sub(r"\s*[:·\-–]?\s*" + re.escape(rubric) + r"\s*[:·\-–]?\s*", " ", title, flags=re.I)  # pas de répétition de la rubrique
@@ -115,7 +115,7 @@ def export(post: dict):
     iso_year, week, name = folder_name(post)
     folder = os.path.join(root, iso_year, week, name)
     d = date.fromisoformat(str(post["slot_date"])[:10])
-    rubric = labels().get(post["theme"], post["theme"])
+    rubric = label(post["theme"])
     # Même rubrique le même jour : l'ancienne version est remplacée
     for old in glob.glob(os.path.join(glob.escape(os.path.dirname(folder)), f"{d:%d-%m} * - {glob.escape(rubric)}*")):
         if os.path.isdir(old) and old != folder:

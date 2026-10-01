@@ -897,6 +897,35 @@ def posts_generate(request):
 
 
 @admin_view()
+def posts_request(request):
+    """Post « sur demande » : l'IA traduit la phrase en réglages, les chiffres viennent de la base (custom.py)."""
+    import secrets
+    from core.services import ai
+    from core.services.social import custom
+    from core.services.social.generator import PostGenerator
+    text = req_str(request, "demande").strip()[:500]
+    if len(text) < 8:
+        return back(request, path("admin/posts"), "error", "Décrivez le post voulu, par exemple « les 20 titres les plus écoutés de l’année au Ghana ».")
+    client = ai.make()
+    if not client:
+        return back(request, path("admin/posts"), "error", "IA non configurée : ajoutez GROQ_API_KEY (et AI_PROVIDER=groq) dans les variables de Vercel.")
+    try:
+        params = custom.interpret(client, text)
+        facts = custom.facts(params)
+        if not facts:
+            return back(request, path("admin/posts"), "error", "Pas de données réelles pour cette demande. " + params["explanation"])
+        post = PostGenerator(client).generate("demande-" + secrets.token_hex(3), facts=facts)
+    except Exception as exc:  # noqa: BLE001
+        import sys
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return back(request, path("admin/posts"), "error", f"Génération impossible : {type(exc).__name__} : {exc}")
+    audit.log(uid(request), "social.request", "social_post", post["id"], text, {"params": {k: v for k, v in params.items() if k != "request"}}, ip(request))
+    return back(request, path("admin/posts") + f"#post-{int(post['id'])}", "success",
+                f"Post créé : « {post['title']} ». {params['explanation']}")
+
+
+@admin_view()
 def post_zip(request, pid: str):
     """Dossier complet d'un post en ZIP. Sur Vercel (réponse limitée à 4,5 Mo), l'archive passe par le Blob."""
     import os

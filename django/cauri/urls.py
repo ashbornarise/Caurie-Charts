@@ -64,6 +64,7 @@ urlpatterns = [
     re_path(r"^admin/actualites/(?P<nid>\d+|nouveau)$", admin.news_form),
     path("admin/posts", admin.posts),
     path("admin/posts/generer", admin.posts_generate),
+    path("admin/posts/demande", admin.posts_request),
     re_path(r"^admin/posts/(?P<pid>\d+)$", admin.post_status),
     re_path(r"^admin/posts/(?P<pid>\d+)/telegram$", admin.post_telegram),
     re_path(r"^admin/posts/(?P<pid>\d+)/zip$", admin.post_zip),

@@ -40,9 +40,10 @@ class PostGenerator:
     def __init__(self, ai_client=None):
         self.ai = ai_client
 
-    def generate(self, theme: str, day: str | None = None):
+    def generate(self, theme: str, day: str | None = None, facts: dict | None = None):
+        """facts fournis : post « sur demande » (custom.py) ; sinon faits de la rubrique."""
         day = day or clock.today().isoformat()
-        facts = PF.for_theme(theme)
+        facts = facts or PF.for_theme(theme)
         if not facts:
             return None
         text = None
