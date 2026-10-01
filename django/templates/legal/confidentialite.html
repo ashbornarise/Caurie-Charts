@@ -49,7 +49,8 @@
 
 <h2>Qui voit ces données</h2>
 <p>Uniquement l'équipe de {{ brand() }} chargée des vérifications, et les prestataires techniques ci-dessous, qui agissent sur nos instructions. Les données ne sont ni vendues, ni louées, ni partagées avec le label {{ config('app.group_label.name') }}. Les captures d'écran ne sont jamais publiées.</p>
-<table class="table">
+<div class="table-scroll">
+<table class="data-table">
     <thead><tr><th>Prestataire</th><th>Rôle</th><th>Lieu</th></tr></thead>
     <tbody>
         <tr><td>Vercel Inc.</td><td>Hébergement du site et des fichiers envoyés (captures, images)</td><td>Union européenne (Francfort, Paris) ; société établie aux États-Unis</td></tr>
@@ -58,6 +59,7 @@
         <tr><td>Google (Gemini) et Groq</td><td>Rédaction assistée des posts et classement des artistes par pays : ces services ne reçoivent que des données publiques (classements, noms d'artistes), jamais de données personnelles</td><td>États-Unis</td></tr>
     </tbody>
 </table>
+</div>
 <p>Les liens vers YouTube, Spotify, Audiomack ou Boomplay ouvrent le site de la plateforme, qui applique alors sa propre politique. Certaines pochettes peuvent être affichées depuis les serveurs de Spotify ou d'Apple : votre navigateur contacte alors ces serveurs pour charger l'image.</p>
 
 <h2>Où sont stockées les données</h2>
