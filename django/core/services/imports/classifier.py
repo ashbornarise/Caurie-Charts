@@ -39,14 +39,14 @@ class ArtistClassifier:
         self.evidence_cache: dict = {}
         self.searches_left = 15  # recherches YouTube par nom (100 unités chacune) par passage
 
-    def run(self, limit: int = 60) -> dict:
+    def run(self, limit: int = 60, ai_budget: int | None = None) -> dict:
         cfg = conf.get("ai.classify")
         covered = {r["code"]: r["id"] for r in db.all("SELECT id, code FROM countries WHERE is_active = 1")}
         artists = db.all(f"""SELECT a.id, a.name, c.code AS guessed FROM artists a LEFT JOIN countries c ON c.id = a.guessed_country_id
                              WHERE a.status = 'pending' AND (a.origin_checked_at IS NULL OR a.origin_checked_at < LOCALTIMESTAMP - INTERVAL '30 days')
                              ORDER BY a.origin_checked_at IS NOT NULL, a.fans DESC NULLS LAST, a.id LIMIT {max(0, int(limit))}""")
         stats = {"checked": 0, "active": 0, "out_of_scope": 0, "pending": 0, "ai_calls": 0}
-        ai_left = int(cfg["max_ai_calls"])
+        ai_left = int(cfg["max_ai_calls"] if ai_budget is None else ai_budget)
         threshold = float(cfg["threshold"])
         wikidata = WikidataLookup(self.http)
         ai_ok = bool(self.ai and self.ai.is_available())

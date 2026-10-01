@@ -57,6 +57,7 @@ urlpatterns = [
     re_path(r"^admin/pays/(?P<cid>\d+)$", admin.save_country),
     path("admin/import", admin.imports),
     path("admin/import/lancer", admin.import_run),
+    path("admin/import/ia", admin.import_classify),
     re_path(r"^admin/import/artiste/(?P<aid>\d+)$", admin.import_artist),
     re_path(r"^admin/import/clip/(?P<pid>\d+)$", admin.import_clip),
     re_path(r"^admin/import/clip-manuel/(?P<tid>\d+)$", admin.import_manual_clip),

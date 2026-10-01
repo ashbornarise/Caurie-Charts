@@ -643,6 +643,29 @@ def imports(request):
     })
 
 
+@admin_view()
+def import_classify(request):
+    """Vérification par l'IA des artistes « à vérifier » : un lot de 30 (délai d'une requête), avec le même garde-fou
+    que la nuit — l'IA ne valide seule que si un indice collecté (chaîne YouTube, Wikidata, scène) confirme sa réponse."""
+    from core.services import ai
+    from core.services.imports.classifier import ArtistClassifier
+    from core.services.platforms import HttpClient
+    client = ai.make()
+    if not client:
+        return back(request, path("admin/import") + "#artistes", "error", "IA non configurée (GROQ_API_KEY).")
+    try:
+        s = ArtistClassifier(HttpClient(20), client).run(12, ai_budget=12)
+    except Exception as exc:  # noqa: BLE001
+        import sys
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return back(request, path("admin/import") + "#artistes", "error", f"Vérification interrompue : {exc}")
+    audit.log(uid(request), "artist.ai_classify", None, None, None, s, ip(request))
+    return back(request, path("admin/import") + "#artistes", "success",
+                f"{s['checked']} artistes examinés : {s['active']} validés automatiquement, {s['out_of_scope']} hors zone, "
+                f"{s['pending']} restent à vérifier (indices insuffisants). Recliquez pour le lot suivant.")
+
+
 @admin_view("admin")
 def import_run(request):
     service = ImportService()
