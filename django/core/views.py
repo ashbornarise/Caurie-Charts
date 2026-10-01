@@ -57,7 +57,7 @@ def aside(country: dict) -> dict:
 def site_ld() -> dict:
     """Organisation et site, présents sur chaque page (données structurées schema.org)."""
     return {"@type": "Organization", "@id": url("/") + "#organisation", "name": brand(), "url": url("/"),
-            "logo": url("assets/img/brand/logo-share.png"), "areaServed": ["TG", "BJ", "GH", "CI", "SN"]}
+            "logo": url("assets/img/brand/logo-share.png"), "areaServed": [c["code"] for c in repos.countries()]}
 
 
 def json_ld(items: list):

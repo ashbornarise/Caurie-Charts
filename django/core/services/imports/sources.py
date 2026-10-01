@@ -80,7 +80,7 @@ class AppleMusicChartSource:
 
 class DeezerChartSource:
     """« Top <pays> » du compte Deezer Charts : Côte d'Ivoire et Sénégal seulement."""
-    PLAYLISTS = {"CI": 1362497945, "SN": 1362523075}
+    PLAYLISTS = {"CI": 1362497945, "SN": 1362523075, "NG": 1362516565}
     URL = "https://api.deezer.com/playlist/{}/tracks?limit=100"
 
     def __init__(self, http):
@@ -113,8 +113,8 @@ class DeezerChartSource:
 
 
 class ShazamChartSource:
-    """Top 200 Shazam (7 derniers jours), CSV public : Ghana, Côte d'Ivoire, Sénégal."""
-    SLUGS = {"GH": "ghana", "CI": "ivory-coast", "SN": "senegal"}
+    """Top 200 Shazam (7 derniers jours), CSV public : Ghana, Côte d'Ivoire, Sénégal, Nigeria."""
+    SLUGS = {"GH": "ghana", "CI": "ivory-coast", "SN": "senegal", "NG": "nigeria"}
     URL = "https://www.shazam.com/services/charts/csv/top-200/{}"
 
     def __init__(self, http):
@@ -169,8 +169,8 @@ _QUOTES = " \t\"'“”«»"
 
 
 class YouTubeTrendingSource:
-    """Vidéos musicales populaires par pays (videos.list chart=mostPopular, 1 unité) : Ghana et Sénégal."""
-    COUNTRIES = ["GH", "SN"]
+    """Vidéos musicales populaires par pays (videos.list chart=mostPopular, 1 unité) : Ghana, Sénégal, Nigeria."""
+    COUNTRIES = ["GH", "SN", "NG"]
     URL = "https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&videoCategoryId=10&maxResults=50&regionCode={}&key={}"
 
     def __init__(self, http, api_key: str):

@@ -16,7 +16,7 @@
         </span>
         <div class="artist-hero__text">
             <p class="eyebrow">
-                {% if country_code and country_code|length == 2 and country_code in ('TG', 'BJ', 'GH', 'CI', 'SN') %}{{ flag(country_code, 14) }} {{ t('artist.eyebrow', {'country': country_name(country_code)}) }}
+                {% if country_code and country_code|length == 2 and country_code in countries|map(attribute='code')|list %}{{ flag(country_code, 14) }} {{ t('artist.eyebrow', {'country': country_name(country_code)}) }}
                 {% else %}{{ t('artist.eyebrow_unknown') }}{% endif %}
             </p>
             <h1 class="profile__title">{{ artist.name }}</h1>

@@ -204,6 +204,8 @@ class SceneSignals:
                "nouchi", "babi", "rap ivoire", "coupé-décalé", "coupe decale"],
         "SN": ["sénégal", "senegal", "sénégalais", "sénégalaise", "dakar", "pikine", "thiès", "saint-louis", "221", "wolof", "galsen", "mbalax", "kebetu"],
         "GH": ["ghana", "ghanaian", "accra", "kumasi", "tema", "233", "twi", "hiplife", "highlife", "asakaa", "drill gh"],
+        "NG": ["nigeria", "nigerian", "naija", "lagos", "abuja", "ibadan", "port harcourt", "234", "yoruba", "igbo", "hausa",
+               "street pop", "afrobeats naija"],
     }
     PAYOUT_COUNTRIES = ["FR", "US", "GB", "BE", "CA", "DE", "NL", "CH", "IT", "ES", "AE"]
     _LETTER = r"[^\W\d_]"

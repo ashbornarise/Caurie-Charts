@@ -86,7 +86,7 @@ def _all() -> dict:
                        "clip_seconds": 30, "clip_start": 30, "hashtags_base": ["#CauriCharts", "#AfriqueDeLOuest"]},
         },
         "discovery": {
-            "wikidata_countries": {"TG": "Q945", "BJ": "Q962", "GH": "Q117", "CI": "Q1008", "SN": "Q1041"},
+            "wikidata_countries": {"TG": "Q945", "BJ": "Q962", "GH": "Q117", "CI": "Q1008", "SN": "Q1041", "NG": "Q1033"},
             "min_deezer_fans": 300, "min_youtube_subs": 5000, "seeds_per_run": 25, "max_new_per_run": 200,
             "priority": ["TG", "BJ"],
         },

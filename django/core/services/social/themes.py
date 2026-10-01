@@ -13,7 +13,7 @@ from core.helpers import country_name
 from core.services.live_chart import SOURCES
 
 RECENT = "o.observed_on >= CURRENT_DATE - 7"
-COUNTRIES = {"TG": "Togo", "BJ": "Bénin", "GH": "Ghana", "CI": "Côte d’Ivoire", "SN": "Sénégal"}
+COUNTRIES = {"TG": "Togo", "BJ": "Bénin", "GH": "Ghana", "CI": "Côte d’Ivoire", "SN": "Sénégal", "NG": "Nigeria"}
 
 
 def _fmt(n) -> str:
@@ -230,6 +230,8 @@ THEMES = {
                       CHARTS + " ; fans : Deezer", revelations),
     "top_sn": _t("Top Sénégal", "Top Sénégal", ("Les titres qui font bouger", "le Sénégal", "cette semaine"),
                  "🇸🇳 Ce qui tourne au Sénégal cette semaine :", "Votre son du moment au Sénégal ?", CHARTS, top_country("SN")),
+    "top_ng": _t("Top Nigeria", "Top Nigeria", ("Les titres qui font bouger", "le Nigeria", "cette semaine"),
+                 "🇳🇬 Ce qui tourne au Nigeria cette semaine :", "Votre son du moment au Nigeria ?", CHARTS, top_country("NG")),
     "youtube_tendances": _t("Tendances YouTube", "Tendances YouTube", ("YouTube", "en tendance", "musique en Afrique de l’Ouest"),
                             "🔥 Nos artistes dans les tendances YouTube :", "Vous l’avez vu passer ?",
                             "Tendances YouTube (7 derniers jours)", by_source("youtube_trending")),

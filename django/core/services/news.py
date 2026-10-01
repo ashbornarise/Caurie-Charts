@@ -30,6 +30,7 @@ COUNTRY_WORDS = {
     "GH": ["ghana", "ghanaian", "ghanéen", "ghanéenne", "accra", "kumasi"],
     "CI": ["côte d'ivoire", "côte d’ivoire", "ivory coast", "ivoirien", "ivoirienne", "abidjan"],
     "SN": ["sénégal", "senegal", "sénégalais", "sénégalaise", "senegalese", "dakar"],
+    "NG": ["nigeria", "nigérian", "nigériane", "nigerian", "lagos", "abuja", "naija"],
 }
 CATEGORY_WORDS = {
     "evenement": r"festivals?|concerts?|tournée|tour|olympia|scènes?|awards?|cérémonie|vmas?|grammys?|headline|performs?|stage",
