@@ -55,6 +55,8 @@ class PostGenerator:
         text["hashtags"] = list(dict.fromkeys(list(conf.get("ai.social.hashtags_base")) + list(text.get("hashtags") or [])))
 
         name = f"{day}-{theme}-{secrets.token_hex(4)[:6]}"
+        look = PI.style(name)
+        facts["style"] = look["name"] if look else None  # habillage tiré pour ce post (polices, couleurs, filtre)
         images = PI.render(facts, text, name)
         cover = self._cover(facts)
         items = self._carousel_items(facts)
@@ -128,7 +130,7 @@ class PostGenerator:
             # Photo de l'artiste plutôt que la pochette (souvent couverte de texte)
             rows = [{**t, "artist": facts["artist"]["name"], "image": facts.get("image") or t.get("image_url")} for t in facts["tracks"]]
         else:
-            rows = [{**e, "image": e.get("image_url")} for e in facts["top"]]
+            rows = [{**e, "image": e.get("image_url") or (facts.get("image") if facts["kind"] == "ranking" else None)} for e in facts["top"]]
         items = []
         for i, r in enumerate(rows[:7]):
             if "figure_value" in r or not r.get("track_id"):

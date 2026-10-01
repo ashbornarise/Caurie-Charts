@@ -266,7 +266,9 @@ def facts(key: str):
         return None
     return {"kind": "ranking", "theme": key, "label": th["label"], "headline": th["label"], "big": th["big"], "cover": th["cover"],
             "intro": th["intro"], "question": th["question"], "top": entries, "source": th["source"],
-            "image": next((e["image_url"] for e in entries if e.get("image_url")), None)}
+            # Sans photo dans la liste (chiffres, actualités) : photo d'un artiste suivi, tirée au hasard
+            "image": next((e["image_url"] for e in entries if e.get("image_url")), None) or db.value(
+                "SELECT image_url FROM artists WHERE status = 'active' AND image_url LIKE 'https://%' ORDER BY random() LIMIT 1")}
 
 
 def rotation() -> list:

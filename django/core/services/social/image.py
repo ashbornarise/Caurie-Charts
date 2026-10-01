@@ -5,10 +5,11 @@ titre du post, puis la liste des meilleures performances. Rendu en 4K (2160 px d
 fil Instagram et Facebook) et story 9:16 (2160 × 3840). La mise en page est écrite sur une base de 1080 px.
 """
 import io
+import random
 import re
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageOps
 
 from core import storage
 from core.services import share_image
@@ -20,7 +21,6 @@ SCALE = 2  # base 1080 px → 2160 px de large (4K)
 # Zones couvertes par l'interface des applications en 9:16 (base 1080 × 1920) : profil et boutons en haut,
 # légende, musique et réponse en bas, boutons d'action à droite (TikTok, Reels). Rien d'important n'y est posé.
 SAFE_916 = {"top": 250, "bottom": 440, "side": 130}
-VIOLET = (139, 82, 255)
 _FONTS: dict = {}
 
 
@@ -36,12 +36,60 @@ def font(path: str, px: int) -> ImageFont.FreeTypeFont:
     return _FONTS[key]
 
 
-def fonts() -> dict | None:
-    f = share_image.fonts()
-    if not f:
+FONT_DIR = REPO / "resources" / "fonts"
+# Habillage tiré au hasard pour chaque post (le même sur tous ses visuels) : polices, couleurs, filtre photo.
+# Polices libres (licence OFL, resources/fonts) : embarquées, car le serveur n'en a aucune.
+FONT_SETS = [
+    {"name": "Magazine", "display": "Anton-Regular.ttf", "bold": "Poppins-Bold.ttf", "sans": "Poppins-Regular.ttf", "serif": "DMSerifDisplay-Regular.ttf"},
+    {"name": "Affiche", "display": "BebasNeue-Regular.ttf", "bold": "Lato-Bold.ttf", "sans": "Lato-Regular.ttf", "serif": "AbrilFatface-Regular.ttf"},
+    {"name": "Bloc", "display": "ArchivoBlack-Regular.ttf", "bold": "PT_Sans-Web-Bold.ttf", "sans": "PT_Sans-Web-Regular.ttf", "serif": "PT_Serif-Web-Bold.ttf"},
+    {"name": "Rétro", "display": "AlfaSlabOne-Regular.ttf", "bold": "Poppins-Bold.ttf", "sans": "Poppins-Regular.ttf", "serif": "AlfaSlabOne-Regular.ttf"},
+    {"name": "Néon", "display": "Bungee-Regular.ttf", "bold": "Lato-Bold.ttf", "sans": "Lato-Regular.ttf", "serif": "DMSerifDisplay-Regular.ttf"},
+    {"name": "Élégant", "display": "AbrilFatface-Regular.ttf", "bold": "Lato-Bold.ttf", "sans": "Lato-Regular.ttf", "serif": "DMSerifDisplay-Regular.ttf"},
+]
+# accent (chiffres, rubrique), texte posé sur l'accent, ombre des dégradés, fond sans photo
+PALETTES = [
+    {"name": "Violet Cauri", "accent": (139, 82, 255), "on": (255, 255, 255), "shade": (8, 5, 18), "base": (42, 14, 120)},
+    {"name": "Or", "accent": (255, 190, 40), "on": (20, 14, 0), "shade": (16, 10, 2), "base": (120, 70, 0)},
+    {"name": "Corail", "accent": (255, 92, 100), "on": (255, 255, 255), "shade": (20, 5, 8), "base": (130, 20, 40)},
+    {"name": "Émeraude", "accent": (0, 210, 150), "on": (0, 25, 18), "shade": (3, 16, 12), "base": (0, 90, 70)},
+    {"name": "Bleu", "accent": (60, 170, 255), "on": (0, 15, 30), "shade": (4, 10, 22), "base": (10, 40, 120)},
+    {"name": "Orange", "accent": (255, 120, 30), "on": (255, 255, 255), "shade": (18, 8, 2), "base": (130, 50, 0)},
+    {"name": "Citron", "accent": (215, 255, 60), "on": (20, 25, 0), "shade": (8, 10, 4), "base": (60, 80, 0)},
+]
+FILTERS = ["naturel", "noir et blanc", "duotone", "chaud", "froid", "contrasté", "doux"]
+
+
+def style(seed: str) -> dict | None:
+    """Habillage d'un post, tiré au hasard mais stable pour un même nom de post. None si une police manque."""
+    rnd = random.Random(seed)
+    fs, pal = rnd.choice(FONT_SETS), rnd.choice(PALETTES)
+    paths = {k: str(FONT_DIR / fs[k]) for k in ("display", "bold", "sans", "serif")}
+    if not all(Path(p).is_file() for p in paths.values()):
         return None
-    anton = REPO / "resources" / "fonts" / "Anton-Regular.ttf"
-    return {**f, "display": str(anton) if anton.is_file() else f["bold"]}
+    flt = rnd.choice(FILTERS)
+    return {**paths, **{k: pal[k] for k in ("accent", "on", "shade", "base")}, "filter": flt,
+            "name": f"{fs['name']} · {pal['name']} · {flt}"}
+
+
+def filtered(img: Image.Image | None, f: dict) -> Image.Image | None:
+    """Filtre photo de l'habillage."""
+    if img is None:
+        return None
+    kind = f.get("filter")
+    if kind == "noir et blanc":
+        return ImageEnhance.Contrast(ImageOps.grayscale(img)).enhance(1.15).convert("RGB")
+    if kind == "duotone":
+        light = tuple(min(255, int(c * 0.55 + 255 * 0.45)) for c in f["accent"])
+        return ImageOps.colorize(ImageOps.grayscale(img), black=f["shade"], white=light)
+    if kind in ("chaud", "froid"):
+        tint = Image.new("RGB", img.size, (255, 150, 60) if kind == "chaud" else (60, 140, 255))
+        return Image.blend(ImageEnhance.Color(img).enhance(1.1), tint, 0.14)
+    if kind == "contrasté":
+        return ImageEnhance.Color(ImageEnhance.Contrast(img).enhance(1.25)).enhance(1.2)
+    if kind == "doux":
+        return ImageEnhance.Brightness(ImageEnhance.Contrast(img).enhance(0.88)).enhance(1.05)
+    return img
 
 
 def width(text: str, path: str, px: int) -> int:
@@ -183,7 +231,7 @@ def items(facts: dict) -> list:
     if facts["kind"] == "cauri_chart":
         for e in facts["top"]:
             pp = e.get("previous_position")
-            move = ("▲ " + str(pp - e["position"]) if pp > e["position"] else "") if pp else "Nouveau"
+            move = ("+" + str(pp - e["position"]) if pp > e["position"] else "") if pp else "Nouveau"
             out.append({"rank": int(e["position"]), "title": e["title"], "detail": (e["artist"] + (" · " + move if move else "")).strip()})
     elif facts["kind"] == "ranking":
         for i, e in enumerate(facts["top"]):
@@ -205,11 +253,11 @@ def _fmt_int(n) -> str:
 
 
 def render(facts: dict, text: dict, name: str) -> dict:
-    f = fonts()
+    f = style(name)
     if not f:
         return {}
     DIR.mkdir(parents=True, exist_ok=True)
-    ph = photo(facts.get("image"))
+    ph = filtered(photo(facts.get("image")), f)
     rows_all = [{**it, "title": clean(it["title"]), "detail": clean(it["detail"])} for it in items(facts)]
     head = headline(facts)
     subtitle = clean(text["title"])
@@ -229,13 +277,13 @@ def render(facts: dict, text: dict, name: str) -> dict:
         if ph:
             paste_cover(img, ph, fr.w, fr.h)
         else:
-            fr.gradient(img, 0, h, (42, 14, 120), 0, 0)
+            fr.gradient(img, 0, h, f["base"], 0, 0)
         # 2. Dégradés : léger en haut (logo), fort en bas (textes)
         fr.gradient(img, 0, fr.top + int(h * 0.16), (0, 0, 0), 70, 127)
-        fr.gradient(img, int(h * L["shade"]), h, (8, 5, 18), 127, 8)
+        fr.gradient(img, int(h * L["shade"]), h, f["shade"], 127, 8)
         draw = ImageDraw.Draw(img, "RGBA")
         pad = max(64, fr.side)
-        white, soft, violet = (255, 255, 255, 255), (255, 255, 255, gd_alpha(35)), (*VIOLET, 255)
+        white, soft, violet = (255, 255, 255, 255), (255, 255, 255, gd_alpha(35)), (*f["accent"], 255)
         # 3. En-tête (sous la barre de profil en 9:16) : logo blanc à gauche, rubrique à droite
         if logo:
             lw = fr.s(190)
@@ -245,7 +293,7 @@ def render(facts: dict, text: dict, name: str) -> dict:
         lwid = fr.width(label, f["bold"], 20) + 36
         lx, ly = w - pad - lwid, fr.top + L["head"] + 8
         fr.rect(draw, lx, ly, lx + lwid, ly + 44, violet)
-        fr.text(draw, 20, lx + 18, ly + 30, white, f["bold"], label)
+        fr.text(draw, 20, lx + 18, ly + 30, (*f["on"], 255), f["bold"], label)
         # 4. Bas de l'image (au-dessus de la légende en 9:16), de bas en haut : source, liste, titre du post, titre géant
         y = h - fr.bottom - L["foot"]
         fr.text(draw, 17, pad, y, soft, f["sans"], fr.fit("Source : " + facts["source"], f["sans"], 17, w - 2 * pad))

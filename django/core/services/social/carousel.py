@@ -30,7 +30,7 @@ VIDEO = "tiktok"  # la vidéo reprend les diapositives 9:16
 
 def render(facts: dict, cover: dict, items: list, name: str) -> dict:
     """{"slides": [4:5], "slides_916": [9:16], "video": mp4 9:16 ou None}."""
-    f = PI.fonts()
+    f = PI.style(name)
     if not f:
         return {"slides": [], "slides_916": [], "video": None}
     PI.DIR.mkdir(parents=True, exist_ok=True)
@@ -85,16 +85,16 @@ def find_clip(item: dict):
     return None
 
 
-def _canvas(fr: PI.Frame, photo_url, transparent: bool = False):
+def _canvas(fr: PI.Frame, f: dict, photo_url, transparent: bool = False):
     if transparent:
         # Calque posé sur un clip : fond transparent, seuls les dégradés et les textes sont dessinés
         return Image.new("RGBA", (fr.w, fr.h), (0, 0, 0, 0))
-    img = Image.new("RGB", (fr.w, fr.h), (24, 10, 60))
-    ph = PI.photo(photo_url)
+    img = Image.new("RGB", (fr.w, fr.h), f["shade"])
+    ph = PI.filtered(PI.photo(photo_url), f)
     if ph:
         PI.paste_cover(img, ph, fr.w, fr.h)
     else:
-        fr.gradient(img, 0, fr.bh, (139, 82, 255), 90, 20)
+        fr.gradient(img, 0, fr.bh, f["base"], 90, 0)
     return img
 
 
@@ -146,10 +146,10 @@ def _logo(fr: PI.Frame, img: Image.Image, x: int, y: int, width: int) -> None:
 
 def _cover_slide(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -> Image.Image:
     W, H = fr.bw, fr.bh
-    img = _canvas(fr, photo_url)
+    img = _canvas(fr, f, photo_url)
     # Zone des titres : fond flouté puis assombri, pour que le texte reste lisible même sur une photo chargée
     _blur_zone(fr, img, 0, int(H * 0.50), True)
-    fr.gradient(img, 0, int(H * 0.58), (6, 4, 14), 8, 127)
+    fr.gradient(img, 0, int(H * 0.58), f["shade"], 8, 127)
     fr.gradient(img, int(H * 0.78), H, (0, 0, 0), 127, 60)
     draw = ImageDraw.Draw(img, "RGBA")
     white = (255, 255, 255, 255)
@@ -174,15 +174,15 @@ def _cover_slide(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -> I
 def _item_slide(fr: PI.Frame, f: dict, item: dict, n: int, total: int, source: str, transparent: bool = False) -> Image.Image:
     W, H = fr.bw, fr.bh
     base = H - fr.bottom  # bas de la zone visible
-    img = _canvas(fr, None if transparent else item.get("image"), transparent)
+    img = _canvas(fr, f, None if transparent else item.get("image"), transparent)
     fr.gradient(img, 0, fr.top + 220, (0, 0, 0), 60, 127)
     if not transparent:
         _blur_zone(fr, img, min(int(H * 0.50), base - 640), H, False)  # photo seulement : sur un clip, le calque reste transparent
-    fr.gradient(img, min(int(H * 0.40), base - 760), H, (6, 4, 14), 127, 6)
+    fr.gradient(img, min(int(H * 0.40), base - 760), H, f["shade"], 127, 6)
     _logo(fr, img, max(56, fr.side), fr.top + 52, 180)
     draw = ImageDraw.Draw(img, "RGBA")
     _counter(fr, draw, f, n, total)
-    white, violet, soft = (255, 255, 255, 255), (*PI.VIOLET, 255), (255, 255, 255, PI.gd_alpha(40))
+    white, violet, soft = (255, 255, 255, 255), (*f["accent"], 255), (255, 255, 255, PI.gd_alpha(40))
     # Rang « 1er », « 2e »… centré, suffixe en exposant
     rank = str(item["rank"])
     suffix = "er" if item["rank"] == 1 else "e"

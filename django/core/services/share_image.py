@@ -18,11 +18,11 @@ REPO = Path(__file__).resolve().parent.parent.parent.parent
 
 def fonts() -> dict | None:
     fdir = REPO / "resources" / "fonts"
-    serif = [conf.get("app.share.font_serif"), fdir / "serif-bold.ttf", "C:/Windows/Fonts/georgiab.ttf",
+    serif = [conf.get("app.share.font_serif"), fdir / "serif-bold.ttf", fdir / "PT_Serif-Web-Bold.ttf", "C:/Windows/Fonts/georgiab.ttf",
              "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/dejavu/DejaVuSerif-Bold.ttf"]
-    sans = [conf.get("app.share.font_sans"), fdir / "sans.ttf", "C:/Windows/Fonts/arial.ttf",
+    sans = [conf.get("app.share.font_sans"), fdir / "sans.ttf", fdir / "PT_Sans-Web-Regular.ttf", "C:/Windows/Fonts/arial.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/dejavu/DejaVuSans.ttf"]
-    bold = [fdir / "sans-bold.ttf", "C:/Windows/Fonts/arialbd.ttf",
+    bold = [fdir / "sans-bold.ttf", fdir / "PT_Sans-Web-Bold.ttf", "C:/Windows/Fonts/arialbd.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"]
 
     def pick(lst):
