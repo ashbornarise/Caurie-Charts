@@ -42,6 +42,7 @@
         </ol>
         {% endif %}
         <p class="post-card__files">
+            {% if p.image_square or p.slides %}<a class="button button--small" href="{{ path('admin/posts/' ~ p.id ~ '/zip') }}">⬇ Télécharger tout (ZIP)</a>{% endif %}
             {% if p.image_square %}<a href="{{ media(p.image_square) }}" target="_blank" rel="noopener">{{ t('admin.post_square') }}</a>{% endif %}
             {% if p.image_story %}<a href="{{ media(p.image_story) }}" target="_blank" rel="noopener">{{ t('admin.post_story') }}</a>{% endif %}
             {% if p.video %}<a href="{{ media(p.video) }}" target="_blank" rel="noopener">{{ t('admin.post_video') }}</a>{% endif %}

@@ -891,6 +891,27 @@ def posts_generate(request):
 
 
 @admin_view()
+def post_zip(request, pid: str):
+    """Dossier complet d'un post en ZIP. Sur Vercel (réponse limitée à 4,5 Mo), l'archive passe par le Blob."""
+    import os
+    import secrets
+    from urllib.parse import quote
+    from django.http import FileResponse
+    from core import storage
+    from core.services.social.export import zip_post
+    post = db.one("SELECT * FROM social_posts WHERE id = ?", [int(pid)])
+    if not post:
+        return HttpResponseBadRequest()
+    name, file = zip_post(post)
+    if storage.blob_token():
+        with open(file, "rb") as fh:
+            link = storage.blob_put(f"media/zips/{int(pid)}-{secrets.token_hex(6)}/{quote(name)}", fh.read(), "application/zip")
+        os.unlink(file)
+        return redirect(link)
+    return FileResponse(open(file, "rb"), as_attachment=True, filename=name, content_type="application/zip")
+
+
+@admin_view()
 def post_telegram(request, pid: str):
     from core.services import telegram
     post = db.one("SELECT * FROM social_posts WHERE id = ?", [int(pid)])

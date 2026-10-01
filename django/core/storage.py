@@ -46,6 +46,15 @@ def _blob_put(pathname: str, data: bytes, content_type: str) -> str:
     return r.json()["url"]
 
 
+def blob_token() -> str:
+    return _blob_token()
+
+
+def blob_put(pathname: str, data: bytes, content_type: str) -> str:
+    """Dépose un fichier dans le Blob ; retourne son adresse publique."""
+    return _blob_put(pathname, data, content_type)
+
+
 def check_image(upload) -> str:
     """Valide une image envoyée ; retourne son extension. ValueError avec un message affichable."""
     if upload is None:
