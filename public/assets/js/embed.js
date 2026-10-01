@@ -13,3 +13,8 @@ document.querySelectorAll('[data-copy]').forEach(function (btn) {
         }
     });
 });
+
+// Aperçu mis à jour dès qu'un réglage change
+document.querySelectorAll('form[data-autosubmit]').forEach(function (form) {
+    form.addEventListener('change', function () { form.submit(); });
+});

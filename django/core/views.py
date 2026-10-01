@@ -16,7 +16,7 @@ from core.i18n import locale, set_locale, t
 from core.services import insights, live_chart
 
 # Pages de contenu placées dans la grille à deux colonnes (avec l'encadré latéral)
-WITH_ASIDE = {"methodology", "about", "contact", "submit", "legal", "news", "news-item", "artist", "track", "partners-page"}
+WITH_ASIDE = {"methodology", "about", "contact", "claim", "submit", "legal", "news", "news-item", "artist", "track", "partners-page"}
 
 
 # ---------------------------------------------------------------- outils communs

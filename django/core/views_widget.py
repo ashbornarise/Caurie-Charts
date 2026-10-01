@@ -50,8 +50,10 @@ def embed(request):
     snippet = (f'<iframe src="{src}" width="100%" height="{height}" style="border:0;max-width:440px" loading="lazy" '
                f'title="Classement musical {countries[code]} · {brand()}"></iframe>\n'
                f'<p><a href="{url(chart_top.page_path(code))}">Classement musical {countries[code]} : {brand()}</a></p>')
+    # Aperçu par une adresse relative : même origine que la page, quel que soit le domaine (avec ou sans www)
+    preview = f"/widget/{code}?n={n}&theme={theme}"
     response = render(request, "embed", {"countries": countries, "code": code, "n": n, "theme": theme, "sizes": SIZES,
-                                         "src": src, "height": height, "snippet": snippet,
+                                         "src": src, "preview": preview, "height": height, "snippet": snippet,
                                          "meta": {"title": "Intégrer le classement · " + brand(),
                                                   "description": "Affichez le classement musical d’Afrique de l’Ouest sur votre site, "
                                                                  "blog ou site de radio, mis à jour automatiquement."}})

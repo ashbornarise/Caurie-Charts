@@ -231,7 +231,7 @@ h1, h2, h3 { font-family: var(--serif); line-height: 1.1; margin: 0 0 .5em; }
 .field { margin-bottom: 16px; }
 .field label { display: block; font-weight: 600; margin-bottom: 4px; }
 .field input[type=text], .field input[type=email], .field input[type=password], .field input[type=date],
-.field input[type=number], .field input[type=url], .field select, .field textarea {
+.field input[type=number], .field input[type=url], .field input[type=tel], .field select, .field textarea {
     width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--ink-2); border-radius: var(--radius); background: var(--surface);
 }
 .field__hint { margin: 0 0 6px; color: var(--muted); font-size: .85rem; }
@@ -592,5 +592,32 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .news-card--tone-0 { --tone: #8B52FF; --tone-soft: #F3EDFF; --tone-ink: #3E1A9E; }
 
 /* Page « Intégrer le classement » */
-.embed-code { width: 100%; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
-.embed-preview { display: block; border: 0; max-width: 440px; }
+.embed { padding-top: 32px; padding-bottom: 56px; }
+.embed__hero { max-width: 720px; }
+.embed__hero h1 { font-size: clamp(2rem, 7vw, 3.2rem); }
+.embed__perks { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 16px 0 0; }
+.embed__perks li { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: .88rem; }
+.embed__perks li::before { content: "✓ "; color: var(--accent); font-weight: 700; }
+.embed__grid { display: grid; gap: 24px; margin-top: 32px; align-items: start; }
+@media (min-width: 860px) { .embed__grid { grid-template-columns: minmax(0, 1fr) 440px; } }
+.embed__panel { padding: 24px; background: var(--surface-2); border-radius: 12px; }
+.embed__panel h2 { display: flex; align-items: center; gap: 10px; font-size: 1.25rem; margin: 28px 0 12px; }
+.embed__panel h2:first-child { margin-top: 0; }
+.embed__num { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font: 700 .9rem var(--sans); }
+.embed__form .field { margin-bottom: 14px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; border: 0; padding: 0; margin: 0 0 14px; }
+.seg legend { width: 100%; font-weight: 600; margin-bottom: 6px; padding: 0; }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: inline-block; padding: 8px 14px; border: 1px solid var(--ink-2); border-radius: 999px; background: var(--surface); font-size: .92rem; }
+.seg input:checked + span { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.seg input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+.embed-code { display: block; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #16141c; color: #e9e6f2; font: 13px/1.5 ui-monospace, Consolas, monospace; resize: vertical; }
+.embed__copy { margin-top: 10px; }
+.embed__how { margin: 0; padding-left: 1.2em; }
+.embed__how li { margin-bottom: 4px; }
+.embed__preview { position: sticky; top: 16px; }
+.embed__frame { padding: 16px; border-radius: 12px; background: repeating-linear-gradient(45deg, #f2f0f7 0 10px, #ebe8f2 10px 20px); }
+.embed__frame--sombre { background: repeating-linear-gradient(45deg, #24212c 0 10px, #1d1a24 10px 20px); }
+.embed__frame iframe { display: block; border: 0; border-radius: 8px; background: transparent; box-shadow: 0 8px 30px rgba(0, 0, 0, .12); }
+.embed__terms { margin-top: 32px; max-width: 720px; }

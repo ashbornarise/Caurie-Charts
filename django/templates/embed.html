@@ -1,27 +1,55 @@
-<h1>Intégrer le classement</h1>
-<p class="lead">Affichez le classement musical sur votre blog, votre site de radio ou de média. Il se met à jour tout seul, chaque jour, à partir des mêmes données que {{ brand() }}. Gratuit, sans inscription.</p>
+<div class="wrap embed">
+    <header class="embed__hero">
+        <p class="eyebrow">Blogs · radios · médias</p>
+        <h1>Le classement sur votre site</h1>
+        <p class="lead">Affichez le Top de la semaine sur votre blog ou le site de votre radio. Il se met à jour tout seul, chaque jour, avec les mêmes données que {{ brand() }}.</p>
+        <ul class="embed__perks">
+            <li>Gratuit, sans inscription</li>
+            <li>Mis à jour chaque jour</li>
+            <li>S’adapte aux mobiles</li>
+        </ul>
+    </header>
 
-<form method="get" action="{{ path('integrer') }}" class="toolbar box">
-    <label>Pays
-        <select name="pays">{% for k, label in countries.items() %}<option value="{{ k }}"{{ ' selected' if k == code }}>{{ label }}</option>{% endfor %}</select>
-    </label>
-    <label>Titres
-        <select name="n">{% for s in sizes %}<option value="{{ s }}"{{ ' selected' if s == n }}>Top {{ s }}</option>{% endfor %}</select>
-    </label>
-    <label>Thème
-        <select name="theme"><option value="clair"{{ ' selected' if theme == 'clair' }}>Clair</option><option value="sombre"{{ ' selected' if theme == 'sombre' }}>Sombre</option></select>
-    </label>
-    <button class="button button--small" type="submit">Mettre à jour l’aperçu</button>
-</form>
+    <div class="embed__grid">
+        <section class="embed__panel" aria-labelledby="embed-step1">
+            <h2 id="embed-step1"><span class="embed__num">1</span> Choisissez</h2>
+            <form method="get" action="{{ path('integrer') }}" class="embed__form" data-autosubmit>
+                <div class="field">
+                    <label for="embed-pays">Classement</label>
+                    <select id="embed-pays" name="pays">{% for k, label in countries.items() %}<option value="{{ k }}"{{ ' selected' if k == code }}>{{ label }}</option>{% endfor %}</select>
+                </div>
+                <fieldset class="seg">
+                    <legend>Nombre de titres</legend>
+                    {% for s in sizes %}<label><input type="radio" name="n" value="{{ s }}"{{ ' checked' if s == n }}><span>Top {{ s }}</span></label>{% endfor %}
+                </fieldset>
+                <fieldset class="seg">
+                    <legend>Thème</legend>
+                    <label><input type="radio" name="theme" value="clair"{{ ' checked' if theme == 'clair' }}><span>Clair</span></label>
+                    <label><input type="radio" name="theme" value="sombre"{{ ' checked' if theme == 'sombre' }}><span>Sombre</span></label>
+                </fieldset>
+                <noscript><button class="button button--small" type="submit">Mettre à jour l’aperçu</button></noscript>
+            </form>
 
-<h2>Code à copier</h2>
-<p>Collez ce code dans votre page (bloc « HTML personnalisé » sur WordPress, Blogger ou Wix). Gardez le lien sous le classement : il permet à vos lecteurs de retrouver le classement complet.</p>
-<textarea id="embed-code" class="embed-code" rows="5" readonly>{{ snippet }}</textarea>
-<p><button class="button button--small" type="button" data-copy="embed-code">Copier le code</button></p>
+            <h2><span class="embed__num">2</span> Copiez le code</h2>
+            <textarea id="embed-code" class="embed-code" rows="7" readonly aria-label="Code d’intégration">{{ snippet }}</textarea>
+            <button class="button embed__copy" type="button" data-copy="embed-code">Copier le code</button>
 
-<h2>Aperçu</h2>
-<iframe src="{{ src }}" width="100%" height="{{ height }}" class="embed-preview" loading="lazy" title="Aperçu du widget"></iframe>
+            <h2><span class="embed__num">3</span> Collez-le sur votre site</h2>
+            <ul class="embed__how">
+                <li><strong>WordPress</strong> : bloc « HTML personnalisé ».</li>
+                <li><strong>Blogger</strong> : gadget « HTML/JavaScript ».</li>
+                <li><strong>Wix</strong> : Ajouter › Intégrer › « Code HTML ».</li>
+            </ul>
+        </section>
 
-<h2>Conditions</h2>
-<p>Le widget est gratuit pour tout site, commercial ou non. Ne modifiez pas les positions affichées et laissez visible le lien vers {{ brand() }}. Le détail des règles figure dans les <a href="{{ path('conditions') }}">conditions d’utilisation</a>.</p>
+        <section class="embed__preview" aria-label="Aperçu">
+            <p class="eyebrow">Aperçu en direct</p>
+            <div class="embed__frame embed__frame--{{ theme }}">
+                <iframe src="{{ preview }}" width="100%" height="{{ height }}" loading="lazy" title="Aperçu du widget"></iframe>
+            </div>
+        </section>
+    </div>
+
+    <p class="fineprint embed__terms">Gratuit pour tout site, commercial ou non. Ne modifiez pas les positions et laissez visible le lien vers {{ brand() }} sous le classement. Détails dans les <a href="{{ path('conditions') }}">conditions d’utilisation</a>.</p>
+</div>
 <script src="{{ asset('js/embed.js') }}" defer></script>
