@@ -38,6 +38,7 @@ Règles :
   et dis-le clairement dans explanation.
 - Les relevés ont commencé le 30 septembre 2026 : une période plus longue ne couvre que ce qui a été relevé ; dis-le si c'est le cas.
 - Si la demande est impossible avec ces données, choisis la mesure la plus proche et explique l'écart.
+- Dans title, écris les lieux en toutes lettres (« Afrique de l'Ouest », « Ghana »), jamais un code comme WA ou GH.
 Réponds uniquement par un objet JSON :
 {{"metric": "...", "country": "...", "period": "...", "source": null, "limit": 10,
  "title": "titre du post, 40 caractères max", "explanation": "une ou deux phrases pour l'équipe : ce qui est mesuré et ce qui ne l'est pas"}}"""
