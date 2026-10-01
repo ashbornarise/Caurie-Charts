@@ -105,3 +105,9 @@ def test_telegram_appel_api_avec_le_jeton(monkeypatch):
     http = FakeHttp(lambda *a: {"status": 200, "body": json.dumps({"ok": True, "result": {"username": "cauri_bot"}})})
     assert telegram.call("getMe", {}, http)["username"] == "cauri_bot"
     assert http.calls[0]["url"] == "https://api.telegram.org/bot123:abc/getMe"
+
+
+def test_telegram_post_legende_tronquee_a_1024_caracteres():
+    from core.services.telegram import post_caption
+    cap = post_caption({"title": "Top <Ghana>", "caption": "ligne\n" * 400, "hashtags": "#CauriCharts"})
+    assert len(cap) <= 1024 and cap.startswith("<b>Top &lt;Ghana&gt;</b>") and "#CauriCharts" in cap

@@ -891,6 +891,19 @@ def posts_generate(request):
 
 
 @admin_view()
+def post_telegram(request, pid: str):
+    from core.services import telegram
+    post = db.one("SELECT * FROM social_posts WHERE id = ?", [int(pid)])
+    if not post:
+        return HttpResponseBadRequest()
+    try:
+        result, kind = telegram.send_post(post, force=req_str(request, "force") == "1"), "success"
+    except Exception as exc:  # noqa: BLE001
+        result, kind = f"échec ({exc})", "error"
+    return back(request, path("admin/posts") + f"#post-{int(pid)}", kind, "Telegram : " + result)
+
+
+@admin_view()
 def post_status(request, pid: str):
     status = req_str(request, "status")
     if status not in ("draft", "approved", "published", "rejected") or not db.value("SELECT 1 FROM social_posts WHERE id = ?", [int(pid)]):

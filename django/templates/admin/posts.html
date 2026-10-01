@@ -62,6 +62,12 @@
                 {% if p.status != 'rejected' %}<button class="button button--small button--ghost" name="status" value="rejected" type="submit">{{ t('admin.post_reject') }}</button>{% endif %}
                 {% if p.status != 'draft' %}<button class="button button--small button--ghost" name="status" value="draft" type="submit">{{ t('admin.post_back_draft') }}</button>{% endif %}
             </form>
+            {% if config('app.telegram_url') %}
+            <form method="post" action="{{ path('admin/posts/' ~ p.id ~ '/telegram') }}" class="toolbar">
+                {{ csrf_field() }}
+                <button class="button button--small button--ghost" type="submit">Envoyer sur Telegram</button>
+            </form>
+            {% endif %}
         </div>
     </article>
 {% endfor %}

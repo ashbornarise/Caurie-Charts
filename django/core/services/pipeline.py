@@ -85,11 +85,18 @@ class DailyPipeline:
                 post = generator.generate_next() if (force_posts or theme == "rotation") else generator.generate(theme)
                 if not post:
                     return ["aucune rubrique n’a assez de données réelles aujourd’hui"]
-                return [f"{post['theme']} : {post['title']}" + (f" → {post['folder']}" if post.get("folder") else "")]
+                lines = [f"{post['theme']} : {post['title']}" + (f" → {post['folder']}" if post.get("folder") else "")]
+                if telegram.configured():
+                    try:
+                        lines.append("Telegram : " + telegram.send_post(post))
+                    except Exception as exc:  # noqa: BLE001 — le post reste généré même si Telegram échoue
+                        lines.append(f"Telegram : échec ({exc})")
+                return lines
             self._step("8. Posts réseaux sociaux", posts)
 
-        if weekday == 1 and telegram.configured():
-            # Lundi : Top 10 de la semaine dans la chaîne Telegram (tendances tant qu'aucun classement officiel n'est publié)
+        if weekday == 7 and telegram.configured():
+            # Dimanche : Top 10 de la semaine dans la chaîne Telegram (tendances tant qu'aucun classement officiel n'est publié) ;
+            # avec les posts du lundi, mercredi et vendredi : 4 publications par semaine
             self._step("8 bis. Chaîne Telegram", lambda: [telegram.send_chart()])
 
         def cleanup():
