@@ -104,8 +104,14 @@ def publish_media_files(folder: str, filenames: list) -> None:
     """Envoie vers Vercel Blob des fichiers déjà écrits dans public/media/<folder> (posts générés sur GitHub Actions)."""
     if not _blob_token():
         return
+    from concurrent.futures import ThreadPoolExecutor
     types = {"png": "image/png", "jpg": "image/jpeg", "mp4": "video/mp4"}
-    for name in filter(None, filenames):
-        f = MEDIA / folder / name
-        if f.is_file():
-            _blob_put(f"media/{folder}/{name}", f.read_bytes(), types.get(f.suffix.lstrip(".").lower(), "application/octet-stream"))
+    paths = [MEDIA / folder / name for name in dict.fromkeys(filter(None, filenames))]
+    paths = [f for f in paths if f.is_file()]
+
+    def put(f):
+        _blob_put(f"media/{folder}/{f.name}", f.read_bytes(), types.get(f.suffix.lstrip(".").lower(), "application/octet-stream"))
+
+    # Envois en parallèle : un post compte une vingtaine de visuels 4K
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        list(pool.map(put, paths))

@@ -125,14 +125,6 @@ def _inner(fr: PI.Frame, margin: int) -> int:
     return fr.bw - 2 * max(margin, fr.side)
 
 
-def _counter(fr: PI.Frame, draw, f: dict, n: int, total: int) -> None:
-    label = f"{n}/{total}"
-    w = fr.width(label, f["bold"], 24) + 36
-    x, y = fr.bw - max(50, fr.side) - w, fr.top + 50
-    fr.rect(draw, x, y, x + w, y + 46, (0, 0, 0, PI.gd_alpha(50)))
-    fr.text(draw, 24, x + 18, y + 32, (255, 255, 255, 255), f["bold"], label)
-
-
 def _logo(fr: PI.Frame, img: Image.Image, x: int, y: int, width: int) -> None:
     logo = PI.white_logo()
     if logo:
@@ -166,7 +158,6 @@ def _cover_slide(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -> I
     if cover.get("subtitle"):
         y += 70
         _centered(fr, draw, 50, y, white, f["serif"], fr.fit(PI.clean(cover["subtitle"]), f["serif"], 50, _inner(fr, 70)))
-    _counter(fr, draw, f, 1, total)
     _logo(fr, img, max(60, fr.side), H - fr.bottom - 190, 210)
     return img
 
@@ -181,7 +172,6 @@ def _item_slide(fr: PI.Frame, f: dict, item: dict, n: int, total: int, source: s
     fr.gradient(img, min(int(H * 0.40), base - 760), H, f["shade"], 127, 6)
     _logo(fr, img, max(56, fr.side), fr.top + 52, 180)
     draw = ImageDraw.Draw(img, "RGBA")
-    _counter(fr, draw, f, n, total)
     white, violet, soft = (255, 255, 255, 255), (*f["accent"], 255), (255, 255, 255, PI.gd_alpha(40))
     # Rang « 1er », « 2e »… centré, suffixe en exposant
     rank = str(item["rank"])

@@ -883,7 +883,13 @@ def posts_generate(request):
         return HttpResponseBadRequest()
     # Une rubrique à la fois : la génération (visuels 4K, texte IA) doit tenir dans le délai d'une requête
     generator = PostGenerator(ai.make())
-    post = generator.generate_next() if theme == "rotation" else generator.generate(theme)
+    try:
+        post = generator.generate_next() if theme == "rotation" else generator.generate(theme)
+    except Exception as exc:  # noqa: BLE001 — l'erreur exacte s'affiche dans l'admin plutôt qu'une page 500
+        import sys
+        import traceback
+        traceback.print_exc(file=sys.stderr)  # journaux Vercel (disque en lecture seule : pas de fichier)
+        return back(request, path("admin/posts"), "error", f"Génération impossible : {type(exc).__name__} : {exc}")
     done = [post["title"]] if post else []
     audit.log(uid(request), "social.generate", "social_post", None, post["theme"] if post else theme, {"titles": done}, ip(request))
     return back(request, path("admin/posts"), "success" if done else "error",

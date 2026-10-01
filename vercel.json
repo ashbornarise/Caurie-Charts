@@ -6,7 +6,7 @@
   "regions": ["fra1"],
   "functions": {
     "api/index.py": {
-      "maxDuration": 60,
+      "maxDuration": 300,
       "includeFiles": "{django/**,public/assets/**,resources/fonts/**}",
       "excludeFiles": "{django/.venv/**,django/.pg/**,django/staticfiles/**,**/__pycache__/**}"
     }

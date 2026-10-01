@@ -150,18 +150,27 @@ def white_logo():
     return white
 
 
+_PHOTOS: dict = {}
+
+
 def photo(url):
+    """Photo téléchargée une seule fois par adresse (un post la réutilise sur une vingtaine de visuels). Ne pas la modifier."""
     if not url or not str(url).startswith("https://"):
         return None
-    data = http_get(url, binary=True)
-    if not data:
-        return None
-    try:
-        im = Image.open(io.BytesIO(data))
-        im.load()
-        return im.convert("RGB")
-    except Exception:  # noqa: BLE001
-        return None
+    if url not in _PHOTOS:
+        data = http_get(url, binary=True)
+        im = None
+        if data:
+            try:
+                im = Image.open(io.BytesIO(data))
+                im.load()
+                im = im.convert("RGB")
+            except Exception:  # noqa: BLE001
+                im = None
+        if len(_PHOTOS) > 64:
+            _PHOTOS.clear()
+        _PHOTOS[url] = im
+    return _PHOTOS[url]
 
 
 def paste_cover(img: Image.Image, src: Image.Image, w: int, h: int, top_ratio: float = 0.25) -> None:
