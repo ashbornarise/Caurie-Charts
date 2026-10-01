@@ -379,6 +379,17 @@ mark.todo { background: #FFF3D6; color: var(--ink); padding: 0 4px; border-radiu
 .country-card--gh::before { background-image: url("../img/flags/gh.svg"); }
 .country-card--ci::before { background-image: url("../img/flags/ci.svg"); }
 .country-card--sn::before { background-image: url("../img/flags/sn.svg"); }
+.country-card--ng::before { background-image: url("../img/flags/ng.svg"); }
+.country-card--bf::before { background-image: url("../img/flags/bf.svg"); }
+.country-card--cv::before { background-image: url("../img/flags/cv.svg"); }
+.country-card--gm::before { background-image: url("../img/flags/gm.svg"); }
+.country-card--gw::before { background-image: url("../img/flags/gw.svg"); }
+.country-card--lr::before { background-image: url("../img/flags/lr.svg"); }
+.country-card--ne::before { background-image: url("../img/flags/ne.svg"); }
+.country-card--sl::before { background-image: url("../img/flags/sl.svg"); }
+.country-card--gn::before { background-image: url("../img/flags/gn.svg"); }
+.country-card--ml::before { background-image: url("../img/flags/ml.svg"); }
+.country-card--mr::before { background-image: url("../img/flags/mr.svg"); }
 .country-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .country-card__flag { width: 48px; height: 32px; border-radius: 5px; object-fit: cover; box-shadow: 0 0 0 1px rgba(17, 17, 17, .08), 0 4px 10px rgba(17, 17, 17, .12); }
 .country-card__size { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }

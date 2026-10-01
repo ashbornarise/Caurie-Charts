@@ -31,6 +31,16 @@ COUNTRY_WORDS = {
     "CI": ["côte d'ivoire", "côte d’ivoire", "ivory coast", "ivoirien", "ivoirienne", "abidjan"],
     "SN": ["sénégal", "senegal", "sénégalais", "sénégalaise", "senegalese", "dakar"],
     "NG": ["nigeria", "nigérian", "nigériane", "nigerian", "lagos", "abuja", "naija"],
+    "BF": ["burkina", "burkinabè", "burkinabé", "burkinabe", "ouagadougou", "ouaga"],
+    "CV": ["cap-vert", "cabo verde", "cape verde", "capverdien", "capverdienne", "praia"],
+    "GM": ["gambie", "gambia", "gambian", "gambien", "banjul", "serrekunda"],
+    "GW": ["guinée-bissau", "guinea-bissau", "bissau", "bissau-guinéen", "245", "gumbé"],
+    "LR": ["liberia", "libéria", "liberian", "libérien", "monrovia", "231"],
+    "NE": ["niger", "nigérien", "nigérienne", "niamey", "zinder", "maradi"],
+    "SL": ["sierra leone", "sierra-léonais", "sierra leonean", "freetown", "232", "krio"],
+    "GN": ["guinée", "guinea conakry", "guinéen", "guinéenne", "conakry", "kankan"],
+    "ML": ["mali", "malien", "malienne", "bamako", "ségou", "sikasso"],
+    "MR": ["mauritanie", "mauritania", "mauritanien", "mauritanienne", "nouakchott", "nouadhibou"],
 }
 CATEGORY_WORDS = {
     "evenement": r"festivals?|concerts?|tournée|tour|olympia|scènes?|awards?|cérémonie|vmas?|grammys?|headline|performs?|stage",

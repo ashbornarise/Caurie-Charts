@@ -42,6 +42,13 @@ class WikidataLookup:
         "CD": "congolese|congolais|congolaise", "ML": "malian|malien|malienne", "BF": "burkinabé|burkinabè|burkinabe",
         "GN": "guinean|guinéen|guinéenne", "KE": "kenyan|kényan", "TZ": "tanzanian|tanzanien", "CA": "canadian|canadien|canadienne",
         "JM": "jamaican|jamaïcain", "BE": "belgian|belge", "MA": "moroccan|marocain|marocaine", "GA": "gabonese|gabonais",
+        "CV": "cape verdean|capverdien|capverdienne",
+        "GM": "gambian|gambien|gambienne",
+        "GW": "bissau-guinean|bissau-guinéen|bissau-guinéenne",
+        "LR": "liberian|libérien|libérienne",
+        "NE": "nigerien|nigérien|nigérienne",
+        "SL": "sierra leonean|sierra-léonais|sierra-léonaise",
+        "MR": "mauritanian|mauritanien|mauritanienne",
     }
 
     def __init__(self, http):

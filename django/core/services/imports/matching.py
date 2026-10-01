@@ -206,6 +206,16 @@ class SceneSignals:
         "GH": ["ghana", "ghanaian", "accra", "kumasi", "tema", "233", "twi", "hiplife", "highlife", "asakaa", "drill gh"],
         "NG": ["nigeria", "nigerian", "naija", "lagos", "abuja", "ibadan", "port harcourt", "234", "yoruba", "igbo", "hausa",
                "street pop", "afrobeats naija"],
+        "BF": ["burkina", "burkinabè", "burkinabé", "burkinabe", "ouagadougou", "ouaga", "bobo-dioulasso", "226", "mooré", "moore", "faso"],
+        "CV": ["cap-vert", "cabo verde", "cape verde", "capverdien", "capverdienne", "praia", "mindelo", "238", "morna", "funaná", "kizomba cv"],
+        "GM": ["gambie", "gambia", "gambian", "gambien", "banjul", "serrekunda", "220", "mandinka"],
+        "GW": ["guinée-bissau", "guinea-bissau", "bissau", "bissau-guinéen", "245", "gumbé", "kriol"],
+        "LR": ["liberia", "libéria", "liberian", "libérien", "monrovia", "231", "hipco"],
+        "NE": ["niger", "nigérien", "nigérienne", "niamey", "zinder", "maradi", "227", "zarma", "haoussa du niger"],
+        "SL": ["sierra leone", "sierra-léonais", "sierra leonean", "freetown", "232", "krio", "salone"],
+        "GN": ["guinée", "guinea conakry", "guinéen", "guinéenne", "conakry", "kankan", "224", "soussou", "peul", "malinké"],
+        "ML": ["mali", "malien", "malienne", "bamako", "ségou", "sikasso", "223", "bambara", "wassoulou"],
+        "MR": ["mauritanie", "mauritania", "mauritanien", "mauritanienne", "nouakchott", "nouadhibou", "222", "hassaniya"],
     }
     PAYOUT_COUNTRIES = ["FR", "US", "GB", "BE", "CA", "DE", "NL", "CH", "IT", "ES", "AE"]
     _LETTER = r"[^\W\d_]"
