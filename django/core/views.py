@@ -54,6 +54,21 @@ def aside(country: dict) -> dict:
     }
 
 
+def site_ld() -> dict:
+    """Organisation et site, présents sur chaque page (données structurées schema.org)."""
+    return {"@type": "Organization", "@id": url("/") + "#organisation", "name": brand(), "url": url("/"),
+            "logo": url("assets/img/brand/logo-share.png"), "areaServed": ["TG", "BJ", "GH", "CI", "SN"]}
+
+
+def json_ld(items: list):
+    """Bloc JSON-LD prêt à insérer dans <script type="application/ld+json"> (« </ » neutralisé)."""
+    from markupsafe import Markup
+    graph = items + [{"@type": "WebSite", "name": brand(), "url": url("/"), "inLanguage": "fr",
+                      "publisher": {"@id": url("/") + "#organisation"}}]
+    body = json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False, default=str)
+    return Markup(body.replace("</", "<\\/"))
+
+
 def render(request, template: str, data: dict | None = None, status: int = 200, layout: str = "layout") -> HttpResponse:
     data = dict(data or {})
     if template in WITH_ASIDE and "aside" not in data:
@@ -64,9 +79,11 @@ def render(request, template: str, data: dict | None = None, status: int = 200, 
             data["asideWrap"] = True
     data.setdefault("countries", repos.countries())
     data.setdefault("flash", take_flash(request))
-    meta = {"title": brand(), "description": t("meta.default_description"), "url": url(request.get_full_path()),
-            "image": url("assets/img/og-default.png"), "type": "website"}
-    meta.update(data.get("meta") or {})           # comme « $meta += [...] » en PHP : les clés fournies priment
+    # Adresse canonique sans paramètres (?lang=, filtres) : une seule URL par page pour les moteurs de recherche
+    meta = {"title": brand(), "description": t("meta.default_description"), "url": url(request.path),
+            "image": url("assets/img/og-default.png"), "type": "website", "jsonld": []}
+    meta.update({k: v for k, v in (data.get("meta") or {}).items() if v is not None})  # les clés fournies priment
+    meta["jsonld"] = json_ld([site_ld()] + list(meta["jsonld"]))
     data["meta"] = meta
     content = get_template(template + ".html").render(data, request)
     html = content if layout is None else get_template(layout + ".html").render({**data, "content": content}, request)
@@ -219,7 +236,12 @@ def artist(request, slug: str):
         "totalWeeks": sum(int(x["weeks"] or 0) for x in tracks),
         "iconHistory": repos.artist_icon_history(int(a["id"])),
         "meta": {"title": a["name"] + " · " + brand(),
-                 "description": t("artist.meta_description", name=a["name"], country=country_name(a["country_code"])), "type": "profile"},
+                 "description": t("artist.meta_description", name=a["name"], country=country_name(a["country_code"])), "type": "profile",
+                 "image": a["image_url"] if str(a.get("image_url") or "").startswith("https://") else None,
+                 "jsonld": [{"@type": "MusicGroup", "name": a["name"], "url": url("artiste/" + a["slug"]),
+                             **({"image": a["image_url"]} if str(a.get("image_url") or "").startswith("https://") else {}),
+                             "foundingLocation": {"@type": "Country", "name": country_name(a["country_code"])},
+                             "track": [{"@type": "MusicRecording", "name": x["title"], "url": url("titre/" + x["slug"])} for x in tracks[:10]]}]},
     })
 
 
@@ -236,7 +258,12 @@ def track(request, slug: str):
         "spotify": spotify, "track": tr, "positions": positions, "links": repos.track_links(int(tr["id"])),
         "peak": min(p["position"] for p in positions) if positions else None,
         "meta": {"title": tr["title"] + " · " + tr["artist_name"] + " · " + brand(),
-                 "description": t("track.meta_description", title=tr["title"], artist=tr["artist_name"]), "type": "music.song"},
+                 "description": t("track.meta_description", title=tr["title"], artist=tr["artist_name"]), "type": "music.song",
+                 "image": tr["cover_url"] if str(tr.get("cover_url") or "").startswith("https://") else None,
+                 "jsonld": [{"@type": "MusicRecording", "name": tr["title"], "url": url("titre/" + tr["slug"]),
+                             "byArtist": {"@type": "MusicGroup", "name": tr["artist_name"], "url": url("artiste/" + tr["artist_slug"])},
+                             **({"image": tr["cover_url"]} if str(tr.get("cover_url") or "").startswith("https://") else {}),
+                             **({"datePublished": str(tr["release_date"])[:10]} if tr.get("release_date") else {})}]},
     })
 
 
@@ -364,7 +391,13 @@ def news_item(request, slug: str):
     item = repos.news_by_slug(slug)
     if not item:
         raise Http404
-    return render(request, "news-item", {"item": item, "meta": {"title": item["title"] + " · " + brand(), "description": item["summary"], "type": "article"}})
+    image = url("media/news/" + item["image_path"]) if item.get("image_path") else None
+    return render(request, "news-item", {"item": item, "meta": {
+        "title": item["title"] + " · " + brand(), "description": item["summary"], "type": "article", "image": image,
+        "jsonld": [{"@type": "NewsArticle", "headline": item["title"][:110], "description": item["summary"],
+                    "datePublished": str(item["published_at"]).replace(" ", "T"), "url": url("actualites/" + item["slug"]),
+                    **({"image": [image]} if image else {}),
+                    "publisher": {"@type": "Organization", "name": brand(), "logo": {"@type": "ImageObject", "url": url("assets/img/brand/logo-share.png")}}}]}})
 
 
 def partners(request):
@@ -470,12 +503,15 @@ def sitemap(request):
             if ch["public"] and not ch.get("regional"):
                 for p in ch["periods"]:
                     urls.append(url(chart_path(c["code"], code, p)))
+    urls += [url(p) for p in ("actualites", "partenaires", "mentions-legales", "confidentialite", "cookies")]
     data = repos.sitemap_entries()
-    urls += [url("artiste/" + a["slug"]) for a in data["artists"]]
-    urls += [url("titre/" + x["slug"]) for x in data["tracks"]]
+    dated = {url("artiste/" + a["slug"]): a["updated_at"] for a in data["artists"]}
+    dated.update({url("actualites/" + n["slug"]): n["published_at"] for n in data["news"]})
+    urls += list(dated) + [url("titre/" + x["slug"]) for x in data["tracks"]]
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     for u in dict.fromkeys(urls):
-        xml += f"  <url><loc>{e(u)}</loc></url>\n"
+        last = f"<lastmod>{str(dated[u])[:10]}</lastmod>" if dated.get(u) else ""
+        xml += f"  <url><loc>{e(u)}</loc>{last}</url>\n"
     return HttpResponse(xml + "</urlset>", content_type="application/xml; charset=utf-8")
 
 

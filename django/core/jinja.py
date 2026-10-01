@@ -8,6 +8,7 @@ from markupsafe import Markup
 
 from core import clock
 from core import conf, helpers
+from core.env import get as env_get
 from core.i18n import locale, t
 
 current_request: ContextVar = ContextVar("current_request", default=None)
@@ -46,7 +47,7 @@ def environment(**options) -> Environment:
     env = Environment(**options, undefined=SoftUndefined, trim_blocks=False, lstrip_blocks=False,
                       extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols"])
     env.globals.update({
-        "t": t, "locale": locale, "config": conf.get, "partial": partial, "csrf_field": csrf_field,
+        "t": t, "locale": locale, "config": conf.get, "env": lambda k: env_get(k, "") or "", "partial": partial, "csrf_field": csrf_field,
         "request_path": request_path, "request_uri": request_uri,
         "e": helpers.e, "url": helpers.url, "path": helpers.path, "asset": helpers.asset, "brand": helpers.brand,
         "fmt_number": helpers.fmt_number, "fmt_date": helpers.fmt_date, "month_name": helpers.month_name,

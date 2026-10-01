@@ -22,6 +22,9 @@
     <meta property="og:locale" content="{{ 'fr_FR' if locale() == 'fr' else 'en_GB' }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="theme-color" content="#111111">
+    {% if env('GOOGLE_SITE_VERIFICATION') %}<meta name="google-site-verification" content="{{ env('GOOGLE_SITE_VERIFICATION') }}">{% endif %}
+    {% if env('BING_SITE_VERIFICATION') %}<meta name="msvalidate.01" content="{{ env('BING_SITE_VERIFICATION') }}">{% endif %}
+    {% if meta.jsonld %}<script type="application/ld+json">{{ meta.jsonld }}</script>{% endif %}
     <link rel="icon" href="{{ asset('img/brand/monogram.svg') }}" type="image/svg+xml">
     <link rel="icon" href="{{ asset('img/brand/favicon-32.png') }}" type="image/png" sizes="32x32">
     <link rel="apple-touch-icon" href="{{ asset('img/brand/apple-touch-icon.png') }}">
