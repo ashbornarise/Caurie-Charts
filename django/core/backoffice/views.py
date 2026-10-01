@@ -25,7 +25,6 @@ from core.views import redirect, render, req_str
 
 PLATFORMS = ["youtube", "audiomack", "boomplay", "spotify", "apple_music", "deezer"]
 CSV_SOURCES = ["audiomack", "boomplay", "apple_music"]
-THEMES = ["classement", "artiste", "weekend"]
 
 
 class Redirect(Exception):
@@ -854,28 +853,30 @@ def partner_delete(request, pid: str):
 @admin_view()
 def posts(request):
     from core import env
-    rows = db.all("""SELECT * FROM social_posts ORDER BY slot_date DESC,
-                     array_position(ARRAY['classement','artiste','weekend']::varchar[], theme::varchar) LIMIT 45""")
+    from core.services.social import themes
+    rows = db.all("SELECT * FROM social_posts ORDER BY slot_date DESC, id DESC LIMIT 45")
     for p in rows:
         try:
             slides = json.loads(p["carousel"] or "[]") or []
         except ValueError:
             slides = []
         p["slides"] = [s if isinstance(s, dict) else {"file": s, "label": ""} for s in slides]
-    return admin_render(request, "posts", {"posts": rows, "exportDir": env.get("SOCIAL_EXPORT_DIR", "")})
+    return admin_render(request, "posts", {"posts": rows, "themes": themes.labels(), "exportDir": env.get("SOCIAL_EXPORT_DIR", "")})
 
 
 @admin_view()
 def posts_generate(request):
     from core.services import ai
     from core.services.social.generator import PostGenerator
+    from core.services.social.themes import THEMES
     theme = req_str(request, "theme")
-    themes = THEMES if theme == "tous" else ([theme] if theme in THEMES else [])
-    if not themes:
+    if theme != "rotation" and theme not in THEMES:
         return HttpResponseBadRequest()
+    # Une rubrique à la fois : la génération (visuels 4K, texte IA) doit tenir dans le délai d'une requête
     generator = PostGenerator(ai.make())
-    done = [post["title"] for post in (generator.generate(th) for th in themes) if post]
-    audit.log(uid(request), "social.generate", "social_post", None, ", ".join(themes), {"titles": done}, ip(request))
+    post = generator.generate_next() if theme == "rotation" else generator.generate(theme)
+    done = [post["title"]] if post else []
+    audit.log(uid(request), "social.generate", "social_post", None, post["theme"] if post else theme, {"titles": done}, ip(request))
     return back(request, path("admin/posts"), "success" if done else "error",
                 t("admin.posts_generated", n=len(done)) if done else t("admin.posts_no_data"))
 

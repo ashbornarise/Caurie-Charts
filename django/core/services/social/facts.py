@@ -21,7 +21,8 @@ def for_theme(theme: str):
         return _artist_of_the_week()
     if theme == "weekend":
         return _weekend()
-    return None
+    from core.services.social import themes
+    return themes.facts(theme)
 
 
 def _chart():

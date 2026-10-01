@@ -85,6 +85,15 @@ class PostGenerator:
         row["folder"] = PE.export(row)
         return row
 
+    def generate_next(self, day: str | None = None):
+        """Rotation : la rubrique publiée depuis le plus longtemps qui a des données réelles."""
+        from core.services.social import themes
+        for theme in themes.rotation():
+            post = self.generate(theme, day)
+            if post:
+                return post
+        return None
+
     def _write(self, facts: dict) -> dict:
         answer = self.ai.ask(SYSTEM, "Faits (JSON) :\n" + json.dumps(facts, ensure_ascii=False, indent=4), 1500)
         j = ai.extract_json(answer["text"])
@@ -99,6 +108,8 @@ class PostGenerator:
 
     @staticmethod
     def _cover(facts: dict) -> dict:
+        if facts.get("cover"):
+            return facts["cover"]
         k = facts["kind"]
         if k == "artist":
             fans = facts["artist"]["deezer_fans"]
@@ -120,6 +131,13 @@ class PostGenerator:
             rows = [{**e, "image": e.get("image_url")} for e in facts["top"]]
         items = []
         for i, r in enumerate(rows[:7]):
+            if "figure_value" in r or not r.get("track_id"):
+                # Rubrique qui fournit son chiffre exact (vues, fans, n°1…), ou entrée sans titre (artiste, actualité)
+                items.append({"rank": i + 1, "title": r["title"], "artist": r["artist"], "image": r.get("image"),
+                              "figure_value": r.get("figure_value") or "", "figure_label": r.get("figure_label") or "",
+                              "youtube_url": db.value("""SELECT url FROM track_platform_ids WHERE track_id = ? AND platform = 'youtube'
+                                                         ORDER BY kind = 'clip' DESC, id LIMIT 1""", [int(r["track_id"])]) if r.get("track_id") else None})
+                continue
             views = db.value("""SELECT SUM((SELECT s.plays FROM snapshots s WHERE s.track_platform_id = p.id ORDER BY s.captured_on DESC LIMIT 1))
                                 FROM track_platform_ids p WHERE p.track_id = ? AND p.platform = 'youtube'""", [int(r["track_id"])]) if r.get("track_id") else None
             best = (r.get("seen") or [None])[0]
@@ -143,7 +161,15 @@ class PostGenerator:
             return " · ".join(f"{s['platform']} {s['country']} n°{s['position']}" for s in seen[:2])
         lines, body = [], []
         k = facts["kind"]
-        if k == "cauri_chart":
+        if k == "ranking":
+            # Rubriques du registre (themes.py) : accroche, une ligne par entrée avec son détail chiffré, question
+            for i, e in enumerate(facts["top"]):
+                line = e.get("line") or f"{e['title']} — {e['artist']}" + (f" ({e['detail']})" if e.get("detail") else "")
+                lines.append(f"{i + 1}. {e.get('row_title') or e['title']}")
+                body.append(f"{i + 1}. {line}")
+            body.insert(0, facts["intro"])
+            body.append(facts["question"])
+        elif k == "cauri_chart":
             lines = [f"{e['position']}. {e['title']} — {e['artist']}" for e in facts["top"]]
             one = facts["top"][0]
             body.append(f"🏆 {one['artist']} est n°1 du Prime Chart Afrique de l’Ouest avec « {one['title']} ».")

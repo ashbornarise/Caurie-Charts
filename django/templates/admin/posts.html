@@ -1,4 +1,3 @@
-{%- set themes = {'classement': 'Tendances', 'artiste': 'Artiste de la semaine', 'weekend': 'Spécial week-end'} -%}
 {%- macro media(f) %}{{ '/media/social/' ~ rawurlencode(f.split('/')[-1]) if f else '' }}{% endmacro -%}
 <h1>{{ t('admin.nav_posts') }}</h1>
 <p class="muted">{{ t('admin.posts_intro') }}</p>
@@ -7,10 +6,15 @@
 <form method="post" action="{{ path('admin/posts/generer') }}" class="toolbar box box--accent">
     {{ csrf_field() }}
     <strong>{{ t('admin.posts_generate') }}</strong>
-    <button class="button button--small" name="theme" value="tous" type="submit">{{ t('admin.posts_generate_all') }}</button>
-    {% for k, label in themes.items() %}
-        <button class="button button--small button--ghost" name="theme" value="{{ k }}" type="submit">{{ label }}</button>
-    {% endfor %}
+    <button class="button button--small" name="theme" value="rotation" type="submit">{{ t('admin.posts_generate_all') }}</button>
+</form>
+<form method="post" action="{{ path('admin/posts/generer') }}" class="toolbar box">
+    {{ csrf_field() }}
+    <label class="visually-hidden" for="post-theme">{{ t('admin.posts_generate_pick') }}</label>
+    <select id="post-theme" name="theme">
+        {% for k, label in themes.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}
+    </select>
+    <button class="button button--small button--ghost" type="submit">{{ t('admin.posts_generate_pick') }}</button>
     <small class="muted">{{ t('admin.posts_generate_note') }}</small>
 </form>
 

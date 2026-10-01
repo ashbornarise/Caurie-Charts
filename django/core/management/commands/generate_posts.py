@@ -1,8 +1,9 @@
 """Posts réseaux sociaux (lundi, mercredi, vendredi), en brouillon à relire.
 
-  manage.py generate_posts                 thème du jour
-  manage.py generate_posts --theme=artiste
-  manage.py generate_posts --all           les trois thèmes (aperçu)
+  manage.py generate_posts                 rubrique du jour (rotation lundi, mercredi, vendredi)
+  manage.py generate_posts --theme=artiste une rubrique précise (liste : core/services/social/themes.py)
+  manage.py generate_posts --theme=rotation la prochaine rubrique de la rotation
+  manage.py generate_posts --all           toutes les rubriques (aperçu)
 """
 from datetime import date
 
@@ -14,6 +15,7 @@ from core.management.commands._cli import out, run
 from core.services import ai
 from core.services.social.generator import PostGenerator
 from core.services.social.image import DIR
+from core.services.social.themes import THEMES
 
 
 class Command(BaseCommand):
@@ -27,7 +29,7 @@ class Command(BaseCommand):
         def task():
             days = {int(k): v for k, v in (conf.get("ai.social.days") or {}).items()}
             if o["all"]:
-                themes = list(days.values())
+                themes = list(THEMES)
             elif o["theme"]:
                 themes = [o["theme"]]
             else:
@@ -38,7 +40,7 @@ class Command(BaseCommand):
             client = ai.make()
             generator = PostGenerator(client)
             for theme in themes:
-                post = generator.generate(theme)
+                post = generator.generate_next() if theme == "rotation" else generator.generate(theme)
                 if not post:
                     out(f"[{theme}] pas assez de données réelles pour ce thème, aucun post créé.")
                     continue

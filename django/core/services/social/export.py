@@ -15,9 +15,9 @@ from datetime import date, timedelta
 from core import env
 from core.services.social import image as PI
 from core.services.social.carousel import clips_dir
+from core.services.social.themes import labels
 
 DAYS = {1: "Lundi", 2: "Mardi", 3: "Mercredi", 4: "Jeudi", 5: "Vendredi", 6: "Samedi", 7: "Dimanche"}
-THEMES = {"classement": "Tendances", "artiste": "Artiste de la semaine", "weekend": "Spécial week-end"}
 # Sous-dossiers par plateforme (Instagram et Facebook ont les mêmes formats : 4:5 au fil, 9:16 en story et en Reel)
 META = "Instagram et Facebook"
 TIKTOK = "TikTok"
@@ -42,7 +42,7 @@ def export(post: dict):
     monday = d - timedelta(days=d.isoweekday() - 1)
     iso_year, iso_week, _ = d.isocalendar()
     week = f"Semaine {iso_week:02d} ({_short(monday)} - {_short(monday + timedelta(days=6))})"
-    rubric = THEMES.get(post["theme"], post["theme"])
+    rubric = labels().get(post["theme"], post["theme"])
     # Espaces insécables de la typographie française → espaces simples, pour reconnaître la rubrique
     title = re.sub(r"[   \t ]+", " ", PI.clean(post["title"]))
     title = re.sub(r"\s*[:·\-–]?\s*" + re.escape(rubric) + r"\s*[:·\-–]?\s*", " ", title, flags=re.I)  # pas de répétition de la rubrique

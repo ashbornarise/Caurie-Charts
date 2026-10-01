@@ -10,11 +10,12 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+from core import storage
 from core.services import share_image
 from core.services.news import http_get
 
 REPO = Path(__file__).resolve().parent.parent.parent.parent.parent
-DIR = REPO / "public" / "media" / "social"
+DIR = storage.MEDIA / "social"
 SCALE = 2  # base 1080 px → 2160 px de large (4K)
 # Zones couvertes par l'interface des applications en 9:16 (base 1080 × 1920) : profil et boutons en haut,
 # légende, musique et réponse en bas, boutons d'action à droite (TikTok, Reels). Rien d'important n'y est posé.
@@ -167,6 +168,8 @@ def save_jpeg(img: Image.Image, file: Path) -> str | None:
 
 
 def headline(facts: dict) -> str:
+    if facts["kind"] == "ranking":
+        return facts["big"]
     return {"artist": (facts.get("artist") or {}).get("name"), "cauri_chart": "Top de la semaine",
             "platform_trends": "Les tendances"}.get(facts["kind"]) or "Spécial week-end"
 
@@ -182,6 +185,12 @@ def items(facts: dict) -> list:
             pp = e.get("previous_position")
             move = ("▲ " + str(pp - e["position"]) if pp > e["position"] else "") if pp else "Nouveau"
             out.append({"rank": int(e["position"]), "title": e["title"], "detail": (e["artist"] + (" · " + move if move else "")).strip()})
+    elif facts["kind"] == "ranking":
+        for i, e in enumerate(facts["top"]):
+            detail = e.get("detail") or ""
+            if e.get("track_id"):  # titre : l'artiste d'abord, puis le détail chiffré
+                detail = e["artist"] + (" · " + detail if detail else "")
+            out.append({"rank": i + 1, "title": e.get("row_title") or e["title"], "detail": detail or e.get("artist") or ""})
     elif facts["kind"] == "artist":
         for i, t in enumerate(facts["tracks"]):
             out.append({"rank": i + 1, "title": t["title"], "detail": _pos(t["seen"])})

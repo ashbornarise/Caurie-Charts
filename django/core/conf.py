@@ -79,7 +79,8 @@ def _all() -> dict:
         },
         "ai": {
             "classify": {"threshold": 0.85, "max_ai_calls": 40},
-            "social": {"days": {1: "classement", 3: "artiste", 5: "weekend"}, "handle": "@cauricharts",
+            # Lundi, mercredi, vendredi : une rubrique en rotation parmi celles de core/services/social/themes.py
+            "social": {"days": {1: "rotation", 3: "rotation", 5: "rotation"}, "handle": "@cauricharts",
                        "clip_seconds": 30, "clip_start": 30, "hashtags_base": ["#CauriCharts", "#AfriqueDeLOuest"]},
         },
         "discovery": {

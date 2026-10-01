@@ -79,14 +79,12 @@ class DailyPipeline:
         theme = days.get(weekday)
         if force_posts or theme:
             def posts():
-                generator, lines = PostGenerator(ai.make()), []
-                for t in (list(days.values()) if force_posts else [theme]):
-                    post = generator.generate(t)
-                    if post:
-                        lines.append(f"{t} : {post['title']}" + (f" → {post['folder']}" if post.get("folder") else ""))
-                    else:
-                        lines.append(f"{t} : pas assez de données")
-                return lines
+                # « rotation » : une rubrique parmi toutes (themes.py), la moins récemment publiée qui a des données
+                generator = PostGenerator(ai.make())
+                post = generator.generate_next() if (force_posts or theme == "rotation") else generator.generate(theme)
+                if not post:
+                    return ["aucune rubrique n’a assez de données réelles aujourd’hui"]
+                return [f"{post['theme']} : {post['title']}" + (f" → {post['folder']}" if post.get("folder") else "")]
             self._step("8. Posts réseaux sociaux", posts)
 
         def cleanup():

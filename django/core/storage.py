@@ -3,7 +3,9 @@
 En local : dossiers du dépôt (storage/uploads hors du dossier public, public/media pour les médias).
 Sur Vercel (disque en lecture seule) : Vercel Blob, activé dès que BLOB_READ_WRITE_TOKEN est défini.
 """
+import os
 import secrets
+import tempfile
 from datetime import date
 from pathlib import Path
 
@@ -16,7 +18,8 @@ from core.i18n import t
 
 REPO = Path(__file__).resolve().parent.parent.parent
 UPLOADS = REPO / "storage" / "uploads"
-MEDIA = REPO / "public" / "media"
+# Vercel : disque en lecture seule sauf /tmp ; les fichiers y sont générés puis envoyés dans le Blob
+MEDIA = Path(tempfile.gettempdir()) / "cauri-media" if os.environ.get("VERCEL") else REPO / "public" / "media"
 ALLOWED = {"PNG": "png", "JPEG": "jpg", "WEBP": "webp"}
 
 
