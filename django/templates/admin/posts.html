@@ -42,6 +42,11 @@
             {% if p.image_story %}<a href="{{ media(p.image_story) }}" target="_blank" rel="noopener">{{ t('admin.post_story') }}</a>{% endif %}
             {% if p.video %}<a href="{{ media(p.video) }}" target="_blank" rel="noopener">{{ t('admin.post_video') }}</a>{% endif %}
         </p>
+        {% if p.slides and p.slides[0].tiktok %}
+        <p class="post-card__files">{{ t('admin.post_tiktok') }} :
+            {% for s in p.slides %}{% if s.tiktok %}<a href="{{ media(s.tiktok) }}" target="_blank" rel="noopener" title="{{ s.label }}">{{ '%02d'|format(loop.index) }}</a> {% endif %}{% endfor %}
+        </p>
+        {% endif %}
 
         <label class="post-card__caption-label" for="caption-{{ p.id|int }}">{{ t('admin.post_caption') }}</label>
         <textarea class="post-card__caption" id="caption-{{ p.id|int }}" rows="8" readonly>{{ p.caption ~ "\n\n" ~ p.hashtags }}</textarea>

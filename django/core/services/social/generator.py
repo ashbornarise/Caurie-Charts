@@ -64,13 +64,16 @@ class PostGenerator:
         slides = []
         for i, file in enumerate(car["slides"]):
             item = items[i - 1] if i > 0 and i - 1 < len(items) else None
-            slides.append({"file": file, "label": labels[i] if i < len(labels) else "",
+            # « file » : diapositive 4:5 (Instagram, Facebook) ; « tiktok » : la même en 9:16
+            slides.append({"file": file, "tiktok": car["slides_916"][i] if i < len(car["slides_916"]) else None,
+                           "label": labels[i] if i < len(labels) else "",
                            "clip": (PC.find_clip(item) is not None) if item else None,
                            "youtube": item.get("youtube_url") if item else None,
                            "expect": f"{item['artist']} - {item['title']}.mp4" if item else None})
         row = {"slot_date": day, "theme": theme, "title": text["title"][:160], "caption": text["caption"],
                "hashtags": " ".join(text["hashtags"][:8])[:300], "facts": json.dumps(facts, ensure_ascii=False),
-               "image_square": images.get("square"), "image_story": images.get("story"),
+               # image_square : visuel du fil, désormais en 4:5 (nom de colonne historique)
+               "image_square": images.get("post"), "image_story": images.get("story"),
                "carousel": json.dumps(slides, ensure_ascii=False), "video": car["video"], "status": "draft"}
         # Brouillon remplacé : ses fichiers (visuels, carrousel, calques, vidéo) sont supprimés avec lui
         for old in db.all("SELECT * FROM social_posts WHERE slot_date = ? AND theme = ? AND status = 'draft'", [day, theme]):
@@ -78,7 +81,7 @@ class PostGenerator:
         db.run("DELETE FROM social_posts WHERE slot_date = ? AND theme = ? AND status = 'draft'", [day, theme])
         row["id"] = db.insert("social_posts", row)
         # Serveur sans disque durable (GitHub Actions) : visuels et vidéo publiés sur Vercel Blob
-        storage.publish_media_files("social", [images.get("square"), images.get("story"), car["video"]] + car["slides"])
+        storage.publish_media_files("social", [images.get("post"), images.get("story"), car["video"]] + car["slides"] + car["slides_916"])
         row["folder"] = PE.export(row)
         return row
 
@@ -181,7 +184,10 @@ def _slide_files(post: dict) -> list:
         slides = json.loads(post.get("carousel") or "[]") or []
     except ValueError:
         slides = []
-    return [s["file"] if isinstance(s, dict) else s for s in slides]
+    files = []
+    for s in slides:
+        files += [s.get("file"), s.get("tiktok")] if isinstance(s, dict) else [s]
+    return [f for f in files if f]
 
 
 def delete_files(post: dict) -> None:

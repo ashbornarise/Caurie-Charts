@@ -1,4 +1,8 @@
-"""Carrousel façon magazine (1080 × 1350) et vidéo du Top (traduction de Social\\PostCarousel, GD → Pillow).
+"""Carrousel façon magazine et vidéo du Top, en 4K (traduction de Social\\PostCarousel, GD → Pillow).
+
+Deux jeux de diapositives : 4:5 (2160 × 2700, carrousel Instagram et Facebook) et 9:16 (2160 × 3840, carrousel
+photo TikTok), et une vidéo 9:16 (Reels Instagram et Facebook, TikTok). En 9:16, les textes restent hors des zones
+couvertes par l'interface des applications (image.SAFE_916).
 
 Couverture, puis une diapositive par performance avec un chiffre exact. Vidéo (ffmpeg, facultatif) :
 titre avec clip officiel fourni par l'artiste ou le label (dossier Clips) → 30 s de clip avec le classement
@@ -20,32 +24,41 @@ from core.services.imports import normalizer as N
 from core.services.platforms import log_write
 from core.services.social import image as PI
 
-W, H = 1080, 1350
+FORMATS = {"feed": ((1080, 1350), None), "tiktok": ((1080, 1920), PI.SAFE_916)}
+VIDEO = "tiktok"  # la vidéo reprend les diapositives 9:16
 
 
 def render(facts: dict, cover: dict, items: list, name: str) -> dict:
+    """{"slides": [4:5], "slides_916": [9:16], "video": mp4 9:16 ou None}."""
     f = PI.fonts()
     if not f:
-        return {"slides": [], "video": None}
+        return {"slides": [], "slides_916": [], "video": None}
     PI.DIR.mkdir(parents=True, exist_ok=True)
     total = len(items) + 1
-    slides, segments = [], []
-    cover_file = _save(_cover_slide(f, facts, cover, facts.get("image") or (items[0].get("image") if items else None), total), PI.DIR / f"{name}-1.png")
-    slides.append(cover_file)
-    segments.append({"image": cover_file})
-    for i, item in enumerate(items):
-        slide = _save(_item_slide(f, item, i + 2, total, facts["source"]), PI.DIR / f"{name}-{i + 2}.png")
-        slides.append(slide)
-        clip = find_clip(item)
-        if clip:
-            # Clip fourni par l'artiste ou le label : il passe en fond, classement et chiffres par-dessus
-            overlay = PI.DIR / f"{name}-{i + 2}-calque.png"
-            _item_slide(f, item, i + 2, total, facts["source"], transparent=True).save(overlay, "PNG")
-            segments.append({"clip": clip, "overlay": str(overlay)})
-        else:
-            segments.append({"image": slide})
-    slides = [s for s in slides if s]
-    return {"slides": [os.path.basename(s) for s in slides], "video": _video(segments, PI.DIR / f"{name}.mp4")}
+    cover_photo = facts.get("image") or (items[0].get("image") if items else None)
+    out, segments = {}, []
+    for fmt, (size, safe) in FORMATS.items():
+        fr = PI.Frame(*size, safe)
+        suffix = "" if fmt == "feed" else "-916"
+        slides = [PI.save_jpeg(_cover_slide(fr, f, cover, cover_photo, total), PI.DIR / f"{name}-1{suffix}.jpg")]
+        if fmt == VIDEO:
+            segments.append({"image": slides[0]})
+        for i, item in enumerate(items):
+            slide = PI.save_jpeg(_item_slide(fr, f, item, i + 2, total, facts["source"]), PI.DIR / f"{name}-{i + 2}{suffix}.jpg")
+            slides.append(slide)
+            if fmt != VIDEO:
+                continue
+            clip = find_clip(item)
+            if clip:
+                # Clip fourni par l'artiste ou le label : il passe en fond, classement et chiffres par-dessus
+                overlay = PI.DIR / f"{name}-{i + 2}-calque.png"
+                _item_slide(fr, f, item, i + 2, total, facts["source"], transparent=True).save(overlay, "PNG")
+                segments.append({"clip": clip, "overlay": str(overlay)})
+            else:
+                segments.append({"image": slide})
+        out[fmt] = [os.path.basename(s) for s in slides if s]
+    fr = PI.Frame(*FORMATS[VIDEO][0])
+    return {"slides": out["feed"], "slides_916": out["tiktok"], "video": _video(segments, PI.DIR / f"{name}.mp4", fr.w, fr.h)}
 
 
 def clips_dir() -> str:
@@ -72,131 +85,133 @@ def find_clip(item: dict):
     return None
 
 
-def _canvas(photo_url, transparent: bool = False):
+def _canvas(fr: PI.Frame, photo_url, transparent: bool = False):
     if transparent:
         # Calque posé sur un clip : fond transparent, seuls les dégradés et les textes sont dessinés
-        return Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    img = Image.new("RGB", (W, H), (24, 10, 60))
+        return Image.new("RGBA", (fr.w, fr.h), (0, 0, 0, 0))
+    img = Image.new("RGB", (fr.w, fr.h), (24, 10, 60))
     ph = PI.photo(photo_url)
     if ph:
-        PI.paste_cover(img, ph, W, H)
+        PI.paste_cover(img, ph, fr.w, fr.h)
     else:
-        PI.gradient(img, 0, H, (139, 82, 255), 90, 20, W)
+        fr.gradient(img, 0, fr.bh, (139, 82, 255), 90, 20)
     return img
 
 
-def _blur_zone(img: Image.Image, y1: int, y2: int, top: bool) -> None:
-    """Floute une bande horizontale ; le flou s'estompe progressivement vers la partie nette."""
+def _blur_zone(fr: PI.Frame, img: Image.Image, y1: int, y2: int, top: bool) -> None:
+    """Floute une bande horizontale (px de base) ; le flou s'estompe progressivement vers la partie nette."""
+    y1, y2 = fr.s(y1), fr.s(y2)
     h = y2 - y1
-    band = img.crop((0, y1, W, y2))
-    small = band.resize((W // 5, max(1, h // 5)), Image.BILINEAR).filter(ImageFilter.GaussianBlur(3))
-    blur = small.resize((W, h), Image.BILINEAR).filter(ImageFilter.GaussianBlur(2))
+    band = img.crop((0, y1, fr.w, y2))
+    shrink = 5 * PI.SCALE  # même flou qu'en 1080, quelle que soit la définition
+    small = band.resize((fr.w // shrink, max(1, h // shrink)), Image.BILINEAR).filter(ImageFilter.GaussianBlur(3))
+    blur = small.resize((fr.w, h), Image.BILINEAR).filter(ImageFilter.GaussianBlur(2 * PI.SCALE))
     fade = int(h * 0.35)
-    mask = Image.new("L", (W, h))
+    mask = Image.new("L", (fr.w, h))
     md = ImageDraw.Draw(mask)
     for y in range(h):
         d = h - 1 - y if top else y  # distance à la limite nette
         pct = 100 if d >= fade else round(100 * d / fade)
-        md.line([(0, y), (W, y)], fill=round(pct * 255 / 100))
+        md.line([(0, y), (fr.w, y)], fill=round(pct * 255 / 100))
     img.paste(blur, (0, y1), mask)
 
 
-def _centered(draw, px: int, y: int, color, path: str, text: str) -> None:
-    PI.draw_text(draw, px, int((W - PI.width(text, path, px)) / 2), y, color, path, text)
+def _centered(fr: PI.Frame, draw, px: int, y: int, color, path: str, text: str) -> None:
+    fr.text(draw, px, (fr.bw - fr.width(text, path, px)) / 2, y, color, path, text)
 
 
-def _counter(draw, f: dict, n: int, total: int) -> None:
+def _inner(fr: PI.Frame, margin: int) -> int:
+    """Largeur utile pour un texte centré : marge habituelle, ou zone des boutons de l'application si plus large."""
+    return fr.bw - 2 * max(margin, fr.side)
+
+
+def _counter(fr: PI.Frame, draw, f: dict, n: int, total: int) -> None:
     label = f"{n}/{total}"
-    w = PI.width(label, f["bold"], 24) + 36
-    x = W - 50 - w
-    draw.rectangle([x, 50, x + w, 96], fill=(0, 0, 0, PI.gd_alpha(50)))
-    PI.draw_text(draw, 24, x + 18, 82, (255, 255, 255, 255), f["bold"], label)
+    w = fr.width(label, f["bold"], 24) + 36
+    x, y = fr.bw - max(50, fr.side) - w, fr.top + 50
+    fr.rect(draw, x, y, x + w, y + 46, (0, 0, 0, PI.gd_alpha(50)))
+    fr.text(draw, 24, x + 18, y + 32, (255, 255, 255, 255), f["bold"], label)
 
 
-def _logo(img: Image.Image, x: int, y: int, width: int) -> None:
+def _logo(fr: PI.Frame, img: Image.Image, x: int, y: int, width: int) -> None:
     logo = PI.white_logo()
     if logo:
-        h = round(logo.size[1] * width / logo.size[0])
-        lg = logo.resize((width, h), Image.LANCZOS)
+        width = fr.s(width)
+        lg = logo.resize((width, round(logo.size[1] * width / logo.size[0])), Image.LANCZOS)
         if img.mode == "RGBA":
-            img.alpha_composite(lg, (x, y))
+            img.alpha_composite(lg, (fr.s(x), fr.s(y)))
         else:
-            img.paste(lg, (x, y), lg)
+            img.paste(lg, (fr.s(x), fr.s(y)), lg)
 
 
-def _cover_slide(f: dict, facts: dict, cover: dict, photo_url, total: int) -> Image.Image:
-    img = _canvas(photo_url)
+def _cover_slide(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -> Image.Image:
+    W, H = fr.bw, fr.bh
+    img = _canvas(fr, photo_url)
     # Zone des titres : fond flouté puis assombri, pour que le texte reste lisible même sur une photo chargée
-    _blur_zone(img, 0, int(H * 0.50), True)
-    PI.gradient(img, 0, int(H * 0.58), (6, 4, 14), 8, 127, W)
-    PI.gradient(img, int(H * 0.78), H, (0, 0, 0), 127, 60, W)
+    _blur_zone(fr, img, 0, int(H * 0.50), True)
+    fr.gradient(img, 0, int(H * 0.58), (6, 4, 14), 8, 127)
+    fr.gradient(img, int(H * 0.78), H, (0, 0, 0), 127, 60)
     draw = ImageDraw.Draw(img, "RGBA")
     white = (255, 255, 255, 255)
-    y = 120
-    _centered(draw, 40, y, white, f["bold"], PI.fit_width(PI.clean(cover["kicker"]), f["bold"], 40, W - 140))
+    y = fr.top + 120
+    _centered(fr, draw, 40, y, white, f["bold"], fr.fit(PI.clean(cover["kicker"]), f["bold"], 40, _inner(fr, 70)))
     y += 20
     size = 150
     head = PI.clean(cover["headline"]).upper()
-    while size > 70 and PI.width(head, f["display"], size) > W - 110:
+    while size > 70 and fr.width(head, f["display"], size) > _inner(fr, 55):
         size -= 6
-    for line in PI.wrap(head, f["display"], size, W - 110, 2):
+    for line in fr.wrap(head, f["display"], size, _inner(fr, 55), 2):
         y += int(size * 1.02)
-        _centered(draw, size, y, white, f["display"], line)
+        _centered(fr, draw, size, y, white, f["display"], line)
     if cover.get("subtitle"):
         y += 70
-        _centered(draw, 50, y, white, f["serif"], PI.fit_width(PI.clean(cover["subtitle"]), f["serif"], 50, W - 140))
-    _counter(draw, f, 1, total)
-    _logo(img, 60, H - 190, 210)
+        _centered(fr, draw, 50, y, white, f["serif"], fr.fit(PI.clean(cover["subtitle"]), f["serif"], 50, _inner(fr, 70)))
+    _counter(fr, draw, f, 1, total)
+    _logo(fr, img, max(60, fr.side), H - fr.bottom - 190, 210)
     return img
 
 
-def _item_slide(f: dict, item: dict, n: int, total: int, source: str, transparent: bool = False) -> Image.Image:
-    img = _canvas(None if transparent else item.get("image"), transparent)
-    PI.gradient(img, 0, 220, (0, 0, 0), 60, 127, W)
+def _item_slide(fr: PI.Frame, f: dict, item: dict, n: int, total: int, source: str, transparent: bool = False) -> Image.Image:
+    W, H = fr.bw, fr.bh
+    base = H - fr.bottom  # bas de la zone visible
+    img = _canvas(fr, None if transparent else item.get("image"), transparent)
+    fr.gradient(img, 0, fr.top + 220, (0, 0, 0), 60, 127)
     if not transparent:
-        _blur_zone(img, int(H * 0.50), H, False)  # photo seulement : sur un clip, le calque reste transparent
-    PI.gradient(img, int(H * 0.40), H, (6, 4, 14), 127, 6, W)
-    _logo(img, 56, 52, 180)
+        _blur_zone(fr, img, min(int(H * 0.50), base - 640), H, False)  # photo seulement : sur un clip, le calque reste transparent
+    fr.gradient(img, min(int(H * 0.40), base - 760), H, (6, 4, 14), 127, 6)
+    _logo(fr, img, max(56, fr.side), fr.top + 52, 180)
     draw = ImageDraw.Draw(img, "RGBA")
-    _counter(draw, f, n, total)
+    _counter(fr, draw, f, n, total)
     white, violet, soft = (255, 255, 255, 255), (*PI.VIOLET, 255), (255, 255, 255, PI.gd_alpha(40))
     # Rang « 1er », « 2e »… centré, suffixe en exposant
     rank = str(item["rank"])
     suffix = "er" if item["rank"] == 1 else "e"
     rs = 170
-    w_rank, w_suf = PI.width(rank, f["serif"], rs), PI.width(suffix, f["serif"], 54)
-    x = int((W - w_rank - w_suf - 6) / 2)
-    y = H - 520
-    PI.draw_text(draw, rs, x, y, white, f["serif"], rank)
-    PI.draw_text(draw, 54, x + w_rank + 6, y - 100, white, f["serif"], suffix)
+    w_rank, w_suf = fr.width(rank, f["serif"], rs), fr.width(suffix, f["serif"], 54)
+    x = (W - w_rank - w_suf - 6) / 2
+    y = base - 520
+    fr.text(draw, rs, x, y, white, f["serif"], rank)
+    fr.text(draw, 54, x + w_rank + 6, y - 100, white, f["serif"], suffix)
     y += 92
-    _centered(draw, 70, y, white, f["serif"], PI.fit_width(PI.clean(item["artist"]), f["serif"], 70, W - 120))
+    _centered(fr, draw, 70, y, white, f["serif"], fr.fit(PI.clean(item["artist"]), f["serif"], 70, _inner(fr, 60)))
     y += 42
-    draw.rectangle([W // 2 - 9, y, W // 2 + 9, y + 18], fill=violet)
+    fr.rect(draw, W / 2 - 9, y, W / 2 + 9, y + 18, violet)
     y += 78
-    _centered(draw, 50, y, white, f["bold"], PI.fit_width(PI.clean(item["title"]), f["bold"], 50, W - 120))
+    _centered(fr, draw, 50, y, white, f["bold"], fr.fit(PI.clean(item["title"]), f["bold"], 50, _inner(fr, 60)))
     y += 74
     # Chiffre exact : nombre en gras, libellé en capitales
     value = str(item["figure_value"]).upper()
     label = " " + str(item["figure_label"]).upper()
-    wv, wl = PI.width(value, f["bold"], 42), PI.width(label, f["sans"], 42)
-    if wv + wl > W - 100:
-        label = " " + PI.fit_width(label.strip(), f["sans"], 42, W - 100 - wv)
-        wl = PI.width(label, f["sans"], 42)
-    x = int((W - wv - wl) / 2)
-    PI.draw_text(draw, 42, x, y, white, f["bold"], value)
-    PI.draw_text(draw, 42, x + wv, y, white, f["sans"], label)
-    _centered(draw, 18, H - 44, soft, f["sans"], PI.fit_width("Source : " + source, f["sans"], 18, W - 120))
+    room = _inner(fr, 50)
+    wv, wl = fr.width(value, f["bold"], 42), fr.width(label, f["sans"], 42)
+    if wv + wl > room:
+        label = " " + fr.fit(label.strip(), f["sans"], 42, room - wv)
+        wl = fr.width(label, f["sans"], 42)
+    x = (W - wv - wl) / 2
+    fr.text(draw, 42, x, y, white, f["bold"], value)
+    fr.text(draw, 42, x + wv, y, white, f["sans"], label)
+    _centered(fr, draw, 18, base - 44, soft, f["sans"], fr.fit("Source : " + source, f["sans"], 18, _inner(fr, 60)))
     return img
-
-
-def _save(img: Image.Image, file: Path):
-    out = file.with_suffix(".jpg")
-    try:
-        img.convert("RGB").save(out, "JPEG", quality=90)
-        return str(out)
-    except OSError:
-        return None
 
 
 def _ffmpeg() -> str | None:
@@ -221,14 +236,15 @@ def _num(x: float) -> str:
     return str(int(x)) if float(x).is_integer() else repr(float(x))
 
 
-def _video(segments: list, out: Path):
-    """Couverture puis chaque titre : 30 s de clip (son compris) avec calque, ou photo 4 s avec un lent zoom."""
+def _video(segments: list, out: Path, w: int, h: int):
+    """Couverture puis chaque titre : 30 s de clip (son compris) avec calque, ou photo 4 s avec un lent zoom. w × h : 4K 9:16."""
     ffmpeg = _ffmpeg()
     if not segments or not ffmpeg:
         return None
     clip_len = int(conf.get("ai.social.clip_seconds") or 30)
     clip_start = int(conf.get("ai.social.clip_start") or 30)
     still = 4
+    zw, zh = round(w * 1.1 / 2) * 2, round(h * 1.1 / 2) * 2  # marge du zoom
     args, filters, n = [], [], 0
     for i, seg in enumerate(segments):
         if "clip" in seg:
@@ -239,8 +255,8 @@ def _video(segments: list, out: Path):
             args += ["-ss", str(start), "-t", _num(length), "-i", seg["clip"], "-loop", "1", "-t", _num(length), "-i", seg["overlay"]]
             c, o = n, n + 1
             n += 2
-            filters.append(f"[{c}:v]scale=1080:1350:force_original_aspect_ratio=increase,crop=1080:1350,fps=30,setsar=1,trim=duration={_num(length)},"
-                           f"setpts=PTS-STARTPTS[c{i}];[c{i}][{o}:v]overlay=0:0:shortest=1,format=yuv420p[v{i}]")
+            filters.append(f"[{c}:v]scale={w}:{h}:force_original_aspect_ratio=increase:flags=lanczos,crop={w}:{h},fps=30,setsar=1,"
+                           f"trim=duration={_num(length)},setpts=PTS-STARTPTS[c{i}];[c{i}][{o}:v]overlay=0:0:shortest=1,format=yuv420p[v{i}]")
             if info["audio"]:
                 fade_out = max(0, length - 1.5)
                 filters.append(f"[{c}:a]atrim=duration={_num(length)},asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo,"
@@ -254,15 +270,17 @@ def _video(segments: list, out: Path):
             args += ["-i", seg["image"], "-f", "lavfi", "-t", str(still), "-i", "anullsrc=r=44100:cl=stereo"]
             k, s = n, n + 1
             n += 2
-            filters.append(f"[{k}:v]scale=1188:1485,zoompan=z='min(zoom+0.0009,1.1)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
-                           f":s=1080x1350:fps=30,setsar=1,format=yuv420p[v{i}]")
+            filters.append(f"[{k}:v]scale={zw}:{zh},zoompan=z='min(zoom+0.0009,1.1)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+                           f":s={w}x{h}:fps=30,setsar=1,format=yuv420p[v{i}]")
             filters.append(f"[{s}:a]anull[a{i}]")
     concat = "".join(f"[v{i}][a{i}]" for i in range(len(segments))) + f"concat=n={len(segments)}:v=1:a=1[out][aout]"
+    # H.264 High 5.1 : 4K 30 i/s accepté tel quel par Instagram, Facebook et TikTok
     cmd = [ffmpeg, "-y", "-loglevel", "error", *args, "-filter_complex", ";".join(filters) + ";" + concat,
-           "-map", "[out]", "-map", "[aout]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "160k",
+           "-map", "[out]", "-map", "[aout]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-profile:v", "high",
+           "-level:v", "5.1", "-maxrate", "40M", "-bufsize", "80M", "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
            "-movflags", "+faststart", str(out)]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
     except (OSError, subprocess.SubprocessError) as exc:
         log_write("social", "error", "ffmpeg a échoué", {"sortie": [str(exc)]})
         return None

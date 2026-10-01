@@ -1,7 +1,8 @@
 """Copie chaque post dans un dossier facile à parcourir (traduction de Social\\PostExport).
 
 SOCIAL_EXPORT_DIR (par exemple Documents\\Cauri Charts - Posts) : Année \\ Semaine NN (du lundi au dimanche) \\
-JJ-MM Jour - Rubrique - Titre, avec le carrousel numéroté, les visuels, la vidéo et la légende prête à coller.
+JJ-MM Jour - Rubrique - Titre, avec la légende prête à coller et un sous-dossier par plateforme, en 4K :
+« Instagram et Facebook » (carrousel et post 4:5, story et Reel 9:16) et « TikTok » (carrousel photo et vidéo 9:16).
 Désactivé si SOCIAL_EXPORT_DIR est vide (serveur).
 """
 import glob
@@ -17,6 +18,9 @@ from core.services.social.carousel import clips_dir
 
 DAYS = {1: "Lundi", 2: "Mardi", 3: "Mercredi", 4: "Jeudi", 5: "Vendredi", 6: "Samedi", 7: "Dimanche"}
 THEMES = {"classement": "Tendances", "artiste": "Artiste de la semaine", "weekend": "Spécial week-end"}
+# Sous-dossiers par plateforme (Instagram et Facebook ont les mêmes formats : 4:5 au fil, 9:16 en story et en Reel)
+META = "Instagram et Facebook"
+TIKTOK = "TikTok"
 MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
 
 
@@ -56,14 +60,20 @@ def export(post: dict):
     except OSError:
         return None
     for old in glob.glob(os.path.join(glob.escape(folder), "*")):
+        # nouvelle version du post du même jour : on remplace
         if os.path.isfile(old):
-            os.unlink(old)  # nouvelle version du post du même jour : on remplace
+            os.unlink(old)
+        elif os.path.isdir(old):
+            shutil.rmtree(old, ignore_errors=True)
 
-    def copy(file, as_name: str) -> None:
-        if file and (PI.DIR / os.path.basename(file)).is_file():
-            shutil.copyfile(PI.DIR / os.path.basename(file), os.path.join(folder, as_name))
+    def copy(file, sub: str, as_name: str) -> None:
+        """Copie dans le sous-dossier de la plateforme, avec l'extension du fichier généré (jpg, png, mp4)."""
+        src = PI.DIR / os.path.basename(file) if file else None
+        if src and src.is_file():
+            os.makedirs(os.path.join(folder, sub), exist_ok=True)
+            shutil.copyfile(src, os.path.join(folder, sub, as_name + src.suffix))
 
-    # « 01 - Couverture - … », « 02 - N°1 - Artiste - Titre », puis visuels, vidéo et légende
+    # Un dossier par plateforme, chaque fichier déjà au bon format : rien à recadrer au moment de publier
     try:
         slides = json.loads(post.get("carousel") or "[]") or []
     except ValueError:
@@ -72,7 +82,9 @@ def export(post: dict):
     for i, slide in enumerate(slides):
         f = slide["file"] if isinstance(slide, dict) else slide
         label = slide["label"] if isinstance(slide, dict) else ("Couverture" if i == 0 else "Diapositive")
-        copy(f, f"{i + 1:02d} - {file_name(label)}.jpg")
+        copy(f, os.path.join(META, "Carrousel 4-5"), f"{i + 1:02d} - {file_name(label)}")
+        if isinstance(slide, dict):
+            copy(slide.get("tiktok"), os.path.join(TIKTOK, "Carrousel photo 9-16"), f"{i + 1:02d} - {file_name(label)}")
         if i == 1:
             leader = " - " + file_name(label)
     count = max(0, len(slides) - 1)
@@ -98,11 +110,12 @@ def export(post: dict):
                       "(MP4) et nous autoriser à en diffuser un extrait de 30 secondes, avec votre nom et le lien vers le clip ? Merci !"]
         with open(os.path.join(folder, "00 - Clips à demander.txt"), "w", encoding="utf-8", newline="") as fh:
             fh.write("\r\n".join(lines) + "\r\n")
-    copy(post.get("image_square"), f"Visuel carré pour le fil{leader}.png")
-    copy(post.get("image_story"), f"Visuel story{leader}.png")
+    copy(post.get("image_square"), META, f"Post unique 4-5{leader}")
+    copy(post.get("image_story"), META, f"Story 9-16{leader}")
     with_clips = len(slides) - 1 - len(missing)
-    copy(post.get("video"), f"Vidéo du Top {count}" + (f" avec {with_clips} clip(s), son inclus" if with_clips > 0
-                                                       else " (sans son, musique à ajouter dans Instagram ou TikTok)") + ".mp4")
+    sound = (f" avec {with_clips} clip(s), son inclus" if with_clips > 0 else " (sans son, musique à ajouter dans l'application)")
+    copy(post.get("video"), META, f"Reel 9-16 - Vidéo du Top {count}{sound}")
+    copy(post.get("video"), TIKTOK, f"Vidéo 9-16 - Top {count}{sound}")
     with open(os.path.join(folder, "00 - Légende à copier.txt"), "w", encoding="utf-8", newline="") as fh:
         fh.write("﻿" + post["title"] + "\r\n\r\n" + post["caption"].replace("\n", "\r\n") + "\r\n\r\n" + post["hashtags"] + "\r\n")
     return folder
