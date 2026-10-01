@@ -1,15 +1,16 @@
 # Ancien site PHP : jamais servi par Vercel (public/ est le dossier des fichiers statiques)
+# Règles ancrées à la racine (/) : sinon elles excluraient aussi django/templates et django/lang
 public/index.php
 public/*.php
-src/
-templates/
-bin/
-vendor/
-tests/
-deploy/
-database/
-lang/
-composer.json
+/src/
+/templates/
+/bin/
+/vendor/
+/tests/
+/deploy/
+/database/
+/lang/
+/composer.json
 
 # Environnements locaux (Python, PostgreSQL portable) et données générées
 django/.venv/
@@ -17,6 +18,6 @@ django/.pg/
 django/staticfiles/
 storage/
 **/__pycache__/
-.env
-docs/
-cauri-charts-logos/
+/.env
+/docs/
+/cauri-charts-logos/
