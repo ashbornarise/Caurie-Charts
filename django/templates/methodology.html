@@ -42,6 +42,9 @@
     <h2>{{ t('methodology.checks_title') }}</h2>
     <p>{{ t('methodology.checks_text', {'factor': formula.anti_fraud.spike_factor|int, 'tolerance': php_round(formula.anti_fraud.declaration_tolerance * 100)|int}) }}</p>
 
+    <h2 id="fiabilite">{{ t('methodology.reliability_title') }}</h2>
+    <p>{{ t('methodology.reliability_text') }}</p>
+
     <h2 id="independance">{{ t('methodology.position_title') }}</h2>
     <p>{{ t('methodology.position_text', {'brand': brand(), 'label': group}) }}</p>
 

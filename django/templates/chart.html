@@ -50,6 +50,16 @@
         <p class="notice"><strong>{{ t('chart.corrected', {'date': fmt_date(run.corrected_at[:10])}) }}</strong> {{ run.correction_note }}</p>
     {% endif %}
     {% endif %}
+    {% if reliability %}
+    <p class="reliability reliability--{{ {'élevée': 'high', 'moyenne': 'mid'}.get(reliability.level, 'low') }}">
+        <span class="reliability__score">Fiabilité {{ reliability.score }}/100 · {{ reliability.level }}</span>
+        {{ reliability.text }}
+        <small>{{ reliability.sources }} plateforme{{ 's' if reliability.sources > 1 }} relevée{{ 's' if reliability.sources > 1 }},
+            {{ reliability.days }} jour{{ 's' if reliability.days > 1 }} sur 7{% if reliability.top %},
+            {{ reliability.corroborated }} titre{{ 's' if reliability.corroborated > 1 }} du Top sur {{ reliability.top }} vu{{ 's' if reliability.corroborated > 1 }} sur deux sources ou plus{% endif %}.
+            <a href="{{ path('methodologie') }}#fiabilite">Comment c’est calculé</a></small>
+    </p>
+    {% endif %}
 </section>
 
 {% if chartCode in ('prime', 'prime-wa', 'buzz', 'fresh', 'icon', 'legend') %}

@@ -202,8 +202,14 @@ def _render_chart(request, country: dict, chart_code: str, period: str, key: str
             if is_prime and view == "live":
                 live["rows"] = live["rows"][:100]
 
+    reliability = None
+    if chart_code in ("prime", "prime-wa"):
+        from core.services import reliability as rel
+        rows = live["rows"] if live and view == "live" else live_chart.build(country["id"], None, 20, "prime", 20)["rows"]
+        reliability = rel.measure(country["id"], rows)
+
     title = chart["name"] if is_regional else t("chart.title", chart=chart["name"], country=country_name(country["code"]))
-    return render(request, "chart", {
+    return render(request, "chart", {"reliability": reliability,
         "view": view, "livePeriod": live_period, "live": live, "liveSources": [] if is_regional else live_sources,
         "country": country, "regional": is_regional, "chartCode": chart_code, "chart": chart, "periodType": period_type,
         "run": run, "entries": repos.entries(int(run["id"])) if run else [],

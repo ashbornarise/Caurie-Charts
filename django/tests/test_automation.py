@@ -114,3 +114,15 @@ def test_mail_without_smtp_is_silent(monkeypatch):
         monkeypatch.delenv(k, raising=False)
     assert mail.configured() is False
     assert mail.send("a@b.co", "s", "t") is False
+
+
+def test_reliability_levels(monkeypatch):
+    from datetime import date
+    from core.services import reliability
+    monkeypatch.setattr(reliability.db, "one", lambda *a, **k: {"sources": 4, "days": 7, "last": date.today().isoformat()})
+    monkeypatch.setattr(reliability.clock, "today", lambda: date.today())
+    rows = [{"seen": [{"source": "deezer"}, {"source": "shazam"}]}] * 20
+    assert reliability.measure(1, rows)["score"] == 100
+    assert reliability.measure(1, rows)["level"] == "élevée"
+    monkeypatch.setattr(reliability.db, "one", lambda *a, **k: {"sources": 0, "days": 7, "last": date.today().isoformat()})
+    assert reliability.measure(1, rows)["score"] == 30  # que des sources calculées : indicatif

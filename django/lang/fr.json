@@ -636,5 +636,7 @@
     "track.clip": "Le clip",
     "track.clip_play": "Lire le clip",
     "track.clip_notice": "La vidéo se charge depuis YouTube (mode confidentialité renforcée) au clic.",
-    "track.clip_open": "Ouvrir sur YouTube"
+    "track.clip_open": "Ouvrir sur YouTube",
+    "methodology.reliability_title": "Indice de fiabilité",
+    "methodology.reliability_text": "Chaque classement affiche une note de fiabilité sur 100, recalculée à chaque relevé. Elle additionne quatre mesures prises sur les 7 derniers jours : le nombre de plateformes dont les classements sont relevés pour le pays (40 points, plein à partir de 4), le nombre de jours relevés (20 points), la part des titres du Top vus sur au moins deux sources différentes (30 points) et la fraîcheur du dernier relevé (10 points). Nos sources calculées (popularité Deezer et vues YouTube des artistes suivis) ne comptent pas comme sources indépendantes : un pays qui ne repose que sur elles reste noté « indicatif » (30 au plus). Au-dessus de 70, la fiabilité est élevée ; de 45 à 69, moyenne ; en dessous, faible."
 }

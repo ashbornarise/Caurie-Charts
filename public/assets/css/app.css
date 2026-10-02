@@ -632,3 +632,11 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .embed__frame--sombre { background: repeating-linear-gradient(45deg, #24212c 0 10px, #1d1a24 10px 20px); }
 .embed__frame iframe { display: block; border: 0; border-radius: 8px; background: transparent; box-shadow: 0 8px 30px rgba(0, 0, 0, .12); }
 .embed__terms { margin-top: 32px; max-width: 720px; }
+
+/* Indice de fiabilité d'un classement */
+.reliability { margin: 14px 0 0; padding: 10px 14px; border-radius: 6px; border-left: 4px solid; font-size: .9rem; color: var(--ink-2); background: var(--surface-2); }
+.reliability small { display: block; margin-top: 4px; color: var(--muted); }
+.reliability__score { display: inline-block; margin-right: 6px; font-weight: 700; color: var(--ink); }
+.reliability--high { border-color: var(--ok); }
+.reliability--mid { border-color: #C9972E; }
+.reliability--low { border-color: var(--danger); }

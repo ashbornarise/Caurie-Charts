@@ -375,5 +375,7 @@
     "track.clip": "The video",
     "track.clip_play": "Play the video",
     "track.clip_notice": "The video loads from YouTube (privacy-enhanced mode) when you click.",
-    "track.clip_open": "Open on YouTube"
+    "track.clip_open": "Open on YouTube",
+    "methodology.reliability_title": "Reliability index",
+    "methodology.reliability_text": "Every chart shows a reliability score out of 100, recomputed with each data pull. It adds four measures over the last 7 days: how many platforms' charts are collected for the country (40 points, full from 4), how many days were collected (20 points), the share of Top tracks seen on at least two different sources (30 points) and how fresh the latest pull is (10 points). Our computed sources (Deezer popularity and YouTube views of tracked artists) do not count as independent sources: a country relying only on them stays 'indicative' (30 at most). Above 70 reliability is high; 45 to 69, medium; below, low."
 }
