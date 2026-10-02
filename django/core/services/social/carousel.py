@@ -285,6 +285,16 @@ def _item_slide(fr: PI.Frame, f: dict, item: dict, n: int, total: int, source: s
     return img
 
 
+MUSIC_DIR = PI.REPO / "resources" / "music"
+
+
+def _music(seed: str) -> str | None:
+    """Morceau libre de droits tiré au sort (stable pour une même vidéo) ; licences dans resources/music/LISEZMOI.txt."""
+    import random
+    files = sorted(str(p) for p in MUSIC_DIR.glob("*") if p.suffix.lower() in (".mp3", ".m4a", ".wav", ".ogg"))
+    return random.Random(seed).choice(files) if files else None
+
+
 def _ffmpeg() -> str | None:
     exe = env.get("FFMPEG_PATH", "ffmpeg") or "ffmpeg"
     return exe if (os.path.isfile(exe) or shutil.which(exe)) else None
@@ -345,9 +355,16 @@ def _video(segments: list, out: Path, w: int, h: int):
                            f":s={w}x{h}:fps=30,setsar=1,format=yuv420p[v{i}]")
             filters.append(f"[{s}:a]anull[a{i}]")
     concat = "".join(f"[v{i}][a{i}]" for i in range(len(segments))) + f"concat=n={len(segments)}:v=1:a=1[out][aout]"
+    # Musique libre de droits (resources/music) sous les photos : seulement si aucun clip n'apporte déjà son propre son
+    music, audio_out = _music(out.name), "[aout]"
+    if music and not any("clip" in seg for seg in segments):
+        total = still * len(segments)
+        args += ["-stream_loop", "-1", "-i", music]
+        concat += f";[{n}:a]atrim=duration={total},asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo,"                   f"afade=t=in:d=1,afade=t=out:st={max(0, total - 2)}:d=2,volume=0.85[mus];[aout]anullsink"
+        audio_out = "[mus]"
     # H.264 High 5.1 : 4K 30 i/s accepté tel quel par Instagram, Facebook et TikTok
     cmd = [ffmpeg, "-y", "-loglevel", "error", *args, "-filter_complex", ";".join(filters) + ";" + concat,
-           "-map", "[out]", "-map", "[aout]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-profile:v", "high",
+           "-map", "[out]", "-map", audio_out, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-profile:v", "high",
            "-level:v", "5.1", "-maxrate", "40M", "-bufsize", "80M", "-c:a", "aac", "-b:a", "192k", "-ar", "44100",
            "-movflags", "+faststart", str(out)]
     try:

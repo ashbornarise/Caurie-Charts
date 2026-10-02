@@ -14,6 +14,7 @@ from core.services.platforms import HttpClient, PlatformException
 API = "https://api.buffer.com"
 # Limites des plateformes pour un carrousel de photos
 MAX_IMAGES = {"instagram": 20, "facebook": 10, "tiktok": 35}
+NOTIFY_REELS = ("instagram", "tiktok")
 PUBLISH_HOUR = 18  # heure de Lomé (UTC) : la fin de journée, quand l'audience est sur son téléphone
 
 
@@ -126,8 +127,11 @@ def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = Fal
         if not pics:
             raise PlatformException("pas d'image pour ce post")
         assets = [{"image": {"url": p}} for p in pics]
+    # Vidéo sur Instagram et TikTok : Buffer prévient le téléphone à l'heure dite et ouvre l'application, où l'on ajoute
+    # un son de leur bibliothèque (impossible par API). Facebook n'a pas ce mode : sa vidéo part seule, musique incrustée.
+    notify = reel and service in NOTIFY_REELS
     data = {"channelId": channel["id"], "text": text(post, service), "assets": assets,
-            "schedulingType": "automatic", "needsApproval": False,
+            "schedulingType": "notification" if notify else "automatic", "needsApproval": False,
             "mode": "customScheduled" if due_at else "addToQueue"}
     if due_at:
         data["dueAt"] = due_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")

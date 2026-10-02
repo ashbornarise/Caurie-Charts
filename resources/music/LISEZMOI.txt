@@ -1,0 +1,17 @@
+MUSIQUES DES VIDÉOS CAURI CHARTS (Facebook, et toute vidéo publiée sans passer par l'application)
+
+Déposez ici 5 à 15 morceaux (.mp3 ou .m4a), puis faites un commit. Chaque vidéo du Top en tire un au hasard,
+posé sous les images avec un fondu au début et à la fin. Les vidéos qui contiennent un clip officiel gardent le
+son du clip.
+
+UNIQUEMENT des musiques libres de droits pour un usage commercial sur les réseaux sociaux, par exemple :
+  - Pixabay Music (pixabay.com/music) : gratuit, usage commercial autorisé, sans attribution.
+    Rechercher « afrobeat », « afro house », « amapiano ».
+  - Bibliothèque audio YouTube (studio.youtube.com > Bibliothèque audio) : seulement les titres marqués
+    « Attribution non requise ».
+Jamais un titre d'artiste du classement ni un morceau du commerce : Facebook coupe le son ou retire la vidéo.
+
+Notez ici la source de chaque fichier (nom du fichier, site, licence), pour pouvoir le prouver en cas de réclamation.
+
+Instagram et TikTok : la vidéo y part en mode « notification » (Buffer prévient le téléphone à l'heure prévue).
+On ajoute alors un son tendance de leur bibliothèque dans l'application, ce qu'aucune API ne permet.
