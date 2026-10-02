@@ -21,8 +21,16 @@ class Command(BaseCommand):
 
     def handle(self, *args, **o):
         def task():
-            report = DailyPipeline(out).run(o["weekly"], o["posts"], o["youtube"])
+            from core.services import health
+            pipeline = DailyPipeline(out)
+            try:
+                report = pipeline.run(o["weekly"], o["posts"], o["youtube"])
+            except Exception as exc:
+                # Arrêt complet : le rapport part quand même, avec les étapes déjà faites
+                out(health.send(pipeline.report, f"{type(exc).__name__} : {exc}"))
+                raise
             failed = [r for r in report if not r["ok"]]
             out("")
             out(f"Terminé : {len(report)} étapes, {len(failed)} en erreur" + (f" ({', '.join(r['step'] for r in failed)})" if failed else ""))
+            out(health.send(report))
         run("daily", task)

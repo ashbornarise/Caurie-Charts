@@ -144,3 +144,14 @@ def test_humanize_caption():
     from core.services.social.generator import humanize
     assert humanize("Le n°1 — Rema​, véritable phénomène !") == "Le n°1, Rema, succès !"
     assert humanize("Ligne 1\nLigne 2 🔥") == "Ligne 1\nLigne 2 🔥"
+
+
+def test_nightly_report_flags_failures(monkeypatch):
+    from core.services import health
+    monkeypatch.setattr(health.db, "value", lambda *a, **k: 0)
+    title, text = health.summary([{"step": "1. Import", "ok": True, "seconds": 2, "lines": ["deezer NG : ERREUR HTTP 500"]},
+                                  {"step": "8. Posts", "ok": False, "seconds": 1, "lines": ["ERREUR : IA"]}], crash=None)
+    assert title == "2 problèmes cette nuit"          # une étape en échec + aucun relevé aujourd'hui
+    assert "AUCUN RELEVÉ" in text and "[ÉCHEC] 8. Posts" in text and "deezer NG" in text
+    monkeypatch.setattr(health.db, "value", lambda *a, **k: 500)
+    assert health.summary([{"step": "1. Import", "ok": True, "seconds": 2, "lines": ["ok"]}])[0] == "nuit OK"
