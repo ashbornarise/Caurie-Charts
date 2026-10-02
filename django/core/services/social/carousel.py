@@ -44,7 +44,8 @@ def render(facts: dict, cover: dict, items: list, name: str) -> dict:
     for fmt, (size, safe) in FORMATS.items():
         fr = PI.Frame(*size, safe)
         suffix = "" if fmt == "feed" else "-916"
-        slides = [PI.save_jpeg(_cover_slide(fr, f, cover, cover_photo, total), PI.DIR / f"{name}-1{suffix}.jpg")] if with_cover else []
+        make_cover = _magazine_cover if magazine(name) else _cover_slide
+        slides = [PI.save_jpeg(make_cover(fr, f, cover, cover_photo, total), PI.DIR / f"{name}-1{suffix}.jpg")] if with_cover else []
         if fmt == VIDEO and slides:
             segments.append({"image": slides[0]})
         for i, item in enumerate(items):
@@ -164,6 +165,82 @@ def _cover_slide(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -> I
         y += 70
         _centered(fr, draw, 50, y, white, f["serif"], fr.fit(PI.clean(cover["subtitle"]), f["serif"], 50, _inner(fr, 70)))
     _logo(fr, img, max(60, fr.side), H - fr.bottom - 190, 210)
+    return img
+
+
+def magazine(name: str) -> bool:
+    """Une couverture sur deux environ en « une de magazine » (tirage stable pour un même post)."""
+    import random
+    return random.Random(name + "-une").random() < 0.55
+
+
+def _tag(fr: PI.Frame, draw, x_right, y, px: int, text: str, fill, ink, path: str) -> float:
+    """Étiquette pleine alignée à droite (« N°1 AFRIQUE DE L'OUEST ») ; renvoie le haut de l'étiquette."""
+    w = fr.width(text, path, px) + 24
+    h = px * 1.35
+    fr.rect(draw, x_right - w, y - h, x_right, y, fill)
+    fr.text(draw, px, x_right - w + 12, y - h * 0.26, ink, path, text)
+    return y - h
+
+
+def _magazine_cover(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -> Image.Image:
+    """Une de magazine : titre CAURI géant en tête, photo plein cadre, nom en très gros en bas, étiquettes de couleur."""
+    W, H = fr.bw, fr.bh
+    img = _canvas(fr, f, photo_url)
+    fr.gradient(img, 0, fr.top + int(H * 0.22), (0, 0, 0), 40, 127)
+    fr.gradient(img, int(H * 0.55), H, f["shade"], 127, 0)
+    draw = ImageDraw.Draw(img, "RGBA")
+    white, ink = (255, 255, 255, 255), (*f["on"], 255)
+    accent = (*f["accent"], 255)
+    side = max(48, fr.side)
+    # 1. Titre du magazine : CAURI sur toute la largeur, CHARTS à la verticale contre la marge droite
+    mast = "CAURI"
+    room = W - 2 * side - 70
+    size = 260
+    while size > 120 and fr.width(mast, f["display"], size) > room:
+        size -= 4
+    top = fr.top + 36
+    fr.text(draw, size, side - 6, top + size * 0.86, white, f["display"], mast)
+    vert = Image.new("RGBA", (fr.s(size * 0.9), fr.s(60)), (0, 0, 0, 0))
+    vd = ImageDraw.Draw(vert)
+    vpx = 46
+    while vpx > 20 and fr.width("CHARTS", f["bold"], vpx) * 1.0 > size * 0.86:
+        vpx -= 2
+    vd.text((0, fr.s(48)), "CHARTS", font=PI.font(f["bold"], fr.s(vpx)), fill=accent, anchor="ls")
+    vert = vert.rotate(90, expand=True)
+    img.paste(vert, (fr.s(W - side - 58), fr.s(top + 6)), vert)
+    # 2. Encart blanc à gauche : rang et périmètre, comme un badge de couverture
+    kicker = PI.clean(cover.get("kicker") or "").upper()
+    badge_top = top + size + 70
+    bpx, bw = 30, 210
+    lines = fr.wrap(kicker or "TOP DE LA SEMAINE", f["display"], bpx, bw - 28, 4)
+    while bpx > 18 and any(fr.width(l, f["display"], bpx) > bw - 28 or l.endswith("…") for l in lines):
+        bpx -= 2
+        lines = fr.wrap(kicker or "TOP DE LA SEMAINE", f["display"], bpx, bw - 28, 4)
+    bh = 30 + len(lines) * bpx * 1.2 + 36
+    fr.rect(draw, 0, badge_top, bw, badge_top + bh, (255, 255, 255, 240))
+    by = badge_top + 20 + bpx
+    for line in lines:
+        fr.text(draw, bpx, 14, by, (17, 17, 17, 255), f["display"], line)
+        by += bpx * 1.2
+    fr.rect(draw, 14, badge_top + bh - 30, bw - 14, badge_top + bh - 14, accent)
+    # 3. Nom en très gros, en bas, sur deux lignes au plus
+    head = PI.clean(cover["headline"]).upper()
+    big = 210
+    while big > 90 and max((fr.width(l, f["display"], big) for l in fr.wrap(head, f["display"], big, W - 2 * side, 2)), default=0) > W - 2 * side:
+        big -= 6
+    big_lines = fr.wrap(head, f["display"], big, W - 2 * side, 2)
+    y = H - fr.bottom - 70
+    for line in reversed(big_lines):
+        fr.text(draw, big, side - 4, y, white, f["display"], line)
+        y -= big * 0.98
+    # 4. Étiquettes au-dessus du nom, alignées à droite (sous-titre découpé en deux lignes au plus)
+    ty = y - 14
+    subtitle = PI.clean(cover.get("subtitle") or "").upper()
+    for line in reversed(fr.wrap(subtitle, f["bold"], 30, W * 0.62, 2)) if subtitle else []:
+        ty = _tag(fr, draw, W - side, ty, 30, line, accent, ink, f["bold"]) - 8
+    _tag(fr, draw, W - side, ty, 22, f"{total - 1} À DÉCOUVRIR · SWIPE", (17, 17, 17, 230), white, f["bold"])
+    fr.text(draw, 18, side, H - fr.bottom - 26, (255, 255, 255, PI.gd_alpha(40)), f["sans"], "cauricharts.com")
     return img
 
 
