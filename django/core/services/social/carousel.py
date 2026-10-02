@@ -169,9 +169,8 @@ def _cover_slide(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -> I
 
 
 def magazine(name: str) -> bool:
-    """Une couverture sur deux environ en « une de magazine » (tirage stable pour un même post)."""
-    import random
-    return random.Random(name + "-une").random() < 0.55
+    """Couverture « une de magazine » pour tous les posts (choix de la rédaction, octobre 2026)."""
+    return True
 
 
 def _tag(fr: PI.Frame, draw, x_right, y, px: int, text: str, fill, ink, path: str) -> float:

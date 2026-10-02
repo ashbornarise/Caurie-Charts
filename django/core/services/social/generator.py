@@ -57,6 +57,16 @@ def humanize(text: str) -> str:
     return re.sub(r" +([,.])", r"\1", text).strip()
 
 
+def own_image(e: dict):
+    """Photo de l'artiste de cette ligne, sinon pochette de son titre ; None plutôt qu'une photo d'un autre artiste."""
+    if e.get("track_id"):
+        return db.value("""SELECT COALESCE(NULLIF(a.image_url, ''), NULLIF(t.cover_url, '')) FROM tracks t JOIN artists a ON a.id = t.artist_id
+                           WHERE t.id = ?""", [int(e["track_id"])])
+    if e.get("artist_id"):
+        return db.value("SELECT NULLIF(image_url, '') FROM artists WHERE id = ?", [int(e["artist_id"])])
+    return None
+
+
 class PostGenerator:
     def __init__(self, ai_client=None):
         self.ai = ai_client
@@ -158,7 +168,8 @@ class PostGenerator:
             # Photo de l'artiste plutôt que la pochette (souvent couverte de texte)
             rows = [{**t, "artist": facts["artist"]["name"], "image": facts.get("image") or t.get("image_url")} for t in facts["tracks"]]
         else:
-            rows = [{**e, "image": e.get("image_url") or (facts.get("image") if facts["kind"] == "ranking" else None)} for e in facts["top"]]
+            # Chaque diapositive porte la photo de SON artiste (ou la pochette de son titre) : jamais celle du n°1 en remplacement
+            rows = [{**e, "image": e.get("image_url") or own_image(e)} for e in facts["top"]]
         items = []
         for i, r in enumerate(rows[:20]):
             if "figure_value" in r or not r.get("track_id"):

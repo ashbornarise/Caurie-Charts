@@ -149,13 +149,14 @@ CREATE = """mutation($input: CreatePostInput!) { createPost(input: $input) {
 
 def schedule(post: dict, due_at: datetime | None = None, force: bool = False, http: HttpClient | None = None) -> str:
     """Programme le post sur chaque compte relié : le carrousel à l'heure prévue, puis la vidéo du Top le lendemain
-    à la même heure (deux publications pour un post). Sans date, chaque envoi prend la prochaine place de la file Buffer."""
+    à midi (deux publications pour un post). Sans date, chaque envoi prend la prochaine place de la file Buffer."""
     if not configured():
         return "Buffer non configuré (BUFFER_API_KEY)"
     done = []
     jobs = [("", False, due_at)]
     if post.get("video"):
-        jobs.append(("-reel", True, due_at + timedelta(days=1) if due_at else None))
+        # La vidéo le lendemain à midi : le soir reste au carrousel du jour et au magazine du dimanche
+        jobs.append(("-reel", True, due_at + timedelta(hours=18) if due_at else None))
     for ch in channels(http):
         if ch["service"] not in MAX_IMAGES:
             continue
