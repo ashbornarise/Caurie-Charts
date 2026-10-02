@@ -50,8 +50,14 @@
         </div>
         <div class="stat-tile">
             <dt>{{ t('artist.stat_views') }}</dt>
+            {% if artist.youtube_views_total %}
+            {# Vues totales de la chaîne officielle : le chiffre que l'artiste connaît #}
+            <dd>{{ fmt_number(artist.youtube_views_total|int) }}</dd>
+            <small>{{ t('artist.stat_views_channel') }}{% if artist.youtube_subscribers %} · {{ t('artist.stat_subscribers', {'n': fmt_number(artist.youtube_subscribers|int)}) }}{% endif %}</small>
+            {% else %}
             <dd>{{ fmt_number(live.views_total) if live.views_total is not none else '—' }}</dd>
             <small>{{ t('artist.stat_views_week', {'n': fmt_number(live.views_week)}) if live.views_week else t('artist.stat_views_note') }}</small>
+            {% endif %}
         </div>
         <div class="stat-tile">
             <dt>{{ t('artist.stat_fans') }}</dt>

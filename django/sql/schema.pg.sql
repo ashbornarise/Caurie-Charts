@@ -51,6 +51,7 @@ CREATE TABLE artists (
     fans                   INTEGER NULL,
     youtube_channel_id     VARCHAR(40) NULL,
     youtube_subscribers    INTEGER NULL,
+    youtube_views_total    BIGINT NULL,
     channel_checked_at     TIMESTAMP(0) NULL,
     discovered_via         VARCHAR(160) NULL,
     profile_checked_at     TIMESTAMP(0) NULL,

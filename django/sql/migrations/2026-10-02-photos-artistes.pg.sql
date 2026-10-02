@@ -7,3 +7,4 @@ ALTER TABLE artists ADD COLUMN IF NOT EXISTS apple_id         BIGINT       NULL;
 ALTER TABLE artists ADD COLUMN IF NOT EXISTS photo_checked_at TIMESTAMP(0) NULL;          -- dernière recherche de photo HD
 ALTER TABLE artists ADD COLUMN IF NOT EXISTS photo_candidates TEXT NULL;  -- photos trouvées (JSON : source, url, taille, licence)
 ALTER TABLE artists ADD COLUMN IF NOT EXISTS image_credit VARCHAR(250) NULL;  -- crédit obligatoire (licence libre de Wikimedia Commons)
+ALTER TABLE artists ADD COLUMN IF NOT EXISTS youtube_views_total BIGINT NULL;  -- vues totales de la chaîne officielle (YouTube)

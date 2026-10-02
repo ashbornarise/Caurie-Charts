@@ -38,9 +38,10 @@ class YouTubeChannelSync:
         todo = db.all(f"""SELECT a.id, a.name, a.status, a.submission_country_id FROM artists a JOIN countries c ON c.id = a.submission_country_id
                           WHERE a.status <> 'out_of_scope' AND a.youtube_channel_id IS NULL
                             AND (a.channel_checked_at IS NULL OR a.channel_checked_at < LOCALTIMESTAMP - INTERVAL '30 days')
-                          ORDER BY a.status = 'active' DESC, c.code IN ('TG', 'BJ') DESC,
-                                   EXISTS (SELECT 1 FROM tracks t JOIN chart_observations o ON o.track_id = t.id
+                          -- Les artistes présents dans un classement cette semaine d'abord (ce sont eux que le public consulte)
+                          ORDER BY EXISTS (SELECT 1 FROM tracks t JOIN chart_observations o ON o.track_id = t.id
                                            WHERE t.artist_id = a.id AND o.observed_on >= CURRENT_DATE - 7) DESC,
+                                   a.status = 'active' DESC, c.code IN ('TG', 'BJ') DESC,
                                    COALESCE(a.fans, 0) DESC
                           LIMIT {max(0, int(new_channels))}""")
         self.searches_left = self.SEARCHES
@@ -50,6 +51,8 @@ class YouTubeChannelSync:
             if YouTubeQuota.remaining() < YouTubeQuota.RESERVE + 10:
                 break
             channel = self._find_channel(a["name"], key, int(a["id"]))
+            if channel and not self.confirms(channel, int(a["id"]), key):
+                channel = None  # chaîne d'un homonyme : aucune de ses vidéos ne porte un titre de l'artiste
             db.update("artists", {"channel_checked_at": now_utc(), **({"youtube_channel_id": channel} if channel else {})}, "id = :id", {"id": a["id"]})
             if channel and YouTubeQuota.spend(2):  # deux pages de vidéos
                 found += 1
@@ -71,7 +74,9 @@ class YouTubeChannelSync:
             c, n = self._sync_channel(int(a["id"]), a["name"], a["youtube_channel_id"], int(a["submission_country_id"]), key, 1)
             db.update("artists", {"channel_checked_at": now_utc()}, "id = :id", {"id": a["id"]})
             clips, created, refreshed = clips + c, created + n, refreshed + 1
+        stats = refresh_channel_stats()
         return [f"{found} nouvelles chaînes trouvées sur {len(todo)} recherchées", f"{refreshed} chaînes relues",
+                f"abonnés et vues totales relevés pour {stats} chaînes",
                 f"{clips} vidéos rattachées à des titres, {created} titres ajoutés au catalogue",
                 f"Quota YouTube restant : {YouTubeQuota.remaining()}"]
 
@@ -88,27 +93,53 @@ class YouTubeChannelSync:
         return [h for h in dict.fromkeys([base, base + "officiel", base + "official", base + "music"]) if len(h) >= 3][:3]
 
     def _find_channel(self, name: str, key: str, artist_id: int | None = None):
-        """Du moins cher au plus cher : vidéo déjà connue (1 unité), pseudo @nom (1 unité chacun), recherche (100, plafonnée)."""
+        """Chaînes portant le nom de l'artiste, du moins cher au plus cher : vidéos déjà connues (1 unité), pseudos @nom
+        (1 unité chacun), recherche (100, plafonnée). Entre plusieurs chaînes officielles (principale, VEVO, Topic),
+        celle qui a le plus d'abonnés."""
+        found, titles = [], {}
         if artist_id:
-            video = db.value("""SELECT p.external_id FROM track_platform_ids p JOIN tracks t ON t.id = p.track_id
-                                WHERE t.artist_id = ? AND p.platform = 'youtube' LIMIT 1""", [artist_id])
-            if video and YouTubeQuota.spend(1):
-                sn = ((self._get("videos?part=snippet&id=" + _enc(video), key).get("items") or [{}])[0].get("snippet") or {})
-                if sn.get("channelId") and self.same_name(sn.get("channelTitle", ""), name):
-                    return sn["channelId"]
+            videos = [r["external_id"] for r in db.all("""SELECT p.external_id FROM track_platform_ids p JOIN tracks t ON t.id = p.track_id
+                                                         WHERE t.artist_id = ? AND p.platform = 'youtube' LIMIT 10""", [artist_id])]
+            if videos and YouTubeQuota.spend(1):
+                for it in self._get("videos?part=snippet&id=" + _enc(",".join(videos)), key).get("items") or []:
+                    sn = it.get("snippet") or {}
+                    if sn.get("channelId") and self.same_name(sn.get("channelTitle", ""), name):
+                        found.append(sn["channelId"])
+                        titles[sn["channelId"]] = sn.get("channelTitle", "")
         for handle in self.handles(name):
             if not YouTubeQuota.spend(1):
-                return None
+                break
             for item in self._get("channels?part=snippet&forHandle=" + _enc("@" + handle), key).get("items") or []:
                 if self.same_name((item.get("snippet") or {}).get("title", ""), name):
-                    return item["id"]
-        if self.searches_left <= 0 or not YouTubeQuota.spend(100):
-            return None
-        self.searches_left -= 1
-        for item in self._get("search?part=snippet&type=channel&maxResults=5&q=" + _enc(name), key).get("items") or []:
-            if self.same_name(item["snippet"]["title"], name):
-                return item["snippet"].get("channelId") or (item.get("id") or {}).get("channelId")
-        return None
+                    found.append(item["id"])
+                    titles[item["id"]] = (item.get("snippet") or {}).get("title", "")
+        secondary = re.compile(r"(-\s*topic|vevo)\s*$", re.I)
+        # Seulement une chaîne VEVO ou « Topic » (générée par YouTube) : la chaîne principale se trouve par la recherche
+        only_secondary = bool(found) and all(secondary.search(titles.get(f, "")) for f in found)
+        if (not found or only_secondary) and self.searches_left > 0 and YouTubeQuota.spend(100):
+            self.searches_left -= 1
+            for item in self._get("search?part=snippet&type=channel&maxResults=5&q=" + _enc(name), key).get("items") or []:
+                if self.same_name(item["snippet"]["title"], name):
+                    cid = item["snippet"].get("channelId") or (item.get("id") or {}).get("channelId")
+                    found.append(cid)
+                    titles[cid] = item["snippet"]["title"]
+        found = list(dict.fromkeys(f for f in found if f))
+        if len(found) <= 1:
+            return found[0] if found else None
+        if not YouTubeQuota.spend(1):
+            return found[0]
+        subs = {it["id"]: int((it.get("statistics") or {}).get("subscriberCount") or 0)
+                for it in self._get("channels?part=statistics&id=" + _enc(",".join(found)), key).get("items") or []}
+        # Chaîne principale avant VEVO et Topic, puis la plus suivie
+        return max(found, key=lambda c: (not secondary.search(titles.get(c, "")), subs.get(c, 0)))
+
+    def confirms(self, channel_id: str, artist_id: int, key: str) -> bool:
+        """La chaîne est celle de l'artiste si l'une de ses 50 dernières vidéos porte un titre de notre catalogue (1 unité)."""
+        if not YouTubeQuota.spend(1):
+            return False
+        r = self._get("playlistItems?part=snippet&maxResults=50&playlistId=" + _enc("UU" + channel_id[2:]), key)
+        tracks = db.all("SELECT id, title FROM tracks WHERE artist_id = ? ORDER BY id", [artist_id])
+        return any(self.match_track(html.unescape(str((it.get("snippet") or {}).get("title") or "")), tracks) for it in r.get("items") or [])
 
     def _sync_channel(self, artist_id: int, artist_name: str, channel_id: str, country_id: int, key: str, pages: int):
         uploads = "UU" + channel_id[2:]  # liste « vidéos mises en ligne » de la chaîne
@@ -177,3 +208,31 @@ class YouTubeChannelSync:
             return (json.loads(r["body"]) or {}) if r["status"] == 200 else {}
         except Exception:  # noqa: BLE001
             return {}
+
+
+def refresh_channel_stats(limit: int = 1000) -> int:
+    """Abonnés et vues totales des chaînes officielles (1 unité de quota pour 50 chaînes), les moins récentes d'abord."""
+    from core.services.platforms import YouTubeQuota
+    key = env.get("YOUTUBE_API_KEY", "")
+    rows = db.all(f"""SELECT id, youtube_channel_id FROM artists WHERE youtube_channel_id IS NOT NULL AND status <> 'out_of_scope'
+                      ORDER BY youtube_views_total IS NOT NULL, id LIMIT {int(limit)}""")
+    n = 0
+    for i in range(0, len(rows), 50):
+        chunk = rows[i:i + 50]
+        if not key or not YouTubeQuota.spend(1):
+            break
+        try:
+            from core.services.platforms import HttpClient
+            r = json.loads(HttpClient(20).request("GET", API + "channels?part=statistics&id=" + _enc(",".join(c["youtube_channel_id"] for c in chunk))
+                                                  + "&key=" + _enc(key))["body"])
+        except Exception:  # noqa: BLE001
+            continue
+        stats = {it["id"]: it.get("statistics") or {} for it in r.get("items") or []}
+        for c in chunk:
+            st = stats.get(c["youtube_channel_id"])
+            if st:
+                db.update("artists", {"youtube_views_total": int(st.get("viewCount") or 0),
+                                      "youtube_subscribers": None if st.get("hiddenSubscriberCount") else int(st.get("subscriberCount") or 0)},
+                          "id = :id", {"id": c["id"]})
+                n += 1
+    return n
