@@ -36,10 +36,16 @@ def path(p: str = "/", query: dict | None = None) -> str:
     return "/" + p.lstrip("/") + _qs(query)
 
 
+_ASSET_VERSIONS: dict = {}
+
+
 def asset(file: str) -> str:
-    full = ASSETS_DIR / file
-    v = hashlib.md5(str(int(full.stat().st_mtime)).encode()).hexdigest()[:8] if full.is_file() else "0"
-    return f"/assets/{file}?v={v}"
+    """Adresse versionnée par le contenu du fichier : sur Vercel, la date des fichiers est figée et ne change pas
+    d'un déploiement à l'autre, alors que les fichiers sont servis « immuables » pendant un an."""
+    if file not in _ASSET_VERSIONS:
+        full = ASSETS_DIR / file
+        _ASSET_VERSIONS[file] = hashlib.md5(full.read_bytes()).hexdigest()[:8] if full.is_file() else "0"
+    return f"/assets/{file}?v={_ASSET_VERSIONS[file]}"
 
 
 def brand() -> str:
