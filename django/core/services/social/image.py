@@ -153,10 +153,23 @@ def white_logo():
 _PHOTOS: dict = {}
 
 
+def hd(url: str) -> str:
+    """Version la plus grande d'une photo d'artiste pour les visuels 4K : Apple 2400 px, Commons 2400 px, avatar YouTube 1200 px."""
+    url = str(url)
+    if "mzstatic.com" in url:
+        return re.sub(r"/[0-9]+x[0-9]+[a-z]*(-[0-9]+)?\.(jpg|jpeg|png|webp)$", "/2400x2400bb.jpg", url)
+    if "Special:FilePath" in url:
+        return re.sub(r"\?width=[0-9]+$", "", url) + "?width=2400"
+    if "ggpht.com" in url or "googleusercontent.com" in url:
+        return url.split("=")[0] + "=s1200"
+    return url
+
+
 def photo(url):
     """Photo téléchargée une seule fois par adresse (un post la réutilise sur une vingtaine de visuels). Ne pas la modifier."""
     if not url or not str(url).startswith("https://"):
         return None
+    url = hd(url)
     if url not in _PHOTOS:
         data = http_get(url, binary=True)
         im = None

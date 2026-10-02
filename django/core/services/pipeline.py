@@ -121,6 +121,11 @@ class DailyPipeline:
         self._step("10g. Clips YouTube des titres restants (recherche titre par titre)",
                    lambda: [json.dumps(imp.match_youtube(youtube_searches), ensure_ascii=False)], 60)
 
+        def photos():
+            from core.services.imports.photos import ArtistPhotos
+            return ArtistPhotos(HttpClient(30)).run(120)
+        self._step("10h. Photos HD des artistes (Apple Music, Wikimedia Commons, YouTube, Deezer)", photos, 180)
+
         def cleanup():
             live_chart.clear_cache()
             return ["cache des classements vidé", f"{purge_orphans()} fichiers de posts abandonnés supprimés", purge_blob()]

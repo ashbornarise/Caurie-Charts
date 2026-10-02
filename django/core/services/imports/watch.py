@@ -11,6 +11,7 @@ from core.services.imports import normalizer as N
 from core.services.imports.matching import ArtistEnricher
 from core.services.imports.sources import YouTubeDiscoverySource
 from core.services.platforms import YouTubeQuota
+from core.services.imports.photos import set_deezer_photo
 
 REPO = Path(__file__).resolve().parent.parent.parent.parent.parent
 _LETTER = r"[^\W\d_]"
@@ -157,7 +158,8 @@ class ArtistWatch:
         if not artist_id:
             return f"{name} : aucun titre sur Deezer"
         artist = db.one("SELECT status, origin_note FROM artists WHERE id = ?", [artist_id])
-        data = {"deezer_id": profile["id"], "fans": profile["nb_fan"], "image_url": profile["image"], "profile_checked_at": now_utc()}
+        data = {"deezer_id": profile["id"], "fans": profile["nb_fan"], "profile_checked_at": now_utc()}
+        set_deezer_photo(artist_id, profile["image"])
         if artist["status"] == "pending" and "suivi" not in str(artist["origin_note"] or ""):
             # Réexamen avec les indices de scène ; le pays pressenti reste une indication, pas une confirmation
             data["origin_checked_at"] = None

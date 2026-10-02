@@ -20,3 +20,26 @@
     <div class="field"><label for="bio">{{ t('admin.bio') }} <span class="optional">{{ t('form.optional') }}</span></label><textarea id="bio" name="bio" rows="4" maxlength="3000">{{ artist.bio or '' }}</textarea></div>
     <button class="button" type="submit">{{ t('admin.save') }}</button>
 </form>
+
+{% if artist.id %}
+<h2 id="photos">Photo de l’artiste</h2>
+<p class="muted">Photo actuelle : <strong>{{ artist.image_source or 'aucune source' }}</strong>{% if artist.image_locked %} · <strong>verrouillée</strong> (choisie à la main, la nuit ne la remplace pas){% endif %}{% if artist.image_credit %} · {{ artist.image_credit }}{% endif %}</p>
+<div class="photo-pick">
+    {% if artist.image_url %}<figure class="photo-pick__item photo-pick__item--current"><img src="{{ artist.image_url }}" alt="" loading="lazy"><figcaption>Actuelle</figcaption></figure>{% endif %}
+    {% for c in candidates %}
+    <figure class="photo-pick__item">
+        <img src="{{ c.site }}" alt="" loading="lazy">
+        <figcaption>{{ {'apple': 'Apple Music', 'commons': 'Wikimedia Commons', 'youtube': 'Chaîne YouTube', 'deezer': 'Deezer', 'presse': 'Photo presse'}.get(c.source, c.source) }} · {{ c.side }} px
+            {% if c.credit %}<br><small>{{ c.credit }}</small>{% endif %}</figcaption>
+        <form method="post" action="{{ path('admin/artistes/' ~ artist.id ~ '/photo') }}">{{ csrf_field() }}
+            <input type="hidden" name="index" value="{{ loop.index0 }}">
+            <button class="button button--small" name="action" value="choisir" type="submit">Utiliser cette photo</button></form>
+    </figure>
+    {% endfor %}
+</div>
+<form method="post" action="{{ path('admin/artistes/' ~ artist.id ~ '/photo') }}" class="toolbar">{{ csrf_field() }}
+    <button class="button button--small button--ghost" name="action" value="chercher" type="submit">Chercher les photos maintenant</button>
+    {% if artist.image_locked %}<button class="button button--small button--ghost" name="action" value="deverrouiller" type="submit">Déverrouiller (laisser la machine choisir)</button>{% endif %}
+</form>
+<p class="muted">Sources : Apple Music (photo officielle, vérifiée par un titre en commun), Wikimedia Commons (licence libre, crédit ajouté aux posts), chaîne YouTube officielle, Deezer. Une photo collée dans le champ ci-dessus est aussi verrouillée.</p>
+{% endif %}

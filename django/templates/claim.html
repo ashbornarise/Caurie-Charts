@@ -4,7 +4,7 @@
     <p class="lead">Vous êtes {{ artist.name }}, son management ou son label ? Une fois votre identité vérifiée, vous pourrez nous faire corriger la photo, la biographie, le pays et les liens officiels de la fiche.</p>
     <p class="fineprint">Les positions et les chiffres ne se modifient jamais à la demande : ils viennent des plateformes et de la <a href="{{ path('methodologie') }}">méthodologie publique</a>.</p>
 
-    <form method="post" action="{{ path('artiste/' ~ artist.slug ~ '/revendiquer') }}" class="form" novalidate>
+    <form method="post" action="{{ path('artiste/' ~ artist.slug ~ '/revendiquer') }}" class="form" enctype="multipart/form-data" novalidate>
         {{ csrf_field() }}
         <div class="hp" aria-hidden="true"><label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
         {{ partial('partials/field', name='name', label='Votre nom', attrs='autocomplete="name" maxlength="150"', old=old, errors=errors) }}
@@ -13,6 +13,13 @@
         {{ partial('partials/field', name='phone', label='Téléphone ou WhatsApp', type='tel', required=false, attrs='autocomplete="tel" maxlength="40"', old=old, errors=errors) }}
         {{ partial('partials/field', name='proof', label='Comptes officiels pour vérifier', type='textarea', hint='Liens vers les comptes officiels (Instagram, YouTube, TikTok, Facebook…). Nous pourrons vous demander un message depuis l’un d’eux.', attrs='maxlength="2000"', old=old, errors=errors) }}
         {{ partial('partials/field', name='message', label='Ce que vous souhaitez corriger ou ajouter', type='textarea', required=false, attrs='maxlength="3000"', old=old, errors=errors) }}
+        <div class="field{{ ' field--error' if errors.photo }}">
+            <label for="f-photo">Photo presse en haute définition <span class="optional">{{ t('form.optional') }}</span></label>
+            <p class="field__hint" id="f-photo-hint">Un portrait officiel (JPEG ou PNG, 1500 px de côté ou plus, 4 Mo au plus). Il sera utilisé sur la fiche et dans nos posts, avec votre accord ci-dessous. Fichier plus lourd : envoyez-le à contact@cauricharts.com.</p>
+            <input id="f-photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp" aria-describedby="f-photo-hint">
+            <label class="check"><input type="checkbox" name="photo_ok" value="1"{{ ' checked' if old.photo_ok }}> J’ai les droits sur cette photo et j’autorise Cauri Charts à l’utiliser sur son site et ses réseaux, avec le crédit indiqué dans mon message.</label>
+            {% if errors.photo %}<p class="field__error">{{ errors.photo }}</p>{% endif %}
+        </div>
         <p class="fineprint">Vos coordonnées servent uniquement à traiter cette demande (<a href="{{ path('confidentialite') }}">confidentialité</a>).</p>
         <button class="button" type="submit">Envoyer la demande</button>
     </form>

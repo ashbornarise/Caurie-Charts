@@ -53,6 +53,7 @@ urlpatterns = [
     path("admin/releves", admin.snapshots),
     path("admin/catalogue", admin.catalog),
     re_path(r"^admin/artistes/(?P<aid>\d+|nouveau)$", admin.artist_form),
+    re_path(r"^admin/artistes/(?P<aid>\d+)/photo$", admin.artist_photo),
     re_path(r"^admin/titres/(?P<tid>\d+|nouveau)$", admin.track_form),
     re_path(r"^admin/pays/(?P<cid>\d+)$", admin.save_country),
     path("admin/import", admin.imports),

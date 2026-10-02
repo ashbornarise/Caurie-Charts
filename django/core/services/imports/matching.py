@@ -8,6 +8,7 @@ from core import budget, db
 from core.repos import now_utc
 from core.services.imports import normalizer as N
 from core.services.platforms import PlatformException, QuotaExceededException
+from core.services.imports.photos import set_deezer_photo
 
 
 def _json(resp):
@@ -145,7 +146,8 @@ class ArtistEnricher:
             profile = self._profile(int(a["id"]), a["name"], int(a["deezer_id"]) if a["deezer_id"] else None)
             data = {"profile_checked_at": now_utc()}
             if profile:
-                data.update({"deezer_id": profile["id"], "fans": profile["nb_fan"], "image_url": profile["image"]})
+                data.update({"deezer_id": profile["id"], "fans": profile["nb_fan"]})
+                set_deezer_photo(int(a["id"]), profile["image"])
                 stats["found"] += 1
             db.update("artists", data, "id = :id", {"id": a["id"]})
             stats["checked"] += 1

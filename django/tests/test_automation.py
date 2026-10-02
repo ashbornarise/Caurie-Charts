@@ -155,3 +155,12 @@ def test_nightly_report_flags_failures(monkeypatch):
     assert "AUCUN RELEVÉ" in text and "[ÉCHEC] 8. Posts" in text and "deezer NG" in text
     monkeypatch.setattr(health.db, "value", lambda *a, **k: 500)
     assert health.summary([{"step": "1. Import", "ok": True, "seconds": 2, "lines": ["ok"]}])[0] == "nuit OK"
+
+
+def test_best_photo_choice():
+    from core.services.imports.photos import best, sized
+    cands = [{"source": "deezer", "side": 1000}, {"source": "apple", "side": 2400}, {"source": "commons", "side": 3840}]
+    assert best(cands)["source"] == "apple"            # photo officielle de studio d'abord
+    assert best([{"source": "apple", "side": 400}, {"source": "deezer", "side": 1000}])["source"] == "deezer"
+    assert best([{"source": "youtube", "side": 300}]) is None
+    assert sized("https://is1-ssl.mzstatic.com/a/b/file.png/1200x630cw.png", 2400).endswith("/2400x2400bb.jpg")

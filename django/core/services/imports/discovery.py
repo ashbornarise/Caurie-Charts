@@ -19,6 +19,7 @@ from core.services.imports import chart_importer
 from core.services.imports import normalizer as N
 from core.services.imports.matching import ArtistEnricher
 from core.services.platforms import YouTubeQuota
+from core.services.imports.photos import set_deezer_photo
 
 REPO = Path(__file__).resolve().parent.parent.parent.parent.parent
 SEEDS_CACHE = REPO / "storage" / "cache" / "discovery-seeds.json"
@@ -184,8 +185,9 @@ class ArtistDiscovery:
             artist_id = artist_id or int(db.value("SELECT artist_id FROM tracks WHERE id = ?", [track_id]))
         if not artist_id:
             return None
-        db.update("artists", {"deezer_id": int(profile["id"]), "fans": int(profile["nb_fan"]), "image_url": profile.get("image"),
+        db.update("artists", {"deezer_id": int(profile["id"]), "fans": int(profile["nb_fan"]),
                               "profile_checked_at": now_utc()}, "id = :id", {"id": artist_id})
+        set_deezer_photo(artist_id, profile.get("image"))
         self.budget -= 1
         return artist_id
 

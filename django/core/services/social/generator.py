@@ -57,6 +57,18 @@ def humanize(text: str) -> str:
     return re.sub(r" +([,.])", r"\1", text).strip()
 
 
+def photo_credits(facts: dict) -> list:
+    """Crédits des photos sous licence libre (Wikimedia Commons) des artistes du post."""
+    names = {str(e.get("artist") or e.get("artist_name") or "") for e in facts.get("top") or []}
+    names.add(str((facts.get("artist") or {}).get("name") or ""))
+    names.discard("")
+    if not names:
+        return []
+    rows = db.all(f"""SELECT name, image_credit FROM artists WHERE image_source = 'commons' AND image_credit IS NOT NULL
+                       AND name IN ({','.join(['?'] * len(names))})""", list(names))
+    return [f"{r['name']}, {r['image_credit'].removeprefix('Photo : ')}" for r in rows]
+
+
 def own_image(e: dict):
     """Photo de l'artiste de cette ligne, sinon pochette de son titre ; None plutôt qu'une photo d'un autre artiste."""
     if e.get("track_id"):
@@ -88,6 +100,9 @@ class PostGenerator:
             text["title"] = facts["headline"]  # post sur demande : titre construit par le site, jamais par l'IA
         text["hashtags"] = list(dict.fromkeys(list(conf.get("ai.social.hashtags_base")) + list(text.get("hashtags") or [])))
         text["title"], text["caption"] = humanize(text["title"]), humanize(text["caption"])
+        credits = photo_credits(facts)
+        if credits:
+            text["caption"] += "\n\nPhotos : " + " ; ".join(credits)  # licence libre de Wikimedia Commons : crédit obligatoire
 
         name = f"{day}-{theme}-{secrets.token_hex(4)[:6]}"
         look = PI.style(name)

@@ -37,9 +37,25 @@ def claim(request, slug: str):
     h = ip_hash(request)
     if int(db.value("SELECT COUNT(*) FROM contact_messages WHERE ip_hash = ? AND created_at > ?", [h, now_utc(-86400)])) >= 5:
         errors["message"] = "Trop de demandes aujourd’hui, réessayez demain."
+    upload = request.FILES.get("photo")
+    old["photo_ok"] = request.POST.get("photo_ok") == "1"
+    photo_data = None
+    if upload:
+        from core import storage
+        try:
+            if upload.size > 4 * 1024 * 1024:
+                raise ValueError("Photo trop lourde (4 Mo au plus) : envoyez-la par e-mail à contact@cauricharts.com.")
+            ext = storage.check_image(upload)
+            photo_data = (upload.read(), ext)
+        except ValueError as exc:
+            errors["photo"] = str(exc)
+        if photo_data and not old["photo_ok"]:
+            errors["photo"] = "Cochez l’autorisation d’utiliser la photo."
     if errors:
         return render(request, "claim", {"artist": artist, "roles": ROLES, "old": old, "errors": errors, "meta": meta}, 422)
-    body = "\n".join([f"Fiche : /artiste/{slug} ({artist['name']})", f"Lien avec l’artiste : {ROLES[old['role']]}",
+    photo_line = _store_press_photo(artist, photo_data, old) if photo_data else ""
+    body = "\n".join([f"Fiche : /artiste/{slug} ({artist['name']})", *([photo_line] if photo_line else []),
+                      f"Lien avec l’artiste : {ROLES[old['role']]}",
                       f"Téléphone / WhatsApp : {old['phone'] or '-'}", "", "Preuves (comptes officiels) :", old["proof"], "",
                       "Demande :", old["message"] or "-"])
     db.insert("contact_messages", {"type": "claim", "name": old["name"], "email": old["email"],
@@ -49,3 +65,28 @@ def claim(request, slug: str):
     mail.acknowledge(old["email"], old["name"], "demande de revendication")
     flash(request, "success", "Demande envoyée. Nous vérifions les preuves et revenons vers vous par e-mail sous sept jours.")
     return redirect(f"/artiste/{slug}")
+
+
+def _store_press_photo(artist: dict, photo: tuple, old: dict) -> str:
+    """Photo presse envoyée avec la revendication : déposée et ajoutée aux photos candidates de l'artiste
+    (Admin > fiche artiste > Photo). Elle n'est jamais utilisée avant d'avoir été choisie dans l'admin."""
+    import io
+    import json
+    import secrets
+    from PIL import Image
+    from core import storage
+    data, ext = photo
+    name = f"presse-{artist['slug']}-{secrets.token_hex(4)}.{ext}"
+    storage.store_media("artists", name, data, "image/" + ("jpeg" if ext == "jpg" else ext))
+    base = storage.blob_public_url()
+    url = f"{base}/media/artists/{name}" if base else f"/media/artists/{name}"
+    side = min(Image.open(io.BytesIO(data)).size)
+    row = db.one("SELECT photo_candidates FROM artists WHERE id = ?", [artist["id"]]) or {}
+    try:
+        cands = json.loads(row.get("photo_candidates") or "[]")
+    except ValueError:
+        cands = []
+    cands.insert(0, {"source": "presse", "url": url, "site": url, "side": side,
+                     "credit": f"Photo fournie par {old['name']} ({ROLES.get(old['role'], old['role'])})"[:250]})
+    db.update("artists", {"photo_candidates": json.dumps(cands, ensure_ascii=False)}, "id = :id", {"id": artist["id"]})
+    return f"Photo presse envoyée ({side} px), à valider dans Admin > fiche de l'artiste > Photo : {url}"

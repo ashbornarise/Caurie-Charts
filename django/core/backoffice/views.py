@@ -530,7 +530,44 @@ def artist_form(request, aid: str):
               if aid == "nouveau" else db.one("SELECT * FROM artists WHERE id = ?", [int(aid)]))
     if not artist:
         raise Http404
-    return admin_render(request, "artist-form", {"artist": artist, "countries": repos.countries(False)})
+    try:
+        candidates = json.loads(artist.get("photo_candidates") or "[]") if artist.get("id") else []
+    except ValueError:
+        candidates = []
+    return admin_render(request, "artist-form", {"artist": artist, "countries": repos.countries(False), "candidates": candidates})
+
+
+@admin_view()
+def artist_photo(request, aid: str):
+    """Galerie de photos : chercher maintenant, choisir une candidate (verrouillée), ou rendre le choix à la machine."""
+    from core.services.imports.photos import ArtistPhotos, best
+    from core.services.platforms import HttpClient
+    artist = db.one("SELECT id, name, image_url, youtube_channel_id, image_locked, photo_candidates FROM artists WHERE id = ?", [int(aid)])
+    if not artist or request.method != "POST":
+        return HttpResponseBadRequest()
+    action, back_to = req_str(request, "action"), path(f"admin/artistes/{int(aid)}") + "#photos"
+    if action == "chercher":
+        cands = ArtistPhotos(HttpClient(30)).collect(artist)
+        data = {"photo_candidates": json.dumps(cands, ensure_ascii=False), "photo_checked_at": now_utc()}
+        pick = best([c for c in cands if c["source"] != "presse"])
+        if pick and not artist["image_locked"]:
+            data.update({"image_url": pick["site"], "image_hd_url": pick["url"], "image_source": pick["source"], "image_credit": pick.get("credit")})
+        db.update("artists", data, "id = :id", {"id": artist["id"]})
+        return back(request, back_to, "success", f"{len(cands)} photos trouvées.")
+    if action == "choisir":
+        try:
+            cands = json.loads(artist["photo_candidates"] or "[]")
+            c = cands[int(req_str(request, "index"))]
+        except (ValueError, IndexError):
+            return HttpResponseBadRequest()
+        db.update("artists", {"image_url": c["site"], "image_hd_url": c["url"], "image_source": c["source"],
+                              "image_credit": c.get("credit"), "image_locked": 1}, "id = :id", {"id": artist["id"]})
+        audit.log(uid(request), "artist.photo", "artist", artist["id"], c["source"], {"url": c["url"]}, ip(request))
+        return back(request, back_to, "success", "Photo choisie et verrouillée : la nuit ne la remplacera plus.")
+    if action == "deverrouiller":
+        db.update("artists", {"image_locked": 0, "photo_checked_at": None}, "id = :id", {"id": artist["id"]})
+        return back(request, back_to, "success", "Photo déverrouillée : la meilleure photo sera choisie la nuit prochaine.")
+    return HttpResponseBadRequest()
 
 
 def _save_artist(request, aid: str):
@@ -545,7 +582,11 @@ def _save_artist(request, aid: str):
             "is_emerging": 1 if request.POST.get("is_emerging") == "1" else 0,
             "bio": req_str(request, "bio")[:3000] or None, "image_url": image or None}
     if ident:
-        old = db.one("SELECT submission_country_id, label_owner FROM artists WHERE id = ?", [ident]) or {}
+        old = db.one("SELECT submission_country_id, label_owner, image_url FROM artists WHERE id = ?", [ident]) or {}
+        if image and image != old.get("image_url"):
+            # Photo saisie à la main : elle devient la photo de l'artiste et la nuit ne la remplace plus
+            data.update({"image_hd_url": image, "image_source": "admin", "image_locked": 1, "image_credit": None})
+        old.pop("image_url", None)
         db.update("artists", data, "id = :id", {"id": ident})
         audit.log(uid(request), "artist.update", "artist", ident, None, {"before": old, "after": {k: data[k] for k in old if k in data}}, ip(request))
     else:
