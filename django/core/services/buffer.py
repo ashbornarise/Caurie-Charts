@@ -128,7 +128,7 @@ def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = Fal
             raise PlatformException("pas d'image pour ce post")
         assets = [{"image": {"url": p}} for p in pics]
     # Vidéo sur Instagram et TikTok : Buffer prévient le téléphone à l'heure dite et ouvre l'application, où l'on ajoute
-    # un son de leur bibliothèque (impossible par API). Facebook n'a pas ce mode : sa vidéo part seule, musique incrustée.
+    # un son de leur bibliothèque (impossible par API). Facebook reçoit le reel par le partage automatique d'Instagram.
     notify = reel and service in NOTIFY_REELS
     data = {"channelId": channel["id"], "text": text(post, service), "assets": assets,
             "schedulingType": "notification" if notify else "automatic", "needsApproval": False,
@@ -165,6 +165,8 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
         if ch["service"] not in MAX_IMAGES:
             continue
         for suffix, reel, when in jobs:
+            if reel and ch["service"] not in NOTIFY_REELS:
+                continue  # Facebook : le reel publié sur Instagram y est repartagé automatiquement, avec son son
             label = ch["service"] + (" (vidéo)" if reel else "")
             key = f"post-{post['id']}-{ch['service']}{suffix}"
             if not force and db.value("SELECT 1 FROM audit_log WHERE action = 'buffer.post' AND reason = ? LIMIT 1", [key]):
