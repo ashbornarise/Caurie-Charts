@@ -39,6 +39,24 @@ def _fmt(n) -> str:
     return f"{int(n):,}".replace(",", " ")
 
 
+# Tics d'écriture des IA (repris du nettoyeur « ig-human ») : remplacés par une tournure simple ou retirés
+SLOP = [(r"\s*[—–]\s*", ", "), (r"\bplongeons dans\b", "voici"), (r"\bdans le paysage musical\b", "dans la musique"),
+        (r"\bn'est pas seulement\b", "est"), (r"\bsans plus attendre,?\s*", ""), (r"\bincontournable\b", "à écouter"),
+        (r"\bvéritable phénomène\b", "succès"), (r"\bfaire vibrer\b", "faire danser"), (r"\ben ces temps\b", "en ce moment")]
+INVISIBLE = re.compile("[​-‏⁠-⁯﻿­]")  # espaces de largeur nulle, marques, césures
+NARROW = re.compile("[    ]")  # espaces insécables et séparateurs : une espace simple
+
+
+def humanize(text: str) -> str:
+    """Retire les caractères invisibles et les tics d'IA ; garde les retours à la ligne et les emojis."""
+    text = NARROW.sub(" ", INVISIBLE.sub("", str(text)))
+    for pattern, repl in SLOP:
+        text = re.sub(pattern, repl, text, flags=re.I)
+    text = re.sub(r",\s*,", ",", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    return re.sub(r" +([,.])", r"\1", text).strip()
+
+
 class PostGenerator:
     def __init__(self, ai_client=None):
         self.ai = ai_client
@@ -59,6 +77,7 @@ class PostGenerator:
         if facts.get("request"):
             text["title"] = facts["headline"]  # post sur demande : titre construit par le site, jamais par l'IA
         text["hashtags"] = list(dict.fromkeys(list(conf.get("ai.social.hashtags_base")) + list(text.get("hashtags") or [])))
+        text["title"], text["caption"] = humanize(text["title"]), humanize(text["caption"])
 
         name = f"{day}-{theme}-{secrets.token_hex(4)[:6]}"
         look = PI.style(name)

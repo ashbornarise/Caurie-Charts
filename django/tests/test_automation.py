@@ -138,3 +138,9 @@ def test_magazine_article_uses_only_given_facts():
     assert "Popularité" not in art["body"]          # source calculée : jamais présentée comme une plateforme
     assert "nouveautés" not in art["body"]           # nouveauté déjà dans le Top 10 : pas répétée
     assert magazine.write({**f, "top": f["top"][:5]}, "41") is None
+
+
+def test_humanize_caption():
+    from core.services.social.generator import humanize
+    assert humanize("Le n°1 — Rema​, véritable phénomène !") == "Le n°1, Rema, succès !"
+    assert humanize("Ligne 1\nLigne 2 🔥") == "Ligne 1\nLigne 2 🔥"
