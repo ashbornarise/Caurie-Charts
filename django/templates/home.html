@@ -8,6 +8,10 @@
 {{ path('/', q) }}
 {%- endmacro -%}
 {%- macro tab_link(p) %}{{ home_link(none, p) }}{% endmacro -%}
+{{ partial('partials/top-band', rows=(entries if entries else (live.rows if live else [])),
+           title=t('home.title', {'country': country_name(code), 'size': country.chart_size}),
+           day=(period_label(run) if run else (t('chart.live_day', {'date': fmt_date(live.day)}) if live and live.day else '')),
+           more='#classement') }}
 <div class="wrap page-grid">
 <div class="page-main">
     <section class="chart-hero" id="classement">

@@ -1,0 +1,29 @@
+{#- Bandeau du Top 5 en tête de l'accueil : grandes pochettes numérotées, façon une de magazine. rows : entrées officielles ou en direct -#}
+{%- if rows -%}
+<section class="top-band" aria-labelledby="top-band-title">
+    <div class="wrap">
+        <div class="top-band__head">
+            <h2 class="top-band__title" id="top-band-title">{{ title }}</h2>
+            {% if day %}<p class="top-band__day">{{ day }}</p>{% endif %}
+        </div>
+        <ol class="top-band__list">
+            {% for e in rows[:5] %}
+            {%- set is_artist = e.track_id is none -%}
+            {%- set cover = e.cover_url or e.artist_image -%}
+            <li class="top-band__item">
+                <a class="top-band__link" href="{{ path('artiste/' ~ e.artist_slug) if is_artist else path('titre/' ~ e.track_slug) }}">
+                    <span class="top-band__cover">
+                        {% if cover %}<img src="{{ cover }}" alt="" width="240" height="240" loading="{{ 'eager' if loop.first else 'lazy' }}">
+                        {% else %}<span class="cover__initials">{{ initials(e.title or e.artist_name) }}</span>{% endif %}
+                        <span class="top-band__rank">{{ loop.index }}</span>
+                    </span>
+                    <span class="top-band__name">{{ e.artist_name if is_artist else e.title }}</span>
+                    {% if not is_artist %}<span class="top-band__artist">{% if e.artist_country %}{{ flag(e.artist_country, 12) }} {% endif %}{{ e.artist_name }}</span>{% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ol>
+        <p class="top-band__more"><a class="top-band__all" href="{{ more }}">{{ t('home.full_chart') }}</a></p>
+    </div>
+</section>
+{%- endif -%}
