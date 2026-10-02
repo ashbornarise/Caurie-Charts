@@ -4,7 +4,7 @@ import re
 import time
 from urllib.parse import quote
 
-from core import db
+from core import budget, db
 from core.repos import now_utc
 from core.services.imports import normalizer as N
 from core.services.platforms import PlatformException, QuotaExceededException
@@ -104,6 +104,8 @@ class DeezerTrackMatcher:
                 ORDER BY a.status = 'active' DESC, t.id DESC LIMIT {max(0, int(limit))}""")
         matched = 0
         for t in tracks:
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
             time.sleep(0.13)  # limite Deezer : 50 requêtes par 5 secondes
             try:
                 # Recherche simple « artiste titre » (la syntaxe avancée ne renvoie plus rien)
@@ -138,6 +140,8 @@ class ArtistEnricher:
                              ORDER BY profile_checked_at IS NOT NULL, id LIMIT {max(0, int(limit))}""")
         stats = {"checked": 0, "found": 0}
         for a in artists:
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
             profile = self._profile(int(a["id"]), a["name"], int(a["deezer_id"]) if a["deezer_id"] else None)
             data = {"profile_checked_at": now_utc()}
             if profile:

@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from urllib.parse import quote
 
-from core import conf, db, env
+from core import budget, conf, db, env
 from core.repos import now_utc
 from core.services.imports import chart_importer
 from core.services.imports import normalizer as N
@@ -135,6 +135,8 @@ class ArtistWatch:
         cfg = conf.get("watchlist") or {}
         report = [self._artist(str(name), hint) for name, hint in (cfg.get("artists") or {}).items()]
         for channel_id, (label, country) in self._channels(cfg).items():
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
             report.append(self._channel(channel_id, label, country))
         return report
 

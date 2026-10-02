@@ -10,7 +10,7 @@ import re
 import time
 from urllib.parse import quote
 
-from core import audit, conf, db, env
+from core import budget, audit, conf, db, env
 from core.helpers import country_name
 from core.repos import now_utc, php_round
 from core.services import ai
@@ -53,6 +53,8 @@ class ArtistClassifier:
         wikidata = WikidataLookup(self.http)
         ai_ok = bool(self.ai and self.ai.is_available())
         for a in artists:
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
             verdict = self.combine(self._music_brainz(a["name"]), wikidata.find(a["name"]))
             needs_ai = verdict is None or verdict["confidence"] < threshold
             if needs_ai and ai_ok and ai_left <= 0:

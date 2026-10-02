@@ -8,7 +8,7 @@ import json
 import re
 from urllib.parse import quote
 
-from core import db, env
+from core import budget, db, env
 from core.repos import now_utc
 from core.services.imports import chart_importer
 from core.services.imports import normalizer as N
@@ -45,6 +45,8 @@ class YouTubeChannelSync:
                           LIMIT {max(0, int(new_channels))}""")
         self.searches_left = self.SEARCHES
         for a in todo:
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
             if YouTubeQuota.remaining() < YouTubeQuota.RESERVE + 10:
                 break
             channel = self._find_channel(a["name"], key, int(a["id"]))
@@ -62,6 +64,8 @@ class YouTubeChannelSync:
                            LIMIT {max(0, int(refresh))}""")
         refreshed = 0
         for a in known:
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
             if not YouTubeQuota.spend(2):
                 break
             c, n = self._sync_channel(int(a["id"]), a["name"], a["youtube_channel_id"], int(a["submission_country_id"]), key, 1)

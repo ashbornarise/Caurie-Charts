@@ -268,7 +268,7 @@ def delete_files(post: dict) -> None:
             os.unlink(f)
 
 
-BLOB_KEEP_DAYS = 45  # offre gratuite de Vercel Blob : 1 Go ; au-delà, le stockage est bloqué 30 jours
+BLOB_KEEP_DAYS = 7  # 7 jours après la date de publication (Buffer et les réseaux gardent leur copie) ; Blob gratuit : 1 Go
 
 
 def purge_blob(keep_days: int = BLOB_KEEP_DAYS) -> str:

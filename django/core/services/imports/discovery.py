@@ -11,7 +11,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
-from core import clock
+from core import budget, clock
 from core import audit, conf, db, env
 from core.helpers import country_name
 from core.repos import now_utc
@@ -63,6 +63,8 @@ class ArtistDiscovery:
         left = 0
         for phase in ("wikidata", "network"):
             for code in order:
+                if budget.over():
+                    break  # temps de l'étape écoulé : la suite la nuit prochaine
                 self.budget = share + left
                 if phase == "wikidata" and code in (self.cfg.get("wikidata_countries") or {}):
                     report.append(f"{code} Wikidata : " + self._wikidata(code, int(countries[code])))
@@ -97,6 +99,8 @@ class ArtistDiscovery:
             return "Wikidata injoignable"
         added = skipped = 0
         for row in rows:
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
             if self.budget <= 0:
                 break
             label = (row.get("pLabel") or {}).get("value") or ""
@@ -143,6 +147,8 @@ class ArtistDiscovery:
         added = 0
         stop = False
         for seed in seeds:
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
             explored[str(seed["id"])] = clock.today().isoformat()
             for r in self._deezer(f"/artist/{int(seed['deezer_id'])}/related?limit=25").get("data") or []:
                 if self.budget <= 0:
@@ -195,6 +201,8 @@ class ArtistDiscovery:
             return 0
         n = 0
         for row in rows:
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
             sp = (row.get("sp") or {}).get("value") or ""
             if not re.fullmatch(r"[A-Za-z0-9]{22}", sp):
                 continue

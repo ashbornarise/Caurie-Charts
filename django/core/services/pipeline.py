@@ -1,15 +1,17 @@
 """Chaîne quotidienne complète (traduction de Services\\DailyPipeline), dans l'ordre où chaque étape a besoin de la précédente.
 
- 1. classements des plateformes ; 2. liste de suivi et découverte ; 3. profils puis pays des artistes ;
- 4. clips YouTube puis relevé des vues ; 5. sources calculées ; 6. actualités ;
- 7. le lundi : classement officiel (brouillon) ; 8. lundi, mercredi, vendredi : posts ; 9. ménage.
+ L'essentiel d'abord : 1. classements des plateformes ; 2. relevé des vues ; 3. sources calculées ; 4. actualités ;
+ 7. le lundi : classement officiel (brouillon) ; 8. posts (lundi, mercredi, vendredi), Cauri Hebdo et Telegram (dimanche).
+ Puis 10. enrichissement du catalogue (suivi, découverte, profils, pays, Deezer, chaînes et clips YouTube), chaque étape
+ avec un budget de temps : la chaîne tient dans l'heure (offre gratuite de GitHub Actions : 2 000 minutes par mois).
+ 11. ménage en dernier.
 Une étape en échec est journalisée et n'empêche pas les suivantes.
 """
 import json
 import time
 from datetime import date
 
-from core import clock
+from core import budget, clock
 from core import conf, db
 from core.services import ai, live_chart
 from core.services.chart_service import ChartService
@@ -37,33 +39,12 @@ class DailyPipeline:
         platform_sources = [k for k in imp.sources() if k not in COMPUTED]
 
         self._step("1. Classements des plateformes", lambda: imp.import_all(None, platform_sources))
-        self._step("2a. Liste de suivi", lambda: ArtistWatch(http).run())
-        self._step("2b. Découverte d'artistes", lambda: ArtistDiscovery(http).run())
-
-        def profiles():
-            p = ArtistEnricher(http).run(150)
-            return [f"{p['checked']} vérifiés, {p['found']} trouvés sur Deezer"]
-        self._step("3a. Profils (photo, fans)", profiles)
-
-        def classify():
-            c = ArtistClassifier(HttpClient(20), ai.make()).run(120)
-            return [f"{c['active']} confirmés, {c['out_of_scope']} hors périmètre, {c['pending']} à vérifier (IA : {c['ai_calls']})"]
-        self._step("3b. Pays des artistes", classify)
-
-        def deezer():
-            r = DeezerTrackMatcher(http).run()
-            return [f"{r['matched']} titres retrouvés sur {r['checked']}"]
-        self._step("4a. Titres retrouvés sur Deezer (popularité, pochette)", deezer)
-        self._step("4b. Chaînes YouTube des artistes (tous leurs clips, audios, lyrics, lives)", lambda: YouTubeChannelSync(http).run())
-        self._step("4c. Clips YouTube des titres restants (recherche titre par titre)",
-                   lambda: [json.dumps(imp.match_youtube(youtube_searches), ensure_ascii=False)])
-
         def collect():
             r = CollectService(clients()).run(clock.today().isoformat())
             return [f"{k} {json.dumps(v, ensure_ascii=False)}" for k, v in r.items()]
-        self._step("4d. Relevé des vues", collect)
-        self._step("5. Sources calculées (popularité Deezer, vues YouTube)", lambda: imp.import_all(None, COMPUTED))
-        self._step("6. Actualités", lambda: FeedImporter().run())
+        self._step("2. Relevé des vues", collect)
+        self._step("3. Sources calculées (popularité Deezer, vues YouTube)", lambda: imp.import_all(None, COMPUTED))
+        self._step("4. Actualités", lambda: FeedImporter().run())
 
         weekday = clock.today().isoweekday()
         if force_weekly or weekday == 1:
@@ -118,16 +99,40 @@ class DailyPipeline:
             # avec les posts du lundi, mercredi et vendredi : 4 publications par semaine
             self._step("8 bis. Chaîne Telegram", lambda: [telegram.send_chart()])
 
+        # Enrichissement du catalogue, après la publication : chaque étape a un budget de temps et reprend la nuit suivante
+        self._step("10a. Liste de suivi", lambda: ArtistWatch(http).run(), 60)
+        self._step("10b. Découverte d'artistes", lambda: ArtistDiscovery(http).run(), 240)
+
+        def profiles():
+            p = ArtistEnricher(http).run(150)
+            return [f"{p['checked']} vérifiés, {p['found']} trouvés sur Deezer"]
+        self._step("10c. Profils (photo, fans)", profiles, 120)
+
+        def classify():
+            c = ArtistClassifier(HttpClient(20), ai.make()).run(120)
+            return [f"{c['active']} confirmés, {c['out_of_scope']} hors périmètre, {c['pending']} à vérifier (IA : {c['ai_calls']})"]
+        self._step("10d. Pays des artistes", classify, 180)
+
+        def deezer():
+            r = DeezerTrackMatcher(http).run()
+            return [f"{r['matched']} titres retrouvés sur {r['checked']}"]
+        self._step("10e. Titres retrouvés sur Deezer (popularité, pochette)", deezer, 90)
+        self._step("10f. Chaînes YouTube des artistes (tous leurs clips, audios, lyrics, lives)", lambda: YouTubeChannelSync(http).run(), 180)
+        self._step("10g. Clips YouTube des titres restants (recherche titre par titre)",
+                   lambda: [json.dumps(imp.match_youtube(youtube_searches), ensure_ascii=False)], 60)
+
         def cleanup():
             live_chart.clear_cache()
             return ["cache des classements vidé", f"{purge_orphans()} fichiers de posts abandonnés supprimés", purge_blob()]
-        self._step("9. Ménage (cache, fichiers orphelins)", cleanup)
+        self._step("11. Ménage (cache, fichiers orphelins, Blob)", cleanup)
         log_write("cron", "info", "pipeline quotidien", {"etapes": [[r["step"], r["ok"], round(r["seconds"], 1)] for r in self.report]})
         return self.report
 
-    def _step(self, name: str, fn) -> None:
+    def _step(self, name: str, fn, seconds: int | None = None) -> None:
         start = time.time()
-        self._say(f"▶ {name}")
+        self._say(f"▶ {name}" + (f" (budget {seconds // 60} min {seconds % 60:02d} s)" if seconds else ""))
+        if seconds:
+            budget.start(seconds)
         try:
             result = fn()
             lines = [str(x) for x in (result if isinstance(result, list) else [result])]
@@ -135,6 +140,8 @@ class DailyPipeline:
         except Exception as exc:  # noqa: BLE001
             log_write("pipeline", "error", f"{name} : {exc}")
             lines, ok = [f"ERREUR : {exc}"], False
+        finally:
+            budget.stop()
         for line in lines:
             self._say("   " + line)
         self.report.append({"step": name, "ok": ok, "seconds": time.time() - start, "lines": lines})
