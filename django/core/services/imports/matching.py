@@ -61,7 +61,8 @@ class YouTubeMatcher:
                   AND NOT EXISTS (SELECT 1 FROM track_platform_ids p WHERE p.track_id = t.id AND p.platform = 'youtube')
                   AND (t.youtube_checked_at IS NULL OR t.youtube_checked_at < LOCALTIMESTAMP - INTERVAL '14 days')
                 -- Pays sans classement de plateforme d'abord, puis un titre par artiste, puis les plus présents
-                ORDER BY c.code IN ('TG', 'BJ') DESC,
+                -- Artistes sans chaîne connue d'abord : la lecture de leur chaîne (1 unité) trouve déjà les clips des autres
+                ORDER BY a.youtube_channel_id IS NULL DESC, c.code IN ('TG', 'BJ') DESC,
                          (SELECT COUNT(*) FROM track_platform_ids p2 JOIN tracks t2 ON t2.id = p2.track_id
                            WHERE t2.artist_id = a.id AND p2.platform = 'youtube') ASC,
                          recent DESC, t.id DESC LIMIT {max(0, int(limit))}""")

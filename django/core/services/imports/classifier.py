@@ -37,7 +37,7 @@ class ArtistClassifier:
     def __init__(self, http, ai_client=None):
         self.http, self.ai = http, ai_client
         self.evidence_cache: dict = {}
-        self.searches_left = 15  # recherches YouTube par nom (100 unités chacune) par passage
+        self.searches_left = 5  # recherches YouTube par nom (100 unités chacune) par passage, après le pseudo @nom
 
     def run(self, limit: int = 60, ai_budget: int | None = None) -> dict:
         cfg = conf.get("ai.classify")
@@ -247,6 +247,14 @@ class ArtistClassifier:
             if video:
                 items = get("videos?part=snippet&id=" + _enc(video)).get("items") or [{}]
                 channel_id = (items[0].get("snippet") or {}).get("channelId")
+            if not channel_id:
+                # Pseudo @nom : 1 unité au lieu de 100 pour une recherche
+                from core.services.imports.channel_sync import YouTubeChannelSync
+                for handle in YouTubeChannelSync.handles(name):
+                    item = (get("channels?part=snippet&forHandle=" + _enc("@" + handle)).get("items") or [None])[0]
+                    if item and YouTubeChannelSync.same_name((item.get("snippet") or {}).get("title", ""), name):
+                        channel_id = item["id"]
+                        break
             if not channel_id and self.searches_left > 0:
                 self.searches_left -= 1
                 for item in get("search?part=snippet&type=video&maxResults=5&q=" + _enc(name), 100).get("items") or []:

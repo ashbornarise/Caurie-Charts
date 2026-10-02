@@ -1,6 +1,6 @@
 """Données YouTube de tous les titres, artiste par artiste, au moindre coût de quota (traduction de YouTubeChannelSync).
 
-La chaîne est trouvée une fois (100 unités), ses vidéos sont lues depuis la liste de la chaîne (1 unité / 50)
+La chaîne est trouvée une fois (1 à 3 unités par une vidéo connue ou le pseudo @nom ; 100 en dernier recours), ses vidéos sont lues depuis la liste de la chaîne (1 unité / 50)
 et rattachées aux titres ; les chaînes connues sont relues chaque jour. Priorité : Togo et Bénin.
 """
 import html
@@ -23,8 +23,11 @@ def _enc(s) -> str:
 
 
 class YouTubeChannelSync:
+    SEARCHES = 8  # recherches par nom (100 unités) par passage, en dernier recours
+
     def __init__(self, http):
         self.http = http
+        self.searches_left = self.SEARCHES
 
     def run(self, new_channels: int = 40, refresh: int = 300) -> list:
         key = env.get("YOUTUBE_API_KEY", "")
@@ -40,12 +43,13 @@ class YouTubeChannelSync:
                                            WHERE t.artist_id = a.id AND o.observed_on >= CURRENT_DATE - 7) DESC,
                                    COALESCE(a.fans, 0) DESC
                           LIMIT {max(0, int(new_channels))}""")
+        self.searches_left = self.SEARCHES
         for a in todo:
-            if not YouTubeQuota.spend(102):  # recherche (100) + deux pages de vidéos
+            if YouTubeQuota.remaining() < YouTubeQuota.RESERVE + 10:
                 break
-            channel = self._find_channel(a["name"], key)
+            channel = self._find_channel(a["name"], key, int(a["id"]))
             db.update("artists", {"channel_checked_at": now_utc(), **({"youtube_channel_id": channel} if channel else {})}, "id = :id", {"id": a["id"]})
-            if channel:
+            if channel and YouTubeQuota.spend(2):  # deux pages de vidéos
                 found += 1
                 c, n = self._sync_channel(int(a["id"]), a["name"], channel, int(a["submission_country_id"]), key, 2)
                 clips, created = clips + c, created + n
@@ -67,12 +71,38 @@ class YouTubeChannelSync:
                 f"{clips} vidéos rattachées à des titres, {created} titres ajoutés au catalogue",
                 f"Quota YouTube restant : {YouTubeQuota.remaining()}"]
 
-    def _find_channel(self, name: str, key: str):
+    @staticmethod
+    def same_name(channel_title: str, name: str) -> bool:
         """Chaîne officielle : nom identique (ou « Nom - Topic », « NomVEVO », « Nom Officiel »)."""
-        key0 = N.text(name).replace(" ", "")
+        title = re.sub(r"\s*(-\s*topic|vevo|officiel|official|music|tv)\s*$", "", channel_title or "", flags=re.I)
+        return N.text(title).replace(" ", "") == N.text(name).replace(" ", "") != ""
+
+    @staticmethod
+    def handles(name: str) -> list:
+        """Pseudos YouTube probables : @nom, @nomofficiel, @nommusic (sans espaces ni accents)."""
+        base = re.sub(r"[^a-z0-9._-]", "", N.text(name).replace(" ", ""))
+        return [h for h in dict.fromkeys([base, base + "officiel", base + "official", base + "music"]) if len(h) >= 3][:3]
+
+    def _find_channel(self, name: str, key: str, artist_id: int | None = None):
+        """Du moins cher au plus cher : vidéo déjà connue (1 unité), pseudo @nom (1 unité chacun), recherche (100, plafonnée)."""
+        if artist_id:
+            video = db.value("""SELECT p.external_id FROM track_platform_ids p JOIN tracks t ON t.id = p.track_id
+                                WHERE t.artist_id = ? AND p.platform = 'youtube' LIMIT 1""", [artist_id])
+            if video and YouTubeQuota.spend(1):
+                sn = ((self._get("videos?part=snippet&id=" + _enc(video), key).get("items") or [{}])[0].get("snippet") or {})
+                if sn.get("channelId") and self.same_name(sn.get("channelTitle", ""), name):
+                    return sn["channelId"]
+        for handle in self.handles(name):
+            if not YouTubeQuota.spend(1):
+                return None
+            for item in self._get("channels?part=snippet&forHandle=" + _enc("@" + handle), key).get("items") or []:
+                if self.same_name((item.get("snippet") or {}).get("title", ""), name):
+                    return item["id"]
+        if self.searches_left <= 0 or not YouTubeQuota.spend(100):
+            return None
+        self.searches_left -= 1
         for item in self._get("search?part=snippet&type=channel&maxResults=5&q=" + _enc(name), key).get("items") or []:
-            title = re.sub(r"\s*(-\s*topic|vevo|officiel|official|music|tv)\s*$", "", item["snippet"]["title"], flags=re.I)
-            if N.text(title).replace(" ", "") == key0:
+            if self.same_name(item["snippet"]["title"], name):
                 return item["snippet"].get("channelId") or (item.get("id") or {}).get("channelId")
         return None
 

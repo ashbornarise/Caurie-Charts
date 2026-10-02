@@ -96,3 +96,13 @@ def test_posts_texte_modele_factuel():
     assert "Deezer CI n°4" in post["caption"]
     assert "52 534 fans" in post["caption"]
     assert "Source : Classements Deezer" in post["caption"]
+
+
+def test_youtube_handles_and_channel_names():
+    from core.services.imports.channel_sync import YouTubeChannelSync as S
+    assert S.handles("Burna Boy") == ["burnaboy", "burnaboyofficiel", "burnaboyofficial"]
+    assert S.handles("Aya Nakamura")[0] == "ayanakamura"
+    assert S.same_name("Burna Boy - Topic", "Burna Boy")
+    assert S.same_name("BurnaBoyVEVO", "Burna Boy")
+    assert not S.same_name("Burna Boy Fans", "Burna Boy")
+    assert not S.same_name("", "")

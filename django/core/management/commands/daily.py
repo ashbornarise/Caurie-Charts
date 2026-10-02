@@ -3,7 +3,7 @@
   manage.py daily
   manage.py daily --weekly        force le calcul du classement officiel de la semaine passée
   manage.py daily --posts         force la génération des trois posts
-  manage.py daily --youtube=10    recherches de clips YouTube (100 unités de quota chacune)
+  manage.py daily --youtube=6     recherches de clips YouTube (100 unités de quota chacune)
 """
 from django.core.management.base import BaseCommand
 
@@ -17,7 +17,7 @@ class Command(BaseCommand):
     def add_arguments(self, p):
         p.add_argument("--weekly", action="store_true")
         p.add_argument("--posts", action="store_true")
-        p.add_argument("--youtube", type=int, default=10)
+        p.add_argument("--youtube", type=int, default=6)
 
     def handle(self, *args, **o):
         def task():
