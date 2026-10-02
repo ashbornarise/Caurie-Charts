@@ -5,7 +5,7 @@ Les visuels sont donnés par leur adresse publique (Vercel Blob) : Buffer les t�
 Chaque post n'est programmé qu'une fois par compte (journal d'audit) ; il reste annulable dans Buffer jusqu'à l'heure prévue.
 """
 import json
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 from core import audit, db, env
 from core.helpers import url
@@ -76,21 +76,35 @@ def images(post: dict, service: str) -> list:
     return [f"{base}/media/social/{f}" for f in files if f][:MAX_IMAGES.get(service, 10)]
 
 
-def payload(post: dict, channel: dict, due_at: datetime | None) -> dict:
+def video_url(post: dict) -> str | None:
+    from core import storage
+    base = storage.blob_public_url()
+    return f"{base}/media/social/{post['video']}" if base and post.get("video") else None
+
+
+def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = False) -> dict:
+    """Carrousel de photos, ou vidéo 9:16 (reel Instagram et Facebook, vidéo TikTok) si reel=True."""
     service = channel["service"]
-    pics = images(post, service)
-    if not pics:
-        raise PlatformException("pas d'image pour ce post")
-    data = {"channelId": channel["id"], "text": text(post, service), "assets": [{"image": {"url": p}} for p in pics],
+    if reel:
+        video = video_url(post)
+        if not video:
+            raise PlatformException("pas de vidéo pour ce post")
+        assets = [{"video": {"url": video}}]
+    else:
+        pics = images(post, service)
+        if not pics:
+            raise PlatformException("pas d'image pour ce post")
+        assets = [{"image": {"url": p}} for p in pics]
+    data = {"channelId": channel["id"], "text": text(post, service), "assets": assets,
             "schedulingType": "automatic", "needsApproval": False,
             "mode": "customScheduled" if due_at else "addToQueue"}
     if due_at:
         data["dueAt"] = due_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     if service == "instagram":
         # Plusieurs images dans un post « post » : Instagram en fait un carrousel
-        data["metadata"] = {"instagram": {"type": "post", "shouldShareToFeed": True}}
+        data["metadata"] = {"instagram": {"type": "reel" if reel else "post", "shouldShareToFeed": True}}
     elif service == "facebook":
-        data["metadata"] = {"facebook": {"type": "post"}}
+        data["metadata"] = {"facebook": {"type": "reel" if reel else "post"}}
     elif service == "tiktok":
         data["metadata"] = {"tiktok": {"title": post["title"][:90]}}
     return data
@@ -103,25 +117,31 @@ CREATE = """mutation($input: CreatePostInput!) { createPost(input: $input) {
 
 
 def schedule(post: dict, due_at: datetime | None = None, force: bool = False, http: HttpClient | None = None) -> str:
-    """Programme le post sur chaque compte relié ; sans date, il prend la prochaine place de la file Buffer."""
+    """Programme le post sur chaque compte relié : le carrousel à l'heure prévue, puis la vidéo du Top le lendemain
+    à la même heure (deux publications pour un post). Sans date, chaque envoi prend la prochaine place de la file Buffer."""
     if not configured():
         return "Buffer non configuré (BUFFER_API_KEY)"
     done = []
+    jobs = [("", False, due_at)]
+    if post.get("video"):
+        jobs.append(("-reel", True, due_at + timedelta(days=1) if due_at else None))
     for ch in channels(http):
         if ch["service"] not in MAX_IMAGES:
             continue
-        key = f"post-{post['id']}-{ch['service']}"
-        if not force and db.value("SELECT 1 FROM audit_log WHERE action = 'buffer.post' AND reason = ? LIMIT 1", [key]):
-            done.append(f"{ch['service']} déjà programmé")
-            continue
-        try:
-            r = call(CREATE, {"input": payload(post, ch, due_at)}, http)["createPost"]
-        except PlatformException as exc:
-            done.append(f"{ch['service']} : {exc}")
-            continue
-        if "post" not in r:
-            done.append(f"{ch['service']} : {r.get('message', 'refusé')}")
-            continue
-        audit.log(None, "buffer.post", "social_post", post["id"], key, {"buffer_id": r["post"]["id"], "due": r["post"].get("dueAt")}, None)
-        done.append(f"{ch['service']} programmé")
+        for suffix, reel, when in jobs:
+            label = ch["service"] + (" (vidéo)" if reel else "")
+            key = f"post-{post['id']}-{ch['service']}{suffix}"
+            if not force and db.value("SELECT 1 FROM audit_log WHERE action = 'buffer.post' AND reason = ? LIMIT 1", [key]):
+                done.append(f"{label} déjà programmé")
+                continue
+            try:
+                r = call(CREATE, {"input": payload(post, ch, when, reel)}, http)["createPost"]
+            except PlatformException as exc:
+                done.append(f"{label} : {exc}")
+                continue
+            if "post" not in r:
+                done.append(f"{label} : {r.get('message', 'refusé')}")
+                continue
+            audit.log(None, "buffer.post", "social_post", post["id"], key, {"buffer_id": r["post"]["id"], "due": r["post"].get("dueAt")}, None)
+            done.append(f"{label} programmé")
     return ", ".join(done) or "aucun compte relié à Buffer"

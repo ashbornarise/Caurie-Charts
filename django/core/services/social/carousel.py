@@ -309,13 +309,13 @@ def _num(x: float) -> str:
 
 
 def _video(segments: list, out: Path, w: int, h: int):
-    """Couverture puis chaque titre : 30 s de clip (son compris) avec calque, ou photo 4 s avec un lent zoom. w × h : 4K 9:16."""
+    """Couverture puis chaque titre : 30 s de clip (son compris) avec calque, ou photo 3 s avec un lent zoom. w × h : 4K 9:16."""
     ffmpeg = _ffmpeg()
     if not segments or not ffmpeg:
         return None
     clip_len = int(conf.get("ai.social.clip_seconds") or 30)
     clip_start = int(conf.get("ai.social.clip_start") or 30)
-    still = 4
+    still = 3  # rythme d'un reel : une image toutes les 3 secondes
     zw, zh = round(w * 1.1 / 2) * 2, round(h * 1.1 / 2) * 2  # marge du zoom
     args, filters, n = [], [], 0
     for i, seg in enumerate(segments):
