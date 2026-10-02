@@ -6,7 +6,7 @@ répartition des pays), pour qu'aucun chiffre ni fait ne puisse être inventé. 
 from collections import Counter
 
 from core import clock, db
-from core.helpers import country_name, slugify, url
+from core.helpers import country_name, slugify
 from core.repos import now_utc
 from core.services import live_chart, reliability
 
@@ -87,6 +87,6 @@ def publish(today=None) -> str:
     image = FeedImporter()._thumbnail(art["image"], guid) if art.get("image") else None
     db.insert("news", {"title": art["title"], "slug": slugify(art["title"])[:180] + f"-{year}-s{week:02d}", "summary": art["summary"],
                        "body": art["body"], "category": "classement", "country_id": None, "source_name": "Cauri Charts",
-                       "source_url": url("/"), "image_path": image, "origin": "cauri", "external_guid": guid,
+                       "source_url": None, "image_path": image, "origin": "manual", "external_guid": guid,
                        "status": "published", "published_at": now_utc()})
     return f"Cauri Hebdo {year}-S{week} publié : {art['title']}"
