@@ -44,8 +44,7 @@ def render(facts: dict, cover: dict, items: list, name: str) -> dict:
     for fmt, (size, safe) in FORMATS.items():
         fr = PI.Frame(*size, safe)
         suffix = "" if fmt == "feed" else "-916"
-        make_cover = _magazine_cover if magazine(name) else _cover_slide
-        slides = [PI.save_jpeg(make_cover(fr, f, cover, cover_photo, total), PI.DIR / f"{name}-1{suffix}.jpg")] if with_cover else []
+        slides = [PI.save_jpeg(_best_cover(fr, f, cover, cover_photo, total), PI.DIR / f"{name}-1{suffix}.jpg")] if with_cover else []
         if fmt == VIDEO and slides:
             segments.append({"image": slides[0]})
         for i, item in enumerate(items):
@@ -166,6 +165,17 @@ def _cover_slide(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -> I
         _centered(fr, draw, 50, y, white, f["serif"], fr.fit(PI.clean(cover["subtitle"]), f["serif"], 50, _inner(fr, 70)))
     _logo(fr, img, max(60, fr.side), H - fr.bottom - 190, 210)
     return img
+
+
+def _best_cover(fr, f, cover, photo_url, total):
+    """Une réaliste (photo entière, tête devant le titre) quand le détourage est disponible, sinon une classique."""
+    from core.services.social import une
+    try:
+        img = une.cover(fr, f, cover, photo_url, total)
+    except Exception as exc:  # noqa: BLE001 — la une classique prend le relais
+        log_write("social", "error", f"une réaliste : {exc}")
+        img = None
+    return img or _magazine_cover(fr, f, cover, photo_url, total)
 
 
 def magazine(name: str) -> bool:
