@@ -73,6 +73,7 @@ urlpatterns = [
     re_path(r"^admin/posts/(?P<pid>\d+)$", admin.post_status),
     re_path(r"^admin/posts/(?P<pid>\d+)/telegram$", admin.post_telegram),
     re_path(r"^admin/posts/(?P<pid>\d+)/zip$", admin.post_zip),
+    re_path(r"^admin/posts/(?P<pid>\d+)/buffer$", admin.post_buffer),
     path("admin/partenaires", admin.partners_list),
     re_path(r"^admin/partenaires/(?P<pid>\d+|nouveau)$", admin.partner_form),
     re_path(r"^admin/partenaires/(?P<pid>\d+)/supprimer$", admin.partner_delete),

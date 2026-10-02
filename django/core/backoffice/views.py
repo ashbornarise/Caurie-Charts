@@ -984,6 +984,26 @@ def post_telegram(request, pid: str):
 
 
 @admin_view()
+def post_buffer(request, pid: str):
+    """Programme le post sur Instagram, Facebook et TikTok par Buffer : ce soir 18 h, ou demain si l'heure est passée."""
+    from datetime import timezone
+    from core.services import buffer
+    post = db.one("SELECT * FROM social_posts WHERE id = ?", [int(pid)])
+    if not post:
+        return HttpResponseBadRequest()
+    due = buffer.evening(clock.today())
+    if due <= datetime.now(timezone.utc) + timedelta(minutes=15):
+        due += timedelta(days=1)
+    try:
+        result, kind = buffer.schedule(post, due, force=req_str(request, "force") == "1"), "success"
+        db.update("social_posts", {"status": "approved"}, "id = :id AND status = 'draft'", {"id": int(pid)})
+        audit.log(uid(request), "social.buffer", "social_post", int(pid), result[:190], {}, ip(request))
+    except Exception as exc:  # noqa: BLE001
+        result, kind = f"échec ({exc})", "error"
+    return back(request, path("admin/posts") + f"#post-{int(pid)}", kind, f"Buffer ({due:%d/%m %H:%M} UTC) : " + result)
+
+
+@admin_view()
 def post_status(request, pid: str):
     status = req_str(request, "status")
     if status not in ("draft", "approved", "published", "rejected") or not db.value("SELECT 1 FROM social_posts WHERE id = ?", [int(pid)]):

@@ -22,7 +22,7 @@ from core.services.imports.service import COMPUTED, ImportService
 from core.services.imports.watch import ArtistWatch
 from core.services.news import FeedImporter
 from core.services.platforms import CollectService, HttpClient, clients, log_write
-from core.services import telegram
+from core.services import buffer, telegram
 from core.services.social.generator import PostGenerator, purge_orphans
 
 
@@ -91,6 +91,12 @@ class DailyPipeline:
                         lines.append("Telegram : " + telegram.send_post(post))
                     except Exception as exc:  # noqa: BLE001 — le post reste généré même si Telegram échoue
                         lines.append(f"Telegram : échec ({exc})")
+                if buffer.configured():
+                    # Instagram, Facebook, TikTok à 18 h (heure de Lomé) : annulable dans Buffer ou l'admin d'ici là
+                    try:
+                        lines.append("Buffer : " + buffer.schedule(post, buffer.evening(clock.today())))
+                    except Exception as exc:  # noqa: BLE001
+                        lines.append(f"Buffer : échec ({exc})")
                 return lines
             self._step("8. Posts réseaux sociaux", posts)
 
