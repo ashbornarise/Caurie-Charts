@@ -88,7 +88,7 @@ def render(name: str, slides: list, cover: dict | None = None) -> list:
         fr = PI.Frame(*size, safe)
         imgs = []
         if cover:
-            imgs.append(C._magazine_cover(fr, PI.style(name), cover, cover.get("photo"), total))
+            imgs.append(C._best_cover(fr, PI.style(name), cover, cover.get("photo"), total))
         imgs += [slide(fr, s, i == len(slides) - 1) for i, s in enumerate(slides)]
         for i, im in enumerate(imgs):
             suffix = "" if fmt == "feed" else "-916"

@@ -58,8 +58,13 @@ jobs:
           cache: pip
       - name: Dépendances (Python, ffmpeg, polices)
         run: |
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r requirements-pipeline.txt
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core > /dev/null
+      - name: Modèle de détourage (une de magazine)
+        uses: actions/cache@v4
+        with:
+          path: ~/.u2net
+          key: rembg-isnet-general-use
       - name: Mémoire des tâches (chaînes suivies, découvertes)
         uses: actions/cache@v4
         with:
