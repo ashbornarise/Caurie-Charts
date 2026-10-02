@@ -630,7 +630,10 @@ def imports(request):
                                 (SELECT COUNT(*) FROM chart_observations o5 JOIN tracks t5 ON t5.id = o5.track_id WHERE t5.artist_id = a.id) AS obs
                              FROM artists a LEFT JOIN countries gc ON gc.id = a.guessed_country_id
                              WHERE a.status = 'pending'
-                             ORDER BY a.base_country IS NULL, COALESCE(a.fans, 0) + COALESCE(a.youtube_subscribers, 0) / 10.0 DESC, a.name COLLATE cauri_ci LIMIT 300"""),
+                             -- Artistes présents dans un classement ces 14 derniers jours d'abord (ceux qui comptent pour le Top), mieux placés en tête
+                             ORDER BY EXISTS (SELECT 1 FROM chart_observations ro JOIN tracks rt ON rt.id = ro.track_id
+                                                     WHERE rt.artist_id = a.id AND ro.observed_on >= CURRENT_DATE - 14) DESC,
+                                      best_position NULLS LAST, a.base_country IS NULL, COALESCE(a.fans, 0) DESC, a.name COLLATE cauri_ci LIMIT 300"""),
         "autoClips": db.all("""SELECT p.id, p.external_id, p.url, t.title, a.name AS artist FROM track_platform_ids p
                                JOIN tracks t ON t.id = p.track_id JOIN artists a ON a.id = t.artist_id
                                WHERE p.platform = 'youtube' AND p.match_status = 'auto' AND a.status = 'active' ORDER BY p.id DESC LIMIT 100"""),
