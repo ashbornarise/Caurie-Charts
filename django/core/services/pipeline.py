@@ -100,6 +100,11 @@ class DailyPipeline:
                 return lines
             self._step("8. Posts réseaux sociaux", posts)
 
+        if weekday == 7:
+            # Dimanche : l'article de la semaine (Cauri Hebdo) dans Actualités, écrit à partir des chiffres réels
+            from core.services import magazine
+            self._step("8 ter. Cauri Hebdo", lambda: [magazine.publish()])
+
         if weekday == 7 and telegram.configured():
             # Dimanche : Top 10 de la semaine dans la chaîne Telegram (tendances tant qu'aucun classement officiel n'est publié) ;
             # avec les posts du lundi, mercredi et vendredi : 4 publications par semaine

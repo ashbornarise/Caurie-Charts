@@ -125,3 +125,16 @@ def test_reliability_levels(monkeypatch):
     assert reliability.measure(1, rows)["level"] == "élevée"
     monkeypatch.setattr(reliability.db, "one", lambda *a, **k: {"sources": 0, "days": 7, "last": date.today().isoformat()})
     assert reliability.measure(1, rows)["score"] == 30  # que des sources calculées : indicatif
+
+
+def test_magazine_article_uses_only_given_facts():
+    from collections import Counter
+    from core.services import magazine
+    row = lambda i, c="NG": {"title": f"Titre {i}", "artist_name": "Ayra Starr" if i == 1 else f"Artiste {i}", "artist_country": c,
+                             "track_id": i, "seen": [{"source": "deezer"}, {"source": "deezer_popularity"}]}
+    f = {"top": [row(i) for i in range(1, 21)], "buzz": [], "fresh": [row(1)], "leaders": [], "countries": Counter({"NG": 20})}
+    art = magazine.write(f, "41")
+    assert "d'Ayra Starr" in art["title"]
+    assert "Popularité" not in art["body"]          # source calculée : jamais présentée comme une plateforme
+    assert "nouveautés" not in art["body"]           # nouveauté déjà dans le Top 10 : pas répétée
+    assert magazine.write({**f, "top": f["top"][:5]}, "41") is None
