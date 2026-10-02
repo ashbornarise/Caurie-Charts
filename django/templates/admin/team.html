@@ -7,6 +7,11 @@
     <p>Mot de passe, affiché <strong>une seule fois</strong> : <code class="secret">{{ shown.password }}</code></p>
     <p class="muted">Transmettez-le à la personne par un canal privé (en main propre, message direct). Elle se connecte sur
         <a href="{{ path('admin/connexion') }}">{{ url('admin/connexion') }}</a>. Rechargez la page : il ne sera plus visible.</p>
+    <form method="post" action="{{ path('admin/equipe/' ~ shown.id ~ '/fiche') }}" class="toolbar">
+        {{ csrf_field() }}
+        <input type="hidden" name="password" value="{{ shown.password }}">
+        <button class="button" type="submit" autofocus>Télécharger sa fiche d’accueil (PDF : accès, classements, règles)</button>
+    </form>
 </div>
 {% endif %}
 
@@ -28,6 +33,7 @@
                     {% if u.role == 'editor' %}<button class="button button--small button--ghost" name="action" value="admin" type="submit">Passer administrateur</button>
                     {% elif u.id != me %}<button class="button button--small button--ghost" name="action" value="editor" type="submit">Passer éditeur</button>{% endif %}
                     <button class="button button--small button--ghost" name="action" value="mot-de-passe" type="submit">Nouveau mot de passe</button>
+                    <button class="button button--small button--ghost" formaction="{{ path('admin/equipe/' ~ u.id ~ '/fiche') }}" type="submit">Fiche PDF</button>
                     {% if u.id != me %}
                         {% if u.is_active %}<button class="button button--small button--danger" name="action" value="desactiver" type="submit">Désactiver</button>
                         {% else %}<button class="button button--small" name="action" value="activer" type="submit">Réactiver</button>{% endif %}
@@ -46,6 +52,12 @@
     {{ partial('partials/field', name='name', label='Nom', attrs='maxlength="150" autocomplete="off"', old=old, errors=errors) }}
     {{ partial('partials/field', name='email', label='E-mail', type='email', attrs='maxlength="190" autocomplete="off"', old=old, errors=errors) }}
     {{ partial('partials/field', name='role', label='Rôle', type='select', options=roles, old=old, errors=errors) }}
+    <div class="field{{ ' field--error' if errors.password }}">
+        <label for="f-password">Mot de passe <span class="optional">facultatif</span></label>
+        <p class="field__hint" id="f-password-hint">Laissez vide pour en générer un solide. Sinon : 12 caractères au moins, en mélangeant minuscules, majuscules, chiffres ou symboles.</p>
+        <input id="f-password" name="password" type="text" minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="f-password-hint">
+        {% if errors.password %}<p class="field__error">{{ errors.password }}</p>{% endif %}
+    </div>
     <button class="button" type="submit">Créer le compte</button>
-    <p class="muted">Un mot de passe solide est généré et affiché une seule fois. Conseillez à chaque membre d’activer la double authentification.</p>
+    <p class="muted">Le mot de passe s’affiche une seule fois, en haut de la page, avec le bouton pour télécharger la fiche d’accueil PDF du membre.</p>
 </form>
