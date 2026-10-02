@@ -59,6 +59,36 @@ def text(post: dict, service: str) -> str:
     return body[:2200]  # limite des légendes Instagram et TikTok
 
 
+TIKTOK_SIZE = (1080, 1920)  # TikTok refuse les photos de plus de 2 073 600 pixels : nos visuels 4K sont réduits
+
+
+def tiktok_copies(files: list, base: str) -> list:
+    """Copie 1080 × 1920 de chaque visuel 9:16, créée une fois et déposée à côté de l'original (« …-tt.jpg »)."""
+    import io
+    from concurrent.futures import ThreadPoolExecutor
+    from PIL import Image
+    from core import storage
+    from core.services.news import http_get
+
+    def one(f: str) -> str:
+        small = f.rsplit(".", 1)[0] + "-tt.jpg"
+        try:
+            if HttpClient(15).request("HEAD", f"{base}/media/social/{small}")["status"] == 200:
+                return small
+            data = http_get(f"{base}/media/social/{f}", binary=True)
+            img = Image.open(io.BytesIO(data)).convert("RGB")
+            img = img.resize(TIKTOK_SIZE, Image.LANCZOS) if img.size[0] > TIKTOK_SIZE[0] else img
+            out = io.BytesIO()
+            img.save(out, "JPEG", quality=90, optimize=True)
+            storage.blob_put(f"media/social/{small}", out.getvalue(), "image/jpeg")
+            return small
+        except Exception:  # noqa: BLE001 — sans copie, on garde l'original (TikTok le refusera, l'erreur sera visible)
+            return f
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        return list(pool.map(one, files))
+
+
 def images(post: dict, service: str) -> list:
     """Adresses publiques des visuels : 9:16 pour TikTok, 4:5 ailleurs (couverture puis titres)."""
     from core import storage
@@ -71,6 +101,7 @@ def images(post: dict, service: str) -> list:
         slides = []
     if service == "tiktok":
         files = [s.get("tiktok") for s in slides if isinstance(s, dict)] or [post.get("image_story")]
+        files = tiktok_copies([f for f in files if f][:MAX_IMAGES["tiktok"]], base)
     else:
         files = [s["file"] if isinstance(s, dict) else s for s in slides] or [post.get("image_square")]
     return [f"{base}/media/social/{f}" for f in files if f][:MAX_IMAGES.get(service, 10)]
