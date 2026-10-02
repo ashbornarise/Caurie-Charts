@@ -102,8 +102,16 @@ class DailyPipeline:
 
         if weekday == 7:
             # Dimanche : l'article de la semaine (Cauri Hebdo) dans Actualités, écrit à partir des chiffres réels
-            from core.services import magazine
-            self._step("8 ter. Cauri Hebdo", lambda: [magazine.publish()])
+            def hebdo():
+                from core.services import magazine
+                from core.services.social import editorial
+                f = magazine.facts()
+                lines = [magazine.publish(f=f)]
+                post = editorial.hebdo_post(f, clock.today())  # le magazine en carrousel, à 18 h sur les réseaux
+                if post and buffer.configured():
+                    lines.append("Buffer : " + buffer.schedule(post, buffer.evening(clock.today())))
+                return lines
+            self._step("8 ter. Cauri Hebdo (article et carrousel)", hebdo)
 
         if weekday == 7 and telegram.configured():
             # Dimanche : Top 10 de la semaine dans la chaîne Telegram (tendances tant qu'aucun classement officiel n'est publié) ;

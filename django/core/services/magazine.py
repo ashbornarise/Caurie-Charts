@@ -73,7 +73,7 @@ def write(f: dict, week: str) -> dict | None:
     return {"title": title[:200], "summary": summary[:400], "body": "\n\n".join(paras), "image": one.get("cover_url") or one.get("artist_image")}
 
 
-def publish(today=None) -> str:
+def publish(today=None, f: dict | None = None) -> str:
     """Article de la semaine (une seule fois par semaine ISO), avec la pochette du n°1 en vignette."""
     from core.services.news import FeedImporter
     day = today or clock.today()
@@ -81,7 +81,7 @@ def publish(today=None) -> str:
     guid = f"cauri-hebdo-{year}-W{week:02d}"
     if db.value("SELECT 1 FROM news WHERE external_guid = ?", [guid]):
         return f"Cauri Hebdo {year}-S{week} déjà publié"
-    art = write(facts(), str(week))
+    art = write(f or facts(), str(week))
     if not art:
         return "Cauri Hebdo : pas assez de titres cette semaine"
     image = FeedImporter()._thumbnail(art["image"], guid) if art.get("image") else None
