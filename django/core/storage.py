@@ -55,6 +55,28 @@ def blob_put(pathname: str, data: bytes, content_type: str) -> str:
     return _blob_put(pathname, data, content_type)
 
 
+def blob_list(prefix: str) -> list:
+    """Fichiers du Blob sous un préfixe : [{pathname, url, size, uploadedAt}] (une opération par page de 1 000)."""
+    out, cursor = [], None
+    while True:
+        params = {"prefix": prefix, "limit": 1000, **({"cursor": cursor} if cursor else {})}
+        r = requests.get("https://blob.vercel-storage.com", params=params, timeout=30,
+                         headers={"authorization": f"Bearer {_blob_token()}", "x-api-version": "7"})
+        r.raise_for_status()
+        data = r.json()
+        out += data.get("blobs", [])
+        cursor = data.get("cursor")
+        if not data.get("hasMore"):
+            return out
+
+
+def blob_delete(urls: list) -> None:
+    """Supprime des fichiers du Blob (les suppressions ne sont pas facturées)."""
+    for i in range(0, len(urls), 500):
+        requests.post("https://blob.vercel-storage.com/delete", json={"urls": urls[i:i + 500]}, timeout=60,
+                      headers={"authorization": f"Bearer {_blob_token()}", "x-api-version": "7"}).raise_for_status()
+
+
 def check_image(upload) -> str:
     """Valide une image envoyée ; retourne son extension. ValueError avec un message affichable."""
     if upload is None:

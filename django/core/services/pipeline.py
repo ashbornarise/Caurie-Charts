@@ -23,7 +23,7 @@ from core.services.imports.watch import ArtistWatch
 from core.services.news import FeedImporter
 from core.services.platforms import CollectService, HttpClient, clients, log_write
 from core.services import buffer, telegram
-from core.services.social.generator import PostGenerator, purge_orphans
+from core.services.social.generator import PostGenerator, purge_blob, purge_orphans
 
 
 class DailyPipeline:
@@ -120,7 +120,7 @@ class DailyPipeline:
 
         def cleanup():
             live_chart.clear_cache()
-            return ["cache des classements vidé", f"{purge_orphans()} fichiers de posts abandonnés supprimés"]
+            return ["cache des classements vidé", f"{purge_orphans()} fichiers de posts abandonnés supprimés", purge_blob()]
         self._step("9. Ménage (cache, fichiers orphelins)", cleanup)
         log_write("cron", "info", "pipeline quotidien", {"etapes": [[r["step"], r["ok"], round(r["seconds"], 1)] for r in self.report]})
         return self.report

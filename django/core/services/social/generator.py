@@ -268,6 +268,32 @@ def delete_files(post: dict) -> None:
             os.unlink(f)
 
 
+BLOB_KEEP_DAYS = 45  # offre gratuite de Vercel Blob : 1 Go ; au-delà, le stockage est bloqué 30 jours
+
+
+def purge_blob(keep_days: int = BLOB_KEEP_DAYS) -> str:
+    """Ménage du Blob : visuels et vidéos des posts de plus de keep_days jours, et fichiers qu'aucun post n'utilise
+    (essais, posts régénérés) après un jour. Les vignettes d'actualités et les autres dossiers ne sont pas touchés."""
+    from datetime import datetime, timedelta, timezone
+    from core import storage
+    if not storage.blob_token():
+        return "Blob non configuré"
+    recent = set()
+    for p in db.all("SELECT image_square, image_story, video, carousel FROM social_posts WHERE slot_date >= CURRENT_DATE - ?", [keep_days]):
+        recent.update(os.path.basename(x) for x in [p["image_square"], p["image_story"], p["video"]] + _slide_files(p) if x)
+    recent |= {f.rsplit(".", 1)[0] + "-tt.jpg" for f in recent}  # copies TikTok 1080 × 1920
+    now = datetime.now(timezone.utc)
+    old, size = [], 0
+    for b in storage.blob_list("media/social/"):
+        name = b["pathname"].rsplit("/", 1)[-1]
+        age = now - datetime.fromisoformat(b["uploadedAt"].replace("Z", "+00:00"))
+        if name not in recent and age > timedelta(days=1):
+            old.append(b["url"])
+            size += int(b.get("size") or 0)
+    storage.blob_delete(old)
+    return f"Blob : {len(old)} fichiers anciens supprimés ({size / 1e6:.0f} Mo libérés)"
+
+
 def purge_orphans() -> int:
     """Supprime les fichiers de public/media/social qu'aucun post n'utilise plus (plus d'une heure)."""
     used = set()
