@@ -106,3 +106,11 @@ def test_youtube_handles_and_channel_names():
     assert S.same_name("BurnaBoyVEVO", "Burna Boy")
     assert not S.same_name("Burna Boy Fans", "Burna Boy")
     assert not S.same_name("", "")
+
+
+def test_mail_without_smtp_is_silent(monkeypatch):
+    from core import mail
+    for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASSWORD"):
+        monkeypatch.delenv(k, raising=False)
+    assert mail.configured() is False
+    assert mail.send("a@b.co", "s", "t") is False

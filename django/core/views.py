@@ -355,6 +355,10 @@ def _contact_send(request):
     if errors:
         return render(request, "contact", {"old": old, "errors": errors, "type": old["type"], "meta": {"title": t("contact.title")}}, 422)
     db.insert("contact_messages", {**old, "ip_hash": h})
+    from core import mail
+    kind = "contestation" if old["type"] == "contestation" else "message"
+    mail.notify_admin(f"{kind.capitalize()} : {old['subject']}", f"De : {old['name']} <{old['email']}>\n\n{old['message']}", old["email"])
+    mail.acknowledge(old["email"], old["name"], kind)
     flash(request, "success", t("contact.sent"))
     return redirect("/contact")
 

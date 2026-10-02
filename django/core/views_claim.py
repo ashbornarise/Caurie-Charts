@@ -44,5 +44,8 @@ def claim(request, slug: str):
                       "Demande :", old["message"] or "-"])
     db.insert("contact_messages", {"type": "claim", "name": old["name"], "email": old["email"],
                                    "subject": f"Revendication : {artist['name']}"[:200], "message": body, "ip_hash": h})
+    from core import mail
+    mail.notify_admin(f"Revendication : {artist['name']}", f"De : {old['name']} <{old['email']}>\n\n{body}", old["email"])
+    mail.acknowledge(old["email"], old["name"], "demande de revendication")
     flash(request, "success", "Demande envoyée. Nous vérifions les preuves et revenons vers vous par e-mail sous sept jours.")
     return redirect(f"/artiste/{slug}")
