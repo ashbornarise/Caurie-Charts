@@ -280,7 +280,10 @@ def track(request, slug: str):
     spotify = db.one(
         """SELECT streams, period_start AS start, period_end AS "end" FROM submissions
            WHERE track_id = ? AND platform = 'spotify' AND status = 'validated' ORDER BY period_end DESC LIMIT 1""", [int(tr["id"])])
+    recent = db.value("""SELECT 1 FROM chart_observations WHERE track_id = ? AND observed_on >= CURRENT_DATE - 30
+                          AND source NOT IN ('deezer_popularity', 'youtube_views') LIMIT 1""", [int(tr["id"])])
     return render(request, "track", {
+        "robots": None if recent else "noindex, follow",
         "spotify": spotify, "track": tr, "positions": positions, "links": repos.track_links(int(tr["id"])),
         "peak": min(p["position"] for p in positions) if positions else None,
         "meta": {"title": tr["title"] + " · " + tr["artist_name"] + " · " + brand(),
@@ -554,23 +557,82 @@ def robots(request):
 
 
 def sitemap(request):
+    """Plan du site avec ses images (photos d'artistes, pochettes, unes et pages des numéros, aperçus) pour Google Images."""
     from core.helpers import e
     urls = [url("/"), url("methodologie"), url("a-propos"), url("contact"), url("declarer")]
+    images: dict = {url("/"): [(og_image("classement", "wa"), "Top 20 Afrique de l’Ouest · Cauri Charts")]}
     for c in repos.countries():
         for code, ch in conf.get("charts").items():
             if ch["public"] and not ch.get("regional"):
                 for p in ch["periods"]:
                     urls.append(url(chart_path(c["code"], code, p)))
+        images[url(chart_path(c["code"], "prime", "week"))] = [(og_image("classement", c["code"].lower()), f"Top {country_name(c['code'])} · Cauri Charts")]
     urls += [url(p) for p in ("actualites", "partenaires", "integrer", "mentions-legales", "confidentialite", "cookies")]
     data = repos.sitemap_entries()
-    dated = {url("artiste/" + a["slug"]): a["updated_at"] for a in data["artists"]}
-    dated.update({url("actualites/" + n["slug"]): n["published_at"] for n in data["news"]})
-    urls += list(dated) + [url("titre/" + x["slug"]) for x in data["tracks"]]
-    xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    dated = {}
+    for a in data["artists"]:
+        u = url("artiste/" + a["slug"])
+        dated[u] = a["updated_at"]
+        images[u] = [(og_image("artiste", a["slug"]), f"{a['name']} · Cauri Charts")]
+        if str(a.get("image") or "").startswith("https://"):
+            images[u].append((a["image"], f"{a['name']}, photo"))
+    for n in data["news"]:
+        u = url("actualites/" + n["slug"])
+        dated[u] = n["published_at"]
+        imgs = [(sl, f"{n['title']} · page {i + 1}") for i, sl in enumerate(edition_slides(n))]
+        if not imgs and n.get("image_path"):
+            imgs = [(url("media/news/" + n["image_path"]), n["title"])]
+        if imgs:
+            images[u] = imgs[:10]
+    track_urls = []
+    for x in data["tracks"]:
+        u = url("titre/" + x["slug"])
+        track_urls.append(u)
+        images[u] = [(og_image("titre", x["slug"]), f"{x['title']} · {x['artist']} · Cauri Charts")]
+        if str(x.get("cover_url") or "").startswith("https://"):
+            images[u].append((x["cover_url"], f"{x['title']} · {x['artist']}, pochette"))
+    urls += list(dated) + track_urls
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+           'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n')
+    today = clock.today().isoformat()
+    for u in [url("/")] + [x for x in urls if "/classements/" in x]:
+        dated.setdefault(u, today)  # classements : mis à jour chaque jour
     for u in dict.fromkeys(urls):
         last = f"<lastmod>{str(dated[u])[:10]}</lastmod>" if dated.get(u) else ""
-        xml += f"  <url><loc>{e(u)}</loc>{last}</url>\n"
-    return HttpResponse(xml + "</urlset>", content_type="application/xml; charset=utf-8")
+        imgs = "".join(f"<image:image><image:loc>{e(i)}</image:loc></image:image>" for i, _ in images.get(u, []))
+        prio = "1.0" if u == url("/") else "0.9" if ("/classements/" in u and "/semaine" in u) or "cauri-hebdo" in u or "cauri-matin" in u \
+            else "0.7" if "/artiste/" in u or "/classements/" in u else "0.4" if "/titre/" in u else "0.5"
+        xml += f"  <url><loc>{e(u)}</loc>{last}<priority>{prio}</priority>{imgs}</url>\n"
+    resp = HttpResponse(xml + "</urlset>", content_type="application/xml; charset=utf-8")
+    resp["Cache-Control"] = "public, max-age=3600, s-maxage=21600"
+    return resp
+
+
+def llms(request):
+    """Résumé du site pour les moteurs de recherche IA : quoi, comment, et le classement de ce jour."""
+    rows = [r for r in live_chart.build(None, None, 10, "prime", 20, "latest")["rows"] if not r.get("is_artist")]
+    lines = [f"# {brand()}", "",
+             "> Le classement musical hebdomadaire de 16 pays d'Afrique de l'Ouest (Togo, Bénin, Ghana, Côte d'Ivoire, Sénégal, "
+             "Nigeria, Burkina Faso, Mali, Niger, Guinée, Guinée-Bissau, Cap-Vert, Gambie, Liberia, Sierra Leone, Mauritanie), "
+             "calculé chaque jour à partir des classements publics d'Apple Music, Deezer, Shazam et YouTube, selon une méthode publique.", "",
+             f"## Top 10 Afrique de l'Ouest au {clock.today():%d/%m/%Y}", ""]
+    lines += [f"{r['rank']}. {r['title']} - {r['artist_name']} ({url('titre/' + r['track_slug'])})" for r in rows]
+    lines += ["", "## Pages principales", "",
+              f"- Top 20 Afrique de l'Ouest : {url('classements/afrique-de-l-ouest')}",
+              *[f"- Top {country_name(c['code'])} : {url(chart_path(c['code'], 'prime'))}" for c in repos.countries()],
+              f"- Méthodologie et indice de fiabilité : {url('methodologie')}",
+              f"- Actualités, Cauri Hebdo et Cauri Matin : {url('actualites')}",
+              f"- À propos : {url('a-propos')}", ""]
+    resp = HttpResponse("\n".join(lines), content_type="text/plain; charset=utf-8")
+    resp["Cache-Control"] = "public, max-age=3600"
+    return resp
+
+
+def favicon(request):
+    from django.http import FileResponse
+    resp = FileResponse(open(storage.REPO / "public" / "favicon.ico", "rb"), content_type="image/x-icon")
+    resp["Cache-Control"] = "public, max-age=604800"
+    return resp
 
 
 # ---------------------------------------------------------------- images de partage

@@ -36,6 +36,8 @@ urlpatterns = [
     re_path(r"^partage/(?P<run_id>\d+)-(?P<fmt>square|story)$", views.share_image),
     re_path(r"^apercu/(?P<kind>classement|titre|artiste|edition|defaut)/(?P<key>[a-z0-9-]+)\.jpg$", views.apercu),
     path("robots.txt", views.robots),
+    path("favicon.ico", views.favicon),
+    path("llms.txt", views.llms),
     path("sitemap.xml", views.sitemap),
     # Administration
     path("admin/connexion", admin.login),

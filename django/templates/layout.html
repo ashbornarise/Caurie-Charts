@@ -10,6 +10,7 @@
     <title>{{ meta.title }}</title>
     <meta name="description" content="{{ meta.description }}">
     <link rel="canonical" href="{{ meta.url }}">
+    {% if robots %}<meta name="robots" content="{{ robots }}">{% endif %}
     <meta property="og:site_name" content="{{ brand() }}">
     <meta property="og:title" content="{{ meta.title }}">
     <meta property="og:description" content="{{ meta.description }}">
@@ -31,6 +32,9 @@
     {% if meta.jsonld %}<script type="application/ld+json">{{ meta.jsonld }}</script>{% endif %}
     <link rel="icon" href="{{ asset('img/brand/monogram.svg') }}" type="image/svg+xml">
     <link rel="icon" href="{{ asset('img/brand/favicon-32.png') }}" type="image/png" sizes="32x32">
+    <link rel="icon" href="{{ asset('img/brand/favicon-48.png') }}" type="image/png" sizes="48x48">
+    <link rel="icon" href="{{ asset('img/brand/favicon-192.png') }}" type="image/png" sizes="192x192">
+    <link rel="shortcut icon" href="/favicon.ico">
     <link rel="apple-touch-icon" href="{{ asset('img/brand/apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>

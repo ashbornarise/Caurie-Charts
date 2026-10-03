@@ -284,14 +284,15 @@ def exclusions(limit: int = 50) -> list[dict]:
 
 def sitemap_entries() -> dict:
     return {
-        "artists": db.all("SELECT slug, updated_at FROM artists WHERE status = 'active'"),
+        "artists": db.all("SELECT slug, name, updated_at, COALESCE(image_hd_url, image_url) AS image FROM artists WHERE status = 'active'"),
         # Titres classés par Cauri Charts, ou vus dans les classements des plateformes sur 90 jours (artistes de la zone)
-        "tracks": db.all("""SELECT DISTINCT t.slug FROM tracks t JOIN artists a ON a.id = t.artist_id
+        "tracks": db.all("""SELECT DISTINCT t.slug, t.title, a.name AS artist, t.cover_url FROM tracks t JOIN artists a ON a.id = t.artist_id
                             WHERE a.status <> 'out_of_scope' AND (
                                 EXISTS (SELECT 1 FROM chart_entries e JOIN chart_runs r ON r.id = e.chart_run_id AND r.status = 'published'
                                         WHERE e.track_id = t.id)
-                                OR EXISTS (SELECT 1 FROM chart_observations o WHERE o.track_id = t.id AND o.observed_on >= CURRENT_DATE - 90))"""),
-        "news": db.all("SELECT slug, published_at FROM news WHERE status = 'published' AND published_at <= ?", [now_utc()]),
+                                OR EXISTS (SELECT 1 FROM chart_observations o WHERE o.track_id = t.id AND o.observed_on >= CURRENT_DATE - 30
+                                           AND o.source NOT IN ('deezer_popularity', 'youtube_views')))"""),
+        "news": db.all("SELECT slug, title, published_at, image_path, external_guid FROM news WHERE status = 'published' AND published_at <= ?", [now_utc()]),
     }
 
 
