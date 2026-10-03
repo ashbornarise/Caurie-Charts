@@ -164,3 +164,14 @@ def test_best_photo_choice():
     assert best([{"source": "apple", "side": 400}, {"source": "deezer", "side": 1000}])["source"] == "deezer"
     assert best([{"source": "youtube", "side": 300}]) is None
     assert sized("https://is1-ssl.mzstatic.com/a/b/file.png/1200x630cw.png", 2400).endswith("/2400x2400bb.jpg")
+
+
+def test_item_slides_render_without_blur():
+    from core.services.social import carousel as C, image as PI
+    f = PI.style("essai")
+    item = {"rank": 2, "artist": "Burna Boy", "title": "Dem Dey", "figure_value": "1 000", "figure_label": "vues", "image": None}
+    for size, safe in C.FORMATS.values():
+        fr = PI.Frame(*size, safe)
+        for v in ("bandeau", "degrade"):
+            assert C._item_slide(fr, f, item, 2, 6, "Shazam", variant=v).size == (fr.w, fr.h)
+    assert C.slide_variant("x") in ("bandeau", "degrade") and C.MUSIC_DIR.name == "music"

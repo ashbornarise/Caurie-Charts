@@ -328,6 +328,9 @@ def _item_slide(fr: PI.Frame, f: dict, item: dict, n: int, total: int, source: s
     return img
 
 
+MUSIC_DIR = PI.REPO / "resources" / "music"
+
+
 def _music(seed: str) -> str | None:
     """Morceau libre de droits tiré au sort (stable pour une même vidéo) ; licences dans resources/music/LISEZMOI.txt."""
     import random
