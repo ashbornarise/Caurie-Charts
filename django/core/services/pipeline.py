@@ -81,6 +81,19 @@ class DailyPipeline:
                 return lines
             self._step("8. Posts réseaux sociaux", posts)
 
+        if weekday in (2, 4):
+            # Mardi et jeudi : portrait d'un grand artiste (bio, palmarès, chiffres, titres), à 18 h sur les réseaux
+            def portrait():
+                from core.services.social import portrait as P
+                post = P.post(clock.today())
+                if not post:
+                    return ["aucun artiste avec assez de faits sourcés aujourd'hui"]
+                lines = [post["title"]]
+                if buffer.configured():
+                    lines.append("Buffer : " + buffer.schedule(post, buffer.evening(clock.today())))
+                return lines
+            self._step("8 quater. Portrait d'artiste", portrait)
+
         if weekday == 7:
             # Dimanche : l'article de la semaine (Cauri Hebdo) dans Actualités, écrit à partir des chiffres réels
             def hebdo():

@@ -92,7 +92,17 @@ def _all() -> dict:
             "priority": ["TG", "BJ"],
         },
         "watchlist": {
-            "artists": {"Paki Chenzu": "TG", "Joachin Migos": None, "Wantché": None, "døpelym": None},
+            # Têtes d'affiche par pays (liste de la rédaction, octobre 2026) : suivies chaque nuit, pays indiqué comme
+            # suggestion à confirmer dans Admin > Import (jamais confirmé seul)
+            "artists": {"Paki Chenzu": "TG", "Joachin Migos": None, "Wantché": None, "døpelym": None,
+                        "Vano Baby": "BJ", "Nikanor": "BJ", "Angélique Kidjo": "BJ", "Amzy": "BF", "Tanya": "BF", "Smarty": "BF",
+                        "Mayra Andrade": "CV", "Elida Almeida": "CV", "Didi B": "CI", "Roseline Layo": "CI", "Jizzle": "GM",
+                        "ST Da Gambian Dream": "GM", "Black Sherif": "GH", "King Promise": "GH", "Stonebwoy": "GH",
+                        "Djelykaba Bintou": "GN", "Soul Bang's": "GN", "Patche Di Rima": "GW", "Karyna Gomes": "GW",
+                        "JzyNo": "LR", "MC Caro": "LR", "Iba One": "ML", "Fatoumata Diawara": "ML", "Adviser": "MR",
+                        "Barakina": "NE", "Safiath": "NE", "Asake": "NG", "Rema": "NG", "Burna Boy": "NG", "Tems": "NG",
+                        "Wally B. Seck": "SN", "Mia Guissé": "SN", "Dip Doundou Guiss": "SN", "Drizilik": "SL", "Star Zee": "SL",
+                        "Santrinos Raphaël": "TG", "Toofan": "TG"},
             "channels": {},
             "channel_names": {"UNIVERSAL MUSIC TOGO": "TG"},
         },

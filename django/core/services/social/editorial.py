@@ -56,7 +56,7 @@ def slide(fr: PI.Frame, s: dict, last: bool) -> Image.Image:
         num_px, main_px, sub_px = min(84, row_h * 0.62), min(40, row_h * 0.32), min(26, row_h * 0.2)
         for num, main, sub in s["rows"]:
             fr.rect(d, pad, y, W - pad, y + 2, (*s["fg"], 70))
-            nw = fr.width("10", FONTS["display"], num_px) + 24
+            nw = max(fr.width(str(r[0]), FONTS["display"], num_px) for r in s["rows"]) + 24  # années, rangs, codes pays
             fr.text(d, num_px, pad, y + row_h * 0.72, acc, FONTS["display"], str(num))
             fr.text(d, main_px, pad + nw, y + row_h * 0.45, fg, FONTS["bold"], fr.fit(main, FONTS["bold"], main_px, w - nw))
             if sub:
