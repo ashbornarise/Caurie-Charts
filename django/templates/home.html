@@ -27,25 +27,25 @@
 
     <section aria-label="{{ t('home.title', {'country': country_name(code), 'size': country.chart_size}) }}">
         {% if not entries and live and live.rows %}
-            <p class="notice notice--live">{{ t('chart.live_intro') }} <strong>{{ t('chart.live_day', {'date': fmt_date(live.day)}) }}</strong><br>{{ t('chart.official_soon') }}</p>
-            <ol class="chart-list chart-list--long">
-                {% for e in live.rows %}
-                    {{ partial('partials/live-entry', e=e, showSourceCountry=true) }}
+            <p class="notice notice--live">{{ t('chart.live_intro') }} <strong>{{ t('chart.live_day', {'date': fmt_date(live.day)}) }}</strong></p>
+            <ol class="chart-list chart-list--compact chart-list--grid">
+                {% for e in live.rows[:10] %}
+                    {{ partial('partials/live-entry', e=e, compact=true, showSourceCountry=true) }}
                 {% endfor %}
             </ol>
             <div class="chart-actions">
-                <a class="button" href="{{ chart_path(code, chartCode) ~ '?vue=direct' }}">{{ t('home.full_chart') }}</a>
+                <a class="button" href="{{ chart_path(code, chartCode) ~ '?vue=direct' }}">{{ t('home.full_chart') }} →</a>
             </div>
         {% elif not entries %}
             <p class="empty">{{ t('chart.empty') }}</p>
         {% else %}
-            <ol class="chart-list">
-                {% for e in entries %}
-                    {{ partial('partials/entry', e=e, showCountry=regional) }}
+            <ol class="chart-list chart-list--compact chart-list--grid">
+                {% for e in entries[:10] %}
+                    {{ partial('partials/entry', e=e, compact=true, showCountry=regional) }}
                 {% endfor %}
             </ol>
             <div class="chart-actions">
-                <a class="button" href="{{ chart_path(code, chartCode, periodType, run.period_key) }}">{{ t('home.full_chart') }}</a>
+                <a class="button" href="{{ chart_path(code, chartCode, periodType, run.period_key) }}">{{ t('home.full_chart') }} →</a>
                 <a class="button button--ghost" href="{{ share_url(run.id, 'square') }}" download>{{ t('share.square') }}</a>
                 <a class="button button--ghost" href="{{ share_url(run.id, 'story') }}" download>{{ t('share.story') }}</a>
             </div>
@@ -64,13 +64,13 @@
                 <p class="highlight__desc">{{ t('chart.short.' ~ hcode) }}</p>
                 {% if h.live %}
                     <ol class="chart-list chart-list--compact">
-                        {% for e in h.live %}
+                        {% for e in h.live[:3] %}
                             {{ partial('partials/live-entry', e=e, compact=true) }}
                         {% endfor %}
                     </ol>
                 {% elif h.entries %}
                     <ol class="chart-list chart-list--compact">
-                        {% for e in h.entries %}
+                        {% for e in h.entries[:3] %}
                             {{ partial('partials/entry', e=e, compact=true) }}
                         {% endfor %}
                     </ol>
@@ -82,45 +82,13 @@
     </section>
     {% endif %}
 
-    <section class="countries" id="pays">
+    <section class="countries countries--chips" id="pays">
         <h2 class="section-title">{{ t('home.all_countries') }}</h2>
-        <ul class="countries__list">
-            {% set one = numberOnes.get('WA') %}
-            <li class="countries__region">
-                <a class="country-card country-card--region{{ ' country-card--current' if regional }}" href="{{ home_link('WA', periodType) }}#classement" {{ Markup('aria-current="true"') if regional }}>
-                    <span class="country-card__flags">{% for c in countries %}{{ flag(c.code, 24, 'country-card__flag') }}{% endfor %}</span>
-                    <span class="country-card__body">
-                        <span class="country-card__size">{{ t('home.showing') if regional else t('home.region_card', {'n': countries|length}) }}</span>
-                        <span class="country-card__name">{{ country_name('WA') }}</span>
-                    </span>
-                    {% if one %}
-                    <span class="country-card__one">
-                        <span class="country-card__one-label">{{ t('home.number_one') }}</span>
-                        <span class="country-card__one-title">{{ one.title }}</span>
-                        <span class="country-card__one-artist">{{ one.artist_name }}</span>
-                    </span>
-                    {% endif %}
-                </a>
-            </li>
-            {% for c in countries %}{% set current = c.code == code %}{% set one = numberOnes.get(c.code) %}
-                <li>
-                    <a class="country-card country-card--{{ c.code|lower }}{{ ' country-card--current' if current }}" href="{{ home_link(c.code, periodType) }}#classement" {{ Markup('aria-current="true"') if current }}>
-                        <span class="country-card__head">
-                            {{ flag(c.code, 32, 'country-card__flag') }}
-                            <span class="country-card__size">{{ t('home.showing') if current else t('home.top_n', {'n': c.chart_size}) }}</span>
-                        </span>
-                        <span class="country-card__name">{{ country_name(c.code) }}</span>
-                        {% if one %}
-                        <span class="country-card__one">
-                            <span class="country-card__one-label">{{ t('home.number_one') }}</span>
-                            <span class="country-card__one-title">{{ one.title }}</span>
-                            <span class="country-card__one-artist">{{ one.artist_name }}</span>
-                        </span>
-                        {% else %}
-                        <span class="country-card__one country-card__one--empty">{{ t('chart.empty_short') }}</span>
-                        {% endif %}
-                    </a>
-                </li>
+        <ul class="country-chips">
+            <li><a class="country-chip{{ ' country-chip--current' if regional }}" href="{{ home_link('WA', periodType) }}#classement" {{ Markup('aria-current="true"') if regional }}>{{ country_name('WA') }}</a></li>
+            {% for c in countries %}{% set current = c.code == code %}
+            <li><a class="country-chip{{ ' country-chip--current' if current }}" href="{{ home_link(c.code, periodType) }}#classement" {{ Markup('aria-current="true"') if current }}
+                   title="{{ ('N°1 : ' ~ numberOnes[c.code].title ~ ' · ' ~ numberOnes[c.code].artist_name) if numberOnes.get(c.code) }}">{{ flag(c.code, 18) }}{{ country_name(c.code) }}</a></li>
             {% endfor %}
         </ul>
     </section>

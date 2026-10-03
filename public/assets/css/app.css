@@ -701,3 +701,12 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .artist-news--strip { margin: 18px 0 6px; }
 .artist-news--strip .artist-news__list { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
 .artist-news--strip .artist-news__item { flex: 0 0 280px; scroll-snap-align: start; }
+
+/* Accueil façon Billboard : Top 10 en deux colonnes, le reste sur la page du classement */
+@media (min-width: 720px) { .chart-list--grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: column; grid-template-rows: repeat(5, auto); column-gap: 24px; } }
+
+/* Pays en pastilles compactes (accueil) */
+.country-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.country-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: inherit; text-decoration: none; font-size: .9rem; white-space: nowrap; }
+.country-chip:hover { border-color: var(--ink-2); }
+.country-chip--current { background: var(--ink, #111); color: var(--surface, #fff); border-color: transparent; }
