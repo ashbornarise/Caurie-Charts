@@ -78,6 +78,10 @@ def render(request, template: str, data: dict | None = None, status: int = 200, 
             data["aside"] = aside(c)
             data["asideWrap"] = True
     data.setdefault("countries", repos.countries())
+    try:
+        data.setdefault("footer", repos.footer_links())
+    except Exception:  # noqa: BLE001 — le bas de page ne doit jamais casser une page
+        data.setdefault("footer", {})
     data.setdefault("flash", take_flash(request))
     # Adresse canonique sans paramètres (?lang=, filtres) : une seule URL par page pour les moteurs de recherche
     meta = {"title": brand(), "description": t("meta.default_description"), "url": url(request.path),

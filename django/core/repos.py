@@ -342,3 +342,25 @@ def partner(pid: int) -> dict | None:
 
 def random_hex(n: int) -> str:
     return secrets.token_hex(n)
+
+
+def footer_links() -> dict:
+    """Liens du bas de page (artistes et titres du moment, dernières éditions), mis en cache une heure."""
+    from django.core.cache import cache
+    data = cache.get("footer-links")
+    if data is not None:
+        return data
+    data = {
+        "artists": db.all("""SELECT a.name, a.slug FROM artists a WHERE a.status = 'active'
+                             AND EXISTS (SELECT 1 FROM chart_observations o JOIN tracks t ON t.id = o.track_id
+                                         WHERE t.artist_id = a.id AND o.observed_on >= CURRENT_DATE - 7)
+                             ORDER BY COALESCE(a.youtube_subscribers, 0) + COALESCE(a.fans, 0) DESC LIMIT 8"""),
+        "tracks": db.all("""SELECT t.title, t.slug FROM chart_observations o JOIN tracks t ON t.id = o.track_id
+                            JOIN artists a ON a.id = t.artist_id WHERE a.status = 'active' AND o.observed_on >= CURRENT_DATE - 3
+                            GROUP BY t.id, t.title, t.slug ORDER BY COUNT(DISTINCT o.source || o.country_id) DESC, MIN(o.position) LIMIT 8"""),
+        "editions": db.all("""SELECT title, slug FROM news WHERE status = 'published' AND origin = 'manual'
+                              AND (external_guid LIKE 'cauri-hebdo-%' OR external_guid LIKE 'cauri-matin-%')
+                              ORDER BY published_at DESC LIMIT 3"""),
+    }
+    cache.set("footer-links", data, 3600)
+    return data

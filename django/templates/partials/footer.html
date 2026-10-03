@@ -1,0 +1,81 @@
+{#- Bas de page complet : classements, pays, artistes et titres du moment, média, Cauri Charts (liens internes utiles au référencement) -#}
+<footer class="site-footer">
+    <div class="wrap">
+        <div class="mega-footer">
+            <div class="mega-footer__brand">
+                <img class="site-footer__logo" src="{{ asset('img/brand/logo.svg') }}" alt="{{ brand() }}" width="120" height="53" loading="lazy">
+                <p>{{ t('footer.about', {'brand': brand()}) }}</p>
+                <ul class="mega-footer__social">
+                    <li><a href="https://www.instagram.com/cauricharts" target="_blank" rel="noopener">Instagram</a></li>
+                    <li><a href="https://www.tiktok.com/@caurichartsofficial" target="_blank" rel="noopener">TikTok</a></li>
+                    {% if config('app.telegram_url') %}<li><a href="{{ config('app.telegram_url') }}" target="_blank" rel="noopener">Telegram</a></li>{% endif %}
+                </ul>
+            </div>
+            <nav aria-label="Classements">
+                <h2>Classements</h2>
+                <ul>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest') }}">Top 20 Afrique de l’Ouest</a></li>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'buzz'}) }}">Ça monte</a></li>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'fresh'}) }}">Nouveautés</a></li>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'icon'}) }}">Top artistes</a></li>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'legend'}) }}">Classiques</a></li>
+                </ul>
+            </nav>
+            {% if countries %}
+            <nav aria-label="{{ t('nav.countries') }}">
+                <h2>{{ t('footer.countries') }}</h2>
+                <ul class="mega-footer__two">
+                    {% for c in countries %}<li><a href="{{ chart_path(c.code, 'prime') }}">{{ flag(c.code, 14) }} {{ country_name(c.code) }}</a></li>{% endfor %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% if footer and footer.artists %}
+            <nav aria-label="Artistes du moment">
+                <h2>Artistes du moment</h2>
+                <ul>{% for a in footer.artists %}<li><a href="{{ path('artiste/' ~ a.slug) }}">{{ a.name }}</a></li>{% endfor %}</ul>
+            </nav>
+            {% endif %}
+            {% if footer and footer.tracks %}
+            <nav aria-label="Titres du moment">
+                <h2>Titres du moment</h2>
+                <ul>{% for tr in footer.tracks %}<li><a href="{{ path('titre/' ~ tr.slug) }}">{{ tr.title }}</a></li>{% endfor %}</ul>
+            </nav>
+            {% endif %}
+            <nav aria-label="Le média">
+                <h2>Le média</h2>
+                <ul>
+                    <li><a href="{{ path('actualites') }}">Actualités</a></li>
+                    {% for e in (footer.editions if footer else []) %}<li><a href="{{ path('actualites/' ~ e.slug) }}">{{ e.title.split(' :')[0] }}</a></li>{% endfor %}
+                </ul>
+                <h2>Artistes et pros</h2>
+                <ul>
+                    <li><a href="{{ path('declarer') }}">{{ t('nav.submit') }}</a></li>
+                    <li><a href="{{ path('integrer') }}">Intégrer le classement</a></li>
+                    <li><a href="{{ path('partenaires') }}">Partenaires</a></li>
+                </ul>
+            </nav>
+            <nav aria-label="{{ brand() }}">
+                <h2>{{ brand() }}</h2>
+                <ul>
+                    <li><a href="{{ path('a-propos') }}">{{ t('nav.about') }}</a></li>
+                    <li><a href="{{ path('methodologie') }}">{{ t('nav.methodology') }}</a></li>
+                    <li><a href="{{ path('methodologie') }}#fiabilite">Indice de fiabilité</a></li>
+                    <li><a href="{{ path('contact') }}">{{ t('nav.contact') }}</a></li>
+                    <li><a href="{{ path('langue/' ~ other_locale, {'retour': current}) }}" hreflang="{{ other_locale }}">{{ t('footer.switch_locale') }}</a></li>
+                </ul>
+                <h2>Sources</h2>
+                <ul class="mega-footer__sources"><li>Apple Music</li><li>Deezer</li><li>Shazam</li><li>YouTube</li></ul>
+            </nav>
+        </div>
+        <div class="mega-footer__bottom">
+            <p class="site-footer__legal">&copy; {{ now_year() }} {{ brand() }}. {{ t('footer.legal') }} {{ t('footer.no_tracking') }}</p>
+            <ul class="site-footer__links site-footer__links--legal">
+                <li><a href="{{ path('mentions-legales') }}">{{ t('legal.mentions') }}</a></li>
+                <li><a href="{{ path('confidentialite') }}">{{ t('legal.confidentialite') }}</a></li>
+                <li><a href="{{ path('cookies') }}">{{ t('legal.cookies') }}</a></li>
+                <li><a href="{{ path('conditions') }}">{{ t('legal.conditions') }}</a></li>
+                {% if ask_consent %}<li><a href="{{ path('cookies') }}" data-consent-open>{{ t('consent.manage') }}</a></li>{% endif %}
+            </ul>
+        </div>
+    </div>
+</footer>

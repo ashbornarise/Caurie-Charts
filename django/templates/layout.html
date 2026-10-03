@@ -62,41 +62,7 @@
     {% endif %}
 </main>
 
-<footer class="site-footer">
-    <div class="wrap">
-        <img class="site-footer__logo" src="{{ asset('img/brand/logo.svg') }}" alt="{{ brand() }}" width="120" height="53" loading="lazy">
-        {% if countries %}
-        <nav class="country-picker" aria-label="{{ t('nav.countries') }}">
-            <h2 class="country-picker__title">{{ t('footer.countries') }}</h2>
-            <ul>
-                {% for c in countries %}
-                <li><a href="{{ chart_path(c.code, 'prime') }}">{{ flag(c.code, 16) }} {{ country_name(c.code) }}</a></li>
-                {% endfor %}
-            </ul>
-        </nav>
-        {% endif %}
-        <div class="site-footer__cols">
-            <p class="site-footer__about">{{ t('footer.about', {'brand': brand()}) }}</p>
-            <ul class="site-footer__links">
-                <li><a href="{{ path('methodologie') }}">{{ t('nav.methodology') }}</a></li>
-                <li><a href="{{ path('a-propos') }}">{{ t('nav.about') }}</a></li>
-                <li><a href="{{ path('contact') }}">{{ t('nav.contact') }}</a></li>
-                <li><a href="{{ path('declarer') }}">{{ t('nav.submit') }}</a></li>
-                <li><a href="{{ path('integrer') }}">Intégrer le classement</a></li>
-                {% if config('app.telegram_url') %}<li><a href="{{ config('app.telegram_url') }}" target="_blank" rel="noopener">Chaîne Telegram</a></li>{% endif %}
-                <li><a href="{{ path('langue/' ~ other_locale, {'retour': current}) }}" hreflang="{{ other_locale }}">{{ t('footer.switch_locale') }}</a></li>
-            </ul>
-        </div>
-        <ul class="site-footer__links site-footer__links--legal">
-            <li><a href="{{ path('mentions-legales') }}">{{ t('legal.mentions') }}</a></li>
-            <li><a href="{{ path('confidentialite') }}">{{ t('legal.confidentialite') }}</a></li>
-            <li><a href="{{ path('cookies') }}">{{ t('legal.cookies') }}</a></li>
-            <li><a href="{{ path('conditions') }}">{{ t('legal.conditions') }}</a></li>
-            {% if ask_consent %}<li><a href="{{ path('cookies') }}" data-consent-open>{{ t('consent.manage') }}</a></li>{% endif %}
-        </ul>
-        <p class="site-footer__legal">&copy; {{ now_year() }} {{ brand() }}. {{ t('footer.legal') }} {{ t('footer.no_tracking') }}</p>
-    </div>
-</footer>
+{{ partial('partials/footer', countries=countries, footer=footer, other_locale=other_locale, current=current, ask_consent=ask_consent) }}
 {% if ask_consent %}{{ partial('partials/consent') }}{% endif %}
 <script src="{{ asset('js/consent.js') }}" defer></script>
 </body>
