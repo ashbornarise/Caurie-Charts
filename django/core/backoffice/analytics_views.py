@@ -185,7 +185,13 @@ def distinctions(request, did: str | None = None, kind: str | None = None):
             sent = req_str(request, "status") == "sent"
             db.run("UPDATE award_distinctions SET status = ?, sent_at = CASE WHEN ? THEN LOCALTIMESTAMP ELSE NULL END WHERE id = ?",
                    [req_str(request, "status"), sent, d["id"]])
-            return back(request, path("admin/distinctions"), "success", f"Distinction N° {d['id']:04d} : " + ("envoyée." if sent else "à envoyer."))
+            note = ""
+            if sent:
+                try:
+                    note = " Post : " + D.announce(d) + "."
+                except Exception as exc:  # noqa: BLE001 — l'envoi reste enregistré même si le post échoue
+                    note = f" Post non programmé : {exc}."
+            return back(request, path("admin/distinctions"), "success", f"Distinction N° {d['id']:04d} : " + ("envoyée." if sent else "à envoyer.") + note)
         if kind in ("carte", "impression", "dorure", "cadre"):
             data, ctype, name = D.files(d, kind)
             resp = HttpResponse(data, content_type=ctype)

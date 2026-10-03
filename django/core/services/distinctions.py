@@ -113,6 +113,53 @@ def message(d: dict) -> str:
             "Partagez-la avec vos fans en mentionnant @cauricharts : nous la republierons.\n\nL'équipe Cauri Charts")
 
 
+SLOTS = (("distinction", 15), ("distinction-2", 13))  # deux annonces par jour au plus (UTC), loin de la vidéo de midi et du post de 18 h
+
+
+def announce(d: dict) -> str:
+    """Post « distinction remise » : la carte encadrée sur Instagram, Facebook et TikTok, l'artiste mentionné.
+    Deux annonces par jour au plus (15 h puis 13 h UTC), le premier créneau libre à partir de demain."""
+    from datetime import datetime, timedelta, timezone
+    from core import clock
+    from core.services import buffer
+    from core.services.social import award
+    key = f"distinction-{int(d['id'])}"
+    if db.one("SELECT 1 FROM social_posts WHERE theme LIKE 'distinction%' AND facts LIKE ?", [f'%"{key}"%']):
+        return "déjà annoncée"
+    a = db.one("SELECT instagram, base_country FROM artists WHERE id = ?", [d["artist_id"]]) or {}
+    day = clock.today() + timedelta(days=1)
+    while True:
+        taken = {r["theme"] for r in db.all("SELECT theme FROM social_posts WHERE theme LIKE 'distinction%' AND slot_date = ?", [day.isoformat()])}
+        free = [sl for sl in SLOTS if sl[0] not in taken]
+        if free:
+            theme, hour = free[0]
+            break
+        day += timedelta(days=1)
+    card = render(d)
+    files = {}
+    for kind, size in (("file", (2160, 2700)), ("tiktok", (1080, 1920))):
+        out = io.BytesIO()
+        award.cadre(card, size=size, seed=str(d["id"])).save(out, "JPEG", quality=90, optimize=True)
+        files[kind] = f"{key}-{size[0]}.jpg"
+        storage.store_media("social", files[kind], out.getvalue(), "image/jpeg")
+    who = f"@{a['instagram']}" if a.get("instagram") else d["artist_name"]
+    what = f"N°{d['rank']} du {d['chart_label']}" + (f" avec « {d['title']} »" if d.get("title") else "")
+    caption = (f"🏆 Distinction officielle N° {int(d['id']):04d}\n\n"
+               f"Félicitations {who} ! {what} en {month_label(d['period_key']).lower()}, "
+               "d'après le classement Cauri Charts, calculé sur des données réelles.\n\n"
+               "Chaque mois, le Top 5 de chaque classement reçoit sa distinction numérotée. Une seule fois par titre.")
+    tags = "#CauriCharts #DistinctionOfficielle #MusiqueAfricaine #AfroMusic"
+    if a.get("base_country"):
+        tags += " #" + country_name(a["base_country"]).replace(" ", "").replace("’", "").replace("'", "")
+    pid = db.insert("social_posts", {"slot_date": day.isoformat(), "theme": theme, "title": f"Distinction officielle · {d['artist_name']}"[:160],
+                                     "caption": caption, "hashtags": tags, "facts": json.dumps({"key": key, "distinction": int(d["id"])}),
+                                     "image_square": files["file"], "image_story": files["tiktok"],
+                                     "carousel": json.dumps([files]), "video": None, "status": "approved"})
+    post = db.one("SELECT * FROM social_posts WHERE id = ?", [pid])
+    due = datetime(day.year, day.month, day.day, hour, tzinfo=timezone.utc)
+    return f"post du {day.isoformat()} : " + buffer.schedule(post, due)
+
+
 def deliver(d: dict) -> bool:
     """Envoie la distinction par e-mail si l'équipe a saisi le contact de l'artiste ; sinon rien (DM à la main)."""
     from core import mail
@@ -121,6 +168,10 @@ def deliver(d: dict) -> bool:
     if not to or not mail.send(to, f"Distinction officielle Cauri Charts N° {int(d['id']):04d}", message(d)):
         return False
     db.run("UPDATE award_distinctions SET emailed_at = LOCALTIMESTAMP, status = 'sent', sent_at = COALESCE(sent_at, LOCALTIMESTAMP) WHERE id = ?", [d["id"]])
+    try:
+        announce(d)
+    except Exception:  # noqa: BLE001 — le post est un bonus : l'envoi à l'artiste reste fait
+        pass
     return True
 
 
