@@ -276,7 +276,8 @@ def barcode(data: str, w: int, h: int, color=CREAM) -> Image.Image:
 
 
 def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week: str, size=(1600, 2000),
-         kind: str | None = None, number: int | None = None, link: str | None = None, stats: dict | None = None) -> Image.Image:
+         kind: str | None = None, number: int | None = None, link: str | None = None, stats: dict | None = None,
+         unit: str = "week", code_period: str | None = None) -> Image.Image:
     """Distinction officielle. Ordre de lecture : CAURI CHARTS → N°1 → artiste → œuvre → classement → semaine.
     Le gabarit ne change jamais ; seuls la photo, le rang, l'artiste, le titre, le classement, la semaine et le numéro varient.
     stats : le langage du classement, tiré de chart_entries : {"last": previous_position (None = nouvelle entrée),
@@ -335,10 +336,11 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
 
     def two(v):
         return f"{int(v):02d}"
-    cells = [("CETTE SEMAINE", two(rank)),
-             ("SEM. DERNIÈRE", ("NOUV." if stats["last"] is None else two(stats["last"])) if "last" in stats else "—"),
+    monthly = unit == "month"
+    cells = [("CE MOIS" if monthly else "CETTE SEMAINE", two(rank)),
+             ("MOIS DERNIER" if monthly else "SEM. DERNIÈRE", ("NOUV." if stats["last"] is None else two(stats["last"])) if "last" in stats else "—"),
              ("MEILLEUR RANG", two(stats["peak"]) if stats.get("peak") else "—"),
-             ("SEMAINES", str(int(stats["weeks"])) if stats.get("weeks") else "—")]
+             ("MOIS" if monthly else "SEMAINES", str(int(stats["weeks"])) if stats.get("weeks") else "—")]
     sy = y + int(62 * s)
     cw_ = (W - 420 * s) / 4
     x0 = 210 * s
@@ -368,8 +370,9 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
     fy = H - int(225 * s)
     import re
     wk = re.findall(r"\d+", week)
-    code = f"CC{number or 0:04d}S{''.join(wk)}"
-    label = f"CC-{number or 0:04d} · S{'·'.join(wk)}" if wk else f"CC-{number or 0:04d}"
+    period_code = code_period or ("S" + "·".join(wk) if wk else "")
+    code = f"CC{number or 0:04d}{period_code.replace('·', '')}"
+    label = f"CC-{number or 0:04d} · {period_code}".rstrip(" ·")
     bc = barcode(code, int(250 * s), int(84 * s))
     bx = int(96 * s)
     img.paste(bc, (bx, fy + int(42 * s)), bc)

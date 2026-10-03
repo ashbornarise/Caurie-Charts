@@ -1,0 +1,28 @@
+<h1>Distinctions officielles</h1>
+<p class="muted">Rares et mensuelles : le Top 5 du classement mensuel Afrique de l’Ouest et le N°1 mensuel de chaque pays, dès que le mois est publié (toutes ses semaines publiées). Un titre n’est distingué qu’une fois par classement. Le numéro ne se réutilise jamais : c’est l’archive de Cauri Charts.</p>
+<p class="muted">Pour chaque distinction : la <strong>carte</strong> à envoyer à l’artiste (DM, e-mail), le <strong>PDF d’impression</strong> (20,3 × 25,4 cm, 300 ppp, 3 mm de fond perdu), le <strong>calque de dorure</strong> pour une impression à chaud, et la version <strong>encadrée</strong> à poster.</p>
+{% if pending %}<p class="notice">{{ pending|length }} classement(s) mensuel(s) publié(s) en attente : les distinctions seront créées cette nuit.</p>{% endif %}
+{% if not rows %}
+<p class="empty">Aucune distinction pour le moment. La première arrivera quand le premier mois complet sera publié (toutes ses semaines publiées dans Classements).</p>
+{% else %}
+<div class="distinction-grid">
+{% for d in rows %}
+    <article class="box distinction-card">
+        {% if d.image %}<img src="{{ d.image }}" alt="Distinction N° {{ '%04d'|format(d.id) }}" width="320" height="400" loading="lazy">{% endif %}
+        <h2>N° {{ '%04d'|format(d.id) }} · {{ d.artist_name }}</h2>
+        <p>N°{{ d.rank }} {{ d.chart_label }} · {{ d.month }}{% if d.title %}<br><em>« {{ d.title }} »</em>{% endif %}</p>
+        <p class="distinction-links">
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/carte') }}">Carte</a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/impression') }}">PDF impression</a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/dorure') }}">Calque dorure</a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/cadre') }}">Encadrée</a>
+        </p>
+        <form method="post" action="{{ path('admin/distinctions/' ~ d.id) }}">{{ csrf_field() }}
+            {% if d.status == 'sent' %}<span class="muted">Envoyée le {{ fmt_date((d.sent_at|string)[:10]) }}</span>
+                <button class="button button--small button--ghost" name="status" value="new" type="submit">Annuler</button>
+            {% else %}<button class="button button--small" name="status" value="sent" type="submit">Marquer comme envoyée</button>{% endif %}
+        </form>
+    </article>
+{% endfor %}
+</div>
+{% endif %}

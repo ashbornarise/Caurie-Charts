@@ -160,6 +160,35 @@ def artist_news(request, eid: str | None = None):
 
 
 @admin_view()
+def distinctions(request, did: str | None = None, kind: str | None = None):
+    """Distinctions officielles : cartes à envoyer, fichiers d'impression, suivi des envois."""
+    from core.backoffice.views import back
+    from core.helpers import path, url
+    from urllib.parse import quote
+    from core.services import distinctions as D
+    from core.views import req_str
+    if did:
+        d = db.one("SELECT * FROM award_distinctions WHERE id = ?", [int(did)])
+        if not d:
+            return back(request, path("admin/distinctions"), "error", "Distinction introuvable.")
+        if request.method == "POST" and req_str(request, "status") in ("new", "sent"):
+            sent = req_str(request, "status") == "sent"
+            db.run("UPDATE award_distinctions SET status = ?, sent_at = CASE WHEN ? THEN LOCALTIMESTAMP ELSE NULL END WHERE id = ?",
+                   [req_str(request, "status"), sent, d["id"]])
+            return back(request, path("admin/distinctions"), "success", f"Distinction N° {d['id']:04d} : " + ("envoyée." if sent else "à envoyer."))
+        if kind in ("carte", "impression", "dorure", "cadre"):
+            data, ctype, name = D.files(d, kind)
+            resp = HttpResponse(data, content_type=ctype)
+            resp["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(name)}"
+            return resp
+    rows = db.all("SELECT * FROM award_distinctions ORDER BY id DESC LIMIT 300")
+    for r in rows:
+        r["image"] = url("media/distinctions/" + r["image_name"]) if r["image_name"] else None
+        r["month"] = D.month_label(r["period_key"])
+    return admin_render(request, "distinctions", {"title": "Distinctions", "rows": rows, "pending": D.pending_runs()})
+
+
+@admin_view()
 def controles(request):
     rows = db.all("""SELECT ran_at, agent, level, message, link FROM agent_findings WHERE ran_at >= LOCALTIMESTAMP - INTERVAL '14 days'
                      ORDER BY ran_at DESC, level, agent LIMIT 300""")

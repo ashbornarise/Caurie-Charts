@@ -195,3 +195,13 @@ def test_ai_channel_pick_never_invents_an_id(monkeypatch):
     assert S._ai_pick("Wizkid", 1, results, "k") is None          # identifiant inventé : refusé
     monkeypatch.setattr(ai, "make", lambda: Fake('{"id": "UCreal1"}'))
     assert S._ai_pick("Wizkid", 1, results, "k") == "UCreal1"    # choix parmi les vrais résultats : accepté (puis vérifié par titre)
+
+
+def test_distinction_card_monthly_renders_without_inventing_stats():
+    from core.services import distinctions
+    from core.services.social import award
+    assert distinctions.month_label("2026-10") == "Octobre 2026"
+    img = award.card(1, "Top 20 · Afrique de l’Ouest", "Asake", "Gratitude", None, "Octobre 2026", number=7,
+                     stats={"last": None, "peak": 1}, unit="month", code_period="M10·2026")
+    assert img.size == (1600, 2000) and "foil" in img.info
+    assert award.barcode("CC0007M102026", 250, 84).size == (250, 84)
