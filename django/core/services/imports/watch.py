@@ -125,6 +125,17 @@ class WikidataLookup:
         return (_json(r) or {}) if r["status"] == 200 else {}
 
 
+def watchlist_file() -> dict:
+    """Liste de suivi de la rédaction (resources/watchlist.csv : artiste, pays) ; le pays n'est qu'une suggestion."""
+    import csv
+    from pathlib import Path
+    f = Path(__file__).resolve().parents[4] / "resources" / "watchlist.csv"
+    if not f.is_file():
+        return {}
+    lines = [l for l in f.read_text(encoding="utf-8").splitlines() if l and not l.startswith("#")]
+    return {r["artiste"].strip(): (r["pays"].strip() or None) for r in csv.DictReader(lines) if r.get("artiste")}
+
+
 class ArtistWatch:
     """Liste de suivi (config/watchlist.php) : artistes absents des classements et chaînes YouTube de labels."""
     CACHE = REPO / "storage" / "cache" / "watch-channels.json"
@@ -134,7 +145,15 @@ class ArtistWatch:
 
     def run(self) -> list:
         cfg = conf.get("watchlist") or {}
-        report = [self._artist(str(name), hint) for name, hint in (cfg.get("artists") or {}).items()]
+        artists = {**watchlist_file(), **(cfg.get("artists") or {})}
+        # Absents de la base d'abord, puis les moins récemment vérifiés : toute la liste passe en quelques nuits
+        checked = {r["match_key"]: r["profile_checked_at"] for r in db.all("SELECT match_key, profile_checked_at FROM artists WHERE match_key IS NOT NULL")}
+        order = sorted(artists.items(), key=lambda kv: (N.artist_key(kv[0]) in checked, str(checked.get(N.artist_key(kv[0])) or "")))
+        report = []
+        for name, hint in order:
+            if budget.over():
+                break  # temps de l'étape écoulé : la suite la nuit prochaine
+            report.append(self._artist(str(name), hint))
         for channel_id, (label, country) in self._channels(cfg).items():
             if budget.over():
                 break  # temps de l'étape écoulé : la suite la nuit prochaine
