@@ -225,7 +225,7 @@ class ChartService:
         weeks = self._published_weeks(cid, period.start, period.end)
         if not weeks:
             return None
-        provisional = len(weeks) < len(period.week_starts())
+        provisional = len(weeks) < len(period.official_week_starts())
         if period.type == "month" and provisional:
             return None
         last_week = weeks[-1]
@@ -313,7 +313,7 @@ class ChartService:
                          GROUP BY ws.track_id, t.artist_id, a.base_country""", [type_id, period.start, period.end])
         weeks = int(db.value("""SELECT COUNT(*) FROM chart_runs WHERE chart_type_id = ? AND country_id IS NULL AND period_type = 'week'
                                 AND status = 'published' AND period_start BETWEEN ? AND ?""", [type_id, period.start, period.end]))
-        provisional = weeks < len(period.week_starts())
+        provisional = weeks < len(period.official_week_starts())
         if not rows or (period.type == "month" and provisional):
             return None
         totals = {int(r["track_id"]): {"score": float(r["score"]), "artist_id": int(r["artist_id"]), "countries": int(r["countries"]),

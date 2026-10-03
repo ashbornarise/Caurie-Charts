@@ -15,6 +15,10 @@ from core import conf, db
 from core.repos import php_round
 
 
+# Première semaine complète de relevés (lundi) : les relevés ont commencé le 30 septembre 2026
+FIRST_OFFICIAL_WEEK = "2026-10-05"
+
+
 def _d(s: str) -> date:
     return datetime.strptime(str(s)[:10], "%Y-%m-%d").date()
 
@@ -80,6 +84,11 @@ class Period:
             out.append(d.isoformat())
             d += timedelta(days=7)
         return out
+
+    def official_week_starts(self) -> list[str]:
+        """Semaines du mois qui peuvent avoir un classement officiel : rien avant le début des relevés complets
+        (FIRST_OFFICIAL_WEEK). Octobre 2026 compte ainsi ses semaines du 5 au 25, sans la semaine incomplète du 28 septembre."""
+        return [w for w in self.week_starts() if w >= FIRST_OFFICIAL_WEEK]
 
     def previous(self) -> "Period":
         if self.type == "week":
