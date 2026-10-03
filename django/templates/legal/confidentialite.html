@@ -1,6 +1,7 @@
 {%- set r = config('app.retention') -%}
 <p class="lead">Nous collectons le moins de données possible. La simple consultation des classements ne nécessite aucun compte{{ ", et les outils de mesure ou de publicité ne se chargent qu'avec votre accord" if config('app.tracking.ga_id') or config('app.tracking.meta_pixel_id') else ", aucun cookie de mesure d'audience et aucun cookie publicitaire" }}.</p>
 {% if config('app.tracking.ga_id') or config('app.tracking.meta_pixel_id') %}
+<p>Sans aucun cookie, le site compte le nombre de pages vues par jour et le site d'où vient la visite (par exemple « instagram.com ») : ni adresse IP, ni identifiant, ni donnée personnelle ne sont enregistrés, et rien ne permet de reconnaître un visiteur.</p>
 <p>Si vous acceptez la mesure d'audience ou la publicité dans le bandeau cookies, Google (Analytics) ou Meta (Pixel) reçoivent des données de navigation (pages vues, identifiant de cookie, adresse IP). Détails et durées : <a href="{{ path('cookies') }}">politique cookies</a>.</p>
 {% endif %}
 

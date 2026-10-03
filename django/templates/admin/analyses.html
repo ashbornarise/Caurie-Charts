@@ -1,0 +1,64 @@
+<h1>Analyses</h1>
+<p class="muted">Ce que la machine mesure pour apprendre ce qui marche : vues du site (anonymes, sans cookie), résultats de chaque publication sur les réseaux (relevés chaque nuit par Buffer), santé des nuits.</p>
+<p class="toolbar">
+    <a class="button button--small" href="{{ path('admin/analyses/export/publications') }}">Exporter les publications (CSV)</a>
+    <a class="button button--small button--ghost" href="{{ path('admin/analyses/export/historique') }}">Historique des statistiques (CSV)</a>
+    <a class="button button--small button--ghost" href="{{ path('admin/analyses/export/vues') }}">Vues du site (CSV)</a>
+</p>
+
+<h2>Le site · 30 derniers jours</h2>
+<p><strong>{{ fmt_number(total_30|int) }}</strong> pages vues.</p>
+{% if days %}
+<div class="bars" role="img" aria-label="Pages vues par jour">
+    {% for d in days %}<span class="bars__bar bars__bar--{{ (10 * d.views|int / peak)|round|int }}" title="{{ fmt_date(d.day) }} : {{ d.views|int }} vues"></span>{% endfor %}
+</div>
+{% else %}<p class="muted">Les vues sont comptées depuis aujourd'hui : la courbe se remplira jour après jour.</p>{% endif %}
+<div class="grid-3">
+    <div><h3>Pages les plus vues</h3>
+        <table class="data-table"><tbody>{% for p in pages %}<tr><td>{{ p.path }}</td><td class="num">{{ fmt_number(p.views|int) }}</td></tr>{% endfor %}</tbody></table></div>
+    <div><h3>Artistes les plus consultés</h3>
+        <table class="data-table"><tbody>{% for a in artists %}<tr><td><a href="{{ path('artiste/' ~ a.slug) }}">{{ a.name }}</a></td><td class="num">{{ fmt_number(a.views|int) }}</td></tr>{% endfor %}</tbody></table></div>
+    <div><h3>D'où viennent les visiteurs</h3>
+        <table class="data-table"><tbody>{% for r in referrers %}<tr><td>{{ r.referrer }}</td><td class="num">{{ fmt_number(r.views|int) }}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+
+<h2>Les réseaux · ce qui marche</h2>
+<p class="muted">Moyennes par publication, du meilleur au moins bon. Interactions = réactions + commentaires + partages + enregistrements.</p>
+{% macro table(rows, label, names={}) %}
+<table class="data-table">
+    <thead><tr><th>{{ label }}</th><th class="num">Publications</th><th class="num">Vues moy.</th><th class="num">Interactions moy.</th></tr></thead>
+    <tbody>{% for g in rows %}<tr><td>{{ names.get(g.key, g.key) }}</td><td class="num">{{ g.posts }}</td><td class="num">{{ fmt_number(g.avg_views) }}</td><td class="num">{{ g.avg_interactions }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endmacro %}
+<div class="grid-3">
+    <div><h3>Par rubrique</h3>{{ table(by_theme, 'Rubrique') }}</div>
+    <div><h3>Par réseau</h3>{{ table(by_channel, 'Réseau') }}<h3>Par format</h3>{{ table(by_type, 'Format') }}</div>
+    <div><h3>Par mise en page</h3>{{ table(by_layout, 'Diapositives', layouts) }}<h3>Par heure de publication (UTC = Lomé)</h3>{{ table(by_hour, 'Heure') }}</div>
+</div>
+
+<h2>Dernières publications</h2>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>Date</th><th>Réseau</th><th>Format</th><th>Rubrique</th><th>Texte</th><th class="num">Vues</th><th class="num">Portée</th><th class="num">Réactions</th><th class="num">Comm.</th><th class="num">Partages</th><th class="num">Enreg.</th></tr></thead>
+    <tbody>
+    {% for p in posts %}
+        <tr><td>{{ fmt_date((p.sent_at|string)[:10]) if p.sent_at else '—' }}</td><td>{{ p.channel }}</td><td>{{ p.post_type or '—' }}</td><td>{{ p.theme or '—' }}</td>
+            <td><small>{{ (p.title or p.text_start or '')[:60] }}</small></td>
+            <td class="num">{{ fmt_number(p.views|int) }}</td><td class="num">{{ fmt_number(p.reach|int) }}</td><td class="num">{{ p.reactions|int }}</td>
+            <td class="num">{{ p.comments|int }}</td><td class="num">{{ p.shares|int }}</td><td class="num">{{ p.saves|int }}</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<h2>Les nuits de la machine</h2>
+<table class="data-table">
+    <thead><tr><th>Nuit</th><th class="num">Durée</th><th class="num">Étapes en échec</th><th>Étapes les plus longues</th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+        <tr><td>{{ fmt_date((r.ran_at|string)[:10]) }}</td><td class="num">{{ (r.seconds // 60)|int }} min</td>
+            <td class="num">{{ r.failed }}{% if r.failed %} · <small>{{ r.steps|selectattr(1, 'equalto', false)|map(attribute=0)|join(', ') }}</small>{% endif %}</td>
+            <td><small>{% for s in (r.steps|sort(attribute=2, reverse=true))[:3] %}{{ s[0] }} ({{ (s[2] // 60)|int }} min){{ ', ' if not loop.last }}{% endfor %}</small></td></tr>
+    {% else %}<tr><td colspan="4" class="muted">L'historique commence avec la prochaine nuit.</td></tr>{% endfor %}
+    </tbody>
+</table>

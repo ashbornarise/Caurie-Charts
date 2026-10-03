@@ -32,6 +32,8 @@ class CauriMiddleware:
         set_locale(conf.get("app.locale", "fr"))
         try:
             response = self.get_response(request)
+            from core.services.analytics import count_view
+            count_view(request, response)  # vues anonymes, agrégées, sans cookie
         finally:
             current_request.reset(token)
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")

@@ -157,10 +157,20 @@ class DailyPipeline:
             return ArtistPhotos(HttpClient(30)).run(120)
         self._step("10h. Photos HD des artistes (Apple Music, Wikimedia Commons, YouTube, Deezer)", photos, 180)
 
+        def stats():
+            from core.services import analytics
+            return [analytics.collect_post_metrics()]
+        self._step("10i. Statistiques des publications (vues, portée, réactions)", stats)
+
         def cleanup():
             live_chart.clear_cache()
             return ["cache des classements vidé", f"{purge_orphans()} fichiers de posts abandonnés supprimés", purge_blob()]
         self._step("11. Ménage (cache, fichiers orphelins, Blob)", cleanup)
+        try:
+            from core.services import analytics
+            analytics.record_run(self.report)  # historique des nuits (Admin > Analyses)
+        except Exception:  # noqa: BLE001
+            pass
         log_write("cron", "info", "pipeline quotidien", {"etapes": [[r["step"], r["ok"], round(r["seconds"], 1)] for r in self.report]})
         return self.report
 

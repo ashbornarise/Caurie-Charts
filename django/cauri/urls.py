@@ -2,7 +2,7 @@
 from django.urls import path, re_path
 
 from core import views, views_claim, views_widget
-from core.backoffice import team
+from core.backoffice import analytics_views, team
 from core.backoffice import views as admin
 
 P = r"(?P<period>semaine|mois|annee)"
@@ -79,6 +79,8 @@ urlpatterns = [
     re_path(r"^admin/partenaires/(?P<pid>\d+|nouveau)$", admin.partner_form),
     re_path(r"^admin/partenaires/(?P<pid>\d+)/supprimer$", admin.partner_delete),
     path("admin/journal", admin.audit_log),
+    path("admin/analyses", analytics_views.analyses),
+    re_path(r"^admin/analyses/export/(?P<what>[a-z]+)$", analytics_views.analyses_export),
     path("admin/messages", admin.messages),
     re_path(r"^admin/messages/(?P<mid>\d+)$", admin.message_status),
     re_path(r"^media/(?P<file_path>.+)$", views.media),
