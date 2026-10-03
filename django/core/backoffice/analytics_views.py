@@ -63,47 +63,100 @@ def analyses_export(request, what: str):
     return resp
 
 
+def _event_image(upload) -> str:
+    """Image envoyée depuis l'ordinateur : JPEG, PNG ou WebP, réencodée en JPEG (1200 px max), rangée sur le Blob."""
+    import io
+    import secrets
+    from PIL import Image, ImageOps
+    from core import storage
+    from core.helpers import url
+    if upload.size > 8_000_000:
+        raise ValueError("Image trop lourde (8 Mo maximum).")
+    try:
+        src = Image.open(upload)
+        if src.format not in ("PNG", "JPEG", "WEBP", "MPO"):
+            raise ValueError
+        src = ImageOps.exif_transpose(src).convert("RGB")
+    except Exception:  # noqa: BLE001
+        raise ValueError("Format d'image non reconnu (JPEG, PNG ou WebP).")
+    src.thumbnail((1200, 1200), Image.LANCZOS)
+    out = io.BytesIO()
+    src.save(out, "JPEG", quality=86, optimize=True, progressive=True)
+    name = f"{secrets.token_hex(8)}.jpg"
+    storage.store_media("actu", name, out.getvalue(), "image/jpeg")
+    return url("media/actu/" + name)
+
+
 @admin_view()
-def artist_news(request):
+def artist_news(request, eid: str | None = None):
+    """Créer (sans eid) ou modifier (avec eid) une actualité ; masquer, republier ou supprimer."""
     from datetime import date
+    from django.core.cache import cache
     from core import audit
     from core.backoffice.views import back, ip, uid
     from core.helpers import path
     from core.services import artist_news as N
     from core.services.imports import normalizer as Nm
     from core.views import req_str
+    here = path("admin/actu-artistes" + (f"/{int(eid)}" if eid else ""))
+    ev = db.one("SELECT e.*, a.name AS artist_name FROM artist_events e JOIN artists a ON a.id = e.artist_id WHERE e.id = ?", [int(eid)]) if eid else None
+    if eid and not ev:
+        return back(request, path("admin/actu-artistes"), "error", "Actualité introuvable.")
     if request.method == "POST":
+        action = req_str(request, "action")
+        if ev and action in ("published", "hidden"):
+            db.update("artist_events", {"status": action}, "id = :id", {"id": ev["id"]})
+            cache.clear()
+            return back(request, path("admin/actu-artistes"), "success", "Actualité " + ("republiée." if action == "published" else "masquée."))
+        if ev and action == "delete":
+            if req_str(request, "confirm") != "1":
+                return back(request, here, "error", "Cochez « Je confirme » pour supprimer.")
+            db.run("DELETE FROM artist_events WHERE id = ?", [ev["id"]])
+            audit.log(uid(request), "artist_event.delete", "artist_event", ev["id"], None, {"title": ev["title"]}, ip(request))
+            cache.clear()
+            return back(request, path("admin/actu-artistes"), "success", "Actualité supprimée.")
         a = db.one("SELECT id, name FROM artists WHERE match_key = ? ORDER BY status = 'active' DESC LIMIT 1", [Nm.artist_key(req_str(request, "artist"))])
         src, img = req_str(request, "source_url"), req_str(request, "image_url")
         try:
             day = date.fromisoformat(req_str(request, "event_date"))
         except ValueError:
             day = None
-        if not a or not day or not req_str(request, "title") or not src.startswith("https://") or (img and not img.startswith("https://")):
-            return back(request, path("admin/actu-artistes"), "error", "Artiste introuvable, date, titre ou lien de source (https) manquant.")
-        eid = db.insert("artist_events", {"artist_id": a["id"], "kind": req_str(request, "kind") if req_str(request, "kind") in N.KINDS else "autre",
-                                          "title": req_str(request, "title")[:200], "event_date": day.isoformat(),
-                                          "summary": req_str(request, "summary")[:500] or None, "image_url": img or None,
-                                          "source_name": req_str(request, "source_name")[:100] or None, "source_url": src[:500], "origin": "redaction"})
-        audit.log(uid(request), "artist_event.create", "artist_event", eid, None, {"artist": a["name"]}, ip(request))
-        from django.core.cache import cache
+        # Les actus automatiques (YouTube, Deezer) gardent leur source ; la rédaction doit en donner une
+        if ev and img == (ev["image_url"] or ""):
+            img = ev["image_url"] or ""  # image déjà enregistrée : conservée telle quelle
+            keep = True
+        else:
+            keep = False
+        if not src and ev and ev["origin"] != "redaction":
+            src = ev["source_url"] or ""
+        if not a or not day or not req_str(request, "title") or not src.startswith("https://") or (img and not keep and not img.startswith("https://")):
+            return back(request, here, "error", "Artiste introuvable, date, titre ou lien de source (https) manquant.")
+        data = {"artist_id": a["id"], "kind": req_str(request, "kind") if req_str(request, "kind") in N.KINDS else "autre",
+                "title": req_str(request, "title")[:200], "event_date": day.isoformat(),
+                "summary": req_str(request, "summary")[:500] or None, "image_url": img or None,
+                "source_name": req_str(request, "source_name")[:100] or None, "source_url": src[:500]}
+        upload = request.FILES.get("image_file")
+        if upload:
+            try:
+                data["image_url"] = _event_image(upload)
+            except ValueError as exc:
+                return back(request, here, "error", str(exc))
+        elif req_str(request, "remove_image") == "1":
+            data["image_url"] = None
+        if ev:
+            db.update("artist_events", data, "id = :id", {"id": ev["id"]})
+            audit.log(uid(request), "artist_event.update", "artist_event", ev["id"], None, {"artist": a["name"]}, ip(request))
+            msg = f"Actualité de {a['name']} modifiée."
+        else:
+            new = db.insert("artist_events", {**data, "origin": "redaction"})
+            audit.log(uid(request), "artist_event.create", "artist_event", new, None, {"artist": a["name"]}, ip(request))
+            msg = f"Actualité publiée pour {a['name']}."
         cache.clear()
-        return back(request, path("admin/actu-artistes"), "success", f"Actualité publiée pour {a['name']}.")
+        return back(request, path("admin/actu-artistes"), "success", msg)
     rows = db.all("""SELECT e.*, a.name AS artist_name FROM artist_events e JOIN artists a ON a.id = e.artist_id
-                     ORDER BY e.event_date DESC LIMIT 80""")
+                     ORDER BY e.origin = 'redaction' DESC, e.event_date DESC LIMIT 120""")
     artists = db.all("SELECT name FROM artists WHERE status = 'active' ORDER BY name LIMIT 2000")
-    return admin_render(request, "artist-news", {"title": "Actu des artistes", "rows": rows, "artists": artists, "kinds": N.KINDS})
-
-
-@admin_view()
-def artist_news_status(request, eid: str):
-    from core.backoffice.views import back
-    from core.helpers import path
-    from core.views import req_str
-    status = req_str(request, "status")
-    if request.method == "POST" and status in ("published", "hidden"):
-        db.update("artist_events", {"status": status}, "id = :id", {"id": int(eid)})
-    return back(request, path("admin/actu-artistes"), "success", "Mis à jour.")
+    return admin_render(request, "artist-news", {"title": "Actu des artistes", "rows": rows, "artists": artists, "kinds": N.KINDS, "ev": ev})
 
 
 @admin_view()

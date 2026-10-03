@@ -87,7 +87,7 @@ urlpatterns = [
     path("admin/analyses", analytics_views.analyses),
     path("admin/controles", analytics_views.controles),
     path("admin/actu-artistes", analytics_views.artist_news),
-    re_path(r"^admin/actu-artistes/(?P<eid>\d+)$", analytics_views.artist_news_status),
+    re_path(r"^admin/actu-artistes/(?P<eid>\d+)$", analytics_views.artist_news),
     re_path(r"^admin/analyses/export/(?P<what>[a-z]+)$", analytics_views.analyses_export),
     path("admin/messages", admin.messages),
     re_path(r"^admin/messages/(?P<mid>\d+)$", admin.message_status),

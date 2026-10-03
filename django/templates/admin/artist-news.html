@@ -1,34 +1,56 @@
 <h1>Actu des artistes</h1>
-<p class="muted">Les sorties (albums, EP, singles) des artistes confirmés sont détectées chaque nuit sur Deezer. Ajoutez ici ce que Deezer ne connaît pas : une sortie annoncée, un concert, un clip, une distinction. Le lien de la source est obligatoire (compte officiel de l’artiste ou média) : rien n’est publié sans preuve.</p>
+<p class="muted">Les nouveaux clips des chaînes YouTube officielles et les sorties Deezer arrivent seuls chaque nuit. Ajoutez ici ce qu’ils ne connaissent pas : une sortie annoncée, un concert, une distinction. Le lien de la source est obligatoire (compte officiel de l’artiste ou média) : rien n’est publié sans preuve. Toute actualité, automatique ou non, peut être modifiée.</p>
 
-<form method="post" action="{{ path('admin/actu-artistes') }}" class="admin-form box">
+{% set editing = ev %}
+<form method="post" action="{{ path('admin/actu-artistes' ~ ('/' ~ ev.id if editing else '')) }}" enctype="multipart/form-data" class="admin-form box" id="formulaire">
     {{ csrf_field() }}
+    <h2>{{ 'Modifier l’actualité' if editing else 'Nouvelle actualité' }}</h2>
     <div class="field-row">
-        <div class="field"><label for="ev-artist">Artiste (nom exact)</label><input id="ev-artist" name="artist" required maxlength="150" list="ev-artists" placeholder="Axel Merryl"></div>
+        <div class="field"><label for="ev-artist">Artiste (nom exact)</label><input id="ev-artist" name="artist" required maxlength="150" list="ev-artists" placeholder="Axel Merryl" value="{{ ev.artist_name if editing }}"></div>
         <datalist id="ev-artists">{% for a in artists %}<option value="{{ a.name }}">{% endfor %}</datalist>
         <div class="field"><label for="ev-kind">Type</label>
-            <select id="ev-kind" name="kind">{% for k, l in kinds.items() %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></div>
-        <div class="field"><label for="ev-date">Date</label><input id="ev-date" type="date" name="event_date" required></div>
+            <select id="ev-kind" name="kind">{% for k, l in kinds.items() %}<option value="{{ k }}" {{ 'selected' if editing and ev.kind == k }}>{{ l }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="ev-date">Date</label><input id="ev-date" type="date" name="event_date" required value="{{ (ev.event_date|string)[:10] if editing }}"></div>
     </div>
-    <div class="field"><label for="ev-title">Titre</label><input id="ev-title" name="title" required maxlength="200" placeholder="Titre de l’album, nom du concert…"></div>
-    <div class="field"><label for="ev-summary">En une phrase <span class="optional">facultatif</span></label><input id="ev-summary" name="summary" maxlength="500" placeholder="Son troisième album, 12 titres, avec…"></div>
+    <div class="field"><label for="ev-title">Titre</label><input id="ev-title" name="title" required maxlength="200" placeholder="Titre de l’album, nom du concert…" value="{{ ev.title if editing }}"></div>
+    <div class="field"><label for="ev-summary">En une phrase <span class="optional">facultatif</span></label><input id="ev-summary" name="summary" maxlength="500" placeholder="Son troisième album, 12 titres, avec…" value="{{ (ev.summary or '') if editing }}"></div>
     <div class="field-row">
-        <div class="field"><label for="ev-src">Lien de la source</label><input id="ev-src" name="source_url" type="url" required placeholder="https://www.instagram.com/p/…"></div>
-        <div class="field"><label for="ev-srcname">Nom de la source <span class="optional">facultatif</span></label><input id="ev-srcname" name="source_name" maxlength="100" placeholder="Instagram de l’artiste"></div>
+        <div class="field"><label for="ev-src">Lien de la source</label><input id="ev-src" name="source_url" type="url" {{ 'required' if not editing or ev.origin == 'redaction' }} placeholder="https://www.instagram.com/p/…" value="{{ (ev.source_url or '') if editing }}"></div>
+        <div class="field"><label for="ev-srcname">Nom de la source <span class="optional">facultatif</span></label><input id="ev-srcname" name="source_name" maxlength="100" placeholder="Instagram de l’artiste" value="{{ (ev.source_name or '') if editing }}"></div>
     </div>
-    <div class="field"><label for="ev-img">Image (lien https) <span class="optional">facultatif : sinon la photo de l’artiste</span></label><input id="ev-img" name="image_url" type="url"></div>
-    <button class="button" type="submit">Publier l’actualité</button>
+    <div class="field">
+        <label for="ev-file">Image <span class="optional">facultatif : sinon la photo de l’artiste</span></label>
+        {% if editing and ev.image_url %}<p><img src="{{ ev.image_url }}" alt="" width="160"> <label><input type="checkbox" name="remove_image" value="1"> Retirer cette image</label></p>{% endif %}
+        <input id="ev-file" name="image_file" type="file" accept="image/jpeg,image/png,image/webp">
+        <small class="muted">Cliquez pour choisir un fichier sur l’ordinateur (JPEG, PNG ou WebP, 8 Mo maximum), ou collez un lien d’image :</small>
+        <input name="image_url" type="url" placeholder="https://… (facultatif)" value="{{ (ev.image_url or '') if editing }}" aria-label="Lien de l’image">
+    </div>
+    <button class="button" type="submit">{{ 'Enregistrer les modifications' if editing else 'Publier l’actualité' }}</button>
+    {% if editing %}<a class="button button--ghost" href="{{ path('admin/actu-artistes') }}">Annuler</a>{% endif %}
 </form>
 
-<h2>Dernières actualités</h2>
+{% if editing %}
+<form method="post" action="{{ path('admin/actu-artistes/' ~ ev.id) }}" class="admin-form box">
+    {{ csrf_field() }}
+    <h2>Supprimer cette actualité</h2>
+    <label><input type="checkbox" name="confirm" value="1" required> Je confirme la suppression définitive</label>
+    <button class="button button--ghost" name="action" value="delete" type="submit">Supprimer</button>
+</form>
+{% endif %}
+
+<h2>Actualités</h2>
 <table class="data-table">
-    <thead><tr><th>Date</th><th>Artiste</th><th>Type</th><th>Titre</th><th>Origine</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Artiste</th><th>Type</th><th>Titre</th><th>Origine</th><th>Statut</th><th></th></tr></thead>
     <tbody>
     {% for e in rows %}
         <tr><td>{{ fmt_date((e.event_date|string)[:10]) }}</td><td>{{ e.artist_name }}</td><td>{{ kinds.get(e.kind, e.kind) }}</td><td>{{ e.title }}</td>
-            <td>{{ 'Deezer' if e.origin == 'deezer' else 'Rédaction' }}{% if e.source_url %} · <a href="{{ e.source_url }}" target="_blank" rel="noopener">source</a>{% endif %}</td>
-            <td><form method="post" action="{{ path('admin/actu-artistes/' ~ e.id) }}">{{ csrf_field() }}
-                <button class="button button--small button--ghost" name="status" value="{{ 'hidden' if e.status == 'published' else 'published' }}" type="submit">{{ 'Masquer' if e.status == 'published' else 'Republier' }}</button></form></td></tr>
+            <td>{{ {'deezer': 'Deezer', 'youtube': 'YouTube'}.get(e.origin, 'Rédaction') }}{% if e.source_url %} · <a href="{{ e.source_url }}" target="_blank" rel="noopener">source</a>{% endif %}</td>
+            <td>{{ 'En ligne' if e.status == 'published' else 'Masquée' }}</td>
+            <td class="nowrap">
+                <a class="button button--small" href="{{ path('admin/actu-artistes/' ~ e.id) }}#formulaire">Modifier</a>
+                <form method="post" action="{{ path('admin/actu-artistes/' ~ e.id) }}" class="inline-form">{{ csrf_field() }}
+                    <button class="button button--small button--ghost" name="action" value="{{ 'hidden' if e.status == 'published' else 'published' }}" type="submit">{{ 'Masquer' if e.status == 'published' else 'Republier' }}</button>
+                </form></td></tr>
     {% endfor %}
     </tbody>
 </table>

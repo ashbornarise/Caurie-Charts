@@ -96,3 +96,7 @@ pre.json { white-space: pre-wrap; font-size: .75rem; margin: 0; max-width: 360px
 .bars__bar--9 { height: 90%; }
 .bars__bar--10 { height: 100%; }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+
+/* Actu des artistes */
+.inline-form { display: inline; }
+.nowrap { white-space: nowrap; }
