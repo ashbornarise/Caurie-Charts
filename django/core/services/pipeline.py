@@ -157,6 +157,11 @@ class DailyPipeline:
             return ArtistPhotos(HttpClient(30)).run(120)
         self._step("10h. Photos HD des artistes (Apple Music, Wikimedia Commons, YouTube, Deezer)", photos, 180)
 
+        def releases():
+            from core.services import artist_news
+            return [artist_news.collect_youtube(), artist_news.collect_releases(150)]
+        self._step("10k. Actu des artistes (nouveaux clips YouTube, sorties Deezer)", releases, 150)
+
         def stats():
             from core.services import analytics
             return [analytics.collect_post_metrics()]

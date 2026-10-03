@@ -66,6 +66,8 @@
         </div>
     </dl>
 
+    {{ partial('partials/artist-news', items=artistNews, title='Son actualité', hide_artist=true) }}
+
     {% if live.positions %}
     <section class="panel">
         <h2 class="section-title">{{ t('artist.this_week') }}</h2>

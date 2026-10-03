@@ -683,3 +683,16 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .article-hero--cover { max-width: 520px; }
 .edition-slides { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin: 12px 0 18px; }
 .edition-slides img { display: block; width: 100%; height: auto; border-radius: 6px; box-shadow: 0 4px 14px rgba(17,13,31,.12); }
+
+/* L'actu des artistes */
+.artist-news { margin: 28px 0; }
+.artist-news__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.artist-news__item { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--surface); }
+.artist-news__link { display: flex; gap: 12px; text-decoration: none; color: inherit; }
+.artist-news__link img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; flex: none; }
+.artist-news__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.artist-news__tag { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.artist-news__tag--soon { color: var(--accent); }
+.artist-news__title { font-weight: 600; overflow-wrap: anywhere; }
+.artist-news__summary { font-size: .85rem; color: var(--ink-2); }
+.artist-news__source { display: block; margin-top: 6px; font-size: .75rem; color: var(--muted); }

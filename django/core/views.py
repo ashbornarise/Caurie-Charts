@@ -76,6 +76,14 @@ def apercu(request, kind: str, key: str):
     return resp
 
 
+def _artist_news(artist_id=None, limit=6) -> list:
+    try:
+        from core.services import artist_news
+        return artist_news.latest(limit, artist_id)
+    except Exception:  # noqa: BLE001 — jamais bloquant pour la page
+        return []
+
+
 def json_ld(items: list):
     """Bloc JSON-LD prêt à insérer dans <script type="application/ld+json"> (« </ » neutralisé)."""
     from markupsafe import Markup
@@ -162,6 +170,7 @@ def home(request):
         "periodType": period_type, "highlights": highlights, "aside": aside(country), "numberOnes": repos.number_ones(),
         "hotArtists": repos.hot_artists(None if regional else int(country["id"])),
         "homeNews": repos.news_latest(3, None if regional else int(country["id"])),
+        "artistNews": _artist_news(),
         "partners": repos.partners_active(),
         "meta": {
             "title": brand() + " · " + t("home.meta_title", country=country_name(country["code"]), size=country["chart_size"]),
@@ -257,6 +266,7 @@ def artist(request, slug: str):
             icon_rank = row["rank"]
             break
     return render(request, "artist", {
+        "artistNews": _artist_news(int(a["id"]), 6),
         "live": repos.artist_live(int(a["id"])), "iconRank": icon_rank, "artist": a, "tracks": tracks,
         "bestPeak": min(x["peak"] for x in charted) if charted else None,
         "totalWeeks": sum(int(x["weeks"] or 0) for x in tracks),

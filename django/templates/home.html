@@ -51,6 +51,8 @@
         {% endif %}
     </section>
 
+    {{ partial('partials/artist-news', items=artistNews) }}
+
     {% if hotArtists %}
     {{ partial('partials/hot-artists', artists=hotArtists) }}
     {% endif %}

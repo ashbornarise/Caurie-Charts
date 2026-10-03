@@ -1,0 +1,22 @@
+{#- L'actu des artistes : sorties (Deezer) et faits de la rédaction, avec leur source. items : artist_news.latest() -#}
+{%- if items -%}
+<section class="artist-news" aria-labelledby="artist-news-title">
+    <h2 id="artist-news-title">{{ title or 'L’actu des artistes' }}</h2>
+    <ul class="artist-news__list">
+        {% for e in items %}
+        <li class="artist-news__item">
+            <a class="artist-news__link" href="{{ path('artiste/' ~ e.artist_slug) }}">
+                {% if e.picture %}<img src="{{ e.picture }}" alt="" width="120" height="120" loading="lazy">{% endif %}
+                <span class="artist-news__body">
+                    <span class="artist-news__tag{{ ' artist-news__tag--soon' if e.upcoming }}">{{ e.kind_label }} · {{ 'le ' ~ fmt_date((e.event_date|string)[:10]) if e.upcoming else fmt_date((e.event_date|string)[:10]) }}</span>
+                    {% if not hide_artist %}<strong>{{ e.artist_name }}</strong>{% endif %}
+                    <span class="artist-news__title">{{ e.title }}</span>
+                    {% if e.summary %}<span class="artist-news__summary">{{ e.summary }}</span>{% endif %}
+                </span>
+            </a>
+            {% if e.source_url %}<small class="artist-news__source">Source : <a href="{{ e.source_url }}" target="_blank" rel="noopener nofollow">{{ e.source_name or url_host(e.source_url) }}</a></small>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{%- endif -%}
