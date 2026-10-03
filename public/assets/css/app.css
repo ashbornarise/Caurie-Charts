@@ -696,3 +696,8 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .artist-news__title { font-weight: 600; overflow-wrap: anywhere; }
 .artist-news__summary { font-size: .85rem; color: var(--ink-2); }
 .artist-news__source { display: block; margin-top: 6px; font-size: .75rem; color: var(--muted); }
+
+/* Accueil : l'actu en bandeau défilant sous le Top 5 */
+.artist-news--strip { margin: 18px 0 6px; }
+.artist-news--strip .artist-news__list { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
+.artist-news--strip .artist-news__item { flex: 0 0 280px; scroll-snap-align: start; }

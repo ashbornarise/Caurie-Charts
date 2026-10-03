@@ -49,6 +49,7 @@
         </a>
         <nav class="site-nav" aria-label="{{ t('nav.main') }}">
             <a href="{{ chart_path('WA', 'prime-wa') }}" {{ Markup('aria-current="page"') if current.startswith('/classements') }}>{{ t('nav.charts') }}</a>
+            <a href="{{ path('actu-artistes') }}" {{ Markup('aria-current="page"') if current == '/actu-artistes' }}>Actu</a>
             <a href="{{ path('methodologie') }}" {{ Markup('aria-current="page"') if current == '/methodologie' }}>{{ t('nav.methodology') }}</a>
             <a href="{{ path('a-propos') }}" {{ Markup('aria-current="page"') if current == '/a-propos' }}>{{ t('nav.about') }}</a>
             <a class="site-nav__cta" href="{{ path('declarer') }}">{{ t('nav.submit') }}</a>

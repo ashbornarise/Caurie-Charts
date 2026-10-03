@@ -1,0 +1,19 @@
+<div class="wrap">
+<div class="page-main">
+    <section class="chart-hero">
+        <p class="eyebrow">Le média</p>
+        <h1 class="chart-hero__title">L’actu des artistes</h1>
+        <p class="chart-hero__lead">Les nouveaux clips des chaînes YouTube officielles (les plus vus d’abord), les albums et EP à venir ou tout juste sortis, les concerts et les distinctions. Chaque information a sa source ; tout est mis à jour chaque nuit.</p>
+        <nav class="tabs" aria-label="Type d’actualité">
+            <a class="tabs__item" href="{{ path('actu-artistes') }}" {{ Markup('aria-current="page"') if not kind }}>Tout</a>
+            {% for k, l in kinds.items() %}<a class="tabs__item" href="{{ path('actu-artistes', {'type': k}) }}" {{ Markup('aria-current="page"') if kind == k }}>{{ l }}</a>{% endfor %}
+        </nav>
+    </section>
+    {% if items %}
+    {{ partial('partials/artist-news', items=items, title=(kinds.get(kind) ~ ' · 45 derniers jours') if kind else 'Les 45 derniers jours et à venir') }}
+    {% else %}
+    <p class="empty">Rien de neuf dans cette catégorie pour le moment.</p>
+    {% endif %}
+    <p class="muted">Un artiste, un label ? Annoncez une sortie ou un concert : <a href="{{ path('contact') }}">écrivez-nous</a> avec le lien de votre annonce officielle.</p>
+</div>
+</div>

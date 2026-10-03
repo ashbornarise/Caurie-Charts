@@ -87,10 +87,12 @@ def collect_youtube() -> str:
     return f"{len(rows)} clips YouTube récents à l'affiche"
 
 
-def latest(limit: int = 6, artist_id: int | None = None) -> list:
+def latest(limit: int = 6, artist_id: int | None = None, days: int = 21, kind: str | None = None) -> list:
     """À venir (30 jours) puis récentes (21 jours) ; les albums et EP avant les singles."""
     today = clock.today()
     flt, params = ("AND e.artist_id = ?", [artist_id]) if artist_id else ("", [])
+    if kind in KINDS:
+        flt, params = flt + " AND e.kind = ?", [*params, kind]
     rows = db.all(f"""SELECT e.*, a.name AS artist_name, a.slug AS artist_slug, COALESCE(e.image_url, a.image_url) AS picture
                       FROM artist_events e JOIN artists a ON a.id = e.artist_id
                       WHERE e.status = 'published' AND a.status = 'active'
@@ -99,7 +101,7 @@ def latest(limit: int = 6, artist_id: int | None = None) -> list:
                       ORDER BY e.event_date > ? DESC, e.origin = 'youtube' DESC, e.kind IN ('album', 'ep', 'concert', 'distinction') DESC,
                                e.event_date DESC
                       LIMIT {int(limit) * 8}""",
-                   [(today - timedelta(days=21 if not artist_id else 365)).isoformat(), (today + timedelta(days=60)).isoformat(), *params,
+                   [(today - timedelta(days=days if not artist_id else 365)).isoformat(), (today + timedelta(days=60)).isoformat(), *params,
                     today.isoformat()])
     for r in rows:
         d = r["event_date"] if isinstance(r["event_date"], date) else date.fromisoformat(str(r["event_date"])[:10])

@@ -429,6 +429,23 @@ def news(request):
     })
 
 
+def artist_news_page(request):
+    """Toute l'actu des artistes : sorties à venir, nouveaux clips YouTube (les plus vus d'abord), albums, concerts…"""
+    use_locale(request)
+    from core.services import artist_news
+    kind = req_str(request, "type")
+    kind = kind if kind in artist_news.KINDS else None
+    try:
+        items = artist_news.latest(60, None, 45, kind)
+    except Exception:  # noqa: BLE001 — jamais bloquant pour la page
+        items = []
+    return render(request, "artist-news-page", {
+        "items": items, "kind": kind, "kinds": {k: v for k, v in artist_news.KINDS.items() if k != "autre"},
+        "meta": {"title": "L’actu des artistes d’Afrique de l’Ouest · " + brand(),
+                 "description": "Nouveaux clips, albums, EP, concerts et distinctions des artistes d’Afrique de l’Ouest, sources à l’appui, mis à jour chaque nuit par " + brand() + "."},
+    })
+
+
 def edition_slides(item: dict) -> list:
     """Diapositives (4:5) du carrousel d'un numéro de Cauri Hebdo ou Cauri Matin, la une en premier."""
     guid = str(item.get("external_guid") or "")
@@ -577,7 +594,7 @@ def sitemap(request):
                 for p in ch["periods"]:
                     urls.append(url(chart_path(c["code"], code, p)))
         images[url(chart_path(c["code"], "prime", "week"))] = [(og_image("classement", c["code"].lower()), f"Top {country_name(c['code'])} · Cauri Charts")]
-    urls += [url(p) for p in ("actualites", "partenaires", "integrer", "mentions-legales", "confidentialite", "cookies")]
+    urls += [url(p) for p in ("actualites", "actu-artistes", "partenaires", "integrer", "mentions-legales", "confidentialite", "cookies")]
     data = repos.sitemap_entries()
     dated = {}
     for a in data["artists"]:

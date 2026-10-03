@@ -1,7 +1,10 @@
 {#- L'actu des artistes : sorties (Deezer) et faits de la rédaction, avec leur source. items : artist_news.latest() -#}
 {%- if items -%}
-<section class="artist-news" aria-labelledby="artist-news-title">
-    <h2 id="artist-news-title">{{ title or 'L’actu des artistes' }}</h2>
+<section class="artist-news{{ ' artist-news--strip' if strip }}" aria-labelledby="artist-news-title">
+    <div class="partners__head">
+        <h2 id="artist-news-title">{{ title or 'L’actu des artistes' }}</h2>
+        {% if more %}<a class="link-arrow" href="{{ more }}">Toute l’actu</a>{% endif %}
+    </div>
     <ul class="artist-news__list">
         {% for e in items %}
         <li class="artist-news__item">

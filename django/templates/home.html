@@ -12,6 +12,7 @@
            title=t('home.title', {'country': country_name(code), 'size': country.chart_size}),
            day=(period_label(run) if run else (t('chart.live_day', {'date': fmt_date(live.day)}) if live and live.day else '')),
            more='#classement') }}
+<div class="wrap">{{ partial('partials/artist-news', items=artistNews, more=path('actu-artistes'), strip=true) }}</div>
 <div class="wrap page-grid">
 <div class="page-main">
     <section class="chart-hero" id="classement">
@@ -50,8 +51,6 @@
             </div>
         {% endif %}
     </section>
-
-    {{ partial('partials/artist-news', items=artistNews) }}
 
     {% if hotArtists %}
     {{ partial('partials/hot-artists', artists=hotArtists) }}
