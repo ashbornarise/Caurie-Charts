@@ -333,20 +333,21 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
     g.line([(W / 2 - 360 * s, y), (W / 2 - 50 * s, y)], fill=255, width=max(1, int(1.6 * s)))
     g.line([(W / 2 + 50 * s, y), (W / 2 + 360 * s, y)], fill=255, width=max(1, int(1.6 * s)))
     rule_y = y
+    cm = c_mark(int(66 * s))  # le « C » de Cauri Charts au centre du filet, dans le même métal
+    if cm:
+        gold.paste(255, (int(W / 2 - cm.width / 2), int(rule_y - cm.height / 2)), cm)
     fr, en = KIND_LABELS.get(kind, KIND_LABELS["title"])
     lab = f"{fr.format(n=rank)}  ·  {CHARTS.get(chart, chart).upper()}"
     _paint(img, gold)
     img.paste(CREAM, (0, 0), nm)
     img.paste(VIO_LIGHT, (0, 0), tm)
-    gm = gem(int(64 * s))
-    img.paste(gm, (int(W / 2 - gm.width / 2), int(rule_y - gm.height * .38)), gm)
     rw = rf.getlength(rank_t)
     for fx, fy_, fr_ in ((.08, -.80, 46), (.93, -.52, 30), (.47, -.06, 22)):  # éclats sur le métal du N°
         sparkle(img, W / 2 - rw / 2 + rw * fx, ry + 400 * s * fy_, fr_ * s)
     d = ImageDraw.Draw(img)
-    _spaced(d, (W / 2, y + 62 * s), lab, _f(CINZEL, _fit(lab, CINZEL, 32 * s, W - 300 * s, "Bold", .14), "Bold"), fill=CREAM, spacing=.14)
-    _spaced(d, (W / 2, y + 108 * s), week.upper(), _f(CINZEL, 28 * s, "Regular"), fill=GREY, spacing=.26)
-    # 8. Pied : code-barres (gauche), numéro et authenticité (centre), sceau (droite)
+    _spaced(d, (W / 2, y + 84 * s), lab, _f(CINZEL, _fit(lab, CINZEL, 32 * s, W - 300 * s, "Bold", .14), "Bold"), fill=CREAM, spacing=.14)
+    _spaced(d, (W / 2, y + 128 * s), week.upper(), _f(CINZEL, 28 * s, "Regular"), fill=GREY, spacing=.26)
+    # 8. Pied : code-barres (gauche), numéro et authenticité (centre)
     fy = H - int(225 * s)
     import re
     wk = re.findall(r"\d+", week)
@@ -357,16 +358,7 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
     img.paste(bc, (bx, fy + int(42 * s)), bc)
     d = ImageDraw.Draw(img)
     _spaced(d, (bx + bc.width / 2, fy + 158 * s), label, _f(SANS, 17 * s), fill=GREY, spacing=.22)
-    seal_r = int(100 * s)
-    sm = seal_mask(seal_r)
-    sg = Image.new("L", (W, H), 0)
-    sx, sy = int(W - 90 * s - 2 * seal_r), fy - int(17 * s)
-    sg.paste(sm, (sx, sy))
-    cm = c_mark(int(seal_r * .46))
-    if cm:
-        sg.paste(255, (int(sx + seal_r - cm.width / 2), int(sy + seal_r * 1.0)), cm)
-    _paint(img, sg, emboss=False)
-    img.info["foil"] = ImageChops.lighter(gold, sg)  # calque « dorure à chaud » pour l'imprimeur
+    img.info["foil"] = gold  # calque « dorure à chaud » pour l'imprimeur
     d = ImageDraw.Draw(img)
     if number:
         _spaced(d, (W / 2, fy + 78 * s), f"DISTINCTION N° {number:04d}", _f(CINZEL, 30 * s, "Bold"), fill=VIO_LIGHT, spacing=.3)
