@@ -13,7 +13,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 from core.services.social import image as PI
 
-VIO, VIO_DARK, VIO_LIGHT = (139, 82, 255), (46, 16, 108), (222, 206, 255)  # violet Cauri Charts (#8B52FF), métal améthyste
+VIO, VIO_DARK, VIO_LIGHT = (139, 82, 255), (46, 16, 108), (222, 206, 255)
+SKY = (120, 196, 245)  # bleu ciel : éclaire la carte et détache l'artiste  # violet Cauri Charts (#8B52FF), métal améthyste
 INK, CREAM, GREY = (8, 6, 12), (246, 243, 252), (176, 168, 194)
 CHARTS = {"prime": "Top 20 · Afrique de l’Ouest", "buzz": "Ça monte · Afrique de l’Ouest", "fresh": "Nouveautés · Afrique de l’Ouest",
           "icon": "Top artistes · Afrique de l’Ouest", "legend": "Classiques · Afrique de l’Ouest"}
@@ -288,13 +289,26 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
     s = W / 1600
     kind = kind or ("artist" if not title else "title")
     img = paper((W, H))
-    # 1. Photo grande et immersive, noir et blanc aux ombres violettes, fondue dans le noir
+    # Ciel : bleu ciel en haut, violet Cauri au milieu, fondu dans le noir avant les textes
+    sky = Image.new("RGB", (1, 256))
+    for i in range(256):
+        t = i / 255
+        a, b, u = ((SKY, VIO, t / .55) if t < .55 else (VIO, (60, 30, 120), (t - .55) / .45))
+        sky.putpixel((0, i), tuple(int(a[c] + (b[c] - a[c]) * u) for c in range(3)))
+    sky = sky.resize((W, int(H * .72)), Image.BICUBIC)
+    alpha = Image.linear_gradient("L").resize(sky.size).point(lambda v: int(235 * (1 - (v / 255) ** 2.2)))
+    img.paste(sky, (0, 0), alpha)
+    # 1. Photo grande et immersive, en couleurs naturelles, fondue dans le ciel en haut et dans le noir en bas
     ph_y, ph_h = int(170 * s), int(900 * s)
     photo = PI.photo(photo_url)
     if photo:
         band = Image.new("RGB", (W, ph_h))
         PI.paste_cover(band, photo, W, ph_h, 0.10)
-        band = ImageOps.colorize(ImageOps.autocontrast(ImageOps.grayscale(band), cutoff=1), (6, 4, 12), (242, 240, 248), mid=(104, 94, 124))
+        from PIL import ImageEnhance
+        band = ImageEnhance.Contrast(ImageEnhance.Color(ImageOps.autocontrast(band, cutoff=.5)).enhance(1.08)).enhance(1.06)
+        # Légère lumière bleu ciel sur les bords : l'artiste ressort au centre
+        edge = Image.radial_gradient("L").resize((W, ph_h)).point(lambda v: int(max(0, v - 120) * .55))
+        band.paste(SKY, (0, 0), edge)
         fade = Image.linear_gradient("L").resize((W, ph_h)).point(lambda v: 255 if v < 120 else int(255 * (1 - ((v - 120) / 135) ** 1.4)))
         top = Image.linear_gradient("L").rotate(180).resize((W, ph_h)).point(lambda v: max(0, min(255, int((v - 175) * 3.2))))
         film = Image.effect_noise((W, ph_h), 26).convert("L")
@@ -343,14 +357,16 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
              ("MOIS DERNIER" if monthly else "SEM. DERNIÈRE", ("NOUV." if stats["last"] is None else two(stats["last"])) if "last" in stats else "—"),
              ("MEILLEUR RANG", two(stats["peak"]) if stats.get("peak") else "—"),
              ("MOIS" if monthly else "SEMAINES", str(int(stats["weeks"])) if stats.get("weeks") else "—")]
+    # Sans historique (première édition, nouvelle entrée) : pas de « mois dernier », « meilleur rang »… à afficher
+    show_stats = stats.get("last") is not None or int(stats.get("weeks") or 0) > 1
     sy = y + int(62 * s)
     cw_ = (W - 420 * s) / 4
     x0 = 210 * s
-    for k in range(1, 4):
+    for k in (range(1, 4) if show_stats else []):
         g.line([(x0 + k * cw_, sy - 4 * s), (x0 + k * cw_, sy + 78 * s)], fill=255, width=max(1, int(1.4 * s)))
     stat_lab, stat_num = _f(SANS, 17 * s), _f(CINZEL, 52 * s, "Bold")
     # 7. Filet au « C », classement et semaine
-    rule_y = sy + int(122 * s)
+    rule_y = sy + int(122 * s) if show_stats else y + int(74 * s)
     g.line([(W / 2 - 360 * s, rule_y), (W / 2 - 50 * s, rule_y)], fill=255, width=max(1, int(1.6 * s)))
     g.line([(W / 2 + 50 * s, rule_y), (W / 2 + 360 * s, rule_y)], fill=255, width=max(1, int(1.6 * s)))
     cm = c_mark(int(60 * s))  # le « C » de Cauri Charts au centre du filet, dans le même métal
@@ -362,7 +378,7 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
     img.paste(CREAM, (0, 0), nm)
     img.paste(VIO_LIGHT, (0, 0), tm)
     d = ImageDraw.Draw(img)
-    for k, (label_, val) in enumerate(cells):
+    for k, (label_, val) in enumerate(cells if show_stats else []):
         cx = x0 + cw_ * (k + .5)
         _spaced(d, (cx, sy + 14 * s), label_, stat_lab, fill=GREY, spacing=.18)
         _spaced(d, (cx, sy + 74 * s), val, stat_num, fill=CREAM if k else VIO_LIGHT, spacing=.04)
