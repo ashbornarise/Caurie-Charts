@@ -269,6 +269,8 @@ def seal_mask(r: int) -> Image.Image:
 def barcode(data: str, w: int, h: int, color=CREAM) -> Image.Image:
     """Code-barres Code 128 (numéro de la distinction), barres claires sur fond transparent."""
     from barcode import Code128
+    import unicodedata
+    data = unicodedata.normalize("NFKD", data).encode("ascii", "ignore").decode()  # Code 128 : ASCII seulement (APERÇU → APERCU)
     bits = "".join(Code128(data).build())
     im = Image.new("RGBA", (len(bits), 1), (0, 0, 0, 0))
     im.putdata([color + (255,) if b == "1" else (0, 0, 0, 0) for b in bits])
