@@ -11,7 +11,7 @@ from django.template.loader import get_template
 
 from core import clock
 from core import conf, db, repos, storage
-from core.helpers import PERIOD_SLUGS, brand, chart_path, country_name, period_label, url
+from core.helpers import PERIOD_SLUGS, brand, chart_path, country_name, path, period_label, url
 from core.i18n import locale, set_locale, t
 from core.services import insights, live_chart
 
@@ -422,6 +422,13 @@ def news_item(request, slug: str):
     use_locale(request)
     item = repos.news_by_slug(slug)
     if not item:
+        # Anciennes adresses des numéros Cauri (titre dans l'adresse) : redirection permanente vers l'adresse stable
+        m = re.search(r"^cauri-hebdo-.*-(\d{4})-s(\d{2})$", slug)
+        if m and repos.news_by_slug(f"cauri-hebdo-{m.group(1)}-semaine-{m.group(2)}"):
+            return redirect(path(f"actualites/cauri-hebdo-{m.group(1)}-semaine-{m.group(2)}"), 301)
+        m = re.search(r"^cauri-matin-.*-(\d{4}-\d{2}-\d{2})$", slug)
+        if m and repos.news_by_slug(f"cauri-matin-{m.group(1)}"):
+            return redirect(path(f"actualites/cauri-matin-{m.group(1)}"), 301)
         raise Http404
     image = url("media/news/" + item["image_path"]) if item.get("image_path") else None
     slides = edition_slides(item)

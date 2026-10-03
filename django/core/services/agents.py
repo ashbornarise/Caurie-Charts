@@ -41,7 +41,7 @@ def check_editions(run: Run) -> None:
     art = db.one("SELECT id, title, slug FROM news WHERE external_guid = ?", [f"cauri-hebdo-{year}-W{week:02d}"])
     if art and one["title"] not in art["title"]:
         f = magazine.facts()
-        new = magazine.write({**f, "top": [r for r in f["top"] if r.get("status") == "active"]}, str(week))
+        new = magazine.write(f, str(week))
         if new and new["title"] != art["title"]:
             db.update("news", {"title": new["title"], "summary": new["summary"],
                                "body": new["body"] + f"\n\nMis à jour le {clock.today():%d/%m} : le classement a évolué depuis la première publication."},

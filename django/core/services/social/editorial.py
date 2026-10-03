@@ -117,12 +117,14 @@ def hebdo_post(f: dict, day: date) -> dict | None:
     from core.services.magazine import de
     from core.services.social.generator import own_image
     # Seulement les artistes au pays confirmé, avec leur vrai rang du classement (les numéros restent ceux du site)
-    top = [r for r in f["top"] if r.get("status") == "active"]
+    # Les listes reprennent le classement du site tel quel (rangs et titres) ; un artiste dont le pays n'est pas
+    # confirmé y figure avec la mention « pays à confirmer » mais n'est jamais mis en avant (couverture)
+    top = f["top"]
     if len(top) < 10:
         return None
     year, week, _ = day.isocalendar()
-    one = top[0]
-    who = lambda r: f"{r['artist_name']}" + (f" · {country_name(r['artist_country'])}" if r.get("artist_country") else "")  # noqa: E731
+    one = next((r for r in top if r.get("status") == "active"), top[0])
+    who = lambda r: f"{r['artist_name']} · " + ("pays à confirmer" if r.get("status") != "active" else country_name(r["artist_country"]) if r.get("artist_country") else "")  # noqa: E731
     slides = [
         {"bg": INK, "fg": WHITE, "acc": GOLD, "tag": "LE PODIUM", "big": "EN TÊTE DU TOP",
          "rows": [(r["rank"], r["title"], who(r)) for r in top[:3]]},
@@ -137,7 +139,7 @@ def hebdo_post(f: dict, day: date) -> dict | None:
         slides.append({"bg": GOLD, "fg": INK, "acc": INK, "tag": "ÇA MONTE", "big": "À SURVEILLER",
                        "rows": [(i + 1, r["title"], who(r)) for i, r in enumerate([b for b in f["buzz"] if b.get("status") == "active"][:3])]})
     if f.get("leaders"):
-        slides.append({"bg": INK, "fg": WHITE, "acc": VIOLET, "tag": "PAYS PAR PAYS", "big": "LES N°1",
+        slides.append({"bg": INK, "fg": WHITE, "acc": VIOLET, "tag": "CLASSEMENT DE CHAQUE PAYS", "big": "N°1 DANS CHAQUE PAYS",
                        "rows": [(r["country"], r["title"], f"{r['artist_name']} · {country_name(r['country'])}") for r in f["leaders"][:6] if r.get("status") == "active"]})
     slides.append({"bg": VIOLET, "fg": WHITE, "acc": GOLD, "tag": "CAURI HEBDO", "big": "L'ARTICLE COMPLET EST EN LIGNE",
                    "body": "Le classement complet, la méthode et la note de fiabilité de chaque pays sur cauricharts.com. Rendez-vous dimanche prochain.",

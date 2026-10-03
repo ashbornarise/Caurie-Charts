@@ -14,6 +14,8 @@ MAIN = ["NG", "GH", "CI", "SN", "TG", "BJ", "ML", "BF"]
 
 
 def _who(r: dict) -> str:
+    if r.get("status") and r["status"] != "active":
+        return f"{r['artist_name']} (pays à confirmer)"
     country = f" ({country_name(r['artist_country'])})" if r.get("artist_country") else ""
     return f"{r['artist_name']}{country}"
 
@@ -51,10 +53,18 @@ def write(f: dict, week: str) -> dict | None:
     names = [live_chart.SOURCES.get(p, p) for p in platforms]
     paras.append(f"« {one['title']} » {de(_who(one))} prend la première place du Top 20 Afrique de l'Ouest cette semaine"
                  + (f", porté par {', '.join(names[:-1]) + ' et ' + names[-1] if len(names) > 1 else names[0]}." if names else "."))
+    # N°1 régional différent du n°1 de son propre pays : deux classements, on l'explique au lecteur
+    home = next((r for r in f.get("leaders") or [] if r["country"] == one.get("artist_country")), None)
+    if home and home.get("track_id") != one.get("track_id"):
+        n = len({s["country"] for s in one.get("seen") or []})
+        paras.append(f"À noter : au {country_name(home['country'])} pris seul, le n°1 est « {home['title']} » {de(home['artist_name'])}. "
+                     f"« {one['title']} » prend la tête de la région parce qu'il est classé dans {n} pays à la fois : "
+                     "le Top 20 Afrique de l'Ouest récompense les titres écoutés partout dans la région.")
     podium = top[1:3]
     paras.append("Sur le podium, " + " puis ".join(f"« {r['title']} » {de(_who(r))}" for r in podium) + ".")
     rest = top[3:10]
-    paras.append("Le reste du Top 10 : " + " ; ".join(f"n°{i + 4} « {r['title']} » ({r['artist_name']})" for i, r in enumerate(rest)) + ".")
+    # Rangs du site, jamais recomptés
+    paras.append("Le reste du Top 10 : " + " ; ".join(f"n°{r['rank']} « {r['title']} » ({r['artist_name']})" for r in rest) + ".")
     if f["countries"]:
         parts = [f"{country_name(c)} {n} {_plural(n, 'titre', 'titres')}" for c, n in f["countries"].most_common(5)]
         paras.append(f"{len(f['countries'])} pays sont représentés dans le Top 20 : " + ", ".join(parts)
@@ -85,7 +95,7 @@ def publish(today=None, f: dict | None = None) -> str:
     if not art:
         return "Cauri Hebdo : pas assez de titres cette semaine"
     image = FeedImporter()._thumbnail(art["image"], guid) if art.get("image") else None
-    db.insert("news", {"title": art["title"], "slug": slugify(art["title"])[:180] + f"-{year}-s{week:02d}", "summary": art["summary"],
+    db.insert("news", {"title": art["title"], "slug": f"cauri-hebdo-{year}-semaine-{week:02d}",  # adresse stable : ne dépend pas du n°1 "summary": art["summary"],
                        "body": art["body"], "category": "classement", "country_id": None, "source_name": "Cauri Charts",
                        "source_url": None, "image_path": image, "origin": "manual", "external_guid": guid,
                        "status": "published", "published_at": now_utc()})
