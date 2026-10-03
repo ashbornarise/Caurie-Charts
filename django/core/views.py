@@ -446,6 +446,17 @@ def artist_news_page(request):
     })
 
 
+def presse(request):
+    """Espace presse : communiqués (PDF consultables et indexés), visuels, contact."""
+    use_locale(request)
+    from core import press
+    return render(request, "presse", {
+        "releases": press.published(),
+        "meta": {"title": "Espace presse · " + brand(),
+                 "description": "Communiqués de presse, visuels et contact presse de Cauri Charts, la référence de la musique ouest-africaine."},
+    })
+
+
 def distinction(request, did: str, kind: str | None = None):
     """Page publique d'une distinction officielle : la carte, sa preuve (le classement), les fichiers à télécharger."""
     use_locale(request)
@@ -620,6 +631,8 @@ def sitemap(request):
                 for p in ch["periods"]:
                     urls.append(url(chart_path(c["code"], code, p)))
         images[url(chart_path(c["code"], "prime", "week"))] = [(og_image("classement", c["code"].lower()), f"Top {country_name(c['code'])} · Cauri Charts")]
+    from core import press
+    urls += [url("presse")] + [url(f) for r in press.published() for _l, f in r["files"] if f.endswith(".pdf")]
     urls += [url(p) for p in ("actualites", "actu-artistes", "partenaires", "integrer", "mentions-legales", "confidentialite", "cookies")]
     data = repos.sitemap_entries()
     dated = {}

@@ -1,0 +1,27 @@
+<div class="wrap press-page">
+    <p class="eyebrow">Espace presse</p>
+    <h1>Cauri Charts, la référence de la musique ouest-africaine</h1>
+    <p class="lead">Communiqués, visuels et contact presse. Les classements sont calculés chaque semaine sur des données réelles, selon une <a href="{{ path('methodologie') }}">méthode publique</a>.</p>
+    <h2>Communiqués</h2>
+    {% if releases %}
+    <ul class="press-list">
+        {% for r in releases %}
+        <li class="press-item">
+            <p class="news-list__meta">{{ fmt_date(r.date[:10]) }}</p>
+            <h3>{{ r.title }}</h3>
+            <p>{{ r.summary }}</p>
+            <p class="press-links">{% for label, href in r.links %}<a class="button button--ghost button--small" href="{{ href }}">{{ label }}</a> {% endfor %}
+                {% if r.article %}<a href="{{ path(r.article) }}">Lire l’article</a>{% endif %}</p>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">Le premier communiqué sera publié très prochainement.</p>
+    {% endif %}
+    <h2>Logos</h2>
+    <p class="press-links"><a class="button button--ghost button--small" href="{{ asset('img/brand/logo.svg') }}" download>Logo (SVG)</a>
+        <a class="button button--ghost button--small" href="{{ asset('img/brand/logo-white.svg') }}" download>Logo blanc (SVG)</a>
+        <a class="button button--ghost button--small" href="{{ asset('img/brand/logo-share.png') }}" download>Logo (PNG)</a></p>
+    <h2>Contact presse</h2>
+    <p><a href="mailto:contact@cauricharts.com">contact@cauricharts.com</a> · Instagram <a href="https://www.instagram.com/cauricharts/" rel="noopener">@cauricharts</a> · TikTok <a href="https://www.tiktok.com/@caurichartsofficial" rel="noopener">@caurichartsofficial</a></p>
+</div>

@@ -47,6 +47,7 @@
                 <ul>
                     <li><a href="{{ path('actu-artistes') }}">L’actu des artistes</a></li>
                     <li><a href="{{ path('actualites') }}">Actualités</a></li>
+                    <li><a href="{{ path('presse') }}">Espace presse</a></li>
                     {% for e in (footer.editions if footer else []) %}<li><a href="{{ path('actualites/' ~ e.slug) }}">{{ e.title.split(' :')[0] }}</a></li>{% endfor %}
                 </ul>
                 <h2>Artistes et pros</h2>

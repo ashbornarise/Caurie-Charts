@@ -715,3 +715,10 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .distinction-page { max-width: 820px; padding-top: 24px; padding-bottom: 40px; }
 .distinction-page__card { width: 100%; max-width: 560px; height: auto; display: block; margin: 20px 0; border-radius: 6px; box-shadow: 0 12px 40px rgba(0, 0, 0, .25); }
 .distinction-page__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Espace presse */
+.press-page { max-width: 820px; padding-top: 24px; padding-bottom: 40px; }
+.press-list { list-style: none; padding: 0; margin: 0; }
+.press-item { border-top: 1px solid var(--line); padding: 16px 0; }
+.press-item h3 { margin: 4px 0 6px; }
+.press-links { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

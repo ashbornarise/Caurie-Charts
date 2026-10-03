@@ -31,6 +31,7 @@ urlpatterns = [
     path("conditions", views.legal),
     path("actualites", views.news),
     path("actu-artistes", views.artist_news_page),
+    path("presse", views.presse),
     re_path(r"^distinctions/(?P<did>\d+)$", views.distinction),
     re_path(r"^distinctions/(?P<did>\d+)/(?P<kind>impression)\.pdf$", views.distinction),
     re_path(r"^actualites/(?P<slug>[a-z0-9-]+)$", views.news_item),
