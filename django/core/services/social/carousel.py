@@ -48,7 +48,8 @@ def render(facts: dict, cover: dict, items: list, name: str) -> dict:
         if fmt == VIDEO and slides:
             segments.append({"image": slides[0]})
         for i, item in enumerate(items):
-            slide = PI.save_jpeg(_item_slide(fr, f, item, i + 2, total, facts["source"]), PI.DIR / f"{name}-{i + 2}{suffix}.jpg")
+            slide = PI.save_jpeg(_item_slide(fr, f, item, i + 2, total, facts["source"], variant=slide_variant(name)),
+                                 PI.DIR / f"{name}-{i + 2}{suffix}.jpg")
             slides.append(slide)
             if fmt != VIDEO:
                 continue
@@ -253,49 +254,78 @@ def _magazine_cover(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -
     return img
 
 
-def _item_slide(fr: PI.Frame, f: dict, item: dict, n: int, total: int, source: str, transparent: bool = False) -> Image.Image:
-    W, H = fr.bw, fr.bh
-    base = H - fr.bottom  # bas de la zone visible
-    img = _canvas(fr, f, None if transparent else item.get("image"), transparent)
-    fr.gradient(img, 0, fr.top + 220, (0, 0, 0), 60, 127)
-    if not transparent:
-        _blur_zone(fr, img, min(int(H * 0.50), base - 640), H, False)  # photo seulement : sur un clip, le calque reste transparent
-    fr.gradient(img, min(int(H * 0.40), base - 760), H, f["shade"], 127, 6)
-    _logo(fr, img, max(56, fr.side), fr.top + 52, 180)
-    draw = ImageDraw.Draw(img, "RGBA")
-    white, violet, soft = (255, 255, 255, 255), (*f["accent"], 255), (255, 255, 255, PI.gd_alpha(40))
-    # Rang « 1er », « 2e »… centré, suffixe en exposant
-    rank = str(item["rank"])
-    suffix = "er" if item["rank"] == 1 else "e"
-    rs = 170
-    w_rank, w_suf = fr.width(rank, f["serif"], rs), fr.width(suffix, f["serif"], 54)
-    x = (W - w_rank - w_suf - 6) / 2
-    y = base - 520
-    fr.text(draw, rs, x, y, white, f["serif"], rank)
-    fr.text(draw, 54, x + w_rank + 6, y - 100, white, f["serif"], suffix)
-    y += 92
-    _centered(fr, draw, 70, y, white, f["serif"], fr.fit(PI.clean(item["artist"]), f["serif"], 70, _inner(fr, 60)))
-    y += 42
-    fr.rect(draw, W / 2 - 9, y, W / 2 + 9, y + 18, violet)
-    y += 78
-    _centered(fr, draw, 50, y, white, f["bold"], fr.fit(PI.clean(item["title"]), f["bold"], 50, _inner(fr, 60)))
-    y += 74
-    # Chiffre exact : nombre en gras, libellé en capitales
-    value = str(item["figure_value"]).upper()
-    label = " " + str(item["figure_label"]).upper()
-    room = _inner(fr, 50)
-    wv, wl = fr.width(value, f["bold"], 42), fr.width(label, f["sans"], 42)
-    if wv + wl > room:
-        label = " " + fr.fit(label.strip(), f["sans"], 42, room - wv)
-        wl = fr.width(label, f["sans"], 42)
-    x = (W - wv - wl) / 2
-    fr.text(draw, 42, x, y, white, f["bold"], value)
-    fr.text(draw, 42, x + wv, y, white, f["sans"], label)
-    _centered(fr, draw, 18, base - 44, soft, f["sans"], fr.fit("Source : " + source, f["sans"], 18, _inner(fr, 60)))
+def slide_variant(name: str) -> str:
+    """Mise en page des diapositives d'un post : « bandeau » ou « dégradé », tirée au sort par post (stable)."""
+    import random
+    return "bandeau" if random.Random(name + "-diapo").random() < 0.5 else "degrade"
+
+
+FONT_D, FONT_B, FONT_S = (str(PI.FONT_DIR / n) for n in ("Anton-Regular.ttf", "Poppins-Bold.ttf", "Poppins-Regular.ttf"))
+
+
+def _photo(fr: PI.Frame, url, height: int, bg) -> Image.Image:
+    """Photo nette (aucun flou, aucun filtre), recadrée sur le haut du sujet, sur la hauteur demandée."""
+    img = Image.new("RGB", (fr.w, fr.h), bg)
+    ph = PI.photo(url)
+    if ph:
+        part = Image.new("RGB", (fr.w, height))
+        PI.paste_cover(part, ph, fr.w, height, 0.18)
+        img.paste(part, (0, 0))
+    else:
+        fr.gradient(img, 0, fr.bh, (40, 30, 70), 90, 0)
     return img
 
 
-MUSIC_DIR = PI.REPO / "resources" / "music"
+def _item_slide(fr: PI.Frame, f: dict, item: dict, n: int, total: int, source: str, transparent: bool = False,
+                variant: str = "degrade") -> Image.Image:
+    """Diapositive d'un titre, sans flou : « bandeau » (photo en haut, bandeau plein en bas) ou « dégradé » (photo
+    plein cadre, dégradé noir profond). Sur un clip vidéo (calque transparent), toujours le dégradé."""
+    W, H = fr.bw, fr.bh
+    base = H - fr.bottom
+    pad = max(64, fr.side)
+    ink, white = (14, 12, 18), (255, 255, 255)
+    acc, on = (*f["accent"], 255), (*f["on"], 255)
+    rank = str(item["rank"])
+    artist, title = PI.clean(item["artist"]), PI.clean(item["title"])
+    value, label = str(item.get("figure_value") or ""), str(item.get("figure_label") or "").upper()
+    if variant == "bandeau" and not transparent:
+        split = int(H * (0.62 if fr.bottom == 0 else 0.56))
+        img = _photo(fr, item.get("image"), PI.Frame.s(split), ink)
+        d = ImageDraw.Draw(img, "RGBA")
+        fr.gradient(img, 0, fr.top + 200, (0, 0, 0), 70, 127)
+        fr.rect(d, 0, split, W, H, (*ink, 255))
+        fr.rect(d, 0, split, W, split + 8, acc)
+        rank_px = 300 if fr.bottom == 0 else 280
+        fr.text(d, rank_px, pad - 8, split + rank_px * 0.5, acc, FONT_D, rank)
+        x = pad + fr.width(rank, FONT_D, rank_px) + 34
+        room = W - x - pad
+        fr.text(d, 30, x, split + 70, (255, 255, 255, 170), FONT_B, fr.fit(f"N°{rank}", FONT_B, 30, room))
+        fr.text(d, 64, x, split + 140, (*white, 255), FONT_D, fr.fit(artist.upper(), FONT_D, 64, room))
+        fr.text(d, 34, x, split + 190, (*white, 255), FONT_B, fr.fit(f"« {title} »", FONT_B, 34, room))
+        if value:
+            fr.rect(d, pad, base - 170, W - pad, base - 168, (255, 255, 255, 60))
+            fr.text(d, 40, pad, base - 105, acc, FONT_D, value)
+            fr.text(d, 24, pad + fr.width(value, FONT_D, 40) + 14, base - 108, (*white, 255), FONT_B,
+                    fr.fit(label, FONT_B, 24, W - 2 * pad - fr.width(value, FONT_D, 40) - 14))
+        fr.text(d, 17, pad, base - 44, (255, 255, 255, 150), FONT_S, fr.fit("Source : " + source + " · cauricharts.com", FONT_S, 17, W - 2 * pad))
+        _logo(fr, img, pad, fr.top + 52, 180)
+        return img
+    # Dégradé : photo plein cadre nette, noir profond vers le bas, textes alignés à gauche
+    img = _canvas(fr, f, None, True) if transparent else _photo(fr, item.get("image"), fr.h, ink)
+    fr.gradient(img, int(H * 0.38), H, (6, 5, 9), 127, 0)
+    fr.gradient(img, 0, fr.top + 200, (0, 0, 0), 60, 127)
+    d = ImageDraw.Draw(img, "RGBA")
+    fr.text(d, 220, pad - 6, base - 370, acc, FONT_D, rank)
+    fr.text(d, 92, pad, base - 240, (*white, 255), FONT_D, fr.fit(artist.upper(), FONT_D, 92, W - 2 * pad))
+    fr.text(d, 38, pad, base - 180, (*white, 255), FONT_B, fr.fit(f"« {title} »", FONT_B, 38, W - 2 * pad))
+    if value:
+        tag = fr.fit(f"{value}  {label}", FONT_B, 26, W - 2 * pad - 32)
+        vw = fr.width(tag, FONT_B, 26) + 32
+        fr.rect(d, pad, base - 130, pad + vw, base - 80, acc)
+        fr.text(d, 26, pad + 16, base - 95, on, FONT_B, tag)
+    fr.text(d, 17, pad, base - 30, (255, 255, 255, 150), FONT_S, fr.fit("Source : " + source + " · cauricharts.com", FONT_S, 17, W - 2 * pad))
+    _logo(fr, img, pad, fr.top + 52, 180)
+    return img
 
 
 def _music(seed: str) -> str | None:
