@@ -49,15 +49,24 @@ def _gold(size, seed=0) -> Image.Image:
     mix = ImageChops.add(g.point(lambda v: v // 3), sheen.point(lambda v: v * 2 // 3))
     img = Image.merge("RGB", [mix.point(lut(c)) for c in range(3)])
     noise = Image.effect_noise((max(1, w), max(1, h)), 22).convert("L")
-    return Image.blend(img, Image.merge("RGB", [noise] * 3), 0.06)
+    img = Image.blend(img, Image.merge("RGB", [noise] * 3), 0.05)
+    # Brossage : un bruit étiré à l'horizontale donne les stries d'un métal poli
+    brush = Image.effect_noise((max(1, w // 24), max(1, h)), 60).convert("L").resize((max(1, w), max(1, h)), Image.BILINEAR)
+    return Image.blend(img, Image.merge("RGB", [brush] * 3), 0.10)
 
 
 def _paint(img: Image.Image, mask: Image.Image, emboss=True) -> None:
     """Applique le métal violet à travers un masque, avec une ombre portée discrète (effet gravé)."""
+    k = max(1, img.width // 700)
     if emboss:
-        sh = mask.filter(ImageFilter.GaussianBlur(3)).point(lambda v: int(v * 0.6))
-        img.paste((0, 0, 0), (2, 4), sh)
+        sh = mask.filter(ImageFilter.GaussianBlur(3 * k)).point(lambda v: int(v * 0.6))
+        img.paste((0, 0, 0), (2 * k, 4 * k), sh)
     img.paste(_gold(img.size), (0, 0), mask)
+    soft = mask.filter(ImageFilter.GaussianBlur(1.2 * k))
+    hi = ImageChops.multiply(ImageChops.subtract(soft, ImageChops.offset(soft, 2 * k, 2 * k)), mask)
+    lo = ImageChops.multiply(ImageChops.subtract(soft, ImageChops.offset(soft, -2 * k, -2 * k)), mask)
+    img.paste((255, 255, 255), (0, 0), hi.point(lambda v: int(v * .75)))
+    img.paste((20, 6, 50), (0, 0), lo.point(lambda v: int(v * .7)))
 
 
 def _spaced(d, xy, text, font, fill=255, spacing=0.0, anchor="m"):
@@ -139,6 +148,30 @@ def sparkle(img: Image.Image, x: float, y: float, r: float) -> None:
     ImageDraw.Draw(halo).ellipse([R - r * .45, R - r * .45, R + r * .45, R + r * .45], fill=150)
     glow = ImageChops.lighter(m, halo.filter(ImageFilter.GaussianBlur(r * .25)))
     img.paste((255, 255, 255), (int(x - R), int(y - R)), glow)
+
+
+def c_mark(height: int) -> Image.Image | None:
+    """Masque du « C » du logo Cauri Charts (la partie gauche du logo, avant le texte)."""
+    logo = PI.white_logo()
+    if not logo:
+        return None
+    a = logo.getchannel("A")
+    a = a.crop((0, 0, int(a.width * .37), a.height))
+    a = a.crop(a.getbbox())
+    return a.resize((max(1, round(a.width * height / a.height)), height), Image.LANCZOS)
+
+
+def paper(size) -> Image.Image:
+    """Papier noir mat texturé (grain fin et fibres), comme un carton d'art."""
+    W, H = size
+    img = Image.new("RGB", (W, H), INK)
+    grain = Image.effect_noise((W, H), 40).convert("L").filter(ImageFilter.GaussianBlur(.6))
+    img = Image.blend(img, Image.merge("RGB", [grain.point(lambda v: v // 6)] * 3), .35)
+    fibres = Image.effect_noise((max(1, W // 6), max(1, H // 2)), 70).convert("L").resize((W, H), Image.BICUBIC)
+    img = Image.blend(img, Image.merge("RGB", [fibres.point(lambda v: v // 9)] * 3), .18)
+    halo = Image.radial_gradient("L").resize((W, H)).point(lambda v: int((255 - v) * .16))
+    img.paste((34, 22, 52), (0, 0), halo)
+    return img
 
 
 def _crown(width: int) -> Image.Image:
@@ -249,7 +282,7 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
     W, H = size
     s = W / 1600
     kind = kind or ("artist" if not title else "title")
-    img = Image.new("RGB", (W, H), INK)
+    img = paper((W, H))
     # 1. Photo grande et immersive, noir et blanc aux ombres violettes, fondue dans le noir
     ph_y, ph_h = int(170 * s), int(1040 * s)
     photo = PI.photo(photo_url)
@@ -259,6 +292,8 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
         band = ImageOps.colorize(ImageOps.autocontrast(ImageOps.grayscale(band), cutoff=1), (6, 4, 12), (242, 240, 248), mid=(104, 94, 124))
         fade = Image.linear_gradient("L").resize((W, ph_h)).point(lambda v: 255 if v < 120 else int(255 * (1 - ((v - 120) / 135) ** 1.4)))
         top = Image.linear_gradient("L").rotate(180).resize((W, ph_h)).point(lambda v: max(0, min(255, int((v - 175) * 3.2))))
+        film = Image.effect_noise((W, ph_h), 26).convert("L")
+        band = Image.blend(band, Image.merge("RGB", [film] * 3), .05)
         img.paste(band, (0, ph_y), ImageChops.subtract(fade, top))
     d = ImageDraw.Draw(img)
     gold = Image.new("L", (W, H), 0)
@@ -327,15 +362,30 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
     sg = Image.new("L", (W, H), 0)
     sx, sy = int(W - 90 * s - 2 * seal_r), fy - int(17 * s)
     sg.paste(sm, (sx, sy))
+    cm = c_mark(int(seal_r * .46))
+    if cm:
+        sg.paste(255, (int(sx + seal_r - cm.width / 2), int(sy + seal_r * 1.0)), cm)
     _paint(img, sg, emboss=False)
-    sgem = gem(int(seal_r * .26))
-    img.paste(sgem, (int(sx + seal_r - sgem.width / 2), int(sy + seal_r * 1.12)), sgem)
+    img.info["foil"] = ImageChops.lighter(gold, sg)  # calque « dorure à chaud » pour l'imprimeur
     d = ImageDraw.Draw(img)
     if number:
         _spaced(d, (W / 2, fy + 78 * s), f"DISTINCTION N° {number:04d}", _f(CINZEL, 30 * s, "Bold"), fill=VIO_LIGHT, spacing=.3)
     _spaced(d, (W / 2, fy + 124 * s), "Classement calculé sur des données réelles · cauricharts.com", _f(SANS, 20 * s), fill=GREY, spacing=.05)
     _spaced(d, (W / 2, fy + 158 * s), en.format(n=rank).upper() + " · OFFICIAL CHART DISTINCTION", _f(SANS, 15 * s), fill=(122, 114, 140), spacing=.3)
     return img
+
+
+def print_files(rank: int, chart: str, artist: str, title: str | None, photo_url, week: str, base: str, **kw) -> list:
+    """Fichiers d'impression : format 8 × 10 pouces (20,3 × 25,4 cm, le format standard des cadres photo) à 300 ppp,
+    3 mm de fond perdu ; un PDF en couleurs et un calque de dorure (noir = métal) pour une impression à chaud."""
+    bleed = 36  # 3 mm à 300 ppp
+    img = card(rank, chart, artist, title, photo_url, week, size=(2400, 3000), **kw)
+    full = ImageOps.expand(img, border=bleed, fill=INK)
+    foil = ImageOps.expand(ImageOps.invert(img.info.get("foil", Image.new("L", img.size, 0))), border=bleed, fill=255)
+    out = [f"{base} - impression.pdf", f"{base} - calque dorure.pdf"]
+    full.save(out[0], "PDF", resolution=300)
+    foil.convert("1").save(out[1], "PDF", resolution=300)
+    return out
 
 
 def cadre(card_img: Image.Image, size=(2160, 2700), seed: str = "") -> Image.Image:
