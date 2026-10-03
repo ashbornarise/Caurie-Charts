@@ -276,15 +276,17 @@ def barcode(data: str, w: int, h: int, color=CREAM) -> Image.Image:
 
 
 def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week: str, size=(1600, 2000),
-         kind: str | None = None, number: int | None = None, link: str | None = None) -> Image.Image:
+         kind: str | None = None, number: int | None = None, link: str | None = None, stats: dict | None = None) -> Image.Image:
     """Distinction officielle. Ordre de lecture : CAURI CHARTS → N°1 → artiste → œuvre → classement → semaine.
-    Le gabarit ne change jamais ; seuls la photo, le rang, l'artiste, le titre, le classement, la semaine et le numéro varient."""
+    Le gabarit ne change jamais ; seuls la photo, le rang, l'artiste, le titre, le classement, la semaine et le numéro varient.
+    stats : le langage du classement, tiré de chart_entries : {"last": previous_position (None = nouvelle entrée),
+            "peak": peak_position, "weeks": weeks_on_chart}. Une clé absente s'affiche « — » : on n'invente jamais un chiffre."""
     W, H = size
     s = W / 1600
     kind = kind or ("artist" if not title else "title")
     img = paper((W, H))
     # 1. Photo grande et immersive, noir et blanc aux ombres violettes, fondue dans le noir
-    ph_y, ph_h = int(170 * s), int(1040 * s)
+    ph_y, ph_h = int(170 * s), int(900 * s)
     photo = PI.photo(photo_url)
     if photo:
         band = Image.new("RGB", (W, ph_h))
@@ -307,52 +309,67 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
         lg = logo.resize((lw, round(logo.size[1] * lw / logo.size[0])), Image.LANCZOS)
         img.paste(lg, ((W - lw) // 2, int(78 * s)), lg)
     _spaced(d, (W / 2, 78 * s + (lg.height if logo else 60) + 50 * s), "DISTINCTION OFFICIELLE", _f(CINZEL, 30 * s, "Bold"), fill=CREAM, spacing=.42)
-    # 3. N°1 énorme, à cheval sur le bas de la photo : lisible à deux mètres
-    ry = int(1350 * s)
+    # 3. N°1 énorme, à cheval sur le bas de la photo : net, lisible à deux mètres
+    ry = int(1205 * s)
     rank_t = f"N°{rank}"
-    rf = _f(CINZEL, 400 * s, "Black")
+    rf = _f(CINZEL, 360 * s, "Black")
     sh = Image.new("L", (W, H), 0)
     ImageDraw.Draw(sh).text((W / 2, ry), rank_t, font=rf, fill=255, anchor="ms")
     img.paste((0, 0, 0), (0, int(10 * s)), sh.filter(ImageFilter.GaussianBlur(18 * s)).point(lambda v: int(v * .8)))
     gold.paste(255, (0, 0), sh)
-    # 4. Artiste (crème), 5. œuvre (or, italique)
+    # 4. Artiste (blanc), 5. œuvre (lilas, italique)
     name = artist.upper()
-    ny = ry + int(150 * s)
-    npx = _fit(name, CINZEL, 120 * s, W - 260 * s, "Bold", .05)
+    ny = ry + int(135 * s)
+    npx = _fit(name, CINZEL, 112 * s, W - 260 * s, "Bold", .05)
     nm = Image.new("L", (W, H), 0)
     _spaced(ImageDraw.Draw(nm), (W / 2, ny), name, _f(CINZEL, npx, "Bold"), spacing=.05)
-    y = ny + int(84 * s)
+    y = ny
     tm = Image.new("L", (W, H), 0)
     tl = ImageDraw.Draw(tm)
     if title:
         t = f"« {title} »"
-        tl.text((W / 2, y), t, font=_f(GARAMOND, _fit(t, GARAMOND, 74 * s, W - 300 * s, "Medium Italic"), "Medium Italic"), fill=255, anchor="ms")
-        y += int(66 * s)
-    # 6. Catégorie et classement, 7. semaine
-    y += int(18 * s)
-    g.line([(W / 2 - 360 * s, y), (W / 2 - 50 * s, y)], fill=255, width=max(1, int(1.6 * s)))
-    g.line([(W / 2 + 50 * s, y), (W / 2 + 360 * s, y)], fill=255, width=max(1, int(1.6 * s)))
-    rule_y = y
-    cm = c_mark(int(66 * s))  # le « C » de Cauri Charts au centre du filet, dans le même métal
+        y += int(76 * s)
+        tl.text((W / 2, y), t, font=_f(GARAMOND, _fit(t, GARAMOND, 66 * s, W - 300 * s, "Medium Italic"), "Medium Italic"), fill=255, anchor="ms")
+    # 6. Le langage du classement : cette semaine, semaine dernière, meilleur rang, semaines au classement
+    stats = stats or {}
+
+    def two(v):
+        return f"{int(v):02d}"
+    cells = [("CETTE SEMAINE", two(rank)),
+             ("SEM. DERNIÈRE", ("NOUV." if stats["last"] is None else two(stats["last"])) if "last" in stats else "—"),
+             ("MEILLEUR RANG", two(stats["peak"]) if stats.get("peak") else "—"),
+             ("SEMAINES", str(int(stats["weeks"])) if stats.get("weeks") else "—")]
+    sy = y + int(62 * s)
+    cw_ = (W - 420 * s) / 4
+    x0 = 210 * s
+    for k in range(1, 4):
+        g.line([(x0 + k * cw_, sy - 4 * s), (x0 + k * cw_, sy + 78 * s)], fill=255, width=max(1, int(1.4 * s)))
+    stat_lab, stat_num = _f(SANS, 17 * s), _f(CINZEL, 52 * s, "Bold")
+    # 7. Filet au « C », classement et semaine
+    rule_y = sy + int(122 * s)
+    g.line([(W / 2 - 360 * s, rule_y), (W / 2 - 50 * s, rule_y)], fill=255, width=max(1, int(1.6 * s)))
+    g.line([(W / 2 + 50 * s, rule_y), (W / 2 + 360 * s, rule_y)], fill=255, width=max(1, int(1.6 * s)))
+    cm = c_mark(int(60 * s))  # le « C » de Cauri Charts au centre du filet, dans le même métal
     if cm:
         gold.paste(255, (int(W / 2 - cm.width / 2), int(rule_y - cm.height / 2)), cm)
     fr, en = KIND_LABELS.get(kind, KIND_LABELS["title"])
-    lab = f"{fr.format(n=rank)}  ·  {CHARTS.get(chart, chart).upper()}"
+    lab = CHARTS.get(chart, chart).upper()
     _paint(img, gold)
     img.paste(CREAM, (0, 0), nm)
     img.paste(VIO_LIGHT, (0, 0), tm)
-    rw = rf.getlength(rank_t)
-    for fx, fy_, fr_ in ((.08, -.80, 46), (.93, -.52, 30), (.47, -.06, 22)):  # éclats sur le métal du N°
-        sparkle(img, W / 2 - rw / 2 + rw * fx, ry + 400 * s * fy_, fr_ * s)
     d = ImageDraw.Draw(img)
-    _spaced(d, (W / 2, y + 84 * s), lab, _f(CINZEL, _fit(lab, CINZEL, 32 * s, W - 300 * s, "Bold", .14), "Bold"), fill=CREAM, spacing=.14)
-    _spaced(d, (W / 2, y + 128 * s), week.upper(), _f(CINZEL, 28 * s, "Regular"), fill=GREY, spacing=.26)
+    for k, (label_, val) in enumerate(cells):
+        cx = x0 + cw_ * (k + .5)
+        _spaced(d, (cx, sy + 14 * s), label_, stat_lab, fill=GREY, spacing=.18)
+        _spaced(d, (cx, sy + 74 * s), val, stat_num, fill=CREAM if k else VIO_LIGHT, spacing=.04)
+    _spaced(d, (W / 2, rule_y + 88 * s), lab, _f(CINZEL, _fit(lab, CINZEL, 44 * s, W - 300 * s, "Bold", .12), "Bold"), fill=CREAM, spacing=.12)
+    _spaced(d, (W / 2, rule_y + 136 * s), week.upper(), _f(CINZEL, 30 * s, "Regular"), fill=GREY, spacing=.26)
     # 8. Pied : code-barres (gauche), numéro et authenticité (centre)
     fy = H - int(225 * s)
     import re
     wk = re.findall(r"\d+", week)
     code = f"CC{number or 0:04d}S{''.join(wk)}"
-    label = f"CC-{number or 0:04d} · S{'-'.join(wk)}" if wk else f"CC-{number or 0:04d}"
+    label = f"CC-{number or 0:04d} · S{'·'.join(wk)}" if wk else f"CC-{number or 0:04d}"
     bc = barcode(code, int(250 * s), int(84 * s))
     bx = int(96 * s)
     img.paste(bc, (bx, fy + int(42 * s)), bc)
@@ -363,7 +380,7 @@ def card(rank: int, chart: str, artist: str, title: str | None, photo_url, week:
     if number:
         _spaced(d, (W / 2, fy + 78 * s), f"DISTINCTION N° {number:04d}", _f(CINZEL, 30 * s, "Bold"), fill=VIO_LIGHT, spacing=.3)
     _spaced(d, (W / 2, fy + 124 * s), "Classement calculé sur des données réelles · cauricharts.com", _f(SANS, 20 * s), fill=GREY, spacing=.05)
-    _spaced(d, (W / 2, fy + 158 * s), en.format(n=rank).upper() + " · OFFICIAL CHART DISTINCTION", _f(SANS, 15 * s), fill=(122, 114, 140), spacing=.3)
+    _spaced(d, (W / 2, fy + 158 * s), fr.format(n=rank) + " · " + en.format(n=rank).upper() + " · OFFICIAL CHART DISTINCTION", _f(SANS, 15 * s), fill=(122, 114, 140), spacing=.3)
     return img
 
 
