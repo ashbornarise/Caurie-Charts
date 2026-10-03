@@ -175,3 +175,23 @@ def test_item_slides_render_without_blur():
         for v in ("bandeau", "degrade"):
             assert C._item_slide(fr, f, item, 2, 6, "Shazam", variant=v).size == (fr.w, fr.h)
     assert C.slide_variant("x") in ("bandeau", "degrade") and C.MUSIC_DIR.name == "music"
+
+
+def test_ai_channel_pick_never_invents_an_id(monkeypatch):
+    from core.services import ai
+    from core.services.imports import channel_sync as CS
+    results = [{"snippet": {"channelId": "UCreal1", "title": "StarBoy TV", "description": ""}},
+               {"snippet": {"channelId": "UCreal2", "title": "Wiz Fans", "description": ""}}]
+
+    class Fake:
+        def __init__(self, answer): self.answer = answer
+        def is_available(self): return True
+        def ask(self, *a, **k): return {"text": self.answer}
+    S = CS.YouTubeChannelSync(None)
+    monkeypatch.setattr(S, "_get", lambda *a, **k: {"items": []})
+    monkeypatch.setattr(CS.YouTubeQuota, "spend", staticmethod(lambda *a, **k: True))
+    monkeypatch.setattr(CS.db, "all", lambda *a, **k: [{"title": "Essence"}])
+    monkeypatch.setattr(ai, "make", lambda: Fake('{"id": "UCinvente"}'))
+    assert S._ai_pick("Wizkid", 1, results, "k") is None          # identifiant inventé : refusé
+    monkeypatch.setattr(ai, "make", lambda: Fake('{"id": "UCreal1"}'))
+    assert S._ai_pick("Wizkid", 1, results, "k") == "UCreal1"    # choix parmi les vrais résultats : accepté (puis vérifié par titre)

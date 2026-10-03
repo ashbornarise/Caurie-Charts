@@ -118,11 +118,17 @@ class YouTubeChannelSync:
         only_secondary = bool(found) and all(secondary.search(titles.get(f, "")) for f in found)
         if (not found or only_secondary) and self.searches_left > 0 and YouTubeQuota.spend(100):
             self.searches_left -= 1
-            for item in self._get("search?part=snippet&type=channel&maxResults=5&q=" + _enc(name), key).get("items") or []:
+            results = self._get("search?part=snippet&type=channel&maxResults=8&q=" + _enc(name + " music"), key).get("items") or []
+            for item in results:
                 if self.same_name(item["snippet"]["title"], name):
                     cid = item["snippet"].get("channelId") or (item.get("id") or {}).get("channelId")
                     found.append(cid)
                     titles[cid] = item["snippet"]["title"]
+            if not found and results and artist_id:
+                # Aucun nom identique : l'IA choisit parmi les vraies chaînes trouvées ; la vérification par titre reste obligatoire
+                pick = self._ai_pick(name, artist_id, results, key)
+                if pick:
+                    found.append(pick)
         found = list(dict.fromkeys(f for f in found if f))
         if len(found) <= 1:
             return found[0] if found else None
@@ -132,6 +138,30 @@ class YouTubeChannelSync:
                 for it in self._get("channels?part=statistics&id=" + _enc(",".join(found)), key).get("items") or []}
         # Chaîne principale avant VEVO et Topic, puis la plus suivie
         return max(found, key=lambda c: (not secondary.search(titles.get(c, "")), subs.get(c, 0)))
+
+    def _ai_pick(self, name: str, artist_id: int, results: list, key: str):
+        """Chaîne officielle choisie par l'IA parmi les résultats réels de la recherche (jamais une adresse inventée)."""
+        from core.services import ai
+        client = ai.make()
+        if not client or not client.is_available():
+            return None
+        ids = [(it["snippet"].get("channelId") or (it.get("id") or {}).get("channelId")) for it in results]
+        ids = [i for i in ids if i]
+        stats = {}
+        if ids and YouTubeQuota.spend(1):
+            stats = {it["id"]: it.get("statistics") or {} for it in self._get("channels?part=statistics&id=" + _enc(",".join(ids)), key).get("items") or []}
+        titles = [r["title"] for r in db.all("SELECT title FROM tracks WHERE artist_id = ? ORDER BY id LIMIT 12", [artist_id])]
+        options = [{"id": i, "nom": it["snippet"]["title"], "description": str(it["snippet"].get("description") or "")[:160],
+                    "abonnes": int((stats.get(i) or {}).get("subscriberCount") or 0)} for i, it in zip(ids, results)]
+        system = ("Tu identifies la chaîne YouTube OFFICIELLE d'un artiste musical parmi une liste de chaînes réelles. "
+                  "Réponds uniquement en JSON : {\"id\": \"<id de la liste>\" ou null}. Choisis null en cas de doute : "
+                  "jamais une chaîne de fans, de compilation, de paroles ou d'un homonyme. N'invente aucun identifiant.")
+        prompt = json.dumps({"artiste": name, "ses_titres": titles, "chaines": options}, ensure_ascii=False)
+        try:
+            pick = (ai.extract_json(client.ask(system, prompt, 300)["text"]) or {}).get("id")
+        except Exception:  # noqa: BLE001
+            return None
+        return pick if pick in ids else None  # un identifiant hors de la liste est ignoré
 
     def confirms(self, channel_id: str, artist_id: int, key: str) -> bool:
         """La chaîne est celle de l'artiste si l'une de ses 50 dernières vidéos porte un titre de notre catalogue (1 unité)."""
