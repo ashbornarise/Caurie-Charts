@@ -130,6 +130,23 @@ class YouTubeChannelSync:
                 if pick:
                     found.append(pick)
         found = list(dict.fromkeys(f for f in found if f))
+        if artist_id:
+            # Seules les chaînes dont une vidéo porte un titre de l'artiste comptent (écarte les homonymes : joueurs, fans…)
+            found = [f for f in found if self.confirms(f, artist_id, key)]
+            only_secondary = bool(found) and all(secondary.search(titles.get(f, "") or "") for f in found)
+            if (not found or only_secondary) and self.searches_left > 0 and YouTubeQuota.spend(100):
+                # Homonymes seulement, ou seulement VEVO / Topic : recherche « nom + titre phare », puis l'IA choisit parmi les vraies chaînes trouvées
+                self.searches_left -= 1
+                hit = db.value("SELECT t.title FROM tracks t WHERE t.artist_id = ? ORDER BY (SELECT COUNT(*) FROM chart_observations o WHERE o.track_id = t.id) DESC LIMIT 1", [artist_id]) or ""
+                results = self._get("search?part=snippet&type=channel&maxResults=8&q=" + _enc(f"{name} {hit}"), key).get("items") or []
+                cands = [it["snippet"].get("channelId") or (it.get("id") or {}).get("channelId") for it in results
+                         if self.same_name(it["snippet"]["title"], name)]
+                pick = self._ai_pick(name, artist_id, results, key) if results else None
+                for it in results:
+                    titles.setdefault(it["snippet"].get("channelId") or (it.get("id") or {}).get("channelId"), it["snippet"]["title"])
+                for c in dict.fromkeys([*cands, *([pick] if pick else [])]):
+                    if c and c not in found and self.confirms(c, artist_id, key):
+                        found.append(c)
         if len(found) <= 1:
             return found[0] if found else None
         if not YouTubeQuota.spend(1):
