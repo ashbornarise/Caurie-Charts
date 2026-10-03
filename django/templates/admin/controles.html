@@ -1,0 +1,15 @@
+<h1>Contrôles</h1>
+<p class="muted">Chaque nuit, des agents relisent tout le site : numéros Cauri Hebdo et Cauri Matin, artistes du Top 50 (pays, photo, chaîne YouTube), posts programmés, légendes (relecteur IA comparant chaque légende à ses faits), pages principales. Ils corrigent ce qu'ils peuvent et signalent le reste ici et dans le rapport du matin.</p>
+<p><strong>{{ counts.corrige }}</strong> corrections · <strong>{{ counts.alerte }}</strong> alertes · <strong>{{ counts.info }}</strong> informations (14 derniers jours)</p>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>Quand</th><th>Agent</th><th>Niveau</th><th>Constat</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+        <tr><td><small>{{ (r.ran_at|string)[:16] }}</small></td><td>{{ r.agent }}</td>
+            <td><span class="status status--{{ 'published' if r.level == 'corrige' else 'rejected' if r.level == 'alerte' else 'draft' }}">{{ {'corrige': 'Corrigé', 'alerte': 'À traiter', 'info': 'Info'}[r.level] }}</span></td>
+            <td>{{ r.message }}{% if r.link %} · <a href="{{ r.link }}">voir</a>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted">Les agents passent chaque nuit.</td></tr>{% endfor %}
+    </tbody>
+</table>
+</div>

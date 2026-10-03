@@ -162,6 +162,11 @@ class DailyPipeline:
             return [analytics.collect_post_metrics()]
         self._step("10i. Statistiques des publications (vues, portée, réactions)", stats)
 
+        def control():
+            from core.services import agents
+            return agents.run_all()
+        self._step("10j. Agents de contrôle (éditions, catalogue, publications, relecteur IA, pages)", control, 600)
+
         def cleanup():
             live_chart.clear_cache()
             return ["cache des classements vidé", f"{purge_orphans()} fichiers de posts abandonnés supprimés", purge_blob()]

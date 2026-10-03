@@ -6,7 +6,7 @@ publique). Signale aussi les pannes silencieuses : une nuit sans aucun relevé, 
 """
 from core import clock, db, env, mail
 
-WARN = ("ERREUR", "échec", "quota YouTube du jour atteint", "injoignable")
+WARN = ("ERREUR", "échec", "quota YouTube du jour atteint", "injoignable", "[alerte]")
 
 
 def summary(report: list, crash: str | None = None) -> tuple[str, str]:

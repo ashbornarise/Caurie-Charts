@@ -80,6 +80,7 @@ urlpatterns = [
     re_path(r"^admin/partenaires/(?P<pid>\d+)/supprimer$", admin.partner_delete),
     path("admin/journal", admin.audit_log),
     path("admin/analyses", analytics_views.analyses),
+    path("admin/controles", analytics_views.controles),
     re_path(r"^admin/analyses/export/(?P<what>[a-z]+)$", analytics_views.analyses_export),
     path("admin/messages", admin.messages),
     re_path(r"^admin/messages/(?P<mid>\d+)$", admin.message_status),

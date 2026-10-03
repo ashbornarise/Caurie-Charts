@@ -61,3 +61,11 @@ def analyses_export(request, what: str):
     resp = HttpResponse(out.getvalue(), content_type="text/csv; charset=utf-8")
     resp["Content-Disposition"] = f'attachment; filename="cauri-charts-{what}.csv"'
     return resp
+
+
+@admin_view()
+def controles(request):
+    rows = db.all("""SELECT ran_at, agent, level, message, link FROM agent_findings WHERE ran_at >= LOCALTIMESTAMP - INTERVAL '14 days'
+                     ORDER BY ran_at DESC, level, agent LIMIT 300""")
+    return admin_render(request, "controles", {"title": "Contrôles", "rows": rows,
+                                               "counts": {lv: sum(1 for r in rows if r["level"] == lv) for lv in ("corrige", "alerte", "info")}})
