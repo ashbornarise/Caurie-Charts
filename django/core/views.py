@@ -446,6 +446,32 @@ def artist_news_page(request):
     })
 
 
+def distinction(request, did: str, kind: str | None = None):
+    """Page publique d'une distinction officielle : la carte, sa preuve (le classement), les fichiers à télécharger."""
+    use_locale(request)
+    from core.services import distinctions as D
+    d = db.one("""SELECT d.*, a.slug AS artist_slug, t.slug AS track_slug FROM award_distinctions d JOIN artists a ON a.id = d.artist_id
+                  LEFT JOIN tracks t ON t.id = d.track_id WHERE d.id = ?""", [int(did)])
+    if not d:
+        raise Http404
+    if kind == "impression":
+        data, ctype, name = D.files(d, "impression")
+        resp = HttpResponse(data, content_type=ctype)
+        from urllib.parse import quote
+        resp["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(name)}"
+        resp["Cache-Control"] = "public, max-age=86400"
+        return resp
+    image = url("media/distinctions/" + d["image_name"]) if d["image_name"] else None
+    month = D.month_label(d["period_key"])
+    title = f"Distinction officielle N° {int(d['id']):04d} · {d['artist_name']}"
+    return render(request, "distinction", {
+        "d": d, "image": image, "month": month,
+        "meta": {"title": title + " · " + brand(), "image": image,
+                 "description": f"{d['artist_name']}, N°{d['rank']} du {d['chart_label']} en {month.lower()}"
+                                + (f" avec « {d['title']} »" if d["title"] else "") + ". Distinction officielle Cauri Charts, calculée sur des données réelles."},
+    })
+
+
 def edition_slides(item: dict) -> list:
     """Diapositives (4:5) du carrousel d'un numéro de Cauri Hebdo ou Cauri Matin, la une en premier."""
     guid = str(item.get("external_guid") or "")

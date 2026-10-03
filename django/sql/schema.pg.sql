@@ -425,3 +425,7 @@ CREATE TABLE IF NOT EXISTS award_distinctions (
 );
 -- Rareté : un titre n'est distingué qu'une fois par classement (Afrique de l'Ouest ou pays)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_distinction_track_scope ON award_distinctions (track_id, scope) WHERE track_id IS NOT NULL;
+
+ALTER TABLE artists ADD COLUMN IF NOT EXISTS contact_email VARCHAR(190) NULL;
+ALTER TABLE artists ADD COLUMN IF NOT EXISTS instagram VARCHAR(60) NULL;   -- identifiant sans @
+ALTER TABLE award_distinctions ADD COLUMN IF NOT EXISTS emailed_at TIMESTAMP(0) NULL;

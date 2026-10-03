@@ -171,6 +171,16 @@ def distinctions(request, did: str | None = None, kind: str | None = None):
         d = db.one("SELECT * FROM award_distinctions WHERE id = ?", [int(did)])
         if not d:
             return back(request, path("admin/distinctions"), "error", "Distinction introuvable.")
+        if request.method == "POST" and req_str(request, "action") == "contact":
+            email, insta = req_str(request, "contact_email").strip(), req_str(request, "instagram").strip().lstrip("@")
+            if email and ("@" not in email or len(email) > 190):
+                return back(request, path("admin/distinctions"), "error", "Adresse e-mail invalide.")
+            db.run("UPDATE artists SET contact_email = ?, instagram = ? WHERE id = ?", [email or None, insta[:60] or None, d["artist_id"]])
+            if email and req_str(request, "send") == "1":
+                ok = D.deliver(d)
+                return back(request, path("admin/distinctions"), "success" if ok else "error",
+                            f"Distinction envoyée à {email}." if ok else "Contact enregistré, mais l'e-mail n'est pas parti (SMTP).")
+            return back(request, path("admin/distinctions"), "success", f"Contact de {d['artist_name']} enregistré.")
         if request.method == "POST" and req_str(request, "status") in ("new", "sent"):
             sent = req_str(request, "status") == "sent"
             db.run("UPDATE award_distinctions SET status = ?, sent_at = CASE WHEN ? THEN LOCALTIMESTAMP ELSE NULL END WHERE id = ?",
@@ -181,8 +191,11 @@ def distinctions(request, did: str | None = None, kind: str | None = None):
             resp = HttpResponse(data, content_type=ctype)
             resp["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(name)}"
             return resp
-    rows = db.all("SELECT * FROM award_distinctions ORDER BY id DESC LIMIT 300")
+    rows = db.all("""SELECT d.*, a.contact_email, a.instagram FROM award_distinctions d JOIN artists a ON a.id = d.artist_id
+                     ORDER BY d.id DESC LIMIT 300""")
     for r in rows:
+        r["public"] = D.public_url(r)
+        r["message"] = D.message(r)
         r["image"] = url("media/distinctions/" + r["image_name"]) if r["image_name"] else None
         r["month"] = D.month_label(r["period_key"])
     return admin_render(request, "distinctions", {"title": "Distinctions", "rows": rows, "pending": D.pending_runs()})

@@ -1,5 +1,6 @@
 <h1>Distinctions officielles</h1>
-<p class="muted">Rares et mensuelles : le Top 5 du classement mensuel Afrique de l’Ouest et le N°1 mensuel de chaque pays, dès que le mois est publié (toutes ses semaines publiées). Un titre n’est distingué qu’une fois par classement. Le numéro ne se réutilise jamais : c’est l’archive de Cauri Charts.</p>
+<p class="muted">Rares et mensuelles : le Top 5 de chaque classement mensuel (Afrique de l’Ouest et chaque pays), dès que le mois est publié (toutes ses semaines publiées). Un titre n’est distingué qu’une fois par classement. Le numéro ne se réutilise jamais : c’est l’archive de Cauri Charts.</p>
+<p class="muted">Envoi : si l’e-mail de l’artiste (ou de son label) est connu, la distinction part seule dès sa création. Sinon, saisissez-le ci-dessous (« Enregistrer et envoyer »), ou copiez le message prêt pour un DM Instagram. Jamais d’adresse devinée : seulement un contact officiel.</p>
 <p class="muted">Pour chaque distinction : la <strong>carte</strong> à envoyer à l’artiste (DM, e-mail), le <strong>PDF d’impression</strong> (20,3 × 25,4 cm, 300 ppp, 3 mm de fond perdu), le <strong>calque de dorure</strong> pour une impression à chaud, et la version <strong>encadrée</strong> à poster.</p>
 {% if pending %}<p class="notice">{{ pending|length }} classement(s) mensuel(s) publié(s) en attente : les distinctions seront créées cette nuit.</p>{% endif %}
 {% if not rows %}
@@ -17,6 +18,16 @@
             <a href="{{ path('admin/distinctions/' ~ d.id ~ '/dorure') }}">Calque dorure</a> ·
             <a href="{{ path('admin/distinctions/' ~ d.id ~ '/cadre') }}">Encadrée</a>
         </p>
+        <p class="distinction-links"><a href="{{ d.public }}" target="_blank" rel="noopener">Page publique</a>{% if d.emailed_at %} · <span class="muted">e-mail envoyé le {{ fmt_date((d.emailed_at|string)[:10]) }}</span>{% endif %}</p>
+        <form method="post" action="{{ path('admin/distinctions/' ~ d.id) }}" class="distinction-contact">{{ csrf_field() }}
+            <input type="hidden" name="action" value="contact">
+            <input name="contact_email" type="email" maxlength="190" placeholder="E-mail de l’artiste ou du label" value="{{ d.contact_email or '' }}" aria-label="E-mail de l’artiste">
+            <input name="instagram" maxlength="60" placeholder="Instagram (sans @)" value="{{ d.instagram or '' }}" aria-label="Instagram de l’artiste">
+            <button class="button button--small" name="send" value="1" type="submit">Enregistrer et envoyer</button>
+            <button class="button button--small button--ghost" name="send" value="0" type="submit">Enregistrer</button>
+        </form>
+        <details><summary>Message pour un DM{% if d.instagram %} à <a href="https://www.instagram.com/{{ d.instagram }}/" target="_blank" rel="noopener">@{{ d.instagram }}</a>{% endif %}</summary>
+            <textarea readonly rows="9" class="distinction-dm">{{ d.message }}</textarea></details>
         <form method="post" action="{{ path('admin/distinctions/' ~ d.id) }}">{{ csrf_field() }}
             {% if d.status == 'sent' %}<span class="muted">Envoyée le {{ fmt_date((d.sent_at|string)[:10]) }}</span>
                 <button class="button button--small button--ghost" name="status" value="new" type="submit">Annuler</button>

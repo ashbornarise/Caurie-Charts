@@ -1,8 +1,10 @@
 """Distinctions officielles Cauri Charts : rares, mensuelles, tirées des classements mensuels publiés.
 
-  qui      : le Top 5 du classement mensuel Afrique de l'Ouest et le N°1 mensuel de chaque pays (21 au plus par mois) ;
+  qui      : le Top 5 de chaque classement mensuel : Afrique de l'Ouest et chaque pays ;
   rareté   : un titre n'est distingué qu'une seule fois par classement (index unique track_id + scope) ;
   numéro   : l'identifiant de la table (N° 0001…), jamais réutilisé : c'est l'archive des classements ouest-africains ;
+  envoi    : page publique /distinctions/<n> (carte, PDF d'impression) ; e-mail automatique si l'équipe a saisi le contact
+             de l'artiste, sinon un message prêt à envoyer en DM ;
   fichiers : la carte (JPG, sur le Blob, à envoyer à l'artiste) ; l'impression (PDF 8 × 10 po, 300 ppp, fond perdu),
              le calque de dorure et la version encadrée sont produits à la demande depuis l'admin.
 """
@@ -12,7 +14,7 @@ import json
 from core import budget, conf, db, storage
 from core.helpers import country_name, url
 
-TOP = {"prime-wa": 5, "prime": 1}
+TOP = {"prime-wa": 5, "prime": 5}
 MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
 
 
@@ -96,6 +98,32 @@ def files(d: dict, kind: str) -> tuple[bytes, str, str]:
     return out.getvalue(), "image/jpeg", f"{name} - {kind}.jpg"
 
 
+def public_url(d: dict) -> str:
+    return url(f"distinctions/{int(d['id'])}")
+
+
+def message(d: dict) -> str:
+    """Message à l'artiste (e-mail ou DM Instagram) : la distinction, sa preuve, les liens."""
+    what = f"N°{d['rank']} du {d['chart_label']}" + (f" avec « {d['title']} »" if d.get("title") else "")
+    return (f"Bonjour {d['artist_name']},\n\n"
+            f"Félicitations ! Vous êtes {what} en {month_label(d['period_key']).lower()} sur Cauri Charts, "
+            "le classement musical de l'Afrique de l'Ouest calculé sur des données réelles.\n\n"
+            f"Votre distinction officielle N° {int(d['id']):04d} vous attend ici, avec la carte à partager et le fichier "
+            f"prêt à imprimer :\n{public_url(d)}\n\n"
+            "Partagez-la avec vos fans en mentionnant @cauricharts : nous la republierons.\n\nL'équipe Cauri Charts")
+
+
+def deliver(d: dict) -> bool:
+    """Envoie la distinction par e-mail si l'équipe a saisi le contact de l'artiste ; sinon rien (DM à la main)."""
+    from core import mail
+    a = db.one("SELECT contact_email FROM artists WHERE id = ?", [d["artist_id"]])
+    to = (a or {}).get("contact_email")
+    if not to or not mail.send(to, f"Distinction officielle Cauri Charts N° {int(d['id']):04d}", message(d)):
+        return False
+    db.run("UPDATE award_distinctions SET emailed_at = LOCALTIMESTAMP, status = 'sent', sent_at = COALESCE(sent_at, LOCALTIMESTAMP) WHERE id = ?", [d["id"]])
+    return True
+
+
 def run() -> list:
     """Étape de la chaîne de nuit : distinctions des classements mensuels tout juste publiés, puis un e-mail à l'équipe."""
     lines, made = [], []
@@ -105,13 +133,16 @@ def run() -> list:
             break
         ids = generate(r)
         made += ids
+        for did in ids:  # envoi direct aux artistes dont l'équipe connaît l'adresse
+            deliver(db.one("SELECT * FROM award_distinctions WHERE id = ?", [did]))
         lines.append(f"{r['period_key']} {_label(r)[1]} : {len(ids)} distinction(s)")
     if made:
         try:
             from core import mail
-            rows = db.all(f"SELECT id, rank, artist_name, title, chart_label FROM award_distinctions WHERE id IN ({', '.join(['?'] * len(made))}) ORDER BY id", made)
+            rows = db.all(f"SELECT id, rank, artist_name, title, chart_label, emailed_at FROM award_distinctions WHERE id IN ({', '.join(['?'] * len(made))}) ORDER BY id", made)
             mail.notify_admin(f"{len(made)} nouvelle(s) distinction(s) Cauri Charts",
                               "\n".join(f"N° {r['id']:04d} · N°{r['rank']} {r['chart_label']} · {r['artist_name']}" + (f" « {r['title']} »" if r["title"] else "")
+                                        + (" · envoyée par e-mail" if r["emailed_at"] else " · à envoyer en DM")
                                         for r in rows) + f"\n\nCartes, fichiers d'impression et suivi des envois : {url('admin/distinctions')}")
         except Exception:  # noqa: BLE001 — l'e-mail ne doit jamais bloquer la nuit
             pass

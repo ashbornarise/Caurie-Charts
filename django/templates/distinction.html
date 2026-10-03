@@ -1,0 +1,12 @@
+<div class="wrap distinction-page">
+    <p class="eyebrow">Distinction officielle · N° {{ '%04d'|format(d.id) }}</p>
+    <h1>{{ d.artist_name }}, N°{{ d.rank }} du {{ d.chart_label }}</h1>
+    <p class="lead">{{ month }}{% if d.title %} · « {{ d.title }} »{% endif %}. Calculée sur des données réelles, comme tout le classement : <a href="{{ path('methodologie') }}">voir la méthode</a>.</p>
+    {% if image %}<img class="distinction-page__card" src="{{ image }}" alt="Distinction officielle Cauri Charts N° {{ '%04d'|format(d.id) }} : {{ d.artist_name }}" width="800" height="1000">{% endif %}
+    <p class="distinction-page__actions">
+        {% if image %}<a class="button" href="{{ image }}" download>Télécharger la carte</a>{% endif %}
+        <a class="button button--ghost" href="{{ path('distinctions/' ~ d.id ~ '/impression.pdf') }}">Fichier à imprimer (PDF 20 × 25 cm)</a>
+    </p>
+    <p class="muted">Partagez-la en mentionnant <a href="https://www.instagram.com/cauricharts/" rel="noopener">@cauricharts</a>.
+        {% if d.artist_slug %}<a href="{{ path('artiste/' ~ d.artist_slug) }}">La fiche de {{ d.artist_name }}</a>{% endif %}{% if d.track_slug %} · <a href="{{ path('titre/' ~ d.track_slug) }}">« {{ d.title }} »</a>{% endif %}</p>
+</div>

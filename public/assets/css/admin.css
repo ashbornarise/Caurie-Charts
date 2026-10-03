@@ -106,3 +106,7 @@ pre.json { white-space: pre-wrap; font-size: .75rem; margin: 0; max-width: 360px
 .distinction-card img { width: 100%; height: auto; border-radius: 6px; display: block; margin-bottom: 8px; }
 .distinction-card h2 { font-size: 1rem; margin: 0 0 4px; }
 .distinction-links { font-size: .85rem; }
+
+.distinction-contact { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.distinction-contact input { flex: 1 1 140px; min-width: 0; }
+.distinction-dm { width: 100%; font-size: .8rem; margin-top: 6px; }
