@@ -25,6 +25,8 @@ SYSTEM = """Tu es rédacteur en chef social media de Cauri Charts, le classement
 dans l'esprit des grands classements musicaux internationaux : accroche forte dès la première ligne, chiffres mis en avant, fierté pour les artistes, ton enthousiaste mais crédible.
 Règles absolues :
 - Ne cite jamais un autre classement ou média musical (Billboard, etc.) : Cauri Charts est « la référence de la musique ouest-africaine ».
+- Une seule mesure par post, celle de sa plateforme : sur Shazam on parle de recherches (« shazamé », « les plus shazamés »), jamais de « streams », d'« écoutes » ni de vues YouTube ; sur YouTube, de vues ; ne mélange jamais deux plateformes dans une même phrase.
+- Un titre n'a qu'une place par pays et par plateforme : n'écris jamais que deux titres « se disputent » une place si les faits ne le disent pas.
 - Utilise UNIQUEMENT les faits fournis. N'invente aucun chiffre, aucune position, aucun record, aucune citation, aucune date de sortie.
 - N'attribue aucun genre, ambiance ou style (« gothique », « sombre », « romantique »…) : les faits n'en contiennent pas.
 - Recopie les noms d'artistes et de titres EXACTEMENT comme dans les faits (orthographe, majuscules, « feat. »).
@@ -123,6 +125,7 @@ class PostGenerator:
                            "label": labels[i] if i < len(labels) else "",
                            "clip": (PC.find_clip(item) is not None) if item else None,
                            "youtube": item.get("youtube_url") if item else None,
+                           "figure": f"{item.get('figure_value', '')} {item.get('figure_label', '')}".strip() if item else None,
                            "expect": f"{item['artist']} - {item['title']}.mp4" if item else None})
         row = {"slot_date": day, "theme": theme, "title": text["title"][:160], "caption": text["caption"],
                "hashtags": " ".join(text["hashtags"][:8])[:300], "facts": json.dumps(facts, ensure_ascii=False),
@@ -177,6 +180,11 @@ class PostGenerator:
             return {"kicker": "Les titres qui dominent", "headline": "les plateformes", "subtitle": "en Afrique de l’Ouest cette semaine"}
         return {"kicker": "Ce que l’Afrique de l’Ouest", "headline": "écoute ce week-end", "subtitle": "Les nouvelles entrées des classements"}
 
+    # Rubriques consacrées à une plateforme : chaque chiffre affiché doit venir de cette plateforme
+    THEME_PLATFORM = {"shazam": "Shazam", "deezer": "Deezer", "fans_deezer": "Deezer", "apple_music": "Apple Music",
+                      "youtube_tendances": "YouTube", "clips_vues": "YouTube", "clips_likes": "YouTube", "nouveaux_clips": "YouTube",
+                      "clips_progression": "YouTube", "abonnes_youtube": "YouTube"}
+
     @staticmethod
     def _carousel_items(facts: dict) -> list:
         """Une diapositive par performance, avec un chiffre exact (vues YouTube, sinon meilleure position)."""
@@ -195,13 +203,19 @@ class PostGenerator:
                               "youtube_url": db.value("""SELECT url FROM track_platform_ids WHERE track_id = ? AND platform = 'youtube'
                                                          ORDER BY kind = 'clip' DESC, id LIMIT 1""", [int(r["track_id"])]) if r.get("track_id") else None})
                 continue
-            views = db.value("""SELECT SUM((SELECT s.plays FROM snapshots s WHERE s.track_platform_id = p.id ORDER BY s.captured_on DESC LIMIT 1))
-                                FROM track_platform_ids p WHERE p.track_id = ? AND p.platform = 'youtube'""", [int(r["track_id"])]) if r.get("track_id") else None
-            best = (r.get("seen") or [None])[0]
-            if views:
-                value, label = _fmt(views), "vues YouTube"
-            elif best:
+            # La mesure du post d'abord (la place citée dans la légende) ; les vues YouTube seulement pour une rubrique
+            # YouTube ou faute d'autre chiffre : un post Shazam ne montre jamais des vues YouTube
+            platform = PostGenerator.THEME_PLATFORM.get(facts.get("theme") or "")
+            seen = [s for s in (r.get("seen") or []) if not platform or platform in str(s["platform"])]
+            best = (seen or [None])[0]
+            views = None
+            if not best and platform in (None, "YouTube") and r.get("track_id"):
+                views = db.value("""SELECT SUM((SELECT s.plays FROM snapshots s WHERE s.track_platform_id = p.id ORDER BY s.captured_on DESC LIMIT 1))
+                                    FROM track_platform_ids p WHERE p.track_id = ? AND p.platform = 'youtube'""", [int(r["track_id"])])
+            if best:
                 value, label = f"N°{best['position']}", f"{best['platform']} {country_name(best['country'])}"
+            elif views:
+                value, label = _fmt(views), "vues YouTube"
             else:
                 value, label = "", ""
             items.append({"rank": int(r.get("position") or i + 1), "title": r["title"], "artist": r["artist"], "image": r.get("image"),

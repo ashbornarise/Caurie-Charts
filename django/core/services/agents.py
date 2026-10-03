@@ -130,6 +130,35 @@ def check_publications(run: Run) -> None:
                 run.note("publications", "alerte", f"« {p['title']} » ({p['slot_date']}) : la couverture n'est plus en ligne.", "/admin/posts")
 
 
+OTHER_MEASURES = {"Shazam": ["vues youtube", "vues sur youtube", "stream", "écoutes", "deezer", "apple music"],
+                  "Deezer": ["vues youtube", "vues sur youtube", "shazam", "apple music"],
+                  "Apple Music": ["vues youtube", "vues sur youtube", "shazam", "deezer"],
+                  "YouTube": ["shazam", "apple music", "streams sur", "écoutes sur deezer"]}
+
+
+def check_coherence(run: Run) -> None:
+    """Un post sur une plateforme ne mélange jamais ses mesures avec celles d'une autre (ex. un post Shazam avec des vues
+    YouTube sur les diapositives, ou des « streams » Shazam : Shazam compte des recherches, pas des écoutes)."""
+    from core.services.social.generator import PostGenerator
+    posts = db.all("""SELECT id, theme, title, caption, carousel, slot_date FROM social_posts
+                      WHERE slot_date >= CURRENT_DATE AND status IN ('draft', 'approved') ORDER BY slot_date""")
+    for p in posts:
+        platform = PostGenerator.THEME_PLATFORM.get(p["theme"])
+        if not platform:
+            continue
+        try:
+            slides = json.loads(p["carousel"] or "[]")
+        except ValueError:
+            slides = []
+        wrong = [s.get("figure") for s in slides if isinstance(s, dict) and s.get("figure") and platform.lower() not in s["figure"].lower()
+                 and not (platform == "YouTube" and "vues" in s["figure"].lower())]
+        words = [w for w in OTHER_MEASURES.get(platform, []) if w in (p["caption"] or "").lower()]
+        if wrong or words:
+            run.note("coherence", "alerte", f"« {p['title']} » ({p['slot_date']}) : post {platform} qui cite "
+                     + ", ".join([f"« {w} » sur les diapositives" for w in wrong[:3]] + [f"« {w} » dans la légende" for w in words])
+                     + ". À corriger avant publication.", "/admin/posts")
+
+
 def review_captions(run: Run) -> None:
     """Relecteur IA : compare la légende de chaque post à venir à ses faits ; signale toute affirmation non vérifiable."""
     from core.services import ai
@@ -181,7 +210,7 @@ def check_pages(run: Run) -> None:
             run.note("pages", "alerte", f"{path} affiche une valeur vide (« None »).", path)
 
 
-AGENTS = [("éditions", check_editions), ("catalogue", check_catalogue), ("publications", check_publications),
+AGENTS = [("éditions", check_editions), ("catalogue", check_catalogue), ("publications", check_publications), ("cohérence", check_coherence),
           ("relecteur IA", review_captions), ("pages", check_pages)]
 
 

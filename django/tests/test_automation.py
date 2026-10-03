@@ -205,3 +205,14 @@ def test_distinction_card_monthly_renders_without_inventing_stats():
                      stats={"last": None, "peak": 1}, unit="month", code_period="M10·2026")
     assert img.size == (1600, 2000) and "foil" in img.info
     assert award.barcode("CC0007M102026", 250, 84).size == (250, 84)
+
+
+def test_shazam_post_never_shows_youtube_views(monkeypatch):
+    from core import db
+    from core.services.social.generator import PostGenerator
+    monkeypatch.setattr(db, "value", lambda *a, **k: 6_000_000)  # le titre a des vues YouTube : elles ne doivent pas apparaître
+    facts = {"kind": "ranking", "theme": "shazam", "top": [
+        {"track_id": 1, "title": "Oh No", "artist": "Rema", "image_url": "x",
+         "seen": [{"platform": "Vues YouTube", "country": "NG", "position": 3}, {"platform": "Shazam", "country": "NG", "position": 1}]}]}
+    it = PostGenerator._carousel_items(facts)[0]
+    assert it["figure_value"] == "N°1" and it["figure_label"].startswith("Shazam")

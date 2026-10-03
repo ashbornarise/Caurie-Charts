@@ -31,8 +31,9 @@ def _date(d) -> str:
 
 def _seen(track_id: int, extra: str = "") -> list:
     """Positions du titre sur 7 jours, meilleures d'abord (4 au plus). extra : filtre SQL sur des constantes du code."""
-    rows = db.all(f"""SELECT DISTINCT o.source, c.code, o.position FROM chart_observations o JOIN countries c ON c.id = o.country_id
-                      WHERE o.track_id = ? AND {RECENT} {extra} ORDER BY o.position, o.source, c.code""", [track_id])
+    # Une ligne par plateforme et par pays (sa meilleure place sur 7 jours) : jamais « NG n°1 · NG n°2 » pour un même titre
+    rows = db.all(f"""SELECT o.source, c.code, MIN(o.position) AS position FROM chart_observations o JOIN countries c ON c.id = o.country_id
+                      WHERE o.track_id = ? AND {RECENT} {extra} GROUP BY o.source, c.code ORDER BY position, o.source, c.code""", [track_id])
     return [{"platform": SOURCES.get(r["source"], r["source"]), "country": r["code"], "position": int(r["position"])} for r in rows[:4]]
 
 
