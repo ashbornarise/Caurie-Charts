@@ -81,6 +81,24 @@ class DailyPipeline:
                 return lines
             self._step("8. Posts réseaux sociaux", posts)
 
+        if weekday in (1, 3, 5):
+            # Lundi, mercredi, vendredi : Cauri Matin (carrousel à 7 h, article, Telegram), après le post de 18 h qu'il annonce
+            def matin():
+                from datetime import datetime, timedelta, timezone
+                from core.services.social import matin as M
+                post = M.post(clock.today())
+                if not post:
+                    return ["pas de classement ce matin"]
+                lines = [post["title"]]
+                due = datetime.combine(clock.today(), datetime.min.time(), timezone.utc) + timedelta(hours=7)
+                due = max(due, datetime.now(timezone.utc) + timedelta(minutes=20))  # nuit en retard : dès que possible
+                if buffer.configured():
+                    lines.append("Buffer : " + buffer.schedule(post, due))
+                if telegram.configured():
+                    lines.append("Telegram : " + telegram.send_post(post))
+                return lines
+            self._step("8 a. Cauri Matin", matin)
+
         if weekday in (2, 4):
             # Mardi et jeudi : portrait d'un grand artiste (bio, palmarès, chiffres, titres), à 18 h sur les réseaux
             def portrait():

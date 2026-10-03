@@ -9,7 +9,7 @@ name: Chaîne quotidienne
 
 on:
   schedule:
-    - cron: "30 3 * * *"   # 3 h 30 UTC = 3 h 30 à Lomé
+    - cron: "0 1 * * *"   # 1 h UTC = 1 h à Lomé : marge pour les retards de GitHub, Cauri Matin prêt pour 7 h
   workflow_dispatch:
     inputs:
       args:
