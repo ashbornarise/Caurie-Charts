@@ -63,6 +63,19 @@ def site_ld() -> dict:
                        "https://www.facebook.com/profile.php?id=61594631234765"]}
 
 
+def og_image(kind: str, key: str = "site") -> str:
+    """Adresse de l'aperçu de lien généré pour la page (1200 × 630)."""
+    return url(f"apercu/{kind}/{key}.jpg")
+
+
+def apercu(request, kind: str, key: str):
+    from core.services import og
+    data = og.for_page(kind, key)
+    resp = HttpResponse(data, content_type="image/jpeg")
+    resp["Cache-Control"] = "public, max-age=3600, s-maxage=86400"  # recalculé au plus une fois par jour
+    return resp
+
+
 def json_ld(items: list):
     """Bloc JSON-LD prêt à insérer dans <script type="application/ld+json"> (« </ » neutralisé)."""
     from markupsafe import Markup
@@ -88,7 +101,7 @@ def render(request, template: str, data: dict | None = None, status: int = 200, 
     data.setdefault("flash", take_flash(request))
     # Adresse canonique sans paramètres (?lang=, filtres) : une seule URL par page pour les moteurs de recherche
     meta = {"title": brand(), "description": t("meta.default_description"), "url": url(request.path),
-            "image": url("assets/img/og-default.png"), "type": "website", "jsonld": []}
+            "image": og_image("defaut"), "type": "website", "jsonld": []}
     meta.update({k: v for k, v in (data.get("meta") or {}).items() if v is not None})  # les clés fournies priment
     meta["jsonld"] = json_ld([site_ld()] + list(meta["jsonld"]))
     data["meta"] = meta
@@ -153,7 +166,7 @@ def home(request):
         "meta": {
             "title": brand() + " · " + t("home.meta_title", country=country_name(country["code"]), size=country["chart_size"]),
             "description": t("home.meta_description_region" if regional else "home.meta_description", country=country_name(country["code"])),
-            "image": share_url(int(run["id"]), "square") if run else None,
+            "image": og_image("classement", "wa" if regional else country["code"].lower()),
         },
     })
 
@@ -224,7 +237,7 @@ def _render_chart(request, country: dict, chart_code: str, period: str, key: str
         "meta": {
             "title": title + (" · " + period_label(run) if run else "") + " · " + brand(),
             "description": t(f"chart.description.{chart_code}", country=country_name(country["code"])),
-            "image": share_url(int(run["id"]), "square") if run else None,
+            "image": og_image("classement", "wa" if is_regional else country["code"].lower()),
         },
     })
 
@@ -250,7 +263,7 @@ def artist(request, slug: str):
         "iconHistory": repos.artist_icon_history(int(a["id"])),
         "meta": {"title": a["name"] + " · " + brand(),
                  "description": t("artist.meta_description", name=a["name"], country=country_name(a["country_code"])), "type": "profile",
-                 "image": a["image_url"] if str(a.get("image_url") or "").startswith("https://") else None,
+                 "image": og_image("artiste", a["slug"]),
                  "jsonld": [{"@type": "MusicGroup", "name": a["name"], "url": url("artiste/" + a["slug"]),
                              **({"image": a["image_url"]} if str(a.get("image_url") or "").startswith("https://") else {}),
                              "foundingLocation": {"@type": "Country", "name": country_name(a["country_code"])},
@@ -272,7 +285,7 @@ def track(request, slug: str):
         "peak": min(p["position"] for p in positions) if positions else None,
         "meta": {"title": tr["title"] + " · " + tr["artist_name"] + " · " + brand(),
                  "description": t("track.meta_description", title=tr["title"], artist=tr["artist_name"]), "type": "music.song",
-                 "image": tr["cover_url"] if str(tr.get("cover_url") or "").startswith("https://") else None,
+                 "image": og_image("titre", tr["slug"]),
                  "jsonld": [{"@type": "MusicRecording", "name": tr["title"], "url": url("titre/" + tr["slug"]),
                              "byArtist": {"@type": "MusicGroup", "name": tr["artist_name"], "url": url("artiste/" + tr["artist_slug"])},
                              **({"image": tr["cover_url"]} if str(tr.get("cover_url") or "").startswith("https://") else {}),
