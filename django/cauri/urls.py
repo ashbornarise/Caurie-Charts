@@ -34,7 +34,7 @@ urlpatterns = [
     path("partenaires", views.partners),
     re_path(r"^langue/(?P<loc>[a-z]{2})$", views.set_locale_view),
     re_path(r"^partage/(?P<run_id>\d+)-(?P<fmt>square|story)$", views.share_image),
-    re_path(r"^apercu/(?P<kind>classement|titre|artiste|defaut)/(?P<key>[a-z0-9-]+)\.jpg$", views.apercu),
+    re_path(r"^apercu/(?P<kind>classement|titre|artiste|edition|defaut)/(?P<key>[a-z0-9-]+)\.jpg$", views.apercu),
     path("robots.txt", views.robots),
     path("sitemap.xml", views.sitemap),
     # Administration

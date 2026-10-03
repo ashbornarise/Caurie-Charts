@@ -449,7 +449,7 @@ def news_item(request, slug: str):
     image = url("media/news/" + item["image_path"]) if item.get("image_path") else None
     slides = edition_slides(item)
     if slides:
-        image = slides[0]  # la une du numéro en image de partage
+        image = og_image("edition", item["slug"])  # aperçu léger 1200 × 630 avec la une du numéro
     return render(request, "news-item", {"item": item, "slides": slides, "meta": {
         "title": item["title"] + " · " + brand(), "description": item["summary"], "type": "article", "image": image,
         "jsonld": [{"@type": "NewsArticle", "headline": item["title"][:110], "description": item["summary"],

@@ -79,16 +79,21 @@ def chart(title: str, subtitle: str, rows: list) -> Image.Image:
     return img
 
 
-def card(title: str, lines: list, photo_url, tag: str) -> Image.Image:
-    """Grande photo à gauche, texte à droite (titre ou artiste)."""
+def card(title: str, lines: list, photo_url, tag: str, portrait: bool = False) -> Image.Image:
+    """Grande photo à gauche, texte à droite (titre, artiste, numéro). portrait : image 4:5 montrée entière (une)."""
     img, d = _base()
-    ph = _square(photo_url, H)
-    if ph:
+    ph = None
+    src = PI.photo(photo_url) if photo_url else None
+    if src is not None:
+        pw = int(H * 4 / 5) if portrait else H
+        ph = Image.new("RGB", (pw, H))
+        PI.paste_cover(ph, src, pw, H, 0.0 if portrait else 0.2)
         img.paste(ph, (0, 0))
-        shade = Image.new("L", (1, 256))
-        shade.putdata([int(255 * (i / 255) ** 1.4) for i in range(256)])
-        img.paste(Image.new("RGB", (340, H), INK), (H - 340, 0), shade.rotate(-90, expand=True).resize((340, H)))
-    x = H + 30 if ph else 60
+        if not portrait:
+            # Fondu horizontal : transparent à gauche, couleur du fond à droite
+            fade = Image.linear_gradient("L").rotate(90, expand=True).resize((300, H))  # 0 à gauche, 255 à droite
+            img.paste(Image.new("RGB", (300, H), INK), (pw - 300, 0), fade)
+    x = (ph.width + 50) if ph else 60
     width = W - x - 60
     logo = PI.white_logo()
     if logo:
@@ -149,4 +154,20 @@ def for_page(kind: str, key: str) -> bytes:
             if a.get("youtube_subscribers"):
                 lines.append(f"{int(a['youtube_subscribers']):,} abonnés".replace(",", " "))
             return jpeg(card(a["name"], lines, a.get("image_hd_url") or a.get("image_url"), "ARTISTE"))
+    if kind == "edition":
+        # Numéro Cauri Hebdo ou Cauri Matin : la une à gauche, le titre du numéro à droite
+        item = db.one("SELECT * FROM news WHERE slug = ? AND status = 'published'", [key])
+        if item:
+            from core.views import edition_slides
+            slides = edition_slides(item)
+            name, _, rest = item["title"].partition(" : ")
+            img = card(name, [rest or item["summary"][:90]], _slide_url(slides[0]) if slides else None, "LE MAGAZINE", portrait=True)
+            return jpeg(img)
     return jpeg(default())
+
+
+def _slide_url(page_url: str) -> str:
+    """Adresse Blob directe de la diapositive (sans passer par les redirections du site)."""
+    from core import storage
+    base = storage.blob_public_url()
+    return f"{base}/media/social/{page_url.rsplit('/', 1)[-1]}" if base else page_url
