@@ -96,7 +96,7 @@ def plaque(rank: int, chart: str, artist: str, title: str | None, cover_url, per
     v = vinyl(int(cs * .96), artist)
     _shadow(img, (px + int(cs * .55), py + int(cs * .02), px + int(cs * .55) + v.width, py + v.height), v.width // 2, (8, 14), 170, 18)
     img.paste(v, (px + int(cs * .55), py + int(cs * .02)), v)
-    cover = PI.photo(cover_url)
+    cover = cover_url if isinstance(cover_url, Image.Image) else PI.photo(cover_url)
     sleeve = Image.new("RGB", (cs, cs), (30, 30, 34))
     if cover:
         PI.paste_cover(sleeve, cover, cs, cs, .5)
