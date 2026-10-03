@@ -13,7 +13,14 @@
         <h2>N° {{ '%04d'|format(d.id) }} · {{ d.artist_name }}</h2>
         <p>N°{{ d.rank }} {{ d.chart_label }} · {{ d.month }}{% if d.title %}<br><em>« {{ d.title }} »</em>{% endif %}</p>
         <p class="distinction-links">
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/kit') }}"><strong>Kit complet (ZIP)</strong></a> ·
             <a href="{{ path('admin/distinctions/' ~ d.id ~ '/reconnaissance') }}"><strong>PDF de reconnaissance</strong></a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/telephone') }}">Téléphone</a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/pc') }}">PC</a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/carre') }}">Carré</a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/post') }}">Publication</a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/certificat') }}">Certificat A4</a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/enveloppe') }}">Enveloppe</a> ·
             <a href="{{ path('admin/distinctions/' ~ d.id ~ '/plaque') }}">Plaque</a> ·
             <a href="{{ path('admin/distinctions/' ~ d.id ~ '/bloc') }}">Bloc</a> ·
             <a href="{{ path('admin/distinctions/' ~ d.id ~ '/carte') }}">Carte</a> ·

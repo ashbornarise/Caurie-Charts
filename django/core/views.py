@@ -465,7 +465,7 @@ def distinction(request, did: str, kind: str | None = None):
                   LEFT JOIN tracks t ON t.id = d.track_id WHERE d.id = ?""", [int(did)])
     if not d:
         raise Http404
-    if kind in ("impression", "reconnaissance"):
+    if kind in ("impression", "reconnaissance", "kit") or kind in D.KIT:
         data, ctype, name = D.files(d, kind)
         resp = HttpResponse(data, content_type=ctype)
         from urllib.parse import quote

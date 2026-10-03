@@ -62,9 +62,63 @@ def generate(run: dict) -> list:
         out = io.BytesIO()
         img.save(out, "JPEG", quality=92, optimize=True, progressive=True)
         storage.store_media("distinctions", f"{did}.jpg", out.getvalue(), "image/jpeg")
+        save_mask(did, e["image_url"])
         db.update("award_distinctions", {"image_name": f"{did}.jpg"}, "id = :id", {"id": did})
         done.append(did)
     return done
+
+
+def save_mask(did: int, photo_url) -> bool:
+    """Détourage de la photo (rembg, chaîne de nuit) gardé en PNG : le site s'en sert pour que la tête sorte du cadre."""
+    try:
+        from core.services.social import image as PI
+        from core.services.social import une
+        src = PI.photo(photo_url)
+        if src is None or not une.available():
+            return False
+        out = io.BytesIO()
+        une._mask(src).point(lambda v: 255 if v > 127 else 0).convert("1").save(out, "PNG", optimize=True)
+        storage.store_media("distinctions", f"{did}-masque.png", out.getvalue(), "image/png")
+        return True
+    except Exception:  # noqa: BLE001 — sans masque, le portrait reste dans le cadre
+        return False
+
+
+def load_mask(did: int):
+    from PIL import Image
+    base = storage.blob_public_url()
+    try:
+        if base:
+            import requests
+            r = requests.get(f"{base}/media/distinctions/{did}-masque.png", timeout=15)
+            data = r.content if r.status_code == 200 else None
+        else:
+            p = storage.MEDIA / "distinctions" / f"{did}-masque.png"
+            data = p.read_bytes() if p.is_file() else None
+        return Image.open(io.BytesIO(data)).convert("L") if data else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+KIT = ("telephone", "pc", "carre", "post", "carte", "certificat", "enveloppe")
+KIT_NAMES = {"telephone": "téléphone 1080x1920", "pc": "PC 1920x1080", "carre": "carré 1080x1080", "post": "publication 1080x1350",
+             "carte": "carte 63x88 mm", "certificat": "certificat A4", "enveloppe": "enveloppe DL"}
+
+
+def kit_info(d: dict) -> dict:
+    return {"artist": d["artist_name"], "title": d["title"], "rank": int(d["rank"]), "chart": d["chart_label"],
+            "period": month_label(d["period_key"]), "period_key": d["period_key"], "number": int(d["id"]),
+            "stats": json.loads(d["stats"] or "{}"), "photo_url": d["photo_url"], "verify": public_url(d), "mask": load_mask(int(d["id"]))}
+
+
+def kit_image(d: dict, fmt: str, info: dict | None = None):
+    from core.services.social import kit
+    info = info or kit_info(d)
+    if fmt == "certificat":
+        return kit.certificat(info)
+    if fmt == "enveloppe":
+        return kit.enveloppe(info)
+    return kit.render(fmt, info)
 
 
 def render(d: dict, size=(1600, 2000), **kw):
@@ -117,8 +171,14 @@ def reconnaissance(d: dict) -> bytes:
             pdf.set_font("Serif", "", 16)
             pdf.set_text_color(255, 255, 255)
             pdf.cell(176, 9, caption, align="C")
+    # Certificat A4 paysage
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "certificat.jpg")
+        kit_image(d, "certificat").save(path, "JPEG", quality=88)
+        pdf.add_page(orientation="L")
+        pdf.image(path, x=0, y=0, w=297, h=210)
     # Attestation
-    pdf.add_page()
+    pdf.add_page(orientation="P")
     pdf.set_margins(24, 24, 24)
     pdf.set_xy(24, 30)
     pdf.set_font("Sans", "B", 9)
@@ -169,6 +229,21 @@ def files(d: dict, kind: str) -> tuple[bytes, str, str]:
     out = io.BytesIO()
     if kind == "reconnaissance":
         return reconnaissance(d), "application/pdf", f"{name} - reconnaissance.pdf"
+    if kind in KIT:
+        img = kit_image(d, kind)
+        dpi = (300, 300) if kind in ("carte", "certificat", "enveloppe") else (72, 72)
+        img.save(out, "JPEG", quality=90, dpi=dpi)
+        return out.getvalue(), "image/jpeg", f"{name} - {KIT_NAMES[kind]}.jpg"
+    if kind == "kit":
+        import zipfile
+        info = kit_info(d)
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+            for fmt in KIT:
+                b = io.BytesIO()
+                kit_image(d, fmt, info).save(b, "JPEG", quality=90)
+                z.writestr(f"{name} - {KIT_NAMES[fmt]}.jpg", b.getvalue())
+            z.writestr(f"{name} - PDF de reconnaissance.pdf", reconnaissance(d))
+        return out.getvalue(), "application/zip", f"{name} - kit complet.zip"
     if kind in ("plaque", "bloc"):
         objects(d)[0 if kind == "plaque" else 1].save(out, "JPEG", quality=92)
         return out.getvalue(), "image/jpeg", f"{name} - {kind}.jpg"
