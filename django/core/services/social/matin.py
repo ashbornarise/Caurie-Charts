@@ -20,7 +20,7 @@ from core.repos import now_utc
 from core.services import live_chart
 
 
-OFF_TOPIC = re.compile(r"\b(comedy|comédie|comedian|humou?r|football|movie|film|cinéma|nollywood|politi\w*|election|élection)", re.I)
+OFF_TOPIC = re.compile(r"\b(comedy|comédie|comedian|humou?r|football|movie|film|cinéma|nollywood|politi\w*|election|élection)\b", re.I)
 
 
 def _who(r: dict) -> str:
