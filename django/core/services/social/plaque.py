@@ -64,7 +64,7 @@ def _wall(size, rnd):
 
 
 def plaque(rank: int, chart: str, artist: str, title: str | None, cover_url, period: str, number: int | None,
-           stats: dict | None = None, frame: str = "white", size=SIZE) -> Image.Image:
+           stats: dict | None = None, frame: str = "white", size=SIZE, mark: str = "SPÉCIMEN · CAURI CHARTS") -> Image.Image:
     """La plaque encadrée, accrochée au mur sous un spot (photo de produit, 4:5)."""
     W, H = size
     s = W / 2160
@@ -174,7 +174,7 @@ def plaque(rank: int, chart: str, artist: str, title: str | None, cover_url, per
     pl.rectangle([int(14 * s), int(14 * s), pw - int(14 * s), ph - int(14 * s)], outline=(210, 210, 215), width=max(1, int(2 * s)))
     lines = [("DÉCERNÉE À", 24), (artist.upper(), 50), (f"POUR LA {'1re' if rank == 1 else f'{rank}e'} PLACE DU {lab.upper()}", 24),
              (f"EN {period.upper()}" + (f" AVEC « {title.upper()} »" if title else ""), 24),
-             (f"DISTINCTION N° {number:04d} · CAURI CHARTS" if number else "SPÉCIMEN · CAURI CHARTS", 19)]
+             (f"DISTINCTION N° {number:04d} · CAURI CHARTS" if number else mark, 19)]
     yy = int((ph - sum((px_ + 26) * s for _t, px_ in lines)) / 2 + 44 * s)  # bloc de texte centré dans la plaque
     for t, px_ in lines:
         f = A._f(A.SANS.replace("Regular", "Bold") if px_ >= 30 else A.SANS, A._fit(t, A.SANS, px_ * s, pw - 80 * s))
@@ -190,7 +190,8 @@ def plaque(rank: int, chart: str, artist: str, title: str | None, cover_url, per
     return img
 
 
-def bloc(rank: int, chart: str, artist: str, title: str | None, period: str, number: int | None, size=SIZE) -> Image.Image:
+def bloc(rank: int, chart: str, artist: str, title: str | None, period: str, number: int | None, size=SIZE,
+         mark: str = "SPÉCIMEN · CAURI CHARTS") -> Image.Image:
     """Bloc d'acrylique dépoli posé sur une marche de pierre, au soleil (photo de produit, 4:5)."""
     W, H = size
     s = W / 2160
@@ -261,7 +262,7 @@ def bloc(rank: int, chart: str, artist: str, title: str | None, period: str, num
     if title:
         t = f"« {title.upper()} »"
         A._spaced(d, (cx, y + 410 * s), t, A._f(A.CINZEL, A._fit(t, A.CINZEL, 34 * s, bw_ - 160 * s, "Regular", .1), "Regular"), fill=ink, spacing=.1)
-    A._spaced(d, (cx, by + bh_ - 70 * s), f"N° {number:04d} · CAURI CHARTS" if number else "SPÉCIMEN · CAURI CHARTS", A._f(A.SANS, 20 * s), fill=ink, spacing=.3)
+    A._spaced(d, (cx, by + bh_ - 70 * s), f"N° {number:04d} · CAURI CHARTS" if number else mark, A._f(A.SANS, 20 * s), fill=ink, spacing=.3)
     # Reflet sur l'arête gauche
     edge = Image.new("L", (W, H), 0)
     ImageDraw.Draw(edge).rectangle([bx, by, bx + int(18 * s), by + bh_], fill=120)
