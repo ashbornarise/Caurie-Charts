@@ -400,13 +400,34 @@ def news(request):
     })
 
 
+def edition_slides(item: dict) -> list:
+    """Diapositives (4:5) du carrousel d'un numéro de Cauri Hebdo ou Cauri Matin, la une en premier."""
+    guid = str(item.get("external_guid") or "")
+    if guid.startswith("cauri-hebdo-"):
+        week = guid.rsplit("-W", 1)[-1].lstrip("0")
+        rows = db.all("SELECT carousel, facts FROM social_posts WHERE theme = 'hebdo' ORDER BY slot_date DESC LIMIT 20")
+        rows = [r for r in rows if str(json.loads(r["facts"] or "{}").get("week")) == week]
+    elif guid.startswith("cauri-matin-"):
+        rows = db.all("SELECT carousel, facts FROM social_posts WHERE theme = 'matin' AND slot_date = ? LIMIT 1", [guid.removeprefix("cauri-matin-")])
+    else:
+        return []
+    try:
+        files = [sl["file"] for sl in json.loads(rows[0]["carousel"] or "[]")] if rows else []
+    except (ValueError, KeyError, TypeError):
+        files = []
+    return [url("media/social/" + f) for f in files if f]
+
+
 def news_item(request, slug: str):
     use_locale(request)
     item = repos.news_by_slug(slug)
     if not item:
         raise Http404
     image = url("media/news/" + item["image_path"]) if item.get("image_path") else None
-    return render(request, "news-item", {"item": item, "meta": {
+    slides = edition_slides(item)
+    if slides:
+        image = slides[0]  # la une du numéro en image de partage
+    return render(request, "news-item", {"item": item, "slides": slides, "meta": {
         "title": item["title"] + " · " + brand(), "description": item["summary"], "type": "article", "image": image,
         "jsonld": [{"@type": "NewsArticle", "headline": item["title"][:110], "description": item["summary"],
                     "datePublished": str(item["published_at"]).replace(" ", "T"), "url": url("actualites/" + item["slug"]),

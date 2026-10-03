@@ -676,3 +676,10 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .mega-footer__bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: 16px; }
 @media (max-width: 1100px) { .mega-footer { grid-template-columns: repeat(3, 1fr); } .mega-footer__brand { grid-column: 1 / -1; } }
 @media (max-width: 600px) { .mega-footer { grid-template-columns: 1fr 1fr; } }
+
+/* Articles : image d'en-tête, une des numéros Cauri, diapositives */
+.article-hero { margin: 18px 0 22px; }
+.article-hero img { display: block; width: 100%; height: auto; border-radius: 8px; }
+.article-hero--cover { max-width: 520px; }
+.edition-slides { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin: 12px 0 18px; }
+.edition-slides img { display: block; width: 100%; height: auto; border-radius: 6px; box-shadow: 0 4px 14px rgba(17,13,31,.12); }

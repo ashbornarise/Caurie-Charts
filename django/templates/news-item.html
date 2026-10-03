@@ -5,11 +5,23 @@
         {{ fmt_date(item.published_at[:10]) }}{{ ' · ' ~ country_name(item.country_code) if item.country_code }}
     </p>
     <h1>{{ item.title }}</h1>
+    {% if slides %}
+        <figure class="article-hero article-hero--cover"><img src="{{ slides[0] }}" alt="La une de {{ item.title.split(' :')[0] }}" width="1080" height="1350"></figure>
+    {% elif item.image_path %}
+        <figure class="article-hero"><img src="{{ path('media/news/' ~ item.image_path) }}" alt="" width="720" height="405"></figure>
+    {% endif %}
     <p class="lead">{{ item.summary }}</p>
     {% if item.body %}
         {% for para in paragraphs(item.body) %}
             <p>{{ nl2br(para) }}</p>
         {% endfor %}
+    {% endif %}
+    {% if slides|length > 1 %}
+        <h2>Le numéro en images</h2>
+        <div class="edition-slides">
+            {% for sl in slides[1:] %}<a href="{{ sl }}" target="_blank" rel="noopener"><img src="{{ sl }}" alt="Page {{ loop.index + 1 }}" width="1080" height="1350" loading="lazy"></a>{% endfor %}
+        </div>
+        <p class="fineprint">Le même numéro est publié sur Instagram, TikTok et Facebook : suivez @cauricharts.</p>
     {% endif %}
     {% if item.source_url %}
         <p class="fineprint">{{ t('news.source') }} : <a href="{{ item.source_url }}" rel="noopener nofollow" target="_blank">{{ item.source_name or url_host(item.source_url) }}</a></p>
