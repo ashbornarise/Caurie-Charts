@@ -437,17 +437,20 @@ def _seal_ring(r: int, year: str) -> Image.Image:
     """Sceau de prestige : disque argent dentelé, couronne de texte, « C » violet, année, rubans violet et bleu."""
     import math
     S = int(r * 2.3)
-    im = Image.new("RGBA", (S, int(S * 1.45)), (0, 0, 0, 0))
+    im = Image.new("RGBA", (S, int(S * 1.16)), (0, 0, 0, 0))  # rubans courts : ils ne touchent pas la date
     cx, cy = S // 2, S // 2
     rib = Image.new("L", im.size, 0)
     rd = ImageDraw.Draw(rib)
-    for sx, col in ((-1, A.VIO), (1, BLUE)):
-        x0 = cx + sx * r * .32
-        poly = [(x0 - r * .26, cy), (x0 + r * .26, cy), (x0 + r * .26 + sx * r * .12, im.height - 6),
-                (x0 + sx * r * .12, im.height - r * .26), (x0 - r * .26 + sx * r * .12, im.height - 6)]
+    # Deux rubans en V : ils partent ensemble du centre du sceau et s'écartent (±20°), extrémités en queue d'aronde
+    length, half = im.height - cy - 6, r * .22
+    for sx, col in ((1, BLUE), (-1, A.VIO)):
         one = Image.new("L", im.size, 0)
-        ImageDraw.Draw(one).polygon(poly, fill=255)
+        ImageDraw.Draw(one).polygon([(cx - half, cy), (cx + half, cy), (cx + half, cy + length), (cx, cy + length - r * .22),
+                                     (cx - half, cy + length)], fill=255)
+        one = one.rotate(sx * 20, center=(cx, cy), resample=Image.BICUBIC)
         im.paste(col + (255,), (0, 0), one)
+        # Pli d'ombre le long du ruban
+        im.paste((0, 0, 0, 40), (0, 0), ImageChops.multiply(one, Image.new("L", im.size, 60)))
     disc = Image.new("L", im.size, 0)
     teeth = [(cx + (r if k % 2 == 0 else r * .93) * math.cos(k * math.pi / 30), cy + (r if k % 2 == 0 else r * .93) * math.sin(k * math.pi / 30)) for k in range(60)]
     ImageDraw.Draw(disc).polygon(teeth, fill=255)
