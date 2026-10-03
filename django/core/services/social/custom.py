@@ -72,7 +72,7 @@ def interpret(client, request_text: str) -> dict:
 
 def find_artist(name: str):
     """Artiste suivi le plus proche du nom demandé (le plus de fans en cas d'homonymes)."""
-    return db.one("""SELECT id, name, image_url, fans FROM artists WHERE status <> 'out_of_scope'
+    return db.one("""SELECT id, name, image_url, fans FROM artists WHERE status = 'active'
                      AND (name ILIKE ? OR name ILIKE ?) ORDER BY (name ILIKE ?) DESC, fans DESC NULLS LAST LIMIT 1""",
                   [name, f"%{name}%", name])
 
@@ -91,7 +91,9 @@ def entries(p: dict) -> list:
         return [T._track_entry(r, T._pos(s), s) for r in rows for s in [T._seen(int(r["track_id"]))]]
     if m == "classements":
         cid = None if p["country"] == "WA" else db.value("SELECT id FROM countries WHERE code = ?", [p["country"]])
-        rows = live_chart.build(cid, p["source"], n, "prime", 20, PERIODS[p["period"]][0])["rows"]
+        # Classement demandé : seulement les artistes au pays confirmé (les « à vérifier » restent sur le site)
+        rows = [r for r in live_chart.build(cid, p["source"], n + 15, "prime", 20, PERIODS[p["period"]][0])["rows"]
+                if r.get("status") == "active"][:n]
         out = []
         for r in rows:
             seen = [{"platform": SOURCES.get(s["source"], s["source"]), "country": s["country"], "position": s["position"]} for s in r["seen"][:4]]

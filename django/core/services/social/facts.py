@@ -49,7 +49,7 @@ def _platform_trends():
                         COUNT(DISTINCT o.source || o.country_id) AS charts, MIN(o.position) AS best
                      FROM chart_observations o JOIN tracks t ON t.id = o.track_id JOIN artists a ON a.id = t.artist_id
                      LEFT JOIN countries gc ON gc.id = a.guessed_country_id
-                     WHERE o.observed_on >= CURRENT_DATE - 7 AND a.status <> 'out_of_scope'
+                     WHERE o.observed_on >= CURRENT_DATE - 7 AND a.status = 'active'
                      GROUP BY t.id, a.id, gc.code ORDER BY charts DESC, best, t.id LIMIT 5""")
     if not rows:
         return None
@@ -92,7 +92,7 @@ def _artist_of_the_week():
 def _weekend():
     new = db.all("""SELECT t.id AS track_id, t.title, a.name AS artist, a.image_url, MIN(o.position) AS best
                     FROM chart_observations o JOIN tracks t ON t.id = o.track_id JOIN artists a ON a.id = t.artist_id
-                    WHERE o.observed_on >= CURRENT_DATE - 7 AND o.position <= 30 AND a.status <> 'out_of_scope'
+                    WHERE o.observed_on >= CURRENT_DATE - 7 AND o.position <= 30 AND a.status = 'active'
                       AND NOT EXISTS (SELECT 1 FROM chart_observations o2 WHERE o2.track_id = t.id AND o2.observed_on < CURRENT_DATE - 7)
                     GROUP BY t.id, a.id ORDER BY best, t.id LIMIT 5""")
     news = db.all("""SELECT title, source_name FROM news WHERE status = 'published' AND published_at >= LOCALTIMESTAMP - INTERVAL '7 days'

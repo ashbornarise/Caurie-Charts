@@ -48,7 +48,7 @@ def _tracks(where: str = "", params: list | None = None, having: str = "", order
                              MIN(o.position) AS best, STRING_AGG(DISTINCT c.code, ',') AS codes
                       FROM chart_observations o JOIN tracks t ON t.id = o.track_id JOIN artists a ON a.id = t.artist_id
                       JOIN countries c ON c.id = o.country_id
-                      WHERE {RECENT} AND a.status <> 'out_of_scope' {where}
+                      WHERE {RECENT} AND a.status = 'active' {where}
                       GROUP BY t.id, a.id {having} ORDER BY {order} LIMIT {int(limit)}""", params or [])
 
 
@@ -106,7 +106,7 @@ def numbers_one():
                              COALESCE(a.image_url, t.cover_url) AS image_url
                       FROM chart_observations o JOIN tracks t ON t.id = o.track_id JOIN artists a ON a.id = t.artist_id
                       JOIN countries c ON c.id = o.country_id
-                      WHERE {RECENT} AND o.position = 1 AND a.status <> 'out_of_scope'
+                      WHERE {RECENT} AND o.position = 1 AND a.status = 'active'
                         AND o.source IN ('apple_music', 'deezer', 'shazam', 'youtube_trending')
                       ORDER BY o.source, c.code, o.observed_on DESC""")
     out, seen = [], set()

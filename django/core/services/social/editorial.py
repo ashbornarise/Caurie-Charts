@@ -116,17 +116,18 @@ def hebdo_post(f: dict, day: date) -> dict | None:
     """Le magazine de la semaine en carrousel, à partir des mêmes faits que l'article (magazine.facts)."""
     from core.services.magazine import de
     from core.services.social.generator import own_image
-    top = f["top"]
+    # Seulement les artistes au pays confirmé, avec leur vrai rang du classement (les numéros restent ceux du site)
+    top = [r for r in f["top"] if r.get("status") == "active"]
     if len(top) < 10:
         return None
     year, week, _ = day.isocalendar()
     one = top[0]
     who = lambda r: f"{r['artist_name']}" + (f" · {country_name(r['artist_country'])}" if r.get("artist_country") else "")  # noqa: E731
     slides = [
-        {"bg": INK, "fg": WHITE, "acc": GOLD, "tag": "LE PODIUM", "big": "LES TROIS PREMIERS",
-         "rows": [(i + 1, r["title"], who(r)) for i, r in enumerate(top[:3])]},
-        {"bg": VIOLET, "fg": WHITE, "acc": GOLD, "tag": "LE TOP 10", "big": "DU N°4 AU N°10",
-         "rows": [(i + 4, r["title"], who(r)) for i, r in enumerate(top[3:10])]},
+        {"bg": INK, "fg": WHITE, "acc": GOLD, "tag": "LE PODIUM", "big": "EN TÊTE DU TOP",
+         "rows": [(r["rank"], r["title"], who(r)) for r in top[:3]]},
+        {"bg": VIOLET, "fg": WHITE, "acc": GOLD, "tag": "LE TOP 10", "big": "LA SUITE DU TOP",
+         "rows": [(r["rank"], r["title"], who(r)) for r in top[3:10]]},
     ]
     if f.get("countries"):
         parts = " · ".join(f"{country_name(c)} {n}" for c, n in f["countries"].most_common(6))
@@ -134,16 +135,16 @@ def hebdo_post(f: dict, day: date) -> dict | None:
                        "body": parts + ". Au plus 5 titres d'un même pays : toute la région a sa place."})
     if f.get("buzz"):
         slides.append({"bg": GOLD, "fg": INK, "acc": INK, "tag": "ÇA MONTE", "big": "À SURVEILLER",
-                       "rows": [(i + 1, r["title"], who(r)) for i, r in enumerate(f["buzz"][:3])]})
+                       "rows": [(i + 1, r["title"], who(r)) for i, r in enumerate([b for b in f["buzz"] if b.get("status") == "active"][:3])]})
     if f.get("leaders"):
         slides.append({"bg": INK, "fg": WHITE, "acc": VIOLET, "tag": "PAYS PAR PAYS", "big": "LES N°1",
-                       "rows": [(r["country"], r["title"], f"{r['artist_name']} · {country_name(r['country'])}") for r in f["leaders"][:6]]})
+                       "rows": [(r["country"], r["title"], f"{r['artist_name']} · {country_name(r['country'])}") for r in f["leaders"][:6] if r.get("status") == "active"]})
     slides.append({"bg": VIOLET, "fg": WHITE, "acc": GOLD, "tag": "CAURI HEBDO", "big": "L'ARTICLE COMPLET EST EN LIGNE",
                    "body": "Le classement complet, la méthode et la note de fiabilité de chaque pays sur cauricharts.com. Rendez-vous dimanche prochain.",
                    "cta": "S'ABONNER"})
     name = f"{day.isoformat()}-hebdo-{year}-s{week:02d}"
     cover = {"kicker": f"Cauri Hebdo · semaine {week}", "headline": one["artist_name"],
-             "subtitle": f"« {one['title']} » · n°1 Afrique de l'Ouest", "photo": one.get("artist_image") or own_image(one) or one.get("cover_url")}
+             "subtitle": f"« {one['title']} » · n°{one['rank']} Afrique de l'Ouest", "photo": one.get("artist_image") or own_image(one) or one.get("cover_url")}
     files = render(name, slides, cover)
     caption = (f"Cauri Hebdo, semaine {week}. « {one['title']} » {de(one['artist_name'])} prend la tête du Top 20 Afrique de l'Ouest.\n\n"
                "Le podium, le Top 10, la carte des pays, ceux qui montent et les n°1 de chaque pays : tout est dans le carrousel.\n\n"
