@@ -11,12 +11,16 @@ Tout vient des relevés et des médias importés (aucune IA, aucun chiffre inven
 Seuls les artistes au pays confirmé apparaissent ; les rangs restent ceux du classement du site.
 """
 import json
+import re
 from datetime import date
 
 from core import db
 from core.helpers import country_name, slugify
 from core.repos import now_utc
 from core.services import live_chart
+
+
+OFF_TOPIC = re.compile(r"(comedy|comédie|comedian|humou?r|football|movie|film|cinéma|nollywood|politi\w*|election|élection)", re.I)
 
 
 def _who(r: dict) -> str:
@@ -51,7 +55,7 @@ def facts(day: date) -> dict:
     news = [x for x in db.all("""SELECT title, summary, source_name FROM news WHERE status = 'published' AND origin = 'feed'
                                  AND country_id IS NOT NULL AND published_at >= LOCALTIMESTAMP - INTERVAL '3 days'
                                  ORDER BY published_at DESC LIMIT 15""")
-            if is_about_music(x["title"].lower())][:3]  # le titre doit parler de musique (pas seulement le résumé)
+            if is_about_music(x["title"].lower()) and not OFF_TOPIC.search(x["title"])][:3]  # le titre parle de musique
     tonight = db.one("SELECT title FROM social_posts WHERE slot_date = ? AND theme NOT IN ('matin', 'hebdo', 'presentation') ORDER BY id DESC LIMIT 1",
                      [day.isoformat()])
     number = int(db.value("SELECT COUNT(*) FROM social_posts WHERE theme = 'matin' AND slot_date < ?", [day.isoformat()]) or 0) + 1
