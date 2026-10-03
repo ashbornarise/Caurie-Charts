@@ -57,7 +57,10 @@ def aside(country: dict) -> dict:
 def site_ld() -> dict:
     """Organisation et site, présents sur chaque page (données structurées schema.org)."""
     return {"@type": "Organization", "@id": url("/") + "#organisation", "name": brand(), "url": url("/"),
-            "logo": url("assets/img/brand/logo-share.png"), "areaServed": [c["code"] for c in repos.countries()]}
+            "logo": url("assets/img/brand/logo-share.png"), "areaServed": [c["code"] for c in repos.countries()],
+            # Profils officiels : Google les relie au site (panneau de la marque dans les résultats)
+            "sameAs": ["https://www.instagram.com/cauricharts/", "https://www.tiktok.com/@caurichartsofficial",
+                       "https://www.facebook.com/profile.php?id=61594631234765"]}
 
 
 def json_ld(items: list):
