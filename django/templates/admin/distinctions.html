@@ -13,6 +13,9 @@
         <h2>N° {{ '%04d'|format(d.id) }} · {{ d.artist_name }}</h2>
         <p>N°{{ d.rank }} {{ d.chart_label }} · {{ d.month }}{% if d.title %}<br><em>« {{ d.title }} »</em>{% endif %}</p>
         <p class="distinction-links">
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/reconnaissance') }}"><strong>PDF de reconnaissance</strong></a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/plaque') }}">Plaque</a> ·
+            <a href="{{ path('admin/distinctions/' ~ d.id ~ '/bloc') }}">Bloc</a> ·
             <a href="{{ path('admin/distinctions/' ~ d.id ~ '/carte') }}">Carte</a> ·
             <a href="{{ path('admin/distinctions/' ~ d.id ~ '/impression') }}">PDF impression</a> ·
             <a href="{{ path('admin/distinctions/' ~ d.id ~ '/dorure') }}">Calque dorure</a> ·

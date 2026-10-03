@@ -465,8 +465,8 @@ def distinction(request, did: str, kind: str | None = None):
                   LEFT JOIN tracks t ON t.id = d.track_id WHERE d.id = ?""", [int(did)])
     if not d:
         raise Http404
-    if kind == "impression":
-        data, ctype, name = D.files(d, "impression")
+    if kind in ("impression", "reconnaissance"):
+        data, ctype, name = D.files(d, kind)
         resp = HttpResponse(data, content_type=ctype)
         from urllib.parse import quote
         resp["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(name)}"

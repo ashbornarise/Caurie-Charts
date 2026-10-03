@@ -76,12 +76,102 @@ def render(d: dict, size=(1600, 2000), **kw):
                       stats=json.loads(d["stats"] or "{}"), unit="month", code_period=f"M{int(m):02d}·{y}", **kw)
 
 
+def objects(d: dict) -> tuple:
+    """Les deux objets de la distinction, rendus comme des photos de produit : la plaque encadrée et le bloc acrylique."""
+    from core.services.social import plaque
+    cover = db.value("SELECT cover_url FROM tracks WHERE id = ?", [d["track_id"]]) if d.get("track_id") else None
+    period = month_label(d["period_key"])
+    stats = json.loads(d["stats"] or "{}")
+    return (plaque.plaque(int(d["rank"]), d["chart_label"], d["artist_name"], d["title"], cover or d["photo_url"], period, int(d["id"]), stats),
+            plaque.bloc(int(d["rank"]), d["chart_label"], d["artist_name"], d["title"], period, int(d["id"])))
+
+
+def reconnaissance(d: dict) -> bytes:
+    """PDF de reconnaissance envoyé à l'artiste : la plaque encadrée, le bloc acrylique, puis l'attestation vérifiable."""
+    import os
+    import tempfile
+    from fpdf import FPDF
+    from core.services.social import image as PI
+    fonts = PI.FONT_DIR
+    pdf = FPDF("P", "mm", "A4")
+    pdf.set_title(f"Distinction officielle Cauri Charts N° {int(d['id']):04d} · {d['artist_name']}")
+    pdf.set_author("Cauri Charts")
+    pdf.set_subject(f"N°{d['rank']} du {d['chart_label']}, {month_label(d['period_key'])}")
+    pdf.add_font("Sans", "", str(fonts / "Poppins-Regular.ttf"))
+    pdf.add_font("Sans", "B", str(fonts / "Poppins-Bold.ttf"))
+    pdf.add_font("Serif", "", str(fonts / "DMSerifDisplay-Regular.ttf"))
+    pdf.set_auto_page_break(False)
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, (img, caption) in enumerate(zip(objects(d), ("La plaque encadrée", "Le bloc acrylique"))):
+            path = os.path.join(tmp, f"{i}.jpg")
+            img.save(path, "JPEG", quality=90)
+            pdf.add_page()
+            pdf.set_fill_color(10, 8, 14)
+            pdf.rect(0, 0, 210, 297, "F")
+            pdf.image(path, x=17, y=14, w=176)  # 4:5 → 176 × 220 mm
+            pdf.set_xy(17, 244)
+            pdf.set_font("Sans", "B", 9)
+            pdf.set_text_color(139, 82, 255)
+            pdf.cell(176, 6, f"DISTINCTION OFFICIELLE N° {int(d['id']):04d}", align="C", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_x(17)
+            pdf.set_font("Serif", "", 16)
+            pdf.set_text_color(255, 255, 255)
+            pdf.cell(176, 9, caption, align="C")
+    # Attestation
+    pdf.add_page()
+    pdf.set_margins(24, 24, 24)
+    pdf.set_xy(24, 30)
+    pdf.set_font("Sans", "B", 9)
+    pdf.set_text_color(139, 82, 255)
+    pdf.cell(0, 6, f"ATTESTATION · DISTINCTION OFFICIELLE N° {int(d['id']):04d}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+    pdf.set_font("Serif", "", 26)
+    pdf.set_text_color(17, 17, 17)
+    pdf.multi_cell(0, 12, d["artist_name"], new_x="LMARGIN", new_y="NEXT")
+    if d.get("title"):
+        pdf.set_font("Serif", "", 16)
+        pdf.multi_cell(0, 9, f"« {d['title']} »", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(6)
+    stats = json.loads(d["stats"] or "{}")
+    rows = [("Classement", d["chart_label"]), ("Mois", month_label(d["period_key"])), ("Rang", f"N°{d['rank']}")]
+    if stats.get("last") is not None or int(stats.get("weeks") or 0) > 1:
+        rows += [("Mois précédent", "nouvelle entrée" if stats.get("last") is None else f"N°{stats['last']}"),
+                 ("Meilleur rang", f"N°{stats['peak']}" if stats.get("peak") else "—"), ("Mois au classement", str(stats.get("weeks") or "—"))]
+    rows += [("Numéro", f"{int(d['id']):04d}"), ("Vérification", public_url(d))]
+    for k, v in rows:
+        pdf.set_font("Sans", "", 10)
+        pdf.set_text_color(107, 107, 107)
+        pdf.cell(48, 8, k)
+        pdf.set_font("Sans", "B", 10)
+        pdf.set_text_color(17, 17, 17)
+        pdf.cell(0, 8, str(v), new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(8)
+    pdf.set_font("Sans", "", 10)
+    pdf.set_text_color(40, 40, 40)
+    pdf.multi_cell(0, 5.6, "Cette distinction est attribuée au Top 5 de chaque classement mensuel de Cauri Charts, la référence de la "
+                           "musique ouest-africaine. Les classements sont calculés chaque semaine à partir de chiffres d’écoute et de vues, "
+                           "selon une formule publique ; personne ne peut déplacer un titre à la main. Un titre n’est distingué qu’une seule "
+                           "fois par classement.\n\nLa page de vérification ci-dessus confirme l’authenticité de cette distinction. "
+                           "Méthode : " + url("methodologie") + ".", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(10)
+    pdf.set_font("Sans", "", 9)
+    pdf.set_text_color(107, 107, 107)
+    pdf.multi_cell(0, 5, "Fabrication des objets : la plaque encadrée et le bloc acrylique peuvent être réalisés par un encadreur et un "
+                         "atelier de gravure à partir des fichiers fournis par Cauri Charts (contact@cauricharts.com).")
+    return bytes(pdf.output())
+
+
 def files(d: dict, kind: str) -> tuple[bytes, str, str]:
     """Fichier à télécharger depuis l'admin : carte, impression (PDF), dorure (PDF) ou encadrée (JPG)."""
     from PIL import Image, ImageOps
     from core.services.social import award
     name = f"Cauri Charts - Distinction {int(d['id']):04d} - {d['artist_name']}"
     out = io.BytesIO()
+    if kind == "reconnaissance":
+        return reconnaissance(d), "application/pdf", f"{name} - reconnaissance.pdf"
+    if kind in ("plaque", "bloc"):
+        objects(d)[0 if kind == "plaque" else 1].save(out, "JPEG", quality=92)
+        return out.getvalue(), "image/jpeg", f"{name} - {kind}.jpg"
     if kind in ("impression", "dorure"):
         img = render(d, size=(2400, 3000))
         bleed = 36  # 3 mm à 300 ppp
@@ -108,8 +198,9 @@ def message(d: dict) -> str:
     return (f"Bonjour {d['artist_name']},\n\n"
             f"Félicitations ! Vous êtes {what} en {month_label(d['period_key']).lower()} sur Cauri Charts, "
             "le classement musical de l'Afrique de l'Ouest calculé sur des données réelles.\n\n"
-            f"Votre distinction officielle N° {int(d['id']):04d} vous attend ici, avec la carte à partager et le fichier "
-            f"prêt à imprimer :\n{public_url(d)}\n\n"
+            f"Votre distinction officielle N° {int(d['id']):04d} vous attend ici : la plaque encadrée, le bloc acrylique, "
+            f"la carte à partager et l'attestation, réunis dans votre PDF de reconnaissance :\n{public_url(d)}\n"
+            f"PDF de reconnaissance : {public_url(d)}/reconnaissance.pdf\n\n"
             "Partagez-la avec vos fans en mentionnant @cauricharts : nous la republierons.\n\nL'équipe Cauri Charts")
 
 
@@ -117,7 +208,7 @@ SLOTS = (("distinction", 15), ("distinction-2", 13))  # deux annonces par jour a
 
 
 def announce(d: dict) -> str:
-    """Post « distinction remise » : la carte encadrée sur Instagram, Facebook et TikTok, l'artiste mentionné.
+    """Post « distinction remise » : la plaque encadrée sur Instagram, Facebook et TikTok, l'artiste mentionné.
     Deux annonces par jour au plus (15 h puis 13 h UTC), le premier créneau libre à partir de demain."""
     from datetime import datetime, timedelta, timezone
     from core import clock
@@ -135,12 +226,15 @@ def announce(d: dict) -> str:
             theme, hour = free[0]
             break
         day += timedelta(days=1)
-    card = render(d)
+    from PIL import Image
+    plaque_img = objects(d)[0]
+    tall = Image.new("RGB", (1080, 1920), (30, 31, 34))
+    tall.paste(plaque_img.resize((1080, 1350), Image.LANCZOS), (0, 285))
     files = {}
-    for kind, size in (("file", (2160, 2700)), ("tiktok", (1080, 1920))):
+    for kind, img in (("file", plaque_img), ("tiktok", tall)):
         out = io.BytesIO()
-        award.cadre(card, size=size, seed=str(d["id"])).save(out, "JPEG", quality=90, optimize=True)
-        files[kind] = f"{key}-{size[0]}.jpg"
+        img.save(out, "JPEG", quality=90, optimize=True)
+        files[kind] = f"{key}-{img.width}.jpg"
         storage.store_media("social", files[kind], out.getvalue(), "image/jpeg")
     who = f"@{a['instagram']}" if a.get("instagram") else d["artist_name"]
     what = f"N°{d['rank']} du {d['chart_label']}" + (f" avec « {d['title']} »" if d.get("title") else "")
