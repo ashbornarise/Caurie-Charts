@@ -37,6 +37,7 @@ urlpatterns = [
     re_path(r"^apercu/(?P<kind>classement|titre|artiste|edition|defaut)/(?P<key>[a-z0-9-]+)\.jpg$", views.apercu),
     path("robots.txt", views.robots),
     path("favicon.ico", views.favicon),
+    re_path(r"^google(?P<token>[0-9a-f]{16})\.html$", views.google_verification),
     path("llms.txt", views.llms),
     path("sitemap.xml", views.sitemap),
     # Administration

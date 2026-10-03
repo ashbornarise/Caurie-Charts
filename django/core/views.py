@@ -628,6 +628,13 @@ def llms(request):
     return resp
 
 
+def google_verification(request, token: str):
+    """Fichier de vérification Google Search Console (propriété du site)."""
+    if token != "1c5bd27ce1969a86":
+        raise Http404
+    return HttpResponse(f"google-site-verification: google{token}.html", content_type="text/html; charset=utf-8")
+
+
 def favicon(request):
     from django.http import FileResponse
     resp = FileResponse(open(storage.REPO / "public" / "favicon.ico", "rb"), content_type="image/x-icon")
