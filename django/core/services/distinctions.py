@@ -100,9 +100,10 @@ def load_mask(did: int):
         return None
 
 
-KIT = ("telephone", "pc", "carre", "post", "carte", "certificat", "enveloppe")
+KIT = ("telephone", "pc", "carre", "post", "carte", "certificat", "enveloppe", "carte_cauri", "carte_code", "carte_qr", "ensemble")
 KIT_NAMES = {"telephone": "téléphone 1080x1920", "pc": "PC 1920x1080", "carre": "carré 1080x1080", "post": "publication 1080x1350",
-             "carte": "carte 63x88 mm", "certificat": "certificat A4", "enveloppe": "enveloppe DL"}
+             "carte": "carte 63x88 mm", "certificat": "certificat A4", "enveloppe": "enveloppe DL", "carte_cauri": "carte Cauri Charts 85x55 mm",
+             "carte_code": "carte code-barres 85x55 mm", "carte_qr": "carte de vérification 85x55 mm", "ensemble": "photo de l'ensemble"}
 
 
 def kit_info(d: dict) -> dict:
@@ -118,6 +119,14 @@ def kit_image(d: dict, fmt: str, info: dict | None = None):
         return kit.certificat(info)
     if fmt == "enveloppe":
         return kit.enveloppe(info)
+    if fmt == "carte_cauri":
+        return kit.card_brand(info)
+    if fmt == "carte_code":
+        return kit.card_code(info)
+    if fmt == "carte_qr":
+        return kit.card_qr(info)
+    if fmt == "ensemble":
+        return kit.ensemble(info, objects(d))
     return kit.render(fmt, info)
 
 
@@ -140,7 +149,40 @@ def objects(d: dict) -> tuple:
             plaque.bloc(int(d["rank"]), d["chart_label"], d["artist_name"], d["title"], period, int(d["id"])))
 
 
-def reconnaissance(d: dict) -> bytes:
+def cached_pdf(d: dict) -> bytes:
+    """Le PDF de reconnaissance, calculé une fois (≈ 1 min) puis relu depuis le Blob."""
+    fname = f"{int(d['id'])}-reconnaissance.pdf"
+    base = storage.blob_public_url()
+    try:
+        if base:
+            import requests
+            r = requests.get(f"{base}/media/distinctions/{fname}", timeout=20)
+            if r.status_code == 200 and r.content[:4] == b"%PDF":
+                return r.content
+    except Exception:  # noqa: BLE001
+        pass
+    data = reconnaissance(d)
+    try:
+        storage.store_media("distinctions", fname, data, "application/pdf")
+    except Exception:  # noqa: BLE001
+        pass
+    return data
+
+
+def kit_all(d: dict) -> dict:
+    """Toutes les images du kit, calculées une seule fois (pour le ZIP et le PDF de reconnaissance)."""
+    from core.services.social import kit
+    info = kit_info(d)
+    imgs = {"plaque": None, "bloc": None}
+    imgs["plaque"], imgs["bloc"] = objects(d)
+    for fmt in KIT:
+        if fmt != "ensemble":
+            imgs[fmt] = kit_image(d, fmt, info)
+    imgs["ensemble"] = kit.ensemble(info, (imgs["plaque"], imgs["bloc"]))
+    return imgs
+
+
+def reconnaissance(d: dict, imgs: dict | None = None) -> bytes:
     """PDF de reconnaissance envoyé à l'artiste : la plaque encadrée, le bloc acrylique, puis l'attestation vérifiable."""
     import os
     import tempfile
@@ -155,11 +197,27 @@ def reconnaissance(d: dict) -> bytes:
     pdf.add_font("Sans", "B", str(fonts / "Poppins-Bold.ttf"))
     pdf.add_font("Serif", "", str(fonts / "DMSerifDisplay-Regular.ttf"))
     pdf.set_auto_page_break(False)
+    imgs = imgs or kit_all(d)
+    plaque_img, bloc_img = imgs["plaque"], imgs["bloc"]
     with tempfile.TemporaryDirectory() as tmp:
-        for i, (img, caption) in enumerate(zip(objects(d), ("La plaque encadrée", "Le bloc acrylique"))):
+        # Ouverture : tout le kit en une photo
+        path = os.path.join(tmp, "ensemble.jpg")
+        imgs["ensemble"].save(path, "JPEG", quality=88)
+        pdf.add_page(orientation="L")
+        pdf.set_fill_color(240, 241, 246)
+        pdf.rect(0, 0, 297, 210, "F")
+        pdf.image(path, x=8.5, y=8, w=280, h=186.7)
+        pdf.set_xy(8.5, 197)
+        pdf.set_font("Sans", "B", 9)
+        pdf.set_text_color(139, 82, 255)
+        pdf.cell(280, 6, f"VOTRE DISTINCTION OFFICIELLE N° {int(d['id']):04d} · LE KIT COMPLET", align="C")
+        pdf.add_page(orientation="P")
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, (img, caption) in enumerate(zip((plaque_img, bloc_img), ("La plaque encadrée", "Le bloc acrylique"))):
+            if i:
+                pdf.add_page(orientation="P")
             path = os.path.join(tmp, f"{i}.jpg")
             img.save(path, "JPEG", quality=90)
-            pdf.add_page()
             pdf.set_fill_color(10, 8, 14)
             pdf.rect(0, 0, 210, 297, "F")
             pdf.image(path, x=17, y=14, w=176)  # 4:5 → 176 × 220 mm
@@ -174,9 +232,24 @@ def reconnaissance(d: dict) -> bytes:
     # Certificat A4 paysage
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, "certificat.jpg")
-        kit_image(d, "certificat").save(path, "JPEG", quality=88)
-        pdf.add_page(orientation="L")
-        pdf.image(path, x=0, y=0, w=297, h=210)
+        imgs["certificat"].save(path, "JPEG", quality=88)
+        pdf.add_page(orientation="P")
+        pdf.image(path, x=0, y=0, w=210, h=297)
+    # Planche des trois cartes (85 × 55 mm, à découper)
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf.add_page(orientation="P")
+        pdf.set_font("Serif", "", 18)
+        pdf.set_text_color(17, 17, 17)
+        pdf.set_xy(20, 18)
+        pdf.cell(170, 10, "Les cartes", align="C")
+        for k, fmt in enumerate(("carte_cauri", "carte_code", "carte_qr")):
+            path = os.path.join(tmp, f"{fmt}.jpg")
+            imgs[fmt].save(path, "JPEG", quality=92)
+            pdf.image(path, x=62.5, y=38 + k * 72, w=85, h=55)
+        pdf.set_font("Sans", "", 8)
+        pdf.set_text_color(107, 107, 107)
+        pdf.set_xy(20, 260)
+        pdf.cell(170, 6, "Format carte de visite, 85 × 55 mm, à imprimer sur papier épais.", align="C")
     # Attestation
     pdf.add_page(orientation="P")
     pdf.set_margins(24, 24, 24)
@@ -228,21 +301,25 @@ def files(d: dict, kind: str) -> tuple[bytes, str, str]:
     name = f"Cauri Charts - Distinction {int(d['id']):04d} - {d['artist_name']}"
     out = io.BytesIO()
     if kind == "reconnaissance":
-        return reconnaissance(d), "application/pdf", f"{name} - reconnaissance.pdf"
+        return cached_pdf(d), "application/pdf", f"{name} - reconnaissance.pdf"
     if kind in KIT:
         img = kit_image(d, kind)
-        dpi = (300, 300) if kind in ("carte", "certificat", "enveloppe") else (72, 72)
+        dpi = (300, 300) if kind in ("carte", "certificat", "enveloppe", "carte_cauri", "carte_code", "carte_qr") else (72, 72)
         img.save(out, "JPEG", quality=90, dpi=dpi)
         return out.getvalue(), "image/jpeg", f"{name} - {KIT_NAMES[kind]}.jpg"
     if kind == "kit":
         import zipfile
-        info = kit_info(d)
+        imgs = kit_all(d)
         with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
             for fmt in KIT:
                 b = io.BytesIO()
-                kit_image(d, fmt, info).save(b, "JPEG", quality=90)
+                imgs[fmt].save(b, "JPEG", quality=90)
                 z.writestr(f"{name} - {KIT_NAMES[fmt]}.jpg", b.getvalue())
-            z.writestr(f"{name} - PDF de reconnaissance.pdf", reconnaissance(d))
+            for fmt in ("plaque", "bloc"):
+                b = io.BytesIO()
+                imgs[fmt].save(b, "JPEG", quality=90)
+                z.writestr(f"{name} - {fmt}.jpg", b.getvalue())
+            z.writestr(f"{name} - PDF de reconnaissance.pdf", reconnaissance(d, imgs))
         return out.getvalue(), "application/zip", f"{name} - kit complet.zip"
     if kind in ("plaque", "bloc"):
         objects(d)[0 if kind == "plaque" else 1].save(out, "JPEG", quality=92)

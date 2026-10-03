@@ -9,7 +9,7 @@
         <a class="button button--ghost" href="{{ path('distinctions/' ~ d.id ~ '/kit.zip') }}">Kit complet (tous les formats, ZIP)</a>
     </p>
     <p class="distinction-page__actions">
-        {% for f, label in [('telephone', 'Téléphone'), ('post', 'Publication'), ('carre', 'Carré'), ('pc', 'PC'), ('carte', 'Carte'), ('certificat', 'Certificat A4'), ('enveloppe', 'Enveloppe')] %}
+        {% for f, label in [('ensemble', 'Photo de l’ensemble'), ('telephone', 'Téléphone'), ('post', 'Publication'), ('carre', 'Carré'), ('pc', 'PC'), ('carte', 'Carte de collection'), ('certificat', 'Certificat A4'), ('enveloppe', 'Enveloppe'), ('carte_cauri', 'Carte Cauri Charts'), ('carte_code', 'Carte code-barres'), ('carte_qr', 'Carte de vérification')] %}
         <a class="button button--ghost button--small" href="{{ path('distinctions/' ~ d.id ~ '/' ~ f ~ '.jpg') }}" download>{{ label }}</a>
         {% endfor %}
         <a class="button button--ghost" href="{{ path('distinctions/' ~ d.id ~ '/impression.pdf') }}">Carte à imprimer (PDF 20 × 25 cm)</a>
