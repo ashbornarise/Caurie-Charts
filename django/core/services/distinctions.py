@@ -58,11 +58,12 @@ def generate(run: dict) -> list:
             "chart_run_id": run["id"], "scope": scope, "period_key": run["period_key"], "rank": e["position"],
             "track_id": e["track_id"], "artist_id": e["artist_id"], "artist_name": e["artist_name"], "title": e["title"],
             "chart_label": label, "stats": json.dumps(stats), "photo_url": e["image_url"]})
-        img = render(db.one("SELECT * FROM award_distinctions WHERE id = ?", [did]))
+        save_mask(did, e["image_url"])  # d'abord le détourage : la carte s'en sert (portrait qui sort du cadre)
+        # Carte numérique principale (page officielle, e-mails, aperçus de liens) : le format publication du kit
+        img = kit_image(db.one("SELECT * FROM award_distinctions WHERE id = ?", [did]), "post")
         out = io.BytesIO()
         img.save(out, "JPEG", quality=92, optimize=True, progressive=True)
         storage.store_media("distinctions", f"{did}.jpg", out.getvalue(), "image/jpeg")
-        save_mask(did, e["image_url"])
         db.update("award_distinctions", {"image_name": f"{did}.jpg"}, "id = :id", {"id": did})
         done.append(did)
     return done
