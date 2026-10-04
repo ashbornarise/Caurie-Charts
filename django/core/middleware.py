@@ -23,6 +23,13 @@ def csp() -> str:
             + "; form-action 'self'; frame-ancestors 'none'; base-uri 'self'")
 
 
+MAINTENANCE = """<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cauri Charts · maintenance</title><style>body{margin:0;font-family:system-ui,sans-serif;background:#f7f8fc;color:#0e1228;display:grid;
+place-items:center;min-height:100vh;text-align:center;padding:24px}h1{font-size:1.6rem;margin:0 0 8px}p{color:#5c6288;max-width:440px}
+b{color:#8B52FF}</style></head><body><main><h1>Cauri Charts revient très vite</h1><p>Le site est en courte maintenance.
+Les classements de la musique ouest-africaine reviennent dans quelques instants.</p><p><b>@cauricharts</b> sur Instagram et TikTok</p>
+</main></body></html>"""
+
 # Pages jamais mises en cache par le réseau de Vercel : administration, formulaires (jeton CSRF), espace connecté
 NO_EDGE_CACHE = ("/admin", "/contact", "/declarer", "/revendiquer", "/connexion", "/api/")
 
@@ -60,8 +67,17 @@ class CauriMiddleware:
 
     def process_exception(self, request, exception):
         """Page 404 du site (comme en PHP), y compris en mode débogage."""
-        from django.http import Http404
+        from django.db.utils import OperationalError
+        from django.http import Http404, HttpResponse
         if isinstance(exception, Http404):
             from core.views_errors import render_error
             return render_error(request, 404)
+        from core.services import neon_watch
+        if isinstance(exception, OperationalError) and neon_watch.blocked(exception):
+            # Base bloquée (quota de l'offre gratuite) : alerte immédiate et page de maintenance, jamais mise en cache
+            neon_watch.alert_blocked(exception)
+            resp = HttpResponse(MAINTENANCE, status=503, content_type="text/html; charset=utf-8")
+            resp["Retry-After"] = "3600"
+            resp["Cache-Control"] = "no-store"
+            return resp
         return None

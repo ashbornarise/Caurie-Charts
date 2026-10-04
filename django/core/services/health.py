@@ -21,6 +21,13 @@ def summary(report: list, crash: str | None = None) -> tuple[str, str]:
     if observed == 0:
         lines += ["AUCUN RELEVÉ AUJOURD'HUI : les classements des plateformes n'ont pas été importés.", ""]
     lines.append(f"{observed} positions relevées aujourd'hui · {len(report)} étapes, {len(failed)} en échec, {len(warnings)} avertissements")
+    from core.services import neon_watch
+    neon = neon_watch.report_line()  # transfert consommé sur la base gratuite (alerte à 70 % puis 90 %)
+    if neon:
+        lines.append(neon)
+        if neon.startswith("[alerte]"):
+            warnings.append(("Base de données", neon))
+            title = title if problems else "base de données à surveiller"
     lines.append("")
     for r in report:
         mark = "OK " if r["ok"] else "ÉCHEC"

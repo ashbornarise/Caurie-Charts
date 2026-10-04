@@ -1,0 +1,26 @@
+# Sauvegarde hebdomadaire de la base (Neon) : une copie complète gardée 90 jours dans GitHub (Actions > Sauvegarde > artefact).
+# Pour restaurer : télécharger l'artefact, puis pg_restore --no-owner --no-privileges --dbname <adresse> cauri-charts.dump
+name: Sauvegarde
+
+on:
+  schedule:
+    - cron: "30 3 * * 0"   # dimanche 3 h 30 UTC, après la chaîne de nuit
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Copie complète (pg_dump 18)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          URL="${DATABASE_URL/-pooler./.}"
+          docker run --rm -e URL="$URL" -v "$PWD:/out" postgres:18 sh -c 'pg_dump --format=custom --no-owner --no-privileges --file /out/cauri-charts.dump "$URL"'
+          ls -la cauri-charts.dump
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cauri-charts-${{ github.run_number }}
+          path: cauri-charts.dump
+          retention-days: 90
