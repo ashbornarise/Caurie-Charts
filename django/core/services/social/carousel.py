@@ -44,7 +44,7 @@ def render(facts: dict, cover: dict, items: list, name: str) -> dict:
     for fmt, (size, safe) in FORMATS.items():
         fr = PI.Frame(*size, safe)
         suffix = "" if fmt == "feed" else "-916"
-        slides = [PI.save_jpeg(_best_cover(fr, f, cover, cover_photo, total), PI.DIR / f"{name}-1{suffix}.jpg")] if with_cover else []
+        slides = [PI.save_jpeg(_best_cover(fr, f, cover, cover_photo, total, name, items), PI.DIR / f"{name}-1{suffix}.jpg")] if with_cover else []
         if fmt == VIDEO and slides:
             segments.append({"image": slides[0]})
         for i, item in enumerate(items):
@@ -168,9 +168,37 @@ def _cover_slide(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -> I
     return img
 
 
-def _best_cover(fr, f, cover, photo_url, total):
-    """Une réaliste (photo entière, tête devant le titre) quand le détourage est disponible, sinon une classique."""
+MOIS = ("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc.")
+
+
+def _magazine(fr: PI.Frame, cover: dict, photo_url, name: str, items: list | None, edition: str):
+    """Couverture de magazine (couverture.py, 20 mises en page dans la charte Cauri). Le rang, le titre du morceau et
+    le grand chiffre n'apparaissent que si la couverture parle bien du premier titre de la liste."""
+    import re
+    from datetime import date
+    from core.services.social import couverture
+    items = items or []
+    m_day = re.match(r"(\d{4})-(\d{2})-(\d{2})", name)
+    day = date(*map(int, m_day.groups())) if m_day else date.today()
+    first = items[0] if items else None
+    about_first = bool(first) and PI.clean(str(first.get("artist", ""))).lower() == PI.clean(cover["headline"]).lower()
+    lines = cover.get("lines") or [(it["rank"], PI.clean(it["artist"]), PI.clean(it["title"])) for it in items[1 if about_first else 0:][:4]]
+    m = {"edition": edition, "issue": f"Semaine {day.isocalendar()[1]}", "year": str(day.year),
+         "date": f"{day.day} {MOIS[day.month - 1]} {day.year}", "kicker": PI.clean(cover.get("kicker") or ""),
+         "headline": PI.clean(cover["headline"]), "deck": PI.clean(cover.get("subtitle") or ""), "lines": lines,
+         "photo": photo_url, "rank": cover.get("rank") or (first["rank"] if about_first else None),
+         "title": cover.get("title") or (PI.clean(first["title"]) if about_first else ""), "seed": name}
+    return couverture.render(m, fmt="story" if fr.bh > 1600 else "post")
+
+
+def _best_cover(fr, f, cover, photo_url, total, name: str = "", items: list | None = None, edition: str = "Charts"):
+    """Couverture de magazine (20 mises en page) ; sinon une réaliste, sinon une classique."""
     from core.services.social import une
+    if name:
+        try:
+            return _magazine(fr, cover, photo_url, name, items, edition)
+        except Exception as exc:  # noqa: BLE001 — l'ancienne couverture prend le relais
+            log_write("social", "error", f"couverture magazine : {exc}")
     try:
         img = une.cover(fr, f, cover, photo_url, total)
     except Exception as exc:  # noqa: BLE001 — la une classique prend le relais
@@ -255,9 +283,9 @@ def _magazine_cover(fr: PI.Frame, f: dict, cover: dict, photo_url, total: int) -
 
 
 def slide_variant(name: str) -> str:
-    """Mise en page des diapositives d'un post : « bandeau » ou « dégradé », tirée au sort par post (stable)."""
+    """Mise en page des diapositives d'un post : « bandeau », « dégradé » ou « papier », tirée au sort par post (stable)."""
     import random
-    return "bandeau" if random.Random(name + "-diapo").random() < 0.5 else "degrade"
+    return random.Random(name + "-diapo").choice(("bandeau", "degrade", "papier"))
 
 
 FONT_D, FONT_B, FONT_S = (str(PI.FONT_DIR / n) for n in ("Anton-Regular.ttf", "Poppins-Bold.ttf", "Poppins-Regular.ttf"))
@@ -310,6 +338,8 @@ def _item_slide(fr: PI.Frame, f: dict, item: dict, n: int, total: int, source: s
         fr.text(d, 17, pad, base - 44, (255, 255, 255, 150), FONT_S, fr.fit("Source : " + source + " · cauricharts.com", FONT_S, 17, W - 2 * pad))
         _logo(fr, img, pad, fr.top + 52, 180)
         return img
+    if variant == "papier" and not transparent:
+        return _paper_slide(fr, f, item, source)
     # Dégradé : photo plein cadre nette, noir profond vers le bas, textes alignés à gauche
     img = _canvas(fr, f, None, True) if transparent else _photo(fr, item.get("image"), fr.h, ink)
     fr.gradient(img, int(H * 0.38), H, (6, 5, 9), 127, 0)
@@ -326,6 +356,58 @@ def _item_slide(fr: PI.Frame, f: dict, item: dict, n: int, total: int, source: s
     fr.text(d, 17, pad, base - 30, (255, 255, 255, 150), FONT_S, fr.fit("Source : " + source + " · cauricharts.com", FONT_S, 17, W - 2 * pad))
     _logo(fr, img, pad, fr.top + 52, 180)
     return img
+
+
+PAPER_DIR = PI.REPO / "resources" / "papier"  # papiers déchirés détourés (maquette « 12 Isolated Paper Rips »)
+
+
+def _paper(name: str, width: int, angle: float = 0) -> Image.Image:
+    im = Image.open(PAPER_DIR / f"{name}.png").convert("RGBA")
+    im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+    return im.rotate(angle, Image.BICUBIC, expand=True) if angle else im
+
+
+def _paper_slide(fr: PI.Frame, f: dict, item: dict, source: str) -> Image.Image:
+    """« Papier » : photo plein cadre, feuille déchirée en bas avec le rang, l'artiste et le titre à l'encre, et le
+    chiffre écrit sur un bout de papier collé en haut à droite."""
+    W, H = fr.bw, fr.bh
+    base = H - fr.bottom
+    pad = max(64, fr.side)
+    ink = (17, 15, 24, 255)
+    acc = (*f["accent"], 255)
+    rank = str(item["rank"])
+    artist, title = PI.clean(item["artist"]), PI.clean(item["title"])
+    value, label = str(item.get("figure_value") or ""), str(item.get("figure_label") or "").upper()
+    img = _photo(fr, item.get("image"), fr.h, (14, 12, 18))
+    fr.gradient(img, 0, fr.top + 200, (0, 0, 0), 70, 127)
+    img = img.convert("RGBA")
+    # Feuille du bas : le bord déchiré à 430 px (base) au-dessus de la limite utile
+    edge = base - 380
+    sheet = _paper("bas", fr.w)
+    if sheet.height < fr.h - fr.s(edge):  # 9:16 : la feuille descend jusqu'en bas, sous la zone de l'application
+        sheet = sheet.resize((fr.w, fr.h - fr.s(edge)), Image.LANCZOS)
+    img.alpha_composite(sheet, (0, fr.s(edge)))
+    d = ImageDraw.Draw(img, "RGBA")
+    top = edge + 70
+    rank_px = 210
+    fr.text(d, rank_px, pad - 6, top + rank_px * 0.78, acc, FONT_D, rank)
+    x = pad + fr.width(rank, FONT_D, rank_px) + 30
+    room = W - x - pad
+    fr.text(d, 26, x, top + 50, (*ink[:3], 150), FONT_B, fr.fit(f"N°{rank} · " + source.upper(), FONT_B, 26, room))
+    fr.text(d, 70, x, top + 128, ink, FONT_D, fr.fit(artist.upper(), FONT_D, 70, room))
+    fr.text(d, 34, x, top + 180, ink, FONT_B, fr.fit(f"« {title} »", FONT_B, 34, room))
+    fr.text(d, 17, pad, base - 36, (*ink[:3], 140), FONT_S, fr.fit("Source : " + source + " · cauricharts.com", FONT_S, 17, W - 2 * pad))
+    # Bout de papier collé de travers sur le bord de la feuille, à droite (loin du visage), avec le chiffre
+    if value:
+        scrap = _paper("bout-9", fr.s(440))
+        sd = ImageDraw.Draw(scrap)
+        sub = PI.Frame(440, round(scrap.height / PI.SCALE))
+        sub.text(sd, 58, 46, sub.bh * 0.52, acc, FONT_D, sub.fit(value, FONT_D, 58, 340))
+        sub.text(sd, 19, 48, sub.bh * 0.52 + 36, ink, FONT_B, sub.fit(label, FONT_B, 19, 340))
+        scrap = scrap.rotate(-4, Image.BICUBIC, expand=True)
+        img.alpha_composite(scrap, (fr.s(W - pad - 430), fr.s(edge - sub.bh * 0.62)))
+    _logo(fr, img, pad, fr.top + 52, 180)
+    return img.convert("RGB")
 
 
 MUSIC_DIR = PI.REPO / "resources" / "music"

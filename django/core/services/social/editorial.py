@@ -88,7 +88,7 @@ def render(name: str, slides: list, cover: dict | None = None) -> list:
         fr = PI.Frame(*size, safe)
         imgs = []
         if cover:
-            imgs.append(C._best_cover(fr, PI.style(name), cover, cover.get("photo"), total))
+            imgs.append(C._best_cover(fr, PI.style(name), cover, cover.get("photo"), total, name, edition=cover.get("edition", "Charts")))
         imgs += [slide(fr, s, i == len(slides) - 1) for i, s in enumerate(slides)]
         for i, im in enumerate(imgs):
             suffix = "" if fmt == "feed" else "-916"
@@ -145,8 +145,10 @@ def hebdo_post(f: dict, day: date) -> dict | None:
                    "body": "Le classement complet, la méthode et la note de fiabilité de chaque pays sur cauricharts.com. Rendez-vous dimanche prochain.",
                    "cta": "S'ABONNER"})
     name = f"{day.isoformat()}-hebdo-{year}-s{week:02d}"
-    cover = {"kicker": f"Cauri Hebdo · semaine {week}", "headline": one["artist_name"],
-             "subtitle": f"« {one['title']} » · n°{one['rank']} Afrique de l'Ouest", "photo": one.get("artist_image") or own_image(one) or one.get("cover_url")}
+    cover = {"kicker": f"N°{one['rank']} Afrique de l'Ouest", "headline": one["artist_name"], "edition": "Hebdo",
+             "subtitle": f"« {one['title']} » · n°{one['rank']} du Top 20 Afrique de l'Ouest", "rank": one["rank"], "title": one["title"],
+             "lines": [(r["rank"], r["artist_name"], r["title"]) for r in top[:5] if r is not one and r.get("status") == "active"][:4],
+             "photo": one.get("artist_image") or own_image(one) or one.get("cover_url")}
     files = render(name, slides, cover)
     caption = (f"Cauri Hebdo, semaine {week}. « {one['title']} » {de(one['artist_name'])} prend la tête du Top 20 Afrique de l'Ouest.\n\n"
                "Le podium, le Top 10, la carte des pays, ceux qui montent et les n°1 de chaque pays : tout est dans le carrousel.\n\n"

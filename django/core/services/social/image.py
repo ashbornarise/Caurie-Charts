@@ -165,6 +165,17 @@ def hd(url: str) -> str:
     return url
 
 
+def trim_bars(im: Image.Image) -> Image.Image:
+    """Retire les bandes noires unies sur les bords (image de clip au format cinéma) : sinon le recadrage tombe dessus
+    et coupe la tête. Ne touche pas une photo qui perdrait plus de la moitié de sa surface."""
+    from PIL import ImageOps
+    g = ImageOps.grayscale(im).point(lambda v: 255 if v > 18 else 0)
+    box = g.getbbox()
+    if not box or (box[2] - box[0]) * (box[3] - box[1]) < im.width * im.height * 0.5:
+        return im
+    return im.crop(box) if box != (0, 0, im.width, im.height) else im
+
+
 def photo(url):
     """Photo téléchargée une seule fois par adresse (un post la réutilise sur une vingtaine de visuels). Ne pas la modifier."""
     if not url or not str(url).startswith("https://"):
@@ -177,7 +188,7 @@ def photo(url):
             try:
                 im = Image.open(io.BytesIO(data))
                 im.load()
-                im = im.convert("RGB")
+                im = trim_bars(im.convert("RGB"))
             except Exception:  # noqa: BLE001
                 im = None
         if len(_PHOTOS) > 64:

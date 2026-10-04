@@ -216,3 +216,18 @@ def test_shazam_post_never_shows_youtube_views(monkeypatch):
          "seen": [{"platform": "Vues YouTube", "country": "NG", "position": 3}, {"platform": "Shazam", "country": "NG", "position": 1}]}]}
     it = PostGenerator._carousel_items(facts)[0]
     assert it["figure_value"] == "N°1" and it["figure_label"].startswith("Shazam")
+
+
+def test_couvertures_et_gabarits_se_dessinent_sans_photo(monkeypatch):
+    """Les 20 couvertures de magazine et les 20 gabarits se dessinent dans les deux formats, même sans photo ni rang."""
+    from core.services.social import couverture, gabarits
+    from core.services.social import image as PI
+    monkeypatch.setattr(PI, "SCALE", 1)  # même mise en page, dessinée en 1080 (test rapide)
+    m = {"issue": "Semaine 40", "year": "2026", "date": "4 oct. 2026", "kicker": "Prime Chart", "headline": "Afrique de l'Ouest",
+         "deck": "Le Top de la semaine", "lines": [(2, "Artiste B", "Titre B"), (3, "Artiste C", "Titre C")], "seed": "test"}
+    k = {"kicker": "Bon début de mois", "title": "Novembre", "sub": "Une phrase de vœux.", "date": "1er novembre 2026", "seed": "t"}
+    for fmt, size in (("post", (1080, 1350)), ("story", (1080, 1920))):
+        for fn in couverture.LAYOUTS:
+            assert couverture.render(m, fn.__name__, fmt).size == size
+        for fn in gabarits.LAYOUTS:
+            assert gabarits.render(k, fn.__name__, fmt).size == size
