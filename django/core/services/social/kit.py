@@ -70,7 +70,7 @@ def _leaf(size, seed=0) -> Image.Image:
 
 def _portrait(photo_url, w: int, h: int, mask: Image.Image | None = None):
     """Portrait noir et blanc contrasté (cadré sur le sujet) et, si possible, son masque de détourage."""
-    src = PI.photo(photo_url)
+    src = photo_url if isinstance(photo_url, Image.Image) else PI.photo(photo_url)
     if src is None:
         return None, None
     if mask is not None and mask.size != src.size:
@@ -731,4 +731,18 @@ def ensemble(info: dict, objects: tuple = (), size=(2400, 1800)) -> Image.Image:
     _place(img, card_qr(info), (W * .25, H * .82), W * .22, 6)
     _place(img, card_code(info), (W * .80, H * .82), W * .20, -7)
     _place(img, card_brand(info), (W * .66, H * .18), W * .18, 3)
+    return img
+
+
+def silhouette(size=(1000, 1250)) -> Image.Image:
+    """Silhouette neutre (tête et épaules) pour les visuels « modèle » : aucun vrai artiste n'y figure."""
+    W, H = size
+    img = Image.new("RGB", size, (214, 220, 236))
+    img.paste((246, 248, 253), (0, 0), Image.radial_gradient("L").resize(size).point(lambda v: 255 - v))
+    m = Image.new("L", size, 0)
+    d = ImageDraw.Draw(m)
+    d.ellipse([W * .34, H * .14, W * .66, H * .46], fill=255)                 # tête
+    d.rectangle([W * .44, H * .42, W * .56, H * .56], fill=255)               # cou
+    d.ellipse([W * .10, H * .52, W * .90, H * 1.25], fill=255)                # épaules
+    img.paste((70, 76, 104), (0, 0), m.filter(ImageFilter.GaussianBlur(3)))
     return img

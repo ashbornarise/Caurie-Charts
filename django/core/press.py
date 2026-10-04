@@ -20,5 +20,7 @@ def published() -> list:
     out = []
     for r in RELEASES:
         if r["date"] <= now:
-            out.append({**r, "links": [(label, url(f)) for label, f in r["files"]]})
+            from core import repos
+            article = r.get("article") if r.get("article") and repos.news_by_slug(r["article"].split("/")[-1]) else None
+            out.append({**r, "article": article, "links": [(label, url(f)) for label, f in r["files"]]})
     return sorted(out, key=lambda r: r["date"], reverse=True)
