@@ -56,6 +56,8 @@ def channels(http: HttpClient | None = None) -> list:
 def text(post: dict, service: str) -> str:
     """Légende : titre, texte, hashtags ; le lien n'est cliquable que sur Facebook (« lien en bio » ailleurs)."""
     link = url("/") if service == "facebook" else "Lien en bio : cauricharts.com"
+    if "localhost" in link or "127.0.0.1" in link:
+        link = "https://www.cauricharts.com/"  # un post programmé depuis un poste de travail garde le vrai lien du site
     body = f"{post['title']}\n\n{post.get('caption') or ''}\n\n{link}\n\n{post.get('hashtags') or ''}".strip()
     return body[:2200]  # limite des légendes Instagram et TikTok
 
