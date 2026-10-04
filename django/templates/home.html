@@ -12,6 +12,40 @@
            title=t('home.title', {'country': country_name(code), 'size': country.chart_size}),
            day=(period_label(run) if run else (t('chart.live_day', {'date': fmt_date(live.day)}) if live and live.day else '')),
            more='#classement') }}
+{%- macro news_href(n) -%}{{ n.source_url if (n.origin or 'manual') == 'feed' and n.source_url else path('actualites/' ~ n.slug) }}{%- endmacro -%}
+{%- macro news_ext(n) -%}{{ Markup(' target="_blank" rel="noopener noreferrer"') if (n.origin or 'manual') == 'feed' and n.source_url }}{%- endmacro -%}
+{% if homeNews %}
+<section class="wrap une" aria-labelledby="une-title">
+    <div class="partners__head">
+        <h2 id="une-title">À la une</h2>
+        <a class="link-arrow" href="{{ path('actualites') }}">{{ t('news.all') }}</a>
+    </div>
+    <div class="une__grid">
+        {% set lead = homeNews[0] %}
+        <article class="une__lead">
+            <a class="une__media" href="{{ news_href(lead) }}"{{ news_ext(lead) }} tabindex="-1" aria-hidden="true">
+                {% if lead.image_path %}<img src="/media/news/{{ rawurlencode(lead.image_path.split('/')[-1]) }}" alt="" width="1280" height="720">{% endif %}
+            </a>
+            <p class="une__meta"><span class="news-card__tag">{{ t('news.cat_' ~ lead.category) }}</span> {{ fmt_date(lead.published_at[:10], false) }}</p>
+            <h3 class="une__title"><a href="{{ news_href(lead) }}"{{ news_ext(lead) }}>{{ lead.title }}</a></h3>
+            <p class="une__summary">{{ lead.summary }}</p>
+        </article>
+        <ul class="une__list">
+            {% for n in homeNews[1:5] %}
+            <li class="une__item">
+                <a class="une__thumb" href="{{ news_href(n) }}"{{ news_ext(n) }} tabindex="-1" aria-hidden="true">
+                    {% if n.image_path %}<img src="/media/news/{{ rawurlencode(n.image_path.split('/')[-1]) }}" alt="" loading="lazy" width="320" height="180">{% endif %}
+                </a>
+                <div>
+                    <p class="une__meta"><span class="news-card__tag">{{ t('news.cat_' ~ n.category) }}</span> {{ fmt_date(n.published_at[:10], false) }}</p>
+                    <h3 class="une__item-title"><a href="{{ news_href(n) }}"{{ news_ext(n) }}>{{ n.title }}</a></h3>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+{% endif %}
 <div class="wrap">{{ partial('partials/artist-news', items=artistNews, more=path('actu-artistes'), strip=true) }}</div>
 <div class="wrap page-grid">
 <div class="page-main">
@@ -93,19 +127,6 @@
         </ul>
     </section>
 
-    {% if homeNews %}
-    <section class="home-news" aria-labelledby="home-news-title">
-        <div class="partners__head">
-            <h2 id="home-news-title">{{ t('news.title') }}</h2>
-            <a class="link-arrow" href="{{ path('actualites') }}">{{ t('news.all') }}</a>
-        </div>
-        <ul class="news-grid news-grid--three">
-            {% for n in homeNews %}
-            {{ partial('partials/news-card', n=n, i=loop.index0) }}
-            {% endfor %}
-        </ul>
-    </section>
-    {% endif %}
 
     {% set playlist = config('app.tracking.spotify_playlist') %}
     {% if playlist %}

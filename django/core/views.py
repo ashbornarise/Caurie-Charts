@@ -76,6 +76,12 @@ def apercu(request, kind: str, key: str):
     return resp
 
 
+def _une(items: list) -> list:
+    """« À la une » : un article de la rédaction avec image en tête (Hebdo, Matin, annonces), puis les autres."""
+    lead = next((n for n in items if (n.get("origin") or "manual") == "manual" and n.get("image_path")), None)         or next((n for n in items if n.get("image_path")), None)
+    return ([lead] + [n for n in items if n is not lead])[:5] if lead else items[:5]
+
+
 def _artist_news(artist_id=None, limit=6) -> list:
     try:
         from core.services import artist_news
@@ -169,7 +175,7 @@ def home(request):
         "country": country, "regional": regional, "chartCode": chart_code, "run": run, "entries": entries, "live": live,
         "periodType": period_type, "highlights": highlights, "aside": aside(country), "numberOnes": repos.number_ones(),
         "hotArtists": repos.hot_artists(None if regional else int(country["id"])),
-        "homeNews": repos.news_latest(3, None if regional else int(country["id"])),
+        "homeNews": _une(repos.news_latest(8, None if regional else int(country["id"]))),
         "artistNews": _artist_news(),
         "partners": repos.partners_active(),
         "meta": {

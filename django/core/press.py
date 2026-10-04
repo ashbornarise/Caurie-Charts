@@ -4,7 +4,7 @@ from core.helpers import url
 from core.views_util import now_utc
 
 RELEASES = [
-    {"date": "2026-10-06 16:00:00", "slug": "distinctions-officielles",
+    {"date": "2026-10-04 08:00:00", "slug": "distinctions-officielles",
      "title": "Cauri Charts lance ses Distinctions officielles",
      "summary": "Chaque mois, le Top 5 de chaque classement d’Afrique de l’Ouest reçoit une distinction numérotée, "
                 "calculée sur des données réelles.",
