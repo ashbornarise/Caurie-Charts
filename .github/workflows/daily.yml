@@ -9,7 +9,7 @@ name: Chaîne quotidienne
 
 on:
   schedule:
-    - cron: "0 1 * * *"   # 1 h UTC = 1 h à Lomé : marge pour les retards de GitHub, Cauri Matin prêt pour 7 h
+    - cron: "23 4 * * *"  # secours : le réveil principal est Vercel à 1 h UTC (/cron/nuit) ; ici, seulement s'il n'a pas tourné
   workflow_dispatch:
     inputs:
       args:
@@ -22,7 +22,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Secours : la planification GitHub ne lance rien si la nuit a déjà tourné (ou tourne) aujourd'hui
+  guard:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            n=$(gh run list -R "$GITHUB_REPOSITORY" --workflow daily.yml --created ">=$(date -u +%F)" --json databaseId,status,conclusion                 --jq "[.[] | select(.databaseId != ${{ github.run_id }}) | select(.status != \"completed\" or .conclusion == \"success\")] | length")
+            if [ "$n" -gt 0 ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; echo "Déjà passée aujourd'hui : rien à faire."; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
   daily:
+    needs: guard
+    if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
