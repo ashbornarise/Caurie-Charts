@@ -23,6 +23,23 @@ def csp() -> str:
             + "; form-action 'self'; frame-ancestors 'none'; base-uri 'self'")
 
 
+# Pages jamais mises en cache par le réseau de Vercel : administration, formulaires (jeton CSRF), espace connecté
+NO_EDGE_CACHE = ("/admin", "/contact", "/declarer", "/revendiquer", "/connexion", "/api/")
+
+
+def edge_cache(request, response) -> None:
+    """Pages publiques gardées 10 min par le réseau de Vercel (puis rafraîchies en arrière-plan) : un robot ou un
+    visiteur qui revoit une page ne réinterroge pas la base Neon, dont le transfert mensuel est limité."""
+    from django.conf import settings
+    if request.method not in ("GET", "HEAD") or response.status_code != 200 or response.cookies:
+        return
+    if request.COOKIES.get(settings.SESSION_COOKIE_NAME) or request.path.startswith(NO_EDGE_CACHE) or request.path.endswith("/revendiquer"):
+        return
+    if "Cache-Control" in response.headers:
+        return  # la vue a déjà choisi (images, plan du site…)
+    response.headers["Cache-Control"] = "public, max-age=0, s-maxage=600, stale-while-revalidate=86400"
+
+
 class CauriMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -38,6 +55,7 @@ class CauriMiddleware:
             current_request.reset(token)
         response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
         response.headers.setdefault("Content-Security-Policy", csp())
+        edge_cache(request, response)
         return response
 
     def process_exception(self, request, exception):
