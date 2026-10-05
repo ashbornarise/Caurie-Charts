@@ -124,6 +124,6 @@ def _article(f: dict, caption: str, files: list) -> None:
     from core.services.magazine import de
     title = f"Cauri Matin n°{f['number']} : « {f['one']['title']} » {de(f['one']['artist_name'])}, n°{f['one']['rank']} ce matin"
     body = caption.replace("Classement en direct : lien en bio.", "Classement complet et méthode sur cauricharts.com.")
-    db.insert("news", {"title": title[:200], "slug": f"cauri-matin-{f['day']}",  # adresse stable "summary": caption.split("\n\n")[0][:400],
-                       "body": body, "category": "classement", "country_id": None, "source_name": "Cauri Charts", "source_url": None,
+    db.insert("news", {"title": title[:200], "slug": f"cauri-matin-{f['day']}",  # adresse stable
+                       "summary": caption.split("\n\n")[0][:400], "body": body, "category": "classement", "country_id": None, "source_name": "Cauri Charts", "source_url": None,
                        "image_path": None, "origin": "manual", "external_guid": guid, "status": "published", "published_at": now_utc()})
