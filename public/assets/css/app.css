@@ -135,8 +135,9 @@ h1, h2, h3 { font-family: var(--serif); line-height: 1.1; margin: 0 0 .5em; }
 .entry--compact.entry--top .entry__rank { font-size: 1.5rem; }
 .entry--compact .particles i:nth-child(n+5) { display: none; }
 
-.cover { width: 56px; height: 56px; background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; border-radius: 2px; }
-.cover img { width: 100%; height: 100%; object-fit: cover; }
+.cover { position: relative; width: 56px; height: 56px; background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; border-radius: 2px; }
+/* Images posées en absolu : dans un cadre en grille, une photo en hauteur ferait grandir la ligne (ovale qui déborde) */
+.cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cover__initials { font-family: var(--serif); font-weight: 700; color: var(--muted); }
 .cover--large { width: 120px; height: 120px; flex: none; }
 .cover--large .cover__initials { font-size: 2.4rem; }
@@ -526,7 +527,7 @@ a.partner-card:hover { border-color: var(--accent); box-shadow: 0 8px 22px rgba(
     background: var(--surface-2); display: grid; place-items: center; box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px rgba(139, 82, 255, .35);
     transition: box-shadow .2s ease, transform .2s ease;
 }
-.hot-artist__photo > img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.hot-artist__photo > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .hot-artist__flag img { width: auto; height: 14px; border-radius: 1px; }
 .hot-artist:hover .hot-artist__photo { transform: translateY(-2px); box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px var(--accent), 0 10px 24px rgba(139, 82, 255, .3); }
 .hot-artist__flag { position: absolute; right: 2px; bottom: 4px; background: var(--surface); padding: 3px; border-radius: 4px; line-height: 0; box-shadow: 0 1px 4px rgba(0, 0, 0, .15); }
@@ -548,8 +549,8 @@ a.partner-card:hover { border-color: var(--accent); box-shadow: 0 8px 22px rgba(
 
 /* Fiche artiste : chiffres réels en avant */
 .artist-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 24px 32px; padding: 8px 0 24px; }
-.artist-hero__photo { width: 200px; height: 200px; max-width: 100%; flex: none; border-radius: 50%; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; box-shadow: 0 0 0 4px var(--surface), 0 0 0 7px var(--accent), 0 18px 40px rgba(139, 82, 255, .28); }
-.artist-hero__photo img { width: 100%; height: 100%; object-fit: cover; }
+.artist-hero__photo { position: relative; width: 200px; height: 200px; max-width: 100%; flex: none; border-radius: 50%; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; box-shadow: 0 0 0 4px var(--surface), 0 0 0 7px var(--accent), 0 18px 40px rgba(139, 82, 255, .28); }
+.artist-hero__photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .artist-hero__text { min-width: 0; flex: 1 1 260px; }
 .artist-hero .profile__title { font-size: clamp(2.4rem, 7vw, 4rem); margin: 4px 0 6px; overflow-wrap: anywhere; }
 .artist-hero__rank { display: inline-block; margin: 0 0 8px; padding: 5px 12px; border-radius: 999px; background: #F3EDFF; color: #3E1A9E; font-weight: 700; font-size: .85rem; }
