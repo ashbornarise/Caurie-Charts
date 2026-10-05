@@ -110,20 +110,21 @@ def post(day: date) -> dict | None:
         lines.append(f"Ce soir à 18 h : {f['tonight']}.")
     lines.append("Classement en direct : lien en bio.")
     caption = "\n\n".join(lines)
-    post = E.save_post("matin", day.isoformat(), f"Cauri Matin n°{n}", caption,
+    # L'article (article()) est écrit après la programmation sur les réseaux : un article refusé ne bloque plus le post
+    return E.save_post("matin", day.isoformat(), f"Cauri Matin n°{n}", caption,
                        "#CauriMatin #CauriCharts #AfriqueDeLOuest #Afrobeats #Top20", files, f)
-    _article(f, caption, files)
-    return post
 
 
-def _article(f: dict, caption: str, files: list) -> None:
-    """Le même numéro dans Actualités (une seule fois par jour)."""
+def article(post: dict) -> str:
+    """Le même numéro dans Actualités (une seule fois par jour), à partir du post enregistré."""
+    f, caption = json.loads(post["facts"]), post["caption"]
     guid = f"cauri-matin-{f['day']}"
     if db.value("SELECT 1 FROM news WHERE external_guid = ?", [guid]):
-        return
+        return "article déjà publié"
     from core.services.magazine import de
     title = f"Cauri Matin n°{f['number']} : « {f['one']['title']} » {de(f['one']['artist_name'])}, n°{f['one']['rank']} ce matin"
     body = caption.replace("Classement en direct : lien en bio.", "Classement complet et méthode sur cauricharts.com.")
     db.insert("news", {"title": title[:200], "slug": f"cauri-matin-{f['day']}",  # adresse stable
-                       "summary": caption.split("\n\n")[0][:400], "body": body, "category": "classement", "country_id": None, "source_name": "Cauri Charts", "source_url": None,
-                       "image_path": None, "origin": "manual", "external_guid": guid, "status": "published", "published_at": now_utc()})
+                       "summary": caption.split("\n\n")[0][:400], "body": body, "category": "classement", "country_id": None,
+                       "source_name": "Cauri Charts", "source_url": None, "image_path": None, "origin": "manual", "external_guid": guid, "status": "published", "published_at": now_utc()})
+    return "article publié dans Actualités"

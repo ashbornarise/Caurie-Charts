@@ -28,6 +28,31 @@ from core.services import buffer, telegram
 from core.services.social.generator import PostGenerator, purge_blob, purge_orphans
 
 
+class StepFailed(Exception):
+    """Étape faite en partie (ex. post généré mais refusé par Buffer) : l'échec remonte, le compte rendu est gardé."""
+
+    def __init__(self, lines: list, message: str):
+        super().__init__(message)
+        self.lines = lines
+
+
+def publish(post: dict, due) -> list:
+    """Programme le post dans Buffer ; un envoi refusé fait échouer l'étape (rapport du matin et rattrapage)."""
+    if not buffer.configured():
+        return []
+    result = buffer.schedule(post, due)
+    if buffer.failed(result):
+        raise StepFailed(["Buffer : " + result], "post généré mais pas (entièrement) programmé")
+    return ["Buffer : " + result]
+
+
+def checked(lines: list, problems: list) -> list:
+    """Fin d'étape : les problèmes rencontrés en route la font échouer sans perdre ce qui a été fait."""
+    if problems:
+        raise StepFailed(lines, " ; ".join(problems))
+    return lines
+
+
 class DailyPipeline:
     def __init__(self, out=None):
         self.out = out
@@ -72,12 +97,13 @@ class DailyPipeline:
                         lines.append("Telegram : " + telegram.send_post(post))
                     except Exception as exc:  # noqa: BLE001 — le post reste généré même si Telegram échoue
                         lines.append(f"Telegram : échec ({exc})")
-                if buffer.configured():
-                    # Instagram, Facebook, TikTok à 18 h (heure de Lomé) : annulable dans Buffer ou l'admin d'ici là
-                    try:
-                        lines.append("Buffer : " + buffer.schedule(post, buffer.evening(clock.today())))
-                    except Exception as exc:  # noqa: BLE001
-                        lines.append(f"Buffer : échec ({exc})")
+                # Instagram, Facebook, TikTok à 18 h (heure de Lomé) : annulable dans Buffer ou l'admin d'ici là
+                try:
+                    lines += publish(post, buffer.evening(clock.today()))
+                except StepFailed as exc:
+                    raise StepFailed(lines + exc.lines, str(exc)) from exc
+                except Exception as exc:  # noqa: BLE001
+                    raise StepFailed(lines, f"Buffer : échec ({exc})") from exc
                 return lines
             self._step("8. Posts réseaux sociaux", posts)
 
@@ -89,14 +115,22 @@ class DailyPipeline:
                 post = M.post(clock.today())
                 if not post:
                     return ["pas de classement ce matin"]
-                lines = [post["title"]]
+                lines, problems = [post["title"]], []
                 due = datetime.combine(clock.today(), datetime.min.time(), timezone.utc) + timedelta(hours=7)
                 due = max(due, datetime.now(timezone.utc) + timedelta(minutes=20))  # nuit en retard : dès que possible
-                if buffer.configured():
-                    lines.append("Buffer : " + buffer.schedule(post, due))
-                if telegram.configured():
-                    lines.append("Telegram : " + telegram.send_post(post))
-                return lines
+                # Chaque morceau à part : la publication passe d'abord, un article ou un Telegram raté ne la bloque plus
+                for label, job in (("Buffer", lambda: publish(post, due)),
+                                   ("Telegram", lambda: ["Telegram : " + telegram.send_post(post)] if telegram.configured() else []),
+                                   ("Article", lambda: ["Article : " + M.article(post)])):
+                    try:
+                        lines += job()
+                    except StepFailed as exc:
+                        lines += exc.lines
+                        problems.append(str(exc))
+                    except Exception as exc:  # noqa: BLE001
+                        lines.append(f"{label} : échec ({exc})")
+                        problems.append(f"{label} : {exc}")
+                return checked(lines, problems)
             self._step("8 a. Cauri Matin", matin)
 
         if weekday in (2, 4):
@@ -106,10 +140,7 @@ class DailyPipeline:
                 post = P.post(clock.today())
                 if not post:
                     return ["aucun artiste avec assez de faits sourcés aujourd'hui"]
-                lines = [post["title"]]
-                if buffer.configured():
-                    lines.append("Buffer : " + buffer.schedule(post, buffer.evening(clock.today())))
-                return lines
+                return [post["title"]] + publish(post, buffer.evening(clock.today()))
             self._step("8 quater. Portrait d'artiste", portrait)
 
         if weekday == 7:
@@ -120,8 +151,8 @@ class DailyPipeline:
                 f = magazine.facts()
                 lines = [magazine.publish(f=f)]
                 post = editorial.hebdo_post(f, clock.today())  # le magazine en carrousel, à 18 h sur les réseaux
-                if post and buffer.configured():
-                    lines.append("Buffer : " + buffer.schedule(post, buffer.evening(clock.today())))
+                if post:
+                    lines += publish(post, buffer.evening(clock.today()))
                 return lines
             self._step("8 ter. Cauri Hebdo (article et carrousel)", hebdo)
 
@@ -198,6 +229,9 @@ class DailyPipeline:
             result = fn()
             lines = [str(x) for x in (result if isinstance(result, list) else [result])]
             ok = True
+        except StepFailed as exc:
+            log_write("pipeline", "error", f"{name} : {exc}")
+            lines, ok = [str(x) for x in exc.lines] + [f"ERREUR : {exc}"], False
         except Exception as exc:  # noqa: BLE001
             log_write("pipeline", "error", f"{name} : {exc}")
             lines, ok = [f"ERREUR : {exc}"], False

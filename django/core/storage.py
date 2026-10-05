@@ -6,6 +6,7 @@ Sur Vercel (disque en lecture seule) : Vercel Blob, activé dès que BLOB_READ_W
 import os
 import secrets
 import tempfile
+import time
 from datetime import date
 from pathlib import Path
 
@@ -38,12 +39,26 @@ def blob_public_url() -> str:
     return ""
 
 
+# Pannes passagères du Blob (503 du 5 octobre 2026 : un post de la nuit perdu pour un seul visuel) : on réessaie
+RETRY_WAITS = (2, 5, 15)
+_sleep = time.sleep
+
+
 def _blob_put(pathname: str, data: bytes, content_type: str) -> str:
-    r = requests.put(f"https://blob.vercel-storage.com/{pathname}", data=data, timeout=30, headers={
-        "authorization": f"Bearer {_blob_token()}", "x-api-version": "7", "x-content-type": content_type,
-        "x-add-random-suffix": "0"})
-    r.raise_for_status()
-    return r.json()["url"]
+    for attempt in range(len(RETRY_WAITS) + 1):
+        try:
+            r = requests.put(f"https://blob.vercel-storage.com/{pathname}", data=data, timeout=30, headers={
+                "authorization": f"Bearer {_blob_token()}", "x-api-version": "7", "x-content-type": content_type,
+                "x-add-random-suffix": "0"})
+            if r.status_code not in (429, 500, 502, 503, 504):
+                r.raise_for_status()
+                return r.json()["url"]
+            error = requests.HTTPError(f"{r.status_code} Server Error: {r.reason} for url: {r.url}", response=r)
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            error = exc
+        if attempt == len(RETRY_WAITS):
+            raise error
+        _sleep(RETRY_WAITS[attempt])
 
 
 def blob_token() -> str:

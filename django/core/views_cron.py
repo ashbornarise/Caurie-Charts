@@ -18,7 +18,7 @@ def _reply(text: str, status: int = 200) -> HttpResponse:
     return r
 
 
-def nuit(request):
+def _dispatch(request, workflow: str, label: str):
     secret = env.get("CRON_SECRET", "")
     if secret and request.headers.get("Authorization", "") != f"Bearer {secret}":
         return _reply("non autorisé", 401)
@@ -27,11 +27,20 @@ def nuit(request):
         return _reply("GH_DISPATCH_TOKEN absent", 500)
     h = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
     today = datetime.now(timezone.utc).date().isoformat()
-    runs = requests.get(f"https://api.github.com/repos/{REPO}/actions/workflows/{WORKFLOW}/runs",
+    runs = requests.get(f"https://api.github.com/repos/{REPO}/actions/workflows/{workflow}/runs",
                         params={"created": f">={today}", "per_page": 20}, headers=h, timeout=20).json().get("workflow_runs") or []
     busy = [r for r in runs if r.get("status") != "completed" or r.get("conclusion") == "success"]
     if busy:
-        return _reply(f"déjà lancée aujourd'hui ({busy[0].get('status')})")
-    r = requests.post(f"https://api.github.com/repos/{REPO}/actions/workflows/{WORKFLOW}/dispatches",
+        return _reply(f"déjà lancé aujourd'hui ({busy[0].get('status')})")
+    r = requests.post(f"https://api.github.com/repos/{REPO}/actions/workflows/{workflow}/dispatches",
                       json={"ref": "main"}, headers=h, timeout=20)
-    return _reply("chaîne de nuit lancée" if r.status_code == 204 else f"échec GitHub {r.status_code}", 200 if r.status_code == 204 else 502)
+    return _reply(f"{label} lancé" if r.status_code == 204 else f"échec GitHub {r.status_code}", 200 if r.status_code == 204 else 502)
+
+
+def nuit(request):
+    return _dispatch(request, WORKFLOW, "chaîne de nuit")
+
+
+def rattrapage(request):
+    """5 h UTC : publie ce que la nuit a généré sans le programmer (attend la fin de la nuit si elle tourne encore)."""
+    return _dispatch(request, "rattrapage.yml", "rattrapage du matin")

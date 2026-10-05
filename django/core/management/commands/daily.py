@@ -5,6 +5,8 @@
   manage.py daily --posts         force la génération des trois posts
   manage.py daily --youtube=6     recherches de clips YouTube (100 unités de quota chacune)
 """
+import os
+
 from django.core.management.base import BaseCommand
 
 from core.management.commands._cli import out, run
@@ -33,4 +35,13 @@ class Command(BaseCommand):
             out("")
             out(f"Terminé : {len(report)} étapes, {len(failed)} en erreur" + (f" ({', '.join(r['step'] for r in failed)})" if failed else ""))
             out(health.send(report))
+            if failed:
+                # Sur GitHub : avertissement visible sur la page de la chaîne (le passage reste « réussi » pour ne pas
+                # relancer toute la nuit ; le rattrapage du matin s'occupe des posts non publiés)
+                out("::warning title=Chaîne de nuit::" + " | ".join(f"{r['step']} : {'; '.join(r['lines'])[:200]}" for r in failed)[:900])
+                summary = os.environ.get("GITHUB_STEP_SUMMARY")
+                if summary:
+                    with open(summary, "a", encoding="utf-8") as fh:
+                        fh.write(f"## {len(failed)} étape(s) en échec\n\n" + "".join(
+                            f"- **{r['step']}** : {'; '.join(r['lines'])[:400]}\n" for r in failed))
         run("daily", task)

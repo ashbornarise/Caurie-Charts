@@ -1,0 +1,46 @@
+# Rattrapage du matin : publie ce que la chaîne de nuit a généré sans pouvoir le programmer (panne passagère,
+# file Buffer pleine, bug d'une étape…). Ne relance pas la chaîne : voir django/core/services/catchup.py.
+# Réveil principal : Vercel à 5 h UTC (/cron/rattrapage) ; la planification GitHub ci-dessous sert de secours.
+name: Rattrapage du matin
+
+on:
+  schedule:
+    - cron: "37 6 * * *"  # secours seulement (les tâches planifiées de GitHub partent souvent en retard)
+  workflow_dispatch:
+
+concurrency:
+  group: daily  # attend la fin de la chaîne de nuit si elle tourne encore
+  cancel-in-progress: false
+
+jobs:
+  rattrapage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TIMEZONE: Africa/Lome
+      TZ: Africa/Lome
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+      BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
+      MAIL_ADMIN: ${{ secrets.MAIL_ADMIN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Rattrapage
+        working-directory: django
+        run: python manage.py rattrapage

@@ -33,6 +33,7 @@ urlpatterns = [
     path("actu-artistes", views.artist_news_page),
     path("presse", views.presse),
     path("cron/nuit", views_cron.nuit),
+    path("cron/rattrapage", views_cron.rattrapage),
     re_path(r"^distinctions/(?P<did>\d+)$", views.distinction),
     re_path(r"^distinctions/(?P<did>\d+)/(?P<kind>impression|reconnaissance)\.pdf$", views.distinction),
     re_path(r"^distinctions/(?P<did>\d+)/(?P<kind>kit)\.zip$", views.distinction),

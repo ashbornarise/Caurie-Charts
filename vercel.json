@@ -34,6 +34,10 @@
     {
       "path": "/cron/nuit",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/cron/rattrapage",
+      "schedule": "0 5 * * *"
     }
   ]
 }

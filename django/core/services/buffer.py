@@ -153,9 +153,32 @@ CREATE = """mutation($input: CreatePostInput!) { createPost(input: $input) {
   ... on NotFoundError { message } ... on UnexpectedError { message } ... on RestProxyError { message } } }"""
 
 
+def capacity(http: HttpClient | None = None) -> tuple[int, int] | None:
+    """(limite, posts déjà programmés) de l'organisation Buffer — l'offre gratuite plafonne la file à 10 posts."""
+    try:
+        orgs = call("query { account { organizations { id limits { scheduledPosts } } } }", None, http)["account"]["organizations"]
+        limit, used = 0, 0
+        for org in orgs:
+            limit += int(org["limits"]["scheduledPosts"])
+            found = call("query($o: OrganizationId!) { posts(first: 100, input: {organizationId: $o, filter: {status: [scheduled]}})"
+                         " { edges { node { id } } } }", {"o": org["id"]}, http)["posts"]
+            used += len(found.get("edges") or [])
+        return limit, used
+    except (PlatformException, KeyError, TypeError, ValueError):
+        return None  # inconnu : on tente quand même, Buffer refusera ce qui dépasse
+
+
+def failed(result: str) -> bool:
+    """Vrai si un envoi du compte rendu de schedule() n'a pas abouti (refus, limite, image manquante…)."""
+    parts = [p.strip() for p in (result or "").split(",") if p.strip()]
+    return not parts or any(not p.endswith("programmé") for p in parts)
+
+
 def schedule(post: dict, due_at: datetime | None = None, force: bool = False, http: HttpClient | None = None) -> str:
     """Programme le post sur chaque compte relié : le carrousel à l'heure prévue, puis la vidéo du Top le lendemain
-    à midi (deux publications pour un post). Sans date, chaque envoi prend la prochaine place de la file Buffer."""
+    à midi (deux publications pour un post). Sans date, chaque envoi prend la prochaine place de la file Buffer.
+    La place libre de la file est vérifiée d'abord : faute de place, la vidéo est sacrifiée, puis tout le post
+    (jamais un carrousel publié sur un seul réseau)."""
     if not configured():
         return "Buffer non configuré (BUFFER_API_KEY)"
     done = []
@@ -163,9 +186,22 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
     if post.get("video"):
         # La vidéo le lendemain à midi : le soir reste au carrousel du jour et au magazine du dimanche
         jobs.append(("-reel", True, due_at + timedelta(hours=18) if due_at else None))
-    for ch in channels(http):
-        if ch["service"] not in MAX_IMAGES:
-            continue
+    chans = [ch for ch in channels(http) if ch["service"] in MAX_IMAGES]
+
+    def todo(js):
+        return [(ch, s, r, w) for ch in chans for s, r, w in js
+                if not (r and ch["service"] not in NOTIFY_REELS)  # Facebook : le reel d'Instagram y est repartagé
+                and (force or not db.value("SELECT 1 FROM audit_log WHERE action = 'buffer.post' AND reason = ? LIMIT 1",
+                                           [f"post-{post['id']}-{ch['service']}{s}"]))]
+    room = capacity(http)
+    if room:
+        free = room[0] - room[1]
+        if len(todo(jobs)) > free and len(jobs) > 1:
+            jobs = jobs[:1]
+            done.append(f"vidéo non programmée (file Buffer pleine : {room[1]}/{room[0]})")
+        if len(todo(jobs)) > free:
+            return f"file Buffer pleine : {room[1]}/{room[0]} posts programmés, il faut {len(todo(jobs))} places — rien programmé"
+    for ch in chans:
         for suffix, reel, when in jobs:
             if reel and ch["service"] not in NOTIFY_REELS:
                 continue  # Facebook : le reel publié sur Instagram y est repartagé automatiquement, avec son son
