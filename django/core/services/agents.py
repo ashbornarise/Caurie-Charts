@@ -194,7 +194,10 @@ def check_pages(run: Run) -> None:
     pages = ["/", "/classements/afrique-de-l-ouest", "/actualites", "/methodologie", "/a-propos"]
     pages += [f"/classements/{r['code'].lower()}/prime" for r in db.all("SELECT code FROM countries WHERE is_active = 1 ORDER BY sort_order LIMIT 6")]
     pages += [f"/artiste/{r['slug']}" for r in db.all("""SELECT a.slug FROM artists a WHERE a.status = 'active' ORDER BY COALESCE(a.youtube_subscribers, 0) DESC LIMIT 5""")]
-    pages += [f"/actualites/{r['slug']}" for r in db.all("SELECT slug FROM news WHERE origin = 'manual' ORDER BY published_at DESC LIMIT 2")]
+    # articles déjà en ligne seulement : un article programmé (Distinctions, 6 oct. 2026 à 16 h) répond 404 avant son heure
+    pages += [f"/actualites/{r['slug']}" for r in db.all(
+        "SELECT slug FROM news WHERE origin = 'manual' AND status = 'published' AND published_at <= ? ORDER BY published_at DESC LIMIT 2",
+        [now_utc()])]
     http = HttpClient(20)
     for path in pages:
         try:

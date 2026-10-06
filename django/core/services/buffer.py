@@ -5,6 +5,7 @@ Les visuels sont donnés par leur adresse publique (Vercel Blob) : Buffer les t�
 Chaque post n'est programmé qu'une fois par compte (journal d'audit) ; il reste annulable dans Buffer jusqu'à l'heure prévue.
 """
 import json
+import time as time_mod
 from datetime import date, datetime, time, timedelta, timezone
 
 from core import audit, db, env
@@ -73,10 +74,13 @@ def tiktok_copies(files: list, base: str) -> list:
     from core import storage
     from core.services.news import http_get
 
+    def readable(name: str) -> bool:
+        return HttpClient(15).request("HEAD", f"{base}/media/social/{name}")["status"] == 200
+
     def one(f: str) -> str:
         small = f.rsplit(".", 1)[0] + "-tt.jpg"
         try:
-            if HttpClient(15).request("HEAD", f"{base}/media/social/{small}")["status"] == 200:
+            if readable(small):
                 return small
             data = http_get(f"{base}/media/social/{f}", binary=True)
             img = Image.open(io.BytesIO(data)).convert("RGB")
@@ -84,6 +88,12 @@ def tiktok_copies(files: list, base: str) -> list:
             out = io.BytesIO()
             img.save(out, "JPEG", quality=90, optimize=True)
             storage.blob_put(f"media/social/{small}", out.getvalue(), "image/jpeg")
+            # une copie toute neuve n'est pas toujours servie tout de suite : Buffer la téléchargerait trop tôt
+            # (« Image could not be read from its URL », portrait du 6 octobre 2026) -> on attend qu'elle soit lisible
+            for wait in (1, 2, 3, 5, 8):
+                if readable(small):
+                    return small
+                time_mod.sleep(wait)
             return small
         except Exception:  # noqa: BLE001 — sans copie, on garde l'original (TikTok le refusera, l'erreur sera visible)
             return f
