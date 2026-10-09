@@ -1,0 +1,85 @@
+{#- Monthly Show : page d'annonce du direct (compte à rebours, vidéo, programme, rappel par e-mail). Charte : blanc, ciel en verre, violet. -#}
+<link rel="stylesheet" href="{{ asset('css/show.css') }}">
+
+<div class="show">
+<section class="show-hero wrap">
+    <span class="show-live"><i></i>{{ t('show.badge') }}</span>
+    <p class="kicker">{{ t('show.kicker') }}</p>
+    <h1>THE <span class="show-grad">MONTHLY SHOW</span></h1>
+    <p class="lead">{{ t('show.lead', month=month) }}</p>
+    <p class="show-date">{{ when }}</p>
+    <div class="show-cd" data-start="{{ start_iso }}" aria-live="off">
+        <div class="show-verre"><b data-u="d">–</b><span>{{ t('show.days') }}</span></div>
+        <div class="show-verre"><b data-u="h">–</b><span>{{ t('show.hours') }}</span></div>
+        <div class="show-verre"><b data-u="m">–</b><span>{{ t('show.minutes') }}</span></div>
+        <div class="show-verre"><b data-u="s">–</b><span>{{ t('show.seconds') }}</span></div>
+    </div>
+    <div class="show-actions">
+        <a class="show-btn" href="#rappel">🔔 {{ t('show.remind_me') }}</a>
+        <a class="show-btn show-btn--verre" href="{{ path('show/agenda.ics') }}">📅 {{ t('show.add_calendar') }}</a>
+        <a class="show-btn show-btn--verre" href="https://wa.me/?text={{ (t('show.share_text') ~ ' ' ~ url('show'))|urlencode }}" target="_blank" rel="noopener">{{ t('show.share') }}</a>
+    </div>
+    {% if show.trailer_url %}
+    <div class="show-video show-verre">
+        <video src="{{ show.trailer_url }}" {% if show.trailer_poster %}poster="{{ show.trailer_poster }}"{% endif %} controls playsinline preload="metadata"></video>
+    </div>
+    {% endif %}
+</section>
+
+<section class="show-sec wrap">
+    <p class="k">{{ t('show.program_kicker') }}</p>
+    <h2>{{ t('show.program_title') }}</h2>
+    <div class="show-grid">
+        <div class="show-verre"><div class="show-ico">🎰</div><b>{{ t('show.p1_title') }}</b><p>{{ t('show.p1_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">🔢</div><b>{{ t('show.p2_title') }}</b><p>{{ t('show.p2_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">🏅</div><b>{{ t('show.p3_title') }}</b><p>{{ t('show.p3_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">🗳</div><b>{{ t('show.p4_title') }}</b><p>{{ t('show.p4_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">🎁</div><b>{{ t('show.p5_title') }}</b><p>{{ t('show.p5_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">👑</div><b>{{ t('show.p6_title') }}</b><p>{{ t('show.p6_text') }}</p></div>
+    </div>
+</section>
+
+{% if contenders %}
+<section class="show-sec wrap">
+    <p class="k">{{ t('show.contenders_kicker') }}</p>
+    <h2>{{ t('show.contenders_title') }}</h2>
+    <p>{{ t('show.contenders_text') }}</p>
+    <ol class="show-big5">
+        {% for r in contenders %}
+        <li class="show-verre"><span class="n show-grad">{{ loop.index }}</span>
+            {% if r.artist_image or r.cover_url %}<img src="{{ r.artist_image or r.cover_url }}" alt="" loading="lazy">{% endif %}
+            <span><span class="a">{{ r.artist_name }}</span><br><span class="t">{{ r.title }}</span></span></li>
+        {% endfor %}
+    </ol>
+</section>
+{% endif %}
+
+<section class="show-sec wrap" id="rappel">
+    <p class="k show-center">{{ t('show.form_kicker') }}</p>
+    <h2 class="show-center">{{ t('show.form_title') }}</h2>
+    <form class="form show-form show-verre" method="post" action="{{ path('show') }}#rappel" novalidate>
+        {{ csrf_field() }}
+        <div class="hp" aria-hidden="true"><label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        {{ partial('partials/field', name='name', label=t('show.form_name'), attrs='autocomplete="given-name" maxlength="100"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='email', label=t('form.email'), type='email', attrs='autocomplete="email" maxlength="190"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='country', label=t('show.form_country'), type='select', options=country_options, required=false, old=old, errors=errors) }}
+        {{ partial('partials/field', name='prediction', label=t('show.form_prediction'), attrs='maxlength="200"', required=false, hint=t('show.form_prediction_hint'), old=old, errors=errors) }}
+        <label class="show-check{{ ' field--error' if errors.get('consent') }}"><input type="checkbox" name="consent" value="1" {{ 'checked' if old.get('consent') }}>
+            <span>{{ t('show.form_consent') }} <a href="{{ path('confidentialite') }}">{{ t('legal.confidentialite') }}</a>.</span></label>
+        {% if errors.get('consent') %}<p class="field__error">{{ errors.consent }}</p>{% endif %}
+        <button class="button" type="submit">🔔 {{ t('show.form_submit') }}</button>
+        {% if count >= 20 %}<p class="show-count">{{ t('show.count', n=count) }}</p>{% endif %}
+    </form>
+</section>
+
+<section class="show-sec wrap show-center">
+    <p class="k">{{ t('show.where_kicker') }}</p>
+    <h2>{{ t('show.where_title') }}</h2>
+    <div class="show-chaines">
+        {% for c in show.channels %}<a class="show-verre" href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name }}<small>{{ c.handle }}</small></a>{% endfor %}
+        <a class="show-verre" href="{{ path('show') }}">cauricharts.com<small>/show</small></a>
+    </div>
+</section>
+</div>
+
+<script src="{{ asset('js/show.js') }}" defer></script>

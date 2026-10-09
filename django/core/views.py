@@ -640,6 +640,8 @@ def sitemap(request):
     from core import press
     urls += [url("presse")] + [url(f) for r in press.published() for _l, f in r["files"] if f.endswith(".pdf")]
     urls += [url(p) for p in ("actualites", "actu-artistes", "partenaires", "integrer", "mentions-legales", "confidentialite", "cookies")]
+    if conf.get("show.public"):
+        urls.append(url("show"))
     data = repos.sitemap_entries()
     dated = {}
     for a in data["artists"]:

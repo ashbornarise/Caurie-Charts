@@ -95,6 +95,16 @@ def _compute(country_id, source, limit, mode, top_size, period) -> dict:
         if k not in t["seen"] or t["seen"][k]["position"] > int(r["position"]):
             t["seen"][k] = {"source": r["source"], "country": r["chart_country"], "position": int(r["position"])}
     items = list(tracks.values())
+    if country_id is not None:
+        # Même règle que le classement officiel : un pays ne classe que ses propres artistes. Les tops des plateformes
+        # d'un pays contiennent des artistes d'ailleurs (Nigeria au Liberia…) : ils ne remplissent pas son classement.
+        items = [t for t in items if t.get("artist_country") == t.get("chart_country")]
+        # Pas de classement « coûte que coûte » : trop peu d'artistes du pays suivis = un seul artiste répété partout.
+        # On affiche alors « pas encore assez de données » plutôt qu'un Top rempli artificiellement.
+        artists = {t["artist_id"] for t in items if t.get("status") == "active"}
+        minimum = int(conf.get("live_chart.min_artists", 8) or 0)
+        if source is None and len(artists) < minimum:
+            return {"rows": [], "day": day, "since": since, "insufficient": {"artists": len(artists), "min": minimum}}
     for t in items:
         t["seen"] = sorted(t["seen"].values(), key=lambda s: s["position"])
 

@@ -81,7 +81,9 @@
         {% if live.day %}<strong>{{ t('chart.live_day', {'date': fmt_date(live.day)}) }}</strong>{% endif %}
         {% if not run %}<br>{{ t('chart.official_soon') }}{% endif %}
     </p>
-    {% if not live.rows %}
+    {% if not live.rows and live.insufficient %}
+        <p class="empty">{{ t('chart.live_insufficient', {'country': country_name(code), 'n': live.insufficient.artists, 'min': live.insufficient.min}) }} <a href="{{ path('declarer') }}">{{ t('nav.submit') }}</a></p>
+    {% elif not live.rows %}
         <p class="empty">{{ t('chart.live_empty') }}</p>
     {% else %}
         <ol class="chart-list chart-list--long">

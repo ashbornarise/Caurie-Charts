@@ -41,7 +41,8 @@ class Command(BaseCommand):
                                     if dry else db.run("""UPDATE submissions SET contact_name = '(supprimé)', contact_email = 'supprime@invalid', ip_hash = NULL
                                                           WHERE created_at < ? AND contact_email <> 'supprime@invalid'""", [since]))
             for key, sql, months in (("messages", "FROM contact_messages WHERE status <> 'new' AND created_at < ?", r["contact_messages"]),
-                                     ("connexions", "FROM login_attempts WHERE attempted_at < ?", r["login_attempts"])):
+                                     ("connexions", "FROM login_attempts WHERE attempted_at < ?", r["login_attempts"]),
+                                     ("inscrits_show", "FROM show_leads WHERE created_at < ?", r["show_leads"])):
                 report[key] = int(db.value(f"SELECT COUNT(*) {sql}", [before(months)])) if dry else db.run(f"DELETE {sql}", [before(months)])
             # Adresses IP du journal d'audit (les actions restent tracées)
             since = before(r["audit_ip"])

@@ -44,8 +44,25 @@ def _all() -> dict:
                 "consent_months": 6,
             },
             "retention": {"login_attempts": 6, "audit_ip": 12, "screenshots": 12, "submission_contact": 24,
-                          "contact_messages": 24},
+                          "contact_messages": 24, "show_leads": 3},
             "share": {"font_serif": env.get("SHARE_FONT_SERIF", ""), "font_sans": env.get("SHARE_FONT_SANS", "")},
+        },
+        # Classement en direct d'un pays : seulement ses artistes ; en dessous de ce nombre d'artistes distincts suivis,
+        # la page dit « pas encore assez de données » au lieu de remplir le Top avec le même artiste
+        "live_chart": {"min_artists": int(env.get("LIVE_MIN_ARTISTS", "8") or 8)},
+        # Monthly Show : la remise des prix en direct, le premier samedi après la fin du mois classé (page /show)
+        "show": {
+            "public": env.bool("SHOW_PUBLIC", True),
+            "key": env.get("SHOW_KEY", "2026-10"),                      # mois du classement révélé
+            "start_utc": env.get("SHOW_START_UTC", "2026-11-07T20:00:00Z"),
+            "duration_minutes": 45,
+            "trailer_url": env.get("SHOW_TRAILER_URL", ""),
+            "trailer_poster": env.get("SHOW_TRAILER_POSTER", ""),
+            "channels": [
+                {"name": "TikTok", "handle": "@caurichartsofficial", "url": "https://www.tiktok.com/@caurichartsofficial"},
+                {"name": "Instagram", "handle": "@cauricharts", "url": "https://www.instagram.com/cauricharts"},
+                {"name": "Facebook", "handle": "Cauri Charts", "url": env.get("FACEBOOK_URL", "https://www.facebook.com/profile.php?id=61594631234765")},
+            ],
         },
         "charts": {
             "prime": {"name": "Prime Chart", "kind": "tracks", "public": True, "computed": True, "size": None, "periods": ["week", "month", "year"]},

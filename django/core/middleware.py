@@ -17,7 +17,10 @@ def csp() -> str:
         frame.append("https://www.youtube-nocookie.com")
     if tr.get("spotify_playlist"):
         frame.append("https://open.spotify.com")
-    return ("default-src 'self'; img-src 'self' data: https:; style-src 'self'; script-src " + " ".join(script)
+    media = ["'self'"]
+    if conf.get("show.trailer_url", "").startswith("https://"):
+        media.append("https://" + conf.get("show.trailer_url").split("/")[2])  # vidéo du Monthly Show (Blob)
+    return ("default-src 'self'; img-src 'self' data: https:; media-src " + " ".join(media) + "; style-src 'self'; script-src " + " ".join(script)
             + "; connect-src " + " ".join(connect)
             + "; frame-src " + (" ".join(frame) if frame else "'none'")
             + "; form-action 'self'; frame-ancestors 'none'; base-uri 'self'")
@@ -31,7 +34,7 @@ Les classements de la musique ouest-africaine reviennent dans quelques instants.
 </main></body></html>"""
 
 # Pages jamais mises en cache par le réseau de Vercel : administration, formulaires (jeton CSRF), espace connecté
-NO_EDGE_CACHE = ("/admin", "/contact", "/declarer", "/revendiquer", "/connexion", "/api/")
+NO_EDGE_CACHE = ("/admin", "/contact", "/declarer", "/revendiquer", "/connexion", "/api/", "/show")
 
 
 def edge_cache(request, response) -> None:
