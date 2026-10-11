@@ -325,12 +325,12 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
         for y in range(256):
             m.putpixel((0, y), int(255 * fort * max(0, min(1, (y / 255 - debut) / (fin - debut)))))
         return m.resize((W, H))
-    img = Image.composite(img.filter(ImageFilter.GaussianBlur(22 * k)), img, rampe(.30, .48))
+    img = Image.composite(img.filter(ImageFilter.GaussianBlur(22 * k)), img, rampe(.50, .64))
     # fond clair (pochette blanche…) : on assombrit d'autant plus que la zone du texte est lumineuse
     from PIL import ImageStat
-    lum = ImageStat.Stat(img.crop((0, int(H * .4), W, H)).convert("L")).mean[0] / 255
-    img = Image.blend(img, Image.new("RGB", (W, H), INK), min(.55, max(.12, (lum - .25) * 1.1)))
-    img = Image.composite(Image.new("RGB", (W, H), INK), img, rampe(.32, .72, .94))
+    lum = ImageStat.Stat(img.crop((0, int(H * .55), W, H)).convert("L")).mean[0] / 255
+    img = Image.blend(img, Image.new("RGB", (W, H), INK), min(.35, max(.05, (lum - .3) * .8)))
+    img = Image.composite(Image.new("RGB", (W, H), INK), img, rampe(.46, .74, .95))
     d = ImageDraw.Draw(img)
     fd, fb, fs = PI.FONT_DIR / "Anton-Regular.ttf", PI.FONT_DIR / "Poppins-Bold.ttf", PI.FONT_DIR / "Poppins-Regular.ttf"
     # bandeau
@@ -353,8 +353,21 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
     # titre géant (2 à 3 lignes), dernière ligne en or
     une = ((diapo or {}).get("titre") or f["une"] or f["artiste"]).upper()
     largeur = W - 2 * cote
+    # la phrase d'abord (taille fixe), puis le titre le plus grand possible SANS dépasser le tiers bas : le visage reste visible
+    ft2 = PI.font(str(fb if not diapo else fs), (38 if not diapo else 30) * k)
+    interl2 = (52 if not diapo else 44) * k
+    phrase, l2, cur = ((diapo or {}).get("texte") or f["titre"]), [], ""
+    for m in phrase.split():
+        essai = (cur + " " + m).strip()
+        if d.textlength(essai, font=ft2) <= largeur:
+            cur = essai
+        else:
+            l2.append(cur); cur = m
+    l2 = (l2 + [cur])[:3 if not diapo else 4]
+    budget = H * (.42 if fmt == "feed" else .55)          # hauteur maximale du bloc de texte (TikTok : marge basse plus grande)
+    fixe = bas + 34 * k + 40 * k + len(l2) * interl2 + 34 * k
     max_lignes = 4 if diapo else 3
-    for px in range(205 if not diapo else 130, 60, -6):
+    for px in range(160 if not diapo else 104, 50, -4):
         ft = PI.font(str(fd), px * k)
         mots, lignes, cur = une.split(), [], ""
         for m in mots:
@@ -364,25 +377,17 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
             else:
                 lignes.append(cur); cur = m
         lignes.append(cur)
-        if len(lignes) <= max_lignes and all(d.textlength(l, font=ft) <= largeur for l in lignes):
+        if (len(lignes) <= max_lignes and all(d.textlength(l, font=ft) <= largeur for l in lignes)
+                and fixe + len(lignes) * px * k * .96 <= budget):
             break
     pas = int(px * k * .96)          # interligne (lignes posées sur leur ligne de base)
-    ft2 = PI.font(str(fb if not diapo else fs), (40 if not diapo else 34) * k)
-    phrase, l2, cur = ((diapo or {}).get("texte") or f["titre"]), [], ""
-    for m in phrase.split():
-        essai = (cur + " " + m).strip()
-        if d.textlength(essai, font=ft2) <= largeur:
-            cur = essai
-        else:
-            l2.append(cur); cur = m
-    l2 = (l2 + [cur])[:3 if not diapo else 6]
     fsrc = PI.font(str(fb), 24 * k)
     y_src = H - bas - 34 * k
-    y_phr = y_src - 40 * k - len(l2) * 54 * k
+    y_phr = y_src - 40 * k - len(l2) * interl2
     base = y_phr - 34 * k            # ligne de base de la dernière ligne du titre, au-dessus de la phrase
     ops = [((cote, base - (len(lignes) - 1 - i) * pas), l, ft, "ls", GOLD if (i == len(lignes) - 1 and len(lignes) > 1) else (255, 255, 255))
            for i, l in enumerate(lignes)]
-    ops += [((cote, y_phr + i * 54 * k), l, ft2, "la", (235, 235, 245)) for i, l in enumerate(l2)]
+    ops += [((cote, y_phr + i * interl2), l, ft2, "la", (235, 235, 245)) for i, l in enumerate(l2)]
     ombre = Image.new("L", (W, H), 0)
     do = ImageDraw.Draw(ombre)
     for xy, l, fnt, anc, _ in ops:
