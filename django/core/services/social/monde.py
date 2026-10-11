@@ -200,7 +200,7 @@ def _redige(histoires: list) -> list:
             continue   # hors musique, ou vieille nouvelle remise en avant : pas de l'actualité
         out.append({**h, "rubrique": f.get("rubrique") if f.get("rubrique") in RUBRIQUES else "monde",
                     "artiste": coupe(f.get("artiste"), 60), "une": coupe(f.get("une"), 60).rstrip("…"),
-                    "titre": coupe(f.get("titre") or h["items"][0]["title"], 95),
+                    "titre": coupe(f.get("titre") or h["items"][0]["title"], 140),
                     "accroche": coupe(f.get("accroche"), 130), "resume": coupe(f.get("resume"), 420),
                     "choc": int(f.get("choc") or 0), "sensible": bool(f.get("sensible"))})
     return out
@@ -427,7 +427,8 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
     cover = {"kicker": kicker, "headline": une_fiche["une"] or une_fiche["artiste"].upper(), "subtitle": une_fiche["titre"],
              "photo": photo(une_fiche["artiste"]), "edition": "Monde",
              "lines": [(i + 2, f["artiste"], f["titre"][:48]) for i, f in enumerate(fiches[1:4])]}
-    nom = f"{jour.isoformat()}-{theme}"
+    # nom unique à chaque fabrication : une image refaite n'est jamais servie depuis le cache sous l'ancienne version
+    nom = f"{jour.isoformat()}-{theme}-{datetime.now(timezone.utc):%H%M%S}"
     # toutes les images sur de vraies photos : l'artiste concerné en plein cadre, sinon une scène de concert
     from pathlib import Path
     from core.services.social import image as PI
