@@ -109,7 +109,17 @@ def facts(a: dict) -> dict:
     return {"artist_id": a["id"], "name": a["name"], "slug": a["slug"], "country": a["country"], "qid": qid,
             "awards": awards(qid)[:6] if qid else [], "bio": bio(a["name"], qid), "tracks": tracks, "best": best,
             "youtube_subscribers": a.get("youtube_subscribers"), "youtube_views_total": a.get("youtube_views_total"),
-            "fans": a.get("fans"), "photo": a.get("image_hd_url") or a.get("image_url"), "credit": a.get("image_credit")}
+            "fans": a.get("fans"), "photo": a.get("image_hd_url") or a.get("image_url"), "credit": a.get("image_credit"),
+            "spotify": _spotify(a.get("spotify_id"))}
+
+
+def _spotify(spotify_id) -> dict | None:
+    """Compteurs publics de Spotify (Kworb) ; None si l'artiste n'est pas suivi ou si Kworb ne répond pas."""
+    try:
+        from core.services import kworb
+        return kworb.chiffres(spotify_id)
+    except Exception:  # noqa: BLE001 — le portrait se fait sans ce bloc
+        return None
 
 
 def _n(v) -> str:
@@ -146,6 +156,21 @@ def post(day: date) -> dict | None:
     if rows:
         slides.append({"bg": E.GOLD, "fg": E.INK, "acc": E.INK, "tag": "PALMARÈS", "big": "SES RÉCOMPENSES" if f["awards"] else "SES RECORDS",
                        "rows": rows})
+    # Spotify en chiffres (compteurs publics relevés par Kworb), seulement pour les artistes qu'il suit
+    sp = f.get("spotify")
+    if sp:
+        from core.services.kworb import volume
+        rows = [(1, volume(sp["total"]) + " de streams", "sur Spotify, au total")]
+        if sp["jour"] >= 1e5:
+            rows.append((2, volume(sp["jour"]) + " par jour", "le rythme d'écoute en ce moment"))
+        if sp["auditeurs"]:
+            rows.append((3, volume(sp["auditeurs"]) + " d'auditeurs", "chaque mois" + (f" (record : {volume(sp['record_auditeurs'])})" if sp["record_auditeurs"] and sp["record_auditeurs"] > sp["auditeurs"] * 1.05 else "")))
+        if sp["titres"]:
+            t = sp["titres"][0]
+            rows.append((4, volume(t["streams"]), f"« {t['titre']} »{' (en featuring)' if t['feat'] else ''}, son titre le plus écouté"))
+        if sp["jours_cap"] is not None and sp["jours_cap"] <= 60:
+            rows.append((5, volume(sp["cap"]), f"le prochain cap, d'ici {sp['jours_cap']} jour{'s' if sp['jours_cap'] > 1 else ''} à ce rythme"))
+        slides.append({"bg": E.VIOLET, "fg": E.WHITE, "acc": E.GOLD, "tag": "SPOTIFY EN CHIFFRES", "big": "SES STREAMS", "rows": rows})
     if f["bio"]:
         src = "Wikipédia" + ("" if f["bio"]["lang"] == "fr" else " (anglais)")
         slides.append({"bg": E.CREAM, "fg": E.INK, "acc": E.VIOLET, "tag": "BIOGRAPHIE", "big": "SON HISTOIRE",
@@ -166,11 +191,15 @@ def post(day: date) -> dict | None:
         bits.append(f["bio"]["text"].split(". ")[0].rstrip(".") + ".")
     if stats:
         bits.append("En chiffres : " + " ; ".join(f"{v} {d}" for _, v, d in stats[:3]) + ".")
+    if sp:
+        bits.append(f"Sur Spotify : {volume(sp['total'])} de streams au total"
+                    + (f", {volume(sp['auditeurs'])} d'auditeurs chaque mois" if sp["auditeurs"] else "")
+                    + (f" ; son titre le plus écouté, « {sp['titres'][0]['titre']} », dépasse les {volume(sp['titres'][0]['streams'])}" if sp["titres"] else "") + ".")
     if f["awards"]:
         bits.append("Palmarès : " + " ; ".join(f"{a_['award']}" + (f" ({a_['year']})" if a_["year"] else "") for a_ in f["awards"][:3]) + ".")
     bits.append("Sa fiche complète : lien en bio.")
     if f["bio"]:
-        bits.append(f"Bio : Wikipédia (CC BY-SA). Données : Cauri Charts, YouTube, Deezer, Wikidata.")
+        bits.append(f"Bio : Wikipédia (CC BY-SA). Données : Cauri Charts, YouTube, Deezer, Wikidata" + (", Spotify (compteurs publics, via Kworb)." if sp else "."))
     if f["credit"]:
         bits.append(f["credit"])
     tag = "#" + re.sub(r"[^A-Za-z0-9]", "", f["name"])
