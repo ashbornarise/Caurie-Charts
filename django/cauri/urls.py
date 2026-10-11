@@ -30,6 +30,8 @@ urlpatterns = [
     path("cookies", views.legal),
     path("conditions", views.legal),
     path("actualites", views.news),
+    re_path(r"^(?P<serie>cauri-matin|cauri-hebdo|cauri-monde)$", views.news_series),
+    path("les-plus-ecoutes-dans-le-monde", views.world_listeners),
     path("actu-artistes", views.artist_news_page),
     path("presse", views.presse),
     path("cron/nuit", views_cron.nuit),

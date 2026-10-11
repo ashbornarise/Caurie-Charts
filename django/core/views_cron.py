@@ -58,13 +58,20 @@ def monde(request):
         return _reply("q = matin, soir ou flash", 400)
     if q == "flash":
         from core.services.social import monde as M
+        if M.en_attente():   # un post Cauri Monde est arrivé à son heure : GitHub l'envoie (Buffer, Telegram)
+            _lance("file")
         fiche = M.guette()
         if not fiche:
             return _reply("rien de choc pour l'instant")
+    code = _lance(q)
+    return _reply(f"Cauri Monde ({q}) lancé" if code == 204 else f"échec GitHub {code}", 200 if code == 204 else 502)
+
+
+def _lance(edition: str) -> int:
+    """Lance le workflow Cauri Monde sur GitHub (édition, flash ou file d'attente)."""
     token = env.get("GH_DISPATCH_TOKEN", "")
     if not token:
-        return _reply("GH_DISPATCH_TOKEN absent", 500)
+        return 500
     h = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-    r = requests.post(f"https://api.github.com/repos/{REPO}/actions/workflows/monde.yml/dispatches",
-                      json={"ref": "main", "inputs": {"edition": q}}, headers=h, timeout=20)
-    return _reply(f"Cauri Monde ({q}) lancé" if r.status_code == 204 else f"échec GitHub {r.status_code}", 200 if r.status_code == 204 else 502)
+    return requests.post(f"https://api.github.com/repos/{REPO}/actions/workflows/monde.yml/dispatches",
+                         json={"ref": "main", "inputs": {"edition": edition}}, headers=h, timeout=20).status_code

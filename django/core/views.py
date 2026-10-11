@@ -768,3 +768,53 @@ def media(request, file_path: str):
     if base:
         return redirect(f"{base}/media/{safe}", 302)
     raise Http404
+
+
+SERIES = {
+    "cauri-matin": ("cauri-matin-", "Cauri Matin", "Tous les numéros de Cauri Matin : le n°1 de l’Afrique de l’Ouest au réveil, les plus fortes montées, les nouveaux entrés et l’actu de la région."),
+    "cauri-hebdo": ("cauri-hebdo-", "Cauri Hebdo", "Tous les numéros de Cauri Hebdo : la semaine de la musique d’Afrique de l’Ouest, chaque dimanche."),
+    "cauri-monde": ("monde-", "Cauri Monde", "L’actualité musicale mondiale vue par Cauri Charts : les stars, les records, les sorties, les grands événements."),
+}
+
+
+def news_series(request, serie: str):
+    """Une série du média (Cauri Matin, Cauri Hebdo, Cauri Monde) : tous ses numéros, du plus récent au plus ancien."""
+    use_locale(request)
+    if serie not in SERIES:
+        raise Http404
+    prefix, title, note = SERIES[serie]
+    try:
+        page = max(1, int(req_str(request, "page", "1")))
+    except ValueError:
+        page = 1
+    return render(request, "news", {
+        "items": repos.news_latest(NEWS_PER_PAGE, None, (page - 1) * NEWS_PER_PAGE, prefix), "page": page,
+        "pages": math.ceil(repos.news_count_published(prefix) / NEWS_PER_PAGE), "heading": title, "note": note, "base": serie,
+        "meta": {"title": title + " · " + brand(), "description": note},
+    })
+
+
+def world_listeners(request):
+    """Les artistes d’Afrique de l’Ouest les plus écoutés dans le monde (auditeurs mensuels Spotify, compteurs publics via Kworb)."""
+    use_locale(request)
+    from django.core.cache import cache
+    rows = cache.get("monde-auditeurs")
+    if rows is None:
+        rows = []
+        try:
+            from core.services import kworb
+            aud = kworb.auditeurs()
+            arts = db.all("""SELECT a.name, a.slug, a.image_url, a.spotify_id, COALESCE(a.base_country, gc.code) AS country
+                             FROM artists a LEFT JOIN countries gc ON gc.id = a.guessed_country_id
+                             WHERE a.status = 'active' AND a.spotify_id IS NOT NULL AND a.spotify_id <> ''""")
+            for a in sorted((a for a in arts if a["spotify_id"] in aud), key=lambda a: -aud[a["spotify_id"]][0])[:30]:
+                n, rec = aud[a["spotify_id"]]
+                rows.append({**a, "listeners": n, "record": rec})
+            cache.set("monde-auditeurs", rows, 6 * 3600)
+        except Exception:  # noqa: BLE001 — Kworb injoignable : page vide plutôt qu'en erreur
+            rows = []
+    return render(request, "world", {
+        "rows": rows,
+        "meta": {"title": "Les plus écoutés dans le monde · " + brand(),
+                 "description": "Les artistes d’Afrique de l’Ouest les plus écoutés dans le monde, classés par auditeurs mensuels sur Spotify."},
+    })

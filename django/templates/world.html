@@ -1,0 +1,32 @@
+{#- Les artistes d’Afrique de l’Ouest les plus écoutés dans le monde : auditeurs mensuels Spotify (compteurs publics relevés par Kworb). -#}
+<div class="wrap world-page">
+    <p class="eyebrow">Classements</p>
+    <h1>Les plus écoutés dans le monde</h1>
+    <p class="lead">Les artistes d’Afrique de l’Ouest qui comptent le plus d’auditeurs chaque mois sur Spotify, partout dans le monde.
+        Le chiffre est celui que Spotify affiche publiquement, relevé chaque jour. Un artiste apparaît ici dès qu’il entre dans les
+        2 500 artistes les plus écoutés de la planète.</p>
+    {% if rows %}
+    <section class="hot-artists" aria-label="Classement mondial">
+        <ul class="hot-artists__grid">
+            {% for a in rows %}
+            <li>
+                <a class="hot-artist" href="{{ path('artiste/' ~ a.slug) }}">
+                    <span class="hot-artist__photo">
+                        {% if a.image_url %}<img src="{{ a.image_url }}" alt="" loading="lazy" width="160" height="160">
+                        {% else %}<span class="cover__initials">{{ initials(a.name) }}</span>{% endif %}
+                        {% if a.country %}<span class="hot-artist__flag">{{ flag(a.country, 14) }}</span>{% endif %}
+                    </span>
+                    <span class="hot-artist__name">N°{{ loop.index }} · {{ a.name }}</span>
+                    <span class="hot-artist__meta">{{ fmt_number(a.listeners) }} auditeurs par mois
+                        {% if a.record and a.record > a.listeners * 1.05 %}<br>record : {{ fmt_number(a.record) }}{% endif %}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% else %}
+    <p class="empty">Le classement mondial se met à jour, revenez dans quelques minutes.</p>
+    {% endif %}
+    <p class="news-page__note">Source : Spotify, auditeurs mensuels (compteurs publics relevés par Kworb). Seuls les artistes suivis par
+        {{ brand() }} et présents dans le top mondial sont listés : aucun chiffre n’est estimé.</p>
+</div>

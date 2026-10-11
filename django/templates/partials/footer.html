@@ -20,6 +20,7 @@
                     <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'fresh'}) }}">Nouveautés</a></li>
                     <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'icon'}) }}">Top artistes</a></li>
                     <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'legend'}) }}">Classiques</a></li>
+                    <li><a href="{{ path('les-plus-ecoutes-dans-le-monde') }}">Les plus écoutés dans le monde</a></li>
                 </ul>
             </nav>
             {% if countries %}
@@ -48,7 +49,9 @@
                     <li><a href="{{ path('actu-artistes') }}">L’actu des artistes</a></li>
                     <li><a href="{{ path('actualites') }}">Actualités</a></li>
                     <li><a href="{{ path('presse') }}">Espace presse</a></li>
-                    {% for e in (footer.editions if footer else []) %}<li><a href="{{ path('actualites/' ~ e.slug) }}">{{ e.title.split(' :')[0] }}</a></li>{% endfor %}
+                    <li><a href="{{ path('cauri-matin') }}">Cauri Matin</a></li>
+                    <li><a href="{{ path('cauri-hebdo') }}">Cauri Hebdo</a></li>
+                    <li><a href="{{ path('cauri-monde') }}">Cauri Monde</a></li>
                 </ul>
                 <h2>Artistes et pros</h2>
                 <ul>

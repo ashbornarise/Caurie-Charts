@@ -425,7 +425,11 @@ def _legende(fiches: list, entete: str) -> str:
     return "\n\n".join(lignes)
 
 
-def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, final: str, rendu_seul: bool = False) -> dict:
+PAR_EDITION = 4      # infos (donc posts) par édition
+ECART_MIN = 45       # minutes entre deux posts d'une même édition
+
+
+def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, final: str, rendu_seul: bool = False, due=None) -> dict:
     """Carrousel (couverture magazine qui dit le sujet + une diapositive par info) ; enregistré sauf rendu_seul."""
     from core.services.social import editorial as E
     une_fiche = fiches[0]
@@ -456,7 +460,8 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
         fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": (dp or {}).get("titre") or une_fiche["une"] or une_fiche["artiste"]})
     legende = _legende(fiches, entete)
     hashtags = "#CauriMonde #CauriCharts #ActuMusique #Musique #" + re.sub(r"\W", "", _sans_accents(une_fiche["artiste"]).title())[:30]
-    faits = {"day": jour.isoformat(), "fiches": [{k: v for k, v in f.items() if k not in ("items", "mots", "noms", "date")} for f in fiches]}
+    faits = {"day": jour.isoformat(), "fiches": [{k: v for k, v in f.items() if k not in ("items", "mots", "noms", "date")} for f in fiches],
+             "due": due.isoformat() if due else None}
     if rendu_seul:
         return {"fichiers": fichiers, "legende": legende, "cover": cover, "fiches": fiches, "hashtags": hashtags, "faits": faits}
     return E.save_post(theme, jour.isoformat(), kicker, legende, hashtags, fichiers, faits)
@@ -479,7 +484,8 @@ def archive(fiches: list) -> None:
 
 def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
     """Édition de 8 h (« monde ») ou de 20 h (« records » + « sorties ») : les infos les plus reprises, jamais déjà publiées."""
-    if not rendu_seul and db.value("SELECT 1 FROM social_posts WHERE slot_date = ? AND theme = ?", [jour.isoformat(), f"monde-{quand}"]):
+    if not rendu_seul and db.value("SELECT 1 FROM social_posts WHERE slot_date = ? AND (theme = ? OR theme LIKE ?)",
+                                   [jour.isoformat(), f"monde-{quand}", f"monde-{quand}-%"]):
         return None   # édition déjà faite aujourd'hui (une seule par créneau)
     histoires = [h for h in regroupe(collecte(30 if quand == "matin" else 24)) if not deja_publie(h["cle"])][:30]
     fiches = redige(histoires)
@@ -501,22 +507,24 @@ def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
         if a and a in vus_artistes:
             continue
         vus_artistes.add(a); choix.append(f)
-    choix = choix[:5]
+    choix = choix[:PAR_EDITION]
     if not choix:
         return None
-    n = db.value("SELECT COUNT(*) FROM social_posts WHERE theme LIKE 'monde-%'") or 0
-    if quand == "matin":
-        kicker, theme = f"Cauri Monde n°{n + 1} · {jour:%d/%m} · 8 h", "monde-matin"
-        entete = f"🌍 Cauri Monde, {jour:%d/%m/%Y} : l'actu musicale du monde ce matin."
-        final = "Ce soir à 20 h : les projets, records et sorties des artistes du monde."
-    else:
-        kicker, theme = f"Cauri Monde n°{n + 1} · {jour:%d/%m} · 20 h", "monde-soir"
-        entete = f"🌍 Cauri Monde, {jour:%d/%m/%Y} : projets, records et sorties."
-        final = "Demain à 8 h : l'actu musicale du monde. Et chaque jour, le classement de l'Afrique de l'Ouest en direct."
-    post = construit(choix, jour, theme, kicker, entete, final, rendu_seul)
-    if not rendu_seul:
-        archive(choix)
-    return post
+    # UNE info = UN post = UN visage : celui qui aime Lady Gaga voit son post, celui qui aime Burna Boy le sien.
+    # Les posts partent espacés (8 h, 8 h 45, 9 h 30… / 20 h, 20 h 45…) : le réveil de 10 min les envoie à leur heure.
+    heure = 8 if quand == "matin" else 20
+    depart = datetime(jour.year, jour.month, jour.day, heure, 0, tzinfo=timezone.utc)
+    final = ("Ce soir à 20 h : les projets, records et sorties des stars." if quand == "matin"
+             else "Demain dès 8 h : l'actu musicale du monde. Et chaque jour, le classement de l'Afrique de l'Ouest.")
+    posts = []
+    for i, f in enumerate(choix):
+        due = depart + timedelta(minutes=ECART_MIN * i)
+        kicker = f"Cauri Monde · {jour:%d/%m} · {due.hour} h" + (f" {due.minute:02d}" if due.minute else "")
+        entete = f"🌍 Cauri Monde · {f['titre']}"
+        posts.append(construit([f], jour, f"monde-{quand}-{i + 1}", kicker, entete, final, rendu_seul, due=due))
+        if not rendu_seul:
+            archive([f])
+    return posts[0] if rendu_seul else {"title": f"{len(posts)} posts Cauri Monde ({quand})", "posts": posts}
 
 
 def flash(rendu_seul: bool = False, forcer: bool = False) -> dict | None:
@@ -693,3 +701,30 @@ def caps_streams(jours_annonce: int = 3) -> list:
                     "choc": (95 if cible >= 50000 else 85 if cible >= 10000 else 70) if etat == "franchi" else 55,
                     "sensible": False, "mots": set(), "noms": set()})
     return sorted(out, key=lambda f: -f["choc"])
+
+
+# ---------------------------------------------------------------- file d'attente : un post à la fois, à son heure
+
+def en_attente() -> list:
+    """Posts Cauri Monde arrivés à leur heure et pas encore envoyés (requête légère, appelée toutes les 10 min)."""
+    maintenant = datetime.now(timezone.utc)
+    out = []
+    for r in db.all("""SELECT id, facts FROM social_posts WHERE theme LIKE 'monde-%' AND slot_date >= CURRENT_DATE - 1
+                       AND status = 'approved' ORDER BY id"""):
+        try:
+            due = json.loads(r["facts"]).get("due")
+        except (ValueError, TypeError):
+            continue
+        if due and datetime.fromisoformat(due) <= maintenant and not vu(f"pub-{r['id']}"):
+            out.append(r["id"])
+    return out
+
+
+def publie_file() -> list:
+    """Envoie les posts arrivés à leur heure (Buffer : Instagram, TikTok, Facebook ; puis Telegram), un par un."""
+    lignes = []
+    for pid in en_attente():
+        post = db.one("SELECT * FROM social_posts WHERE id = ?", [pid])
+        marque_vu([f"pub-{pid}"])   # avant l'envoi : jamais deux fois, même si un canal échoue
+        lignes += [f"{post['title']} ({post['theme']})"] + publie(post, datetime.now(timezone.utc) + timedelta(minutes=2))
+    return lignes

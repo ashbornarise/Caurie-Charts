@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       edition:
-        description: "matin, soir ou flash"
+        description: "matin, soir, flash ou file (posts arrivés à leur heure)"
         required: true
         default: "matin"
 

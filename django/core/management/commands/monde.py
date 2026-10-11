@@ -17,12 +17,16 @@ class Command(BaseCommand):
     help = "Publie Cauri Monde (8 h, 20 h) ou un flash."
 
     def add_arguments(self, p):
-        p.add_argument("--edition", choices=("matin", "soir", "flash"), required=True)
+        p.add_argument("--edition", choices=("matin", "soir", "flash", "file"), required=True)
         p.add_argument("--essai", action="store_true")
 
     def handle(self, *args, **o):
         def task():
             maintenant = datetime.now(timezone.utc)
+            if o["edition"] == "file":   # les posts arrivés à leur heure
+                for line in M.publie_file() or ["rien à envoyer"]:
+                    out(line)
+                return
             if o["edition"] == "flash":
                 post = M.flash(rendu_seul=o["essai"])
                 due = maintenant + timedelta(minutes=2)
@@ -37,6 +41,10 @@ class Command(BaseCommand):
                 out("essai : " + ", ".join(f["file"] for f in post["fichiers"]))
                 return
             out(post["title"])
-            for l in M.publie(post, due):
-                out(l)
+            if "posts" in post:   # édition : un post par info, envoyés à leur heure par la file d'attente
+                for line in M.publie_file():
+                    out(line)
+                return
+            for line in M.publie(post, due):
+                out(line)
         run("monde", task)

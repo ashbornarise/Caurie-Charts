@@ -301,9 +301,12 @@ def sitemap_entries() -> dict:
 NEWS_CATEGORIES = ["annonce", "classement", "sortie", "evenement", "industrie"]
 
 
-def news_latest(limit: int = 5, country_id=None, offset: int = 0) -> list[dict]:
+def news_latest(limit: int = 5, country_id=None, offset: int = 0, guid_prefix: str | None = None) -> list[dict]:
     params = [now_utc()]
     where = "n.status = 'published' AND n.published_at <= ?"
+    if guid_prefix:   # une série : cauri-matin-, cauri-hebdo-, monde-
+        where += " AND n.external_guid LIKE ?"
+        params.append(guid_prefix + "%")
     if country_id:
         where += " AND (n.country_id IS NULL OR n.country_id = ?)"
         params.append(country_id)
@@ -312,7 +315,10 @@ def news_latest(limit: int = 5, country_id=None, offset: int = 0) -> list[dict]:
             WHERE {where} ORDER BY n.published_at DESC NULLS LAST LIMIT {int(limit)} OFFSET {int(offset)}""", params)
 
 
-def news_count_published() -> int:
+def news_count_published(guid_prefix: str | None = None) -> int:
+    if guid_prefix:
+        return int(db.value("SELECT COUNT(*) FROM news WHERE status = 'published' AND published_at <= ? AND external_guid LIKE ?",
+                            [now_utc(), guid_prefix + "%"]))
     return int(db.value("SELECT COUNT(*) FROM news WHERE status = 'published' AND published_at <= ?", [now_utc()]))
 
 
