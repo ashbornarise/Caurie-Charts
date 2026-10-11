@@ -34,6 +34,23 @@ FEEDS = [
     {"name": "Music Business Worldwide", "url": "https://www.musicbusinessworldwide.com/feed/", "poids": 2},
     {"name": "RFI Musique", "url": "https://www.rfi.fr/fr/musique/rss", "poids": 3},
 ]
+# Les plus grands visages de la musique, du moment et de tous les temps (veille Google Actualités en français)
+STARS = ["Beyoncé", "Taylor Swift", "Rihanna", "Drake", "Bad Bunny", "The Weeknd", "Ed Sheeran", "Billie Eilish", "Dua Lipa",
+         "Kendrick Lamar", "Travis Scott", "Ariana Grande", "Justin Bieber", "Bruno Mars", "Lady Gaga", "Adele", "Eminem",
+         "Kanye West", "Jay-Z", "Nicki Minaj", "Cardi B", "Sabrina Carpenter", "Doja Cat", "Post Malone", "Shakira",
+         "Karol G", "SZA", "Olivia Rodrigo", "Coldplay", "BTS", "Blackpink", "Rosé", "Lisa", "Miley Cyrus", "Harry Styles",
+         "Michael Jackson", "Madonna", "Céline Dion", "Stromae", "Aya Nakamura", "Ninho", "Jul", "Gims",
+         "Burna Boy", "Wizkid", "Davido", "Tems", "Rema", "Asake", "Ayra Starr", "Tyla", "Fally Ipupa", "Black Sherif"]
+GOOGLE_NEWS = "https://news.google.com/rss/search?hl=fr&gl=FR&ceid=FR:fr&q="
+
+
+def _flux_stars() -> list:
+    from urllib.parse import quote
+    lots = [STARS[i:i + 9] for i in range(0, len(STARS), 9)]
+    return [{"name": "Google Actualités", "url": GOOGLE_NEWS + quote("(" + " OR ".join(f'"{n}"' for n in lot) + ") musique when:2d"), "poids": 1, "stars": True}
+            for lot in lots]
+
+
 RUBRIQUES = {"monde": "L'ACTU MONDE", "records": "PROJETS & RECORDS", "sorties": "ÇA SORT"}
 CATEGORIE_SITE = {"monde": "evenement", "records": "industrie", "sorties": "sortie"}
 SEUIL_FLASH = 80          # note « choc » minimale (0-100) donnée par la rédaction
@@ -82,7 +99,12 @@ def collecte(heures: int = 36) -> list:
             log_write("monde", "warning", f"{feed['name']} : {exc}")
             return []
     with ThreadPoolExecutor(8) as ex:
-        items = [it for lot in ex.map(un, FEEDS) for it in lot]
+        items = [it for lot in ex.map(un, FEEDS + _flux_stars()) for it in lot]
+    # Google Actualités : le vrai média est en fin de titre (« … - Le Parisien »)
+    for it in items:
+        if it["source"] == "Google Actualités" and " - " in it["title"]:
+            it["title"], it["source"] = it["title"].rsplit(" - ", 1)
+            it["poids"] = 2
     out = []
     for it in items:
         d = it.get("published_at")
@@ -128,6 +150,14 @@ SYSTEME = ("Tu es le rédacteur en chef de Cauri Charts, média musical francoph
 
 
 def redige(histoires: list) -> list:
+    """Par paquets de 10 (l'IA gratuite décroche sur de trop longues listes)."""
+    out = []
+    for i in range(0, len(histoires), 10):
+        out += _redige(histoires[i:i + 10])
+    return out
+
+
+def _redige(histoires: list) -> list:
     """Pour chaque histoire : rubrique, artiste, une (≤ 28 car.), titre qui dit exactement de quoi on parle, accroche,
     résumé, note « choc » (0-100), sensible (décès, santé, justice). Les histoires hors musique sont écartées."""
     if not histoires:
@@ -189,6 +219,32 @@ def photo(artiste: str):
     except Exception as exc:  # noqa: BLE001
         log_write("monde", "warning", f"photo {artiste} : {exc}")
     return None
+
+
+_FANS: dict = {}
+
+
+def fans(artiste: str) -> int:
+    """Nombre de fans Deezer de l'artiste (donnée réelle) : mesure de notoriété mondiale."""
+    if not artiste:
+        return 0
+    if artiste not in _FANS:
+        _FANS[artiste] = 0
+        try:
+            from urllib.parse import quote
+            a = (json.loads(http_get("https://api.deezer.com/search/artist?limit=1&q=" + quote(artiste)) or "{}").get("data") or [None])[0]
+            if a and _sans_accents(a["name"]).lower() == _sans_accents(artiste).lower():
+                _FANS[artiste] = int(a.get("nb_fan") or 0)
+        except Exception:  # noqa: BLE001
+            pass
+    return _FANS[artiste]
+
+
+def score(f: dict) -> float:
+    """Note d'une info : son poids « choc », le nombre de médias, et surtout la notoriété de l'artiste (les plus grands visages devant)."""
+    import math
+    star = any(_sans_accents(n).lower() == _sans_accents(f.get("artiste", "")).lower() for n in STARS)
+    return f["choc"] + 12 * len(f["sources"]) + 9 * math.log10(1 + fans(f.get("artiste", ""))) + (25 if star else 0)
 
 
 def deja_publie(cle: str) -> bool:
@@ -262,13 +318,18 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
     else:
         fond = Image.new("RGB", (W, H), VIOLET)
         img = Image.blend(img, fond, .55)
-    # dégradés : lisibilité du titre en bas, du bandeau en haut
-    voile = Image.new("L", (1, 256))
-    for y in range(256):
-        t = y / 255
-        voile.putpixel((0, y), int(255 * max(0, min(1, (t - .38) / .42)) ** 1.15))
-    voile = voile.resize((W, H))
-    img = Image.composite(Image.new("RGB", (W, H), INK), img, voile)
+    # zone du texte : floutée (le texte d'une pochette ne se mélange jamais au nôtre), puis assombrie
+    def rampe(debut, fin, fort=1.0):
+        m = Image.new("L", (1, 256))
+        for y in range(256):
+            m.putpixel((0, y), int(255 * fort * max(0, min(1, (y / 255 - debut) / (fin - debut)))))
+        return m.resize((W, H))
+    img = Image.composite(img.filter(ImageFilter.GaussianBlur(22 * k)), img, rampe(.30, .48))
+    # fond clair (pochette blanche…) : on assombrit d'autant plus que la zone du texte est lumineuse
+    from PIL import ImageStat
+    lum = ImageStat.Stat(img.crop((0, int(H * .4), W, H)).convert("L")).mean[0] / 255
+    img = Image.blend(img, Image.new("RGB", (W, H), INK), min(.55, max(.12, (lum - .25) * 1.1)))
+    img = Image.composite(Image.new("RGB", (W, H), INK), img, rampe(.32, .72, .94))
     d = ImageDraw.Draw(img)
     fd, fb, fs = PI.FONT_DIR / "Anton-Regular.ttf", PI.FONT_DIR / "Poppins-Bold.ttf", PI.FONT_DIR / "Poppins-Regular.ttf"
     # bandeau
@@ -318,11 +379,17 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
     y_src = H - bas - 34 * k
     y_phr = y_src - 40 * k - len(l2) * 54 * k
     base = y_phr - 34 * k            # ligne de base de la dernière ligne du titre, au-dessus de la phrase
-    for i, l in enumerate(lignes):
-        y = base - (len(lignes) - 1 - i) * pas
-        d.text((cote, y), l, font=ft, anchor="ls", fill=GOLD if (i == len(lignes) - 1 and len(lignes) > 1) else (255, 255, 255))
-    for i, l in enumerate(l2):
-        d.text((cote, y_phr + i * 54 * k), l, font=ft2, fill=(235, 235, 245))
+    ops = [((cote, base - (len(lignes) - 1 - i) * pas), l, ft, "ls", GOLD if (i == len(lignes) - 1 and len(lignes) > 1) else (255, 255, 255))
+           for i, l in enumerate(lignes)]
+    ops += [((cote, y_phr + i * 54 * k), l, ft2, "la", (235, 235, 245)) for i, l in enumerate(l2)]
+    ombre = Image.new("L", (W, H), 0)
+    do = ImageDraw.Draw(ombre)
+    for xy, l, fnt, anc, _ in ops:
+        do.text((xy[0], xy[1] + 6 * k), l, font=fnt, anchor=anc, fill=200)
+    img = Image.composite(Image.new("RGB", (W, H), (0, 0, 0)), img, ombre.filter(ImageFilter.GaussianBlur(10 * k)))
+    d = ImageDraw.Draw(img)
+    for xy, l, fnt, anc, col in ops:
+        d.text(xy, l, font=fnt, anchor=anc, fill=col)
     src = ("SOURCES · " + " · ".join(s.upper() for s in f["sources"][:4])) if f.get("sources") else "CAURICHARTS.COM"
     wsrc = d.textlength(src, font=fsrc)
     d.rounded_rectangle([cote, y_src - 6 * k, cote + wsrc + 36 * k, y_src + 46 * k], radius=26 * k, fill=(255, 255, 255))
@@ -407,14 +474,21 @@ def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
     """Édition de 8 h (« monde ») ou de 20 h (« records » + « sorties ») : les infos les plus reprises, jamais déjà publiées."""
     if not rendu_seul and db.value("SELECT 1 FROM social_posts WHERE slot_date = ? AND theme = ?", [jour.isoformat(), f"monde-{quand}"]):
         return None   # édition déjà faite aujourd'hui (une seule par créneau)
-    histoires = [h for h in regroupe(collecte(30 if quand == "matin" else 18)) if not deja_publie(h["cle"])][:24]
+    histoires = [h for h in regroupe(collecte(30 if quand == "matin" else 24)) if not deja_publie(h["cle"])][:30]
     fiches = redige(histoires)
     if quand == "matin":
         choix = [f for f in fiches if f["rubrique"] == "monde"]
         choix += [f for f in fiches if f["rubrique"] != "monde"]
     else:
         choix = [f for f in fiches if f["rubrique"] in ("records", "sorties")] + [f for f in fiches if f["rubrique"] == "monde"]
-    choix = sorted(choix[:12], key=lambda f: (not f["sensible"], f["choc"] + 15 * len(f["sources"])), reverse=True)[:5]
+    tries, vus_artistes = sorted(choix, key=lambda f: (not f["sensible"], score(f)), reverse=True), set()
+    choix = []
+    for f in tries:   # une seule info par artiste et par édition : de la variété
+        a = _sans_accents(f["artiste"]).lower()
+        if a and a in vus_artistes:
+            continue
+        vus_artistes.add(a); choix.append(f)
+    choix = choix[:5]
     if not choix:
         return None
     n = db.value("SELECT COUNT(*) FROM social_posts WHERE theme LIKE 'monde-%'") or 0
@@ -434,7 +508,7 @@ def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
 
 def flash(rendu_seul: bool = False, forcer: bool = False) -> dict | None:
     """L'info choc des 3 dernières heures, reprise par ≥ 2 médias, jamais publiée : un post « FLASH » immédiat."""
-    histoires = [h for h in regroupe(collecte(4 if not forcer else 30)) if (len(h["sources"]) >= SOURCES_FLASH or forcer) and not deja_publie(h["cle"])]
+    histoires = [h for h in regroupe(collecte(4 if not forcer else 30)) if (confirme(h) or forcer) and not deja_publie(h["cle"])]
     if not histoires:
         return None
     fiches = sorted(redige(histoires[:8]), key=lambda f: f["choc"], reverse=True)
@@ -477,11 +551,17 @@ def marque_vu(cles: list) -> None:
         db.run("INSERT INTO monde_vus (cle) VALUES (?) ON CONFLICT DO NOTHING", [c])
 
 
+def confirme(h: dict) -> bool:
+    """Flash : au moins un grand média de référence parmi les sources, ou trois médias différents."""
+    grands = {f["name"] for f in FEEDS}
+    return len(h["sources"]) >= SOURCES_FLASH and (bool(grands & set(h["sources"])) or len(h["sources"]) >= 3)
+
+
 def guette() -> dict | None:
     """Vérification légère (quelques secondes, appelée toutes les 10 min) : une info des 3 dernières heures, reprise par
     au moins 2 médias, jamais publiée ni déjà jugée ? La rédaction lui donne une note ; ≥ SEUIL_FLASH → à publier.
     Renvoie la fiche retenue (le rendu et la publication se font ensuite sur GitHub, plus puissant)."""
-    neuves = [h for h in regroupe(collecte(3)) if len(h["sources"]) >= SOURCES_FLASH and not deja_publie(h["cle"]) and not vu(h["cle"])]
+    neuves = [h for h in regroupe(collecte(3)) if confirme(h) and not deja_publie(h["cle"]) and not vu(h["cle"])]
     if not neuves:
         return None
     fiches = redige(neuves[:6])
