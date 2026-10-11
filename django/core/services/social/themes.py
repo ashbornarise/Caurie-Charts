@@ -86,6 +86,28 @@ def _artists(column: str, label: str, limit: int = 5) -> list:
     return out
 
 
+def ecoutes_monde(limit: int = 8) -> list:
+    """Nos artistes les plus écoutés dans le monde : auditeurs mensuels Spotify (compteurs publics relevés par Kworb)."""
+    from core.services import kworb
+    try:
+        aud = kworb.auditeurs()
+    except Exception:  # noqa: BLE001 — Kworb injoignable : la rubrique est sautée
+        return []
+    rows = db.all("""SELECT a.name, a.image_url, a.spotify_id, COALESCE(a.base_country, gc.code) AS country
+                     FROM artists a LEFT JOIN countries gc ON gc.id = a.guessed_country_id
+                     WHERE a.status = 'active' AND a.spotify_id IS NOT NULL AND a.spotify_id <> ''""")
+    vus = sorted((r for r in rows if r["spotify_id"] in aud), key=lambda r: -aud[r["spotify_id"]][0])[:limit]
+    out = []
+    for r in vus:
+        n = aud[r["spotify_id"]][0]
+        where = country_name(r["country"]) if r["country"] else "Afrique de l’Ouest"
+        label = "auditeurs par mois sur Spotify"
+        out.append({"title": where, "artist": r["name"], "image_url": r["image_url"], "detail": f"{_fmt(n)} {label}",
+                    "row_title": r["name"], "figure_value": kworb.volume(n), "figure_label": label,
+                    "line": f"{r['name']} ({where}) : {_fmt(n)} {label}"})
+    return out if len(out) >= 3 else []
+
+
 # ---------------------------------------------------------------- faits de chaque rubrique
 
 def top_country(code: str):
@@ -219,6 +241,9 @@ THEMES = {
     "fans_deezer": _t("Les plus suivis sur Deezer", "Les plus suivis", ("Deezer", "les plus suivis", "artistes d’Afrique de l’Ouest"),
                       "💜 Les artistes d’Afrique de l’Ouest les plus suivis sur Deezer :", "Vous suivez qui ?", "Deezer (nombre de fans)",
                       lambda: _artists("fans", "fans Deezer")),
+    "ecoutes_monde": _t("Les plus écoutés dans le monde", "Dans le monde", ("Spotify", "les plus écoutés", "dans le monde entier"),
+                        "🌍 Les artistes d’Afrique de l’Ouest les plus écoutés dans le monde sur Spotify :", "Qui sera le prochain à les rejoindre ?",
+                        "Spotify, auditeurs mensuels (compteurs publics relevés par Kworb)", ecoutes_monde),
     "top_ci": _t("Top Côte d’Ivoire", "Top Côte d’Ivoire", ("Les titres qui font bouger", "la Côte d’Ivoire", "cette semaine"),
                  "🇨🇮 Ce qui tourne en Côte d’Ivoire cette semaine :", "Votre son du moment en Côte d’Ivoire ?", CHARTS, top_country("CI")),
     "deezer": _t("Top Deezer", "Top Deezer", ("Deezer", "le top", "en Afrique de l’Ouest"),
