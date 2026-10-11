@@ -30,6 +30,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "core.middleware.EdgeVaryMiddleware",   # en premier : agit en dernier sur la réponse (cache Vercel)
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

@@ -54,6 +54,9 @@ def edge_cache(request, response) -> None:
     if "Cache-Control" in response.headers:
         return  # la vue a déjà choisi (images, plan du site…)
     response.headers["Cache-Control"] = "public, max-age=0, s-maxage=600, stale-while-revalidate=86400"
+    # consigne propre au réseau de Vercel (n'est pas transmise au navigateur)
+    response.headers["Vercel-CDN-Cache-Control"] = "max-age=600, stale-while-revalidate=86400"
+    response._cauri_edge = True   # EdgeVaryMiddleware retirera « Vary: Cookie », qui empêche toute mise en cache
 
 
 class CauriMiddleware:
@@ -90,3 +93,21 @@ class CauriMiddleware:
             resp["Cache-Control"] = "no-store"
             return resp
         return None
+
+
+class EdgeVaryMiddleware:
+    """Tout à l'extérieur : sur une page publique mise en cache (edge_cache), retire « Cookie » de l'en-tête Vary que
+    la session de Django ajoute, et qui empêchait Vercel de garder la page (chaque visite recalculait tout, CPU épuisé
+    le 11/10/2026). Ces pages sont identiques pour tous : les pages avec session ou formulaire ne sont jamais en cache."""
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if getattr(response, "_cauri_edge", False) and response.has_header("Vary"):
+            rest = [v.strip() for v in response["Vary"].split(",") if v.strip() and v.strip().lower() != "cookie"]
+            if rest:
+                response["Vary"] = ", ".join(rest)
+            else:
+                del response["Vary"]
+        return response
