@@ -38,6 +38,14 @@
     {
       "path": "/cron/rattrapage",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/cron/monde?q=matin",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/cron/monde?q=soir",
+      "schedule": "0 19 * * *"
     }
   ]
 }

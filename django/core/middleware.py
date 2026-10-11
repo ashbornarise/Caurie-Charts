@@ -15,9 +15,15 @@ def csp() -> str:
         connect.append("https://www.facebook.com")
     if tr.get("youtube_embeds"):
         frame.append("https://www.youtube-nocookie.com")
+        frame.append("https://www.youtube.com")  # lecteur YouTube standard (clips du Monthly Show)
+        script.append("https://www.youtube.com")  # API du lecteur YouTube (clips du Monthly Show)
     if tr.get("spotify_playlist"):
         frame.append("https://open.spotify.com")
     media = ["'self'"]
+    from core import env as _env
+    if _env.get("TURNSTILE_SITE_KEY", ""):
+        script.append("https://challenges.cloudflare.com")   # captcha invisible du vote du Monthly Show
+        frame.append("https://challenges.cloudflare.com")
     if conf.get("show.trailer_url", "").startswith("https://"):
         media.append("https://" + conf.get("show.trailer_url").split("/")[2])  # vidéo du Monthly Show (Blob)
     return ("default-src 'self'; img-src 'self' data: https:; media-src " + " ".join(media) + "; style-src 'self'; script-src " + " ".join(script)

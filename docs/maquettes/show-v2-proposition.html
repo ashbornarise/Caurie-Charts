@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monthly Show v2</title>
+<style>
+@font-face { font-family:"Poppins"; font-weight:500; src:url(../../public/assets/show/fonts/poppins-500.woff2) format("woff2"); }
+@font-face { font-family:"Poppins"; font-weight:600; src:url(../../public/assets/show/fonts/poppins-600.woff2) format("woff2"); }
+@font-face { font-family:"Poppins"; font-weight:700; src:url(../../public/assets/show/fonts/poppins-700.woff2) format("woff2"); }
+@font-face { font-family:"Poppins"; font-weight:800; src:url(../../public/assets/show/fonts/poppins-800.woff2) format("woff2"); }
+@font-face { font-family:"Poppins"; font-weight:900; src:url(../../public/assets/show/fonts/poppins-900.woff2) format("woff2"); }
+@font-face { font-family:"Playfair Display"; font-style:italic; font-weight:600; src:url(../../public/assets/show/fonts/playfair-600-italic.woff2) format("woff2"); }
+:root { --nuit:#0A0E2A; --nuit2:#151245; --ciel:#7CC8FA; --ciel2:#3BA3F0; --violet:#7B5CFF; --lilas:#B496FF; --blanc:#FFFFFF; --texte:#14121F; --doux:#5b5770; --page:#F6F8FD; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --texte:#F1EEFF; --doux:#B9B3D8; --page:#0E0D1C; } }
+:root[data-theme="dark"] { --texte:#F1EEFF; --doux:#B9B3D8; --page:#0E0D1C; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:Poppins, system-ui, sans-serif; color:var(--texte); background:var(--page); line-height:1.55; overflow-x:hidden; }
+.wrap { max-width:1140px; margin:0 auto; padding:0 20px; }
+a { color:var(--violet); }
+.grad { background:linear-gradient(120deg, var(--ciel), var(--lilas)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.grad2 { background:linear-gradient(120deg, var(--ciel2), var(--violet)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.ico { width:22px; height:22px; flex-shrink:0; }
+/* hero : plateau */
+.hero { background:radial-gradient(60% 60% at 80% 0%, rgba(124,200,250,.35), transparent 60%), radial-gradient(50% 60% at 0% 100%, rgba(123,92,255,.45), transparent 60%), linear-gradient(180deg, var(--nuit), var(--nuit2));
+  color:#fff; padding:64px 0 56px; position:relative; overflow:hidden; }
+.hero::before { content:""; position:absolute; inset:-30% 0 0; background:conic-gradient(from 160deg at 50% -5%, transparent 0deg, rgba(124,200,250,.14) 6deg, transparent 12deg, transparent 22deg, rgba(180,150,255,.13) 28deg, transparent 34deg, transparent 44deg, rgba(124,200,250,.12) 50deg, transparent 56deg); }
+.hero .wrap { position:relative; }
+.pill { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:99px; font-weight:700; font-size:12px; letter-spacing:.14em; text-transform:uppercase; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25); }
+.hero h1 { font-weight:900; font-size:clamp(40px,7vw,86px); line-height:1; margin:18px 0 12px; letter-spacing:-.02em; }
+.hero p { font-size:clamp(17px,2vw,21px); max-width:760px; color:#D6DBFF; }
+section { padding:54px 0; }
+.k { font-weight:700; letter-spacing:.26em; font-size:12px; text-transform:uppercase; color:var(--violet); }
+h2 { font-weight:900; font-size:clamp(28px,4.4vw,46px); line-height:1.08; margin:8px 0 14px; }
+.intro { color:var(--doux); max-width:780px; font-size:17px; margin-bottom:26px; }
+.carte { background:var(--blanc); border:1px solid rgba(20,18,31,.08); border-radius:22px; padding:22px; box-shadow:0 18px 44px rgba(40,30,90,.08); color:#14121F; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .carte { background:#1A1832; color:#F1EEFF; border-color:rgba(255,255,255,.08); } }
+:root[data-theme="dark"] .carte { background:#1A1832; color:#F1EEFF; border-color:rgba(255,255,255,.08); }
+.grille { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; }
+.lecon b { display:block; font-size:17px; margin-bottom:6px; }
+.lecon p { font-size:14.5px; color:var(--doux); }
+.lecon .src { font-size:12.5px; margin-top:10px; }
+.lecon .nous { margin-top:12px; padding-top:12px; border-top:1px dashed rgba(123,92,255,.35); font-size:14px; font-weight:600; }
+.lecon .nous span { color:var(--violet); }
+/* étapes d'une scène */
+.etapes { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; counter-reset:e; }
+@media (max-width:860px) { .etapes { grid-template-columns:1fr; } }
+.etape { position:relative; padding:18px; border-radius:18px; background:linear-gradient(180deg, var(--nuit), var(--nuit2)); color:#fff; }
+.etape::before { counter-increment:e; content:counter(e); display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:linear-gradient(120deg,var(--violet),var(--ciel2)); font-weight:800; margin-bottom:10px; }
+.etape b { display:block; font-size:15.5px; }
+.etape p { font-size:13.5px; color:#C9CEF5; margin-top:4px; }
+.etape small { display:block; margin-top:8px; color:var(--ciel); font-weight:700; font-size:12px; }
+/* formats */
+.format { display:grid; grid-template-columns:1fr; gap:0; overflow:hidden; padding:0; }
+.format .h { padding:18px 20px; background:linear-gradient(120deg, var(--nuit), var(--nuit2)); color:#fff; display:flex; align-items:center; gap:12px; }
+.format .h b { font-size:18px; }
+.format .h span { margin-left:auto; font-size:12px; font-weight:700; padding:4px 10px; border-radius:99px; background:rgba(255,255,255,.12); }
+.format .c { padding:16px 20px 20px; font-size:14.5px; color:var(--doux); }
+.format .c strong { color:inherit; }
+.format .ex { margin-top:10px; padding:10px 12px; border-radius:12px; background:rgba(124,200,250,.14); font-size:13.5px; font-weight:600; color:inherit; }
+/* écrans */
+.ecrans { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:22px; }
+.tel { aspect-ratio:9/16; border-radius:30px; padding:8px; background:#1d1b3a; box-shadow:0 26px 60px rgba(20,10,60,.35); }
+.scr { position:relative; width:100%; height:100%; border-radius:23px; overflow:hidden; color:#fff; container-type:inline-size;
+  background:radial-gradient(70% 40% at 80% 0%, rgba(124,200,250,.45), transparent 70%), radial-gradient(70% 40% at 10% 100%, rgba(123,92,255,.55), transparent 70%), linear-gradient(180deg, var(--nuit), var(--nuit2)); }
+.scr::before { content:""; position:absolute; inset:-25% 0 0; background:conic-gradient(from 160deg at 50% -5%, transparent 0deg, rgba(124,200,250,.2) 6deg, transparent 12deg, transparent 22deg, rgba(180,150,255,.18) 28deg, transparent 34deg, transparent 44deg, rgba(124,200,250,.18) 50deg, transparent 56deg); }
+.in { position:absolute; inset:0; padding:7cqw; display:flex; flex-direction:column; }
+.bug { display:flex; align-items:center; gap:2cqw; font-size:2.9cqw; font-weight:800; letter-spacing:.12em; line-height:1.1; }
+.bug small { display:block; color:var(--ciel); font-weight:700; }
+.bug i { width:6.5cqw; height:6.5cqw; border-radius:30%; background:linear-gradient(135deg,var(--ciel),var(--violet)); }
+.live { position:absolute; top:6.5cqw; right:6cqw; display:flex; gap:1.6cqw; align-items:center; font-size:2.9cqw; font-weight:800; letter-spacing:.1em; padding:1.2cqw 2.8cqw; border-radius:99px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.3); }
+.live i { width:1.8cqw; height:1.8cqw; border-radius:50%; background:#fff; }
+.verre { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.22); border-radius:4.5cqw; backdrop-filter:blur(10px); }
+.big { font-weight:900; line-height:.95; }
+.lbl { font-weight:700; letter-spacing:.18em; font-size:3cqw; color:var(--ciel); }
+.ph { border-radius:50%; object-fit:cover; object-position:50% 22%; border:.9cqw solid rgba(255,255,255,.9); }
+.fl { width:9cqw; height:9cqw; border-radius:50%; object-fit:cover; border:.6cqw solid #fff; }
+.onde { display:flex; align-items:center; gap:1cqw; height:16cqw; }
+.onde i { flex:1; border-radius:99px; background:linear-gradient(180deg,var(--ciel),var(--violet)); }
+.flou { filter:blur(2.4cqw) saturate(1.3); }
+.clip { position:relative; border-radius:4cqw; overflow:hidden; aspect-ratio:16/9; border:1px solid rgba(255,255,255,.3); }
+.clip img { width:100%; height:100%; object-fit:cover; display:block; }
+.clip .play { position:absolute; left:3cqw; bottom:3cqw; font-size:2.8cqw; font-weight:800; padding:1cqw 2.4cqw; border-radius:99px; background:rgba(10,14,42,.75); }
+.jauge { height:3.4cqw; border-radius:99px; background:rgba(255,255,255,.12); overflow:hidden; margin-top:1.4cqw; }
+.jauge i { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--ciel),var(--violet)); }
+.tab { display:grid; grid-template-columns:auto 1fr auto; gap:1.6cqw 2.4cqw; align-items:center; font-size:3.2cqw; font-weight:700; }
+.tab .on { color:var(--ciel); }
+figure figcaption { margin-top:10px; }
+figure figcaption b { display:block; }
+figure figcaption span { color:var(--doux); font-size:13.5px; }
+/* conducteur */
+table.cond { width:100%; border-collapse:separate; border-spacing:0 6px; }
+.cond td { padding:12px 14px; background:var(--blanc); vertical-align:top; font-size:14.5px; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cond td { background:#1A1832; } }
+:root[data-theme="dark"] .cond td { background:#1A1832; }
+.cond td:first-child { border-radius:12px 0 0 12px; font-weight:800; color:var(--violet); white-space:nowrap; }
+.cond td:last-child { border-radius:0 12px 12px 0; white-space:nowrap; font-weight:700; }
+.cond small { display:block; color:var(--doux); }
+.alerte { border-left:5px solid var(--violet); }
+.alerte li { margin:8px 0 0 18px; color:var(--doux); font-size:14.5px; }
+.alerte li b { color:inherit; }
+.q b { display:block; margin-bottom:4px; }
+.q p { color:var(--doux); font-size:14.5px; }
+.sources li { margin:4px 0 0 18px; font-size:14px; }
+footer { padding:30px 0 60px; color:var(--doux); font-size:13px; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <span class="pill">Proposition v2 · repartie de zéro</span>
+    <h1>THE <span class="grad">MONTHLY SHOW</span></h1>
+    <p>Une émission où <b>chaque classement est une scène</b> : d'abord le son, ensuite les visages, puis les clips, et enfin le N°1. L'ordre de passage est calculé pour le suspense, et chaque pays a son propre récit, tiré des vrais chiffres.</p>
+  </div>
+</header>
+
+<section class="wrap">
+  <div class="k">Ce que font les vrais shows</div>
+  <h2>Six leçons, et ce qu'on en fait</h2>
+  <p class="intro">Ces leçons viennent de la recherche faite sur Eurovision, Top of the Pops, TRL, The Game Awards, Trace Awards et les guides de production de live. Sources en bas de page.</p>
+  <div class="grille" id="lecons"></div>
+</section>
+
+<section class="wrap">
+  <div class="k">La règle d'or</div>
+  <h2>Chaque classement = une scène complète</h2>
+  <p class="intro">Une scène dure de 6 à 8 minutes. On ne donne aucun nom tant que le public n'a pas entendu la musique.</p>
+  <div class="etapes">
+    <div class="etape"><b>L'ambiance du pays</b><p>Noir, puis un battement. Quatre extraits de 6 s des titres du Top, pochettes floutées. Le public reconnaît le son avant de voir les noms.</p><small>≈ 30 s · extraits Deezer</small></div>
+    <div class="etape"><b>L'enjeu</b><p>Le chiffre qui raconte la course : « 0 % d'écart entre le N°1 et le N°2 », « un seul artiste occupe deux places »…</p><small>≈ 20 s · données Cauri</small></div>
+    <div class="etape"><b>#5 → #2, en clips</b><p>À l'appel de chaque nom, le clip officiel joue pendant une minute avec le nom, le titre et les plateformes à l'écran.</p><small>≈ 4 min · YouTube officiel</small></div>
+    <div class="etape"><b>Le silence</b><p>La musique coupe, la lumière baisse, un battement. Le moment de la pause entre les nominés et le gagnant, au cœur du design des grandes cérémonies.</p><small>≈ 6 s</small></div>
+    <div class="etape"><b>Le N°1</b><p>Révélation, clip pendant une minute, puis la distinction officielle. On ajoute le message vidéo de l'artiste quand il en envoie un.</p><small>≈ 1 min 30</small></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="k">Pour que ça ne soit jamais répétitif</div>
+  <h2>Cinq formats de scène, choisis par les données</h2>
+  <p class="intro">Toutes les scènes ne se jouent pas pareil. C'est la situation réelle du classement qui choisit le format. Exemples avec les classements du jour :</p>
+  <div class="grille" id="formats"></div>
+</section>
+
+<section class="wrap">
+  <div class="k">Les écrans · plateau télé, bleu nuit et violet</div>
+  <h2>Plus de contraste, comme un vrai plateau</h2>
+  <p class="intro">Fond bleu nuit et violet, éclairé par les projecteurs bleu ciel. Le texte est blanc et les chiffres se lisent de loin. Les classements et les miniatures des clips sont réels.</p>
+  <div class="ecrans" id="ecrans"></div>
+</section>
+
+<section class="wrap">
+  <div class="k">L'ordre de passage</div>
+  <h2>Calculé pour finir en apothéose</h2>
+  <p class="intro">Comme l'Eurovision depuis 2019 : on commence par les victoires les plus nettes, on garde les courses les plus serrées pour la fin, puis le BIG 5 conclut. Ordre calculé ce soir :</p>
+  <div class="carte"><table class="cond" id="ordre"></table></div>
+</section>
+
+<section class="wrap">
+  <div class="k">Le conducteur</div>
+  <h2>50 minutes, rythmées</h2>
+  <p class="intro">On démarre sans « bienvenue » : on ouvre directement sur la première scène, puis le générique. Un sondage est annoncé toutes les 10 à 15 minutes, et le rythme change toutes les 3 à 7 minutes.</p>
+  <div class="carte"><table class="cond" id="cond"></table></div>
+</section>
+
+<section class="wrap">
+  <div class="k">Le public</div>
+  <h2>Faire venir et faire rester</h2>
+  <div class="grille">
+    <div class="carte q"><b>Co-diffusion par les artistes</b><p>The Game Awards 2025 a été repris par 16 500 créateurs. Chez nous, on invite chaque artiste classé et les pages de fans à diffuser le show en direct sur leur compte. Les artistes ont tout intérêt à le faire : c'est leur moment.</p></div>
+    <div class="carte q"><b>Le Prix du public</b><p>Un vrai vote sur cauricharts.com, ouvert une semaine avant le show, avec un résultat révélé en direct. Il reste séparé des classements, qui ne dépendent que des données.</p></div>
+    <div class="carte q"><b>Les sondages annoncés</b><p>« Dans 5 minutes : votez pour le pays suivant. » Les guides de live le recommandent : un sondage annoncé à l'avance retient ceux qui allaient partir.</p></div>
+    <div class="carte q"><b>Les messages des artistes</b><p>Avant le show, on demande à chaque artiste du Top 5 une vidéo de 15 s : « Merci le Togo ! ». Ils passent juste après leur révélation. C'est la vraie réaction, filmée d'avance.</p></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="k">Les clips et les droits</div>
+  <h2>Ce qui est permis, et ce qui ne l'est pas</h2>
+  <div class="carte alerte">
+    <ul>
+      <li><b>Sur cauricharts.com, c'est permis.</b> Le lecteur YouTube officiel peut être intégré au site, à condition de ne pas modifier le lecteur et de passer par la chaîne officielle de l'artiste. Les vues comptent pour l'artiste quand le spectateur lance la lecture lui-même. Les lectures automatiques ne comptent pas.</li>
+      <li><b>Sur TikTok, Instagram, Facebook et YouTube Live, c'est risqué.</b> Ces réseaux repèrent la musique protégée en direct : son coupé, live interrompu, voire avertissement sur le compte. Diffuser une musique ou un clip sans autorisation est déconseillé.</li>
+      <li><b>Ce que je propose :</b> le show complet avec les clips se regarde sur cauricharts.com. Sur les réseaux, le live montre le plateau, les révélations et des extraits très courts, et renvoie vers le site pour les clips. En parallèle, on demande aux artistes et labels du Top une autorisation écrite de diffuser leur clip pendant le live : la plupart y gagnent en visibilité.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="k">À trancher</div>
+  <h2>Tes décisions</h2>
+  <div class="grille">
+    <div class="carte q"><b>1. La voix off</b><p>Tu as écrit « la voix off on laisse ». Ça veut dire qu'on la garde telle quelle, ou qu'on la supprime ?</p></div>
+    <div class="carte q"><b>2. Où se regarde le show complet</b><p>Ma proposition : le show complet sur cauricharts.com, et une version sans clips sur les réseaux.</p></div>
+    <div class="carte q"><b>3. Les formats de scène</b><p>Garder ces cinq formats, en enlever, ou en ajouter d'autres ?</p></div>
+    <div class="carte q"><b>4. Le trailer</b><p>Je le refais seulement une fois ce format validé, dans le même style plateau, avec des nappes de tension et de vrais extraits de titres.</p></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="k">Sources</div>
+  <ul class="sources" id="sources"></ul>
+</section>
+<footer class="wrap">Cauri Charts · proposition interne v2 du Monthly Show · classements réels relevés le 10 oct. 2026.</footer>
+
+<script>
+const D = {"TG": [{"a": "sethlo", "t": "Migbo (Remix)", "pts": 198.5, "yt": "-NWxIr_TyA0", "dz": "4273842562", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages116/v4/d9/fa/f9/d9faf9ab-af0f-ed8b-95aa-9d3832e4bc40/7367fa6d-9a07-4d04-b11a-1528dbcbe17a_ami-identity-ad7761a045d5dbe6d60a2a39e347b472-2023-07-24T00-51-45.847Z_cropped.png/1000x1000bb.jpg", "src": 2}, {"a": "Paki Chenzu", "t": "SOLDAT", "pts": 193.5, "yt": "7uno0LE3FSI", "dz": "3456716461", "p": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/15/d9/39/15d939a4-a776-2f98-cd86-c009afeb66f2/0.jpg/1000x1000bb.jpg", "src": 2}, {"a": "Paki Chenzu", "t": "ASSAUT (feat. Himra)", "pts": 192.5, "yt": "X9OstcJRQBk", "dz": "3166288541", "p": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/15/d9/39/15d939a4-a776-2f98-cd86-c009afeb66f2/0.jpg/1000x1000bb.jpg", "src": 2}, {"a": "Santrinos Raphaël", "t": "Pour La Vie", "pts": 187.0, "yt": "M_cx7JrIXYc", "dz": "2710427582", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/Santrinos_Rapha%C3%ABl_02.jpg?width=1000", "src": 2}, {"a": "Paki Chenzu", "t": "Tout ira mieux (Faut pas m'appeler)", "pts": 187.0, "yt": "8GCtSxewbgM", "dz": "3778849302", "p": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/15/d9/39/15d939a4-a776-2f98-cd86-c009afeb66f2/0.jpg/1000x1000bb.jpg", "src": 2}], "BJ": [{"a": "First King", "t": "Je suis béni", "pts": 312.7, "yt": "8a821cs420I", "dz": "4243087572", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features112/v4/af/27/17/af27175e-2e16-b477-82ce-b656922c8aee/mzl.rsndqnce.jpg/1000x1000bb.jpg", "src": 3}, {"a": "Axel Merryl", "t": "Papa No Dey", "pts": 249.0, "yt": "fB2wppI6InM", "dz": "4204542612", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/Axel_Merryl.jpg?width=1000", "src": 2}, {"a": "Axel Merryl", "t": "Dans toutes les langues", "pts": 228.3, "yt": "U-KsQPmg5dw", "dz": "3806802122", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/Axel_Merryl.jpg?width=1000", "src": 2}, {"a": "First King", "t": "Mon djin enan tchi", "pts": 221.0, "yt": "s8-Ca9k1vmA", "dz": "4243087602", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features112/v4/af/27/17/af27175e-2e16-b477-82ce-b656922c8aee/mzl.rsndqnce.jpg/1000x1000bb.jpg", "src": 2}, {"a": "VANO BABY", "t": "Bandit", "pts": 198.0, "yt": "f6fd0qPFqYM", "dz": "4299604772", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features124/v4/6f/59/b6/6f59b62d-f73f-1dd8-4759-aed4998d04b7/mzl.mcwmezmd.jpg/1000x1000bb.jpg", "src": 2}], "GH": [{"a": "Kweku Smoke", "t": "Bombele", "pts": 409.0, "yt": "tKD6BCGdXlU", "dz": "4242097232", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages126/v4/53/47/3d/53473d74-2e33-ca67-e565-30da66295ed3/ab9f0290-be2f-4f00-bb47-2c2a400c4b65_file_cropped.png/1000x1000bb.jpg", "src": 5}, {"a": "Black Sherif", "t": "Jolie", "pts": 392.2, "yt": "iLXK-vLitDg", "dz": "4183340292", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/57/2f/03/572f0314-adf2-a0b4-7f63-2849c28388cd/ami-identity-8428609ceeaa20eef5910ed8837b82ee-2026-03-01T23-43-24.253Z_cropped.png/1000x1000bb.jpg", "src": 5}, {"a": "Kweku Smoke", "t": "Bra", "pts": 385.5, "yt": "VZQndjaorE0", "dz": "4242097202", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages126/v4/53/47/3d/53473d74-2e33-ca67-e565-30da66295ed3/ab9f0290-be2f-4f00-bb47-2c2a400c4b65_file_cropped.png/1000x1000bb.jpg", "src": 5}, {"a": "Kweku Smoke", "t": "Survivor", "pts": 367.5, "yt": "SY11lQuVJGk", "dz": "4242097192", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages126/v4/53/47/3d/53473d74-2e33-ca67-e565-30da66295ed3/ab9f0290-be2f-4f00-bb47-2c2a400c4b65_file_cropped.png/1000x1000bb.jpg", "src": 5}, {"a": "Fameye", "t": "Gen Z", "pts": 331.0, "yt": "PzLr5Ib8pCo", "dz": "4019724981", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/da/86/b8/da86b830-1d36-601d-96a3-fb58d827ed26/file_cropped.png/1000x1000bb.jpg", "src": 4}], "CI": [{"a": "Himra", "t": "DJOROBITE", "pts": 434.0, "yt": "AfvuNZPj6C4", "dz": "4033831161", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/19/a0/c4/19a0c405-1cac-0939-61c1-6a288172626d/file_cropped.png/1000x1000bb.jpg", "src": 5}, {"a": "Himra", "t": "PLUS DE LOVE", "pts": 417.5, "yt": "DBQONV9RATY", "dz": "4033831061", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/19/a0/c4/19a0c405-1cac-0939-61c1-6a288172626d/file_cropped.png/1000x1000bb.jpg", "src": 5}, {"a": "Himra", "t": "BARA BARA", "pts": 407.5, "yt": "B6XOr6eelJ8", "dz": "4033831051", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/19/a0/c4/19a0c405-1cac-0939-61c1-6a288172626d/file_cropped.png/1000x1000bb.jpg", "src": 5}, {"a": "Himra", "t": "STRIP", "pts": 400.0, "yt": "MFHiEocxkdM", "dz": "4033831081", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/19/a0/c4/19a0c405-1cac-0939-61c1-6a288172626d/file_cropped.png/1000x1000bb.jpg", "src": 5}, {"a": "Himra", "t": "CANALISER", "pts": 377.5, "yt": "j9ApwGnfYKI", "dz": "4033831091", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/19/a0/c4/19a0c405-1cac-0939-61c1-6a288172626d/file_cropped.png/1000x1000bb.jpg", "src": 5}], "SN": [{"a": "AMADEUS", "t": "Dugi-dugi", "pts": 588.0, "yt": "DEufrDXI5T8", "dz": "4266302112", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/10/41/ec/1041eca9-803e-57e8-95fb-5cda174b152e/file_cropped.png/1000x1000bb.jpg", "src": 6}, {"a": "AMADEUS", "t": "Namm nama la", "pts": 549.3, "yt": "Kuepp80dkJw", "dz": "4266302172", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/10/41/ec/1041eca9-803e-57e8-95fb-5cda174b152e/file_cropped.png/1000x1000bb.jpg", "src": 6}, {"a": "Momo Dieng", "t": "Raay", "pts": 510.2, "yt": "eWGKM9xj1tU", "dz": "4295650592", "p": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/08/69/25/0869253a-9043-579f-9eeb-95353305b6ff/pr_source.png/1000x1000bb.jpg", "src": 6}, {"a": "AMADEUS", "t": "Ngëneel", "pts": 479.5, "yt": "44hVLCFPxx4", "dz": "4266302182", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/10/41/ec/1041eca9-803e-57e8-95fb-5cda174b152e/file_cropped.png/1000x1000bb.jpg", "src": 6}, {"a": "Viviane Chidid", "t": "Nous 2 (feat. Wally B. Seck)", "pts": 375.5, "yt": "mPME3hyBMlU", "dz": "4136418071", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/Viviane_Chidid%2C_2013_%28cropped%29.jpg?width=1000", "src": 5}], "NG": [{"a": "Rema", "t": "Oh No", "pts": 521.0, "yt": "xRVY1QfwMis", "dz": "4250678831", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/15/49/6d/15496d51-2bf2-317c-fd87-ab0a785ce533/ami-identity-9e987f39368f9dd37966c136969aac14-2026-08-31T06-31-15.074Z_cropped.png/1000x1000bb.jpg", "src": 6}, {"a": "Kizz Daniel", "t": "Owo Oluwa (feat. Young Jonn, Krizbeatz & Wave Choir)", "pts": 520.3, "yt": "oObngv_N7b8", "dz": "4257488141", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/a0/74/d1/a074d1a9-ff2d-a607-f63f-30721b88a29b/file_cropped.png/1000x1000bb.jpg", "src": 6}, {"a": "Ayra Starr", "t": "Heaven Baby (feat. ZAYN)", "pts": 471.3, "yt": "bb8w9l46TmI", "dz": "4209009742", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/3a/9a/63/3a9a6391-7c11-85a5-53cc-56e1d44bc000/ami-identity-34043dbeadeb9bd7ff2463d570f34c82-2026-08-13T21-58-08.742Z_cropped.png/1000x1000bb.jpg", "src": 4}, {"a": "Seyi Vibez", "t": "Ilome", "pts": 427.3, "yt": "8P-z0n3nUnU", "dz": "4250594661", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/56/f0/17/56f017c9-45b8-f0c9-0199-436c353fd57d/file_cropped.png/1000x1000bb.jpg", "src": 4}, {"a": "Davido", "t": "B4 B4", "pts": 424.5, "yt": "oZsYE5a_x-c", "dz": "4168302732", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/Davido_2024_%28cropped%29.jpg?width=1000", "src": 5}], "BF": [{"a": "Victor Démé", "t": "Djôn'Maya", "pts": 100.0, "yt": null, "dz": "477525322", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/ae/68/b5/ae68b509-3baf-cc93-8eaa-ff8237638c1b/pr_source.png/1000x1000bb.jpg", "src": 1}, {"a": "Greg Burkimbila", "t": "Wonré", "pts": 100.0, "yt": "DUFrcvCviL4", "dz": "3361295251", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/37/85/93/3785932e-d01b-504f-25d3-b37da208e9ab/file_cropped.png/1000x1000bb.jpg", "src": 1}, {"a": "Kristifay", "t": "NON", "pts": 99.7, "yt": "cZcfaKlUQMc", "dz": "3526205321", "p": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/39/1d/91/391d916f-c818-01d8-ad1e-85e45c3dd858/artwork.jpg/1000x1000bb.jpg", "src": 2}, {"a": "Reman", "t": "Mockingbird", "pts": 99.0, "yt": null, "dz": "2328017825", "p": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/50/62/c4/5062c4a2-e9a5-2179-a19d-f629894ee499/199806731017.jpg/1000x1000bb.jpg", "src": 1}, {"a": "Victor Démé", "t": "Chérie", "pts": 98.0, "yt": null, "dz": "477525342", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/ae/68/b5/ae68b509-3baf-cc93-8eaa-ff8237638c1b/pr_source.png/1000x1000bb.jpg", "src": 1}], "CV": [{"a": "Cesária Evora", "t": "Angola", "pts": 391.3, "yt": "ky5yjog0O0k", "dz": "71160381", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/3a/6a/79/3a6a792e-ff90-0fa3-4d4d-68083103552d/mzl.dyxhmsnx.png/1000x1000bb.jpg", "src": 2}, {"a": "Cesária Evora", "t": "Sodade", "pts": 376.3, "yt": "ku_WZoTtT8Q", "dz": "7696449", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/3a/6a/79/3a6a792e-ff90-0fa3-4d4d-68083103552d/mzl.dyxhmsnx.png/1000x1000bb.jpg", "src": 2}, {"a": "Cesária Evora", "t": "Petit pays", "pts": 364.3, "yt": "DeLUGn7qYP8", "dz": "15798849", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/3a/6a/79/3a6a792e-ff90-0fa3-4d4d-68083103552d/mzl.dyxhmsnx.png/1000x1000bb.jpg", "src": 2}, {"a": "Mayra Andrade", "t": "Afeto", "pts": 362.7, "yt": "B5PsIN_FkF4", "dz": "564573042", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/b7/28/a5/b728a555-965f-641a-b20c-dcb7c67c7503/pr_source.png/1000x1000bb.jpg", "src": 2}, {"a": "Mayra Andrade", "t": "Tan Kalakatan", "pts": 327.3, "yt": "EJpfIGVfuyg", "dz": "618577722", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/b7/28/a5/b728a555-965f-641a-b20c-dcb7c67c7503/pr_source.png/1000x1000bb.jpg", "src": 2}], "GN": [{"a": "Straiker", "t": "Daande Jamaa", "pts": 180.8, "yt": "M_ZXQdeYfFY", "dz": "4299467802", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/a6/42/80/a64280e0-4b46-8a75-24e5-3fc748e43249/file_cropped.png/1000x1000bb.jpg", "src": 1}, {"a": "Mory Kanté", "t": "Yeke Yeke", "pts": 136.0, "yt": "BVmS0SSSdWM", "dz": "1224711772", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/95/8a/fa/958afa51-a20e-ab36-003f-62b6f82b95d3/mzl.vnxekfwv.jpg/1000x1000bb.jpg", "src": 1}, {"a": "Lyricson", "t": "Night and Day", "pts": 100.0, "yt": null, "dz": "8980031", "p": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/50/ba/04/50ba0466-54ad-ef7a-2a9c-7f7495088d61/cover.jpg/1000x1000bb.jpg", "src": 1}, {"a": "SAIFOND", "t": "Saifond Kali Feat Djelykaba Bintou (clip Officiel By Mintigui Prod", "pts": 100.0, "yt": "la5oNC_DbQ8", "dz": null, "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/ce/3d/79/ce3d7959-40b0-c0a7-fb11-cf5933aa61e0/file_cropped.png/1000x1000bb.jpg", "src": 1}, {"a": "Takana Zion", "t": "TRUST IN JAH", "pts": 99.5, "yt": null, "dz": "4228747322", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features126/v4/b5/3d/3a/b53d3a0c-5063-c125-cae6-75d745ff3794/mzl.mxwobube.jpg/1000x1000bb.jpg", "src": 1}], "ML": [{"a": "Oumou Sangaré", "t": "Sigi Kuruni", "pts": 212.0, "yt": "ajvpJ6wNQLU", "dz": "3750759332", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/%28Oumou_Sangar%C3%A9%29_De_la_poes%C3%ADa_a_la_m%C3%BAsica_de_ra%C3%ADz%2C_sonidos_de_la_segunda_noche_de_San_Isidro.jpg?width=1000", "src": 2}, {"a": "Sidiki Diabaté", "t": "Fais moi confiance", "pts": 192.0, "yt": "tAUs8R2RmTg", "dz": "125756472", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/d7/5c/9a/d75c9ae5-75ac-2372-0b6b-67cfce749150/mzl.ddrkzzbl.jpg/1000x1000bb.jpg", "src": 2}, {"a": "Tinariwen", "t": "Erghad Afewo", "pts": 189.5, "yt": "Snu2cGohYC4", "dz": "3608215772", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/dc/c8/d6/dcc8d63b-15bf-6aa6-d8d7-8af18cc9d172/ami-identity-95b762cf972796b6db2689d00aee081b-2026-01-21T15-38-47.849Z_cropped.png/1000x1000bb.jpg", "src": 2}, {"a": "Ali Farka Toure", "t": "Cherie", "pts": 185.0, "yt": "Ru0JGaroX-s", "dz": "3794172712", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/90/e7/e6/90e7e67c-4132-3333-02a3-be67b5eae7f2/mza_3939314906149442577.png/1000x1000bb.jpg", "src": 2}, {"a": "Sidiki Diabaté", "t": "Joyeux anniversaire", "pts": 175.5, "yt": "tOeR0Ll5gi8", "dz": "125756468", "p": "https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/d7/5c/9a/d75c9ae5-75ac-2372-0b6b-67cfce749150/mzl.ddrkzzbl.jpg/1000x1000bb.jpg", "src": 2}], "WA": [{"a": "Ayra Starr", "t": "Heaven Baby (feat. ZAYN)", "pts": 405.6, "yt": "8I19MflXzdk", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/3a/9a/63/3a9a6391-7c11-85a5-53cc-56e1d44bc000/ami-identity-34043dbeadeb9bd7ff2463d570f34c82-2026-08-13T21-58-08.742Z_cropped.png/1000x1000bb.jpg"}, {"a": "Asake", "t": "Gratitude", "pts": 340.1, "yt": "_yCEpmBsDq8", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/Asake_performing_in_a_Toronto_concert_%282024%29_%28cropped%29.png?width=1000"}, {"a": "Davido", "t": "B4 B4", "pts": 308.2, "yt": "wABKGOue59k", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/Davido_2024_%28cropped%29.jpg?width=1000"}, {"a": "Rema", "t": "Oh No", "pts": 301.1, "yt": "xRVY1QfwMis", "p": "https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/15/49/6d/15496d51-2bf2-317c-fd87-ab0a785ce533/ami-identity-9e987f39368f9dd37966c136969aac14-2026-08-31T06-31-15.074Z_cropped.png/1000x1000bb.jpg"}, {"a": "Asake", "t": "Forgiveness", "pts": 277.7, "yt": "SMa9snuL8tE", "p": "https://commons.wikimedia.org/wiki/Special:FilePath/Asake_performing_in_a_Toronto_concert_%282024%29_%28cropped%29.png?width=1000"}]}
+;
+const ICO = {"bell": "<path d=\"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9\"/><path d=\"M10.3 21a1.94 1.94 0 0 0 3.4 0\"/>", "calendar": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4\"/>", "share": "<circle cx=\"18\" cy=\"5\" r=\"3\"/><circle cx=\"6\" cy=\"12\" r=\"3\"/><circle cx=\"18\" cy=\"19\" r=\"3\"/><path d=\"m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98\"/>", "shuffle": "<path d=\"m18 14 4 4-4 4\"/><path d=\"m18 2 4 4-4 4\"/><path d=\"M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22\"/><path d=\"M2 6h1.9c1.5 0 2.9.9 3.6 2.2\"/><path d=\"M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8\"/>", "list-ordered": "<path d=\"M10 12h11M10 18h11M10 6h11M4 10h2M4 6h1v4M6 18H4c0-1 2-2 2-3s-1-1.5-2-1\"/>", "award": "<circle cx=\"12\" cy=\"8\" r=\"6\"/><path d=\"M15.477 12.89 17 22l-5-3-5 3 1.523-9.11\"/>", "message": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>", "gift": "<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7\"/><path d=\"M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5\"/>", "crown": "<path d=\"M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z\"/><path d=\"M5 21h14\"/>", "trending-up": "<path d=\"M22 7 13.5 15.5 8.5 10.5 2 17\"/><path d=\"M16 7h6v6\"/>", "sparkles": "<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\"/>", "star": "<path d=\"M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z\"/>", "landmark": "<path d=\"M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z\"/>", "heart": "<path d=\"M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z\"/>", "radio": "<circle cx=\"12\" cy=\"12\" r=\"2\"/><path d=\"M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14\"/>", "play": "<path d=\"M6 3l14 9-14 9z\"/>", "pause": "<rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"/><rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\"/>", "skip-forward": "<path d=\"M5 4l10 8-10 8z\"/><path d=\"M19 5v14\"/>", "skip-back": "<path d=\"M19 20 9 12l10-8z\"/><path d=\"M5 19V5\"/>", "volume": "<path d=\"M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z\"/><path d=\"M16 9a5 5 0 0 1 0 6M19.4 18.4a9 9 0 0 0 0-12.7\"/>", "map-pin": "<path d=\"M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/>", "users": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 6v6l4 2\"/>"};
+const NOMS = {TG:"Togo",BJ:"Bénin",GH:"Ghana",CI:"Côte d'Ivoire",SN:"Sénégal",NG:"Nigeria",BF:"Burkina Faso",CV:"Cap-Vert",GN:"Guinée",ML:"Mali",WA:"Afrique de l'Ouest"};
+const ico = (n, s) => `<svg class="ico" width="${s||22}" height="${s||22}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICO[n]||""}</svg>`;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fl = c => `../../public/assets/img/flags/${c.toLowerCase()}.svg`;
+const yt = id => id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : "";
+const ecart = L => L.length > 1 ? Math.round((L[0].pts - L[1].pts) / Math.max(1, L[0].pts) * 100) : 100;
+
+// leçons
+const L = [
+ ["L'ordre de passage se calcule", "L'Eurovision construit l'ordre des votes avec un algorithme pour garder le suspense, et révèle en dernier le pays qui menait.", "Les pays aux victoires nettes passent en premier, les courses serrées en dernier, puis le BIG 5.", "https://escbubble.com/2019/03/a-change-in-the-results-presentation-for-eurovision-2019/"],
+ ["La musique avant tout", "TRL et Top of the Pops sont des comptes à rebours de clips et de musique, qui finissent toujours par le N°1.", "Chaque appel de nom lance le clip officiel pendant une minute.", "https://en.wikipedia.org/wiki/Total_Request_Live"],
+ ["Des rubriques qui changent", "Top of the Pops 2 alternait le Top 10 avec des rubriques : « première fois », « succès du monde », « tubes de demain ».", "Cinq formats de scène, plus des rubriques courtes : Entrée du mois, Remontada, Tubes de demain (Buzz Chart).", "https://en.wikipedia.org/wiki/Top_of_the_Pops_2"],
+ ["Moitié prix, moitié contenu", "The Game Awards se compose environ pour moitié de prix et pour moitié de révélations. Le show est repris par des milliers de créateurs : 171 millions de diffusions en 2025.", "Les messages vidéo des artistes, et la diffusion du show par les artistes classés sur leurs propres comptes.", "https://www.techradar.com/gaming/the-game-awards-announces-an-estimated-171-million-global-livestreams-of-the-full-broadcast-breaking-the-shows-record-for-its-11th-year"],
+ ["La pause avant le nom", "Le design graphique des SAG Awards est construit autour de la pause entre l'annonce des nominés et le nom du gagnant.", "Chaque scène a son silence (lumière qui baisse, battement) avant le N°1.", "https://oldbrief.promax.org/article/creative-mammals-designs-sag-awards-graphics-package"],
+ ["Accrocher tout de suite", "Pas de « bienvenue » au début : on accroche dans les premières secondes. On change de rythme toutes les 3 à 7 minutes, et on annonce les sondages à l'avance.", "On ouvre directement sur la première scène, le générique vient ensuite.", "https://blog.livereacting.com/7-live-streaming-tips-to-increase-watch-time-and-keep-viewers-engaged/"],
+];
+document.getElementById("lecons").innerHTML = L.map(([t, p, n, u]) => `<div class="carte lecon"><b>${t}</b><p>${p}</p><p class="nous"><span>Chez nous :</span> ${n}</p><p class="src"><a href="${u}" target="_blank" rel="noopener">Source</a></p></div>`).join("");
+
+// formats choisis par les données
+const pays = Object.keys(D).filter(k => k !== "WA");
+const meme = k => D[k][0].a === D[k][1].a;
+const F = [
+ ["Photo-finish", "trending-up", k => !meme(k) && ecart(D[k]) <= 4, "Moins de 5 % d'écart entre le N°1 et le N°2. Les deux clips jouent côte à côte avec une jauge de points, et le public vote avant la révélation."],
+ ["Le règne", "crown", k => meme(k), "Un même artiste occupe le N°1 et le N°2. La scène raconte sa domination, et on révèle lequel de ses titres l'emporte."],
+ ["Le couronnement", "award", k => ecart(D[k]) >= 15, "Le N°1 est loin devant. Pas de faux suspense : on monte vers un triomphe, le clip joue en entier et la distinction est remise en grand."],
+ ["Blind test", "volume", k => !meme(k) && ecart(D[k]) > 4 && ecart(D[k]) < 15, "On entend les cinq titres avant de voir les noms. Le public devine l'ordre en commentaire, puis les clips confirment."],
+ ["Les légendes", "landmark", k => ["ML","CV"].includes(k), "Le classement porte des classiques (Oumou Sangaré, Cesária Evora). La scène montre la place de ce patrimoine dans les écoutes d'aujourd'hui."],
+];
+document.getElementById("formats").innerHTML = F.map(([t, i, test, txt]) => {
+  const ex = pays.filter(test).map(k => `${NOMS[k]} : ${esc(D[k][0].a)}${D[k][1] ? " / " + esc(D[k][1].a) : ""} (écart ${ecart(D[k])} %)`);
+  return `<div class="carte format"><div class="h">${ico(i)}<b>${t}</b><span>${ex.length} pays ce mois-ci</span></div><div class="c">${txt}${ex.length ? `<div class="ex">${ex.join("<br>")}</div>` : ""}</div></div>`;
+}).join("");
+
+// écrans
+const NG = D.NG, TG = D.TG, BJ = D.BJ, WA = D.WA;
+const tel = (inner, live = "EN DIRECT") => `<div class="tel"><div class="scr"><div class="in">
+  <div class="bug"><i></i><div>CAURI CHARTS<small>MONTHLY SHOW</small></div></div><div class="live"><i></i>${live}</div>${inner}</div></div></div>`;
+const E = [
+ ["1 · L'ambiance du pays", "Quatre extraits du Top du Togo, pochettes floutées. Aucun nom encore.", tel(`
+   <div style="margin-top:18cqw" class="lbl">SCÈNE 2 · TOGO</div>
+   <div class="big" style="font-size:12cqw;margin-top:2cqw">ÉCOUTEZ…</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:3cqw;margin-top:6cqw">${TG.slice(0,4).map(e=>`<img class="ph flou" src="${esc(e.p)}" style="width:100%;aspect-ratio:1;border-radius:4cqw" alt="">`).join("")}</div>
+   <div class="onde" style="margin-top:6cqw">${Array.from({length:28},(_,i)=>`<i style="height:${20+Math.abs(Math.sin(i*1.7))*80}%"></i>`).join("")}</div>
+   <div class="verre" style="margin-top:auto;padding:3cqw 4cqw;font-weight:700;font-size:3.4cqw">Reconnais-tu les titres ? Réponds en commentaire</div>`)],
+ ["2 · Photo-finish", "Nigeria : Rema et Kizz Daniel à 0 % d'écart. La jauge bouge, le public vote.", tel(`
+   <div style="margin-top:14cqw;display:flex;align-items:center;gap:3cqw"><img class="fl" src="${fl('NG')}" alt=""><span class="big" style="font-size:7cqw">NIGERIA</span></div>
+   <div class="big grad" style="font-size:13cqw;margin-top:3cqw">PHOTO-FINISH</div>
+   ${NG.slice(0,2).map((e,i)=>`<div class="verre" style="margin-top:4cqw;padding:3cqw;display:flex;gap:3cqw;align-items:center"><img class="ph" src="${esc(e.p)}" style="width:17cqw;height:17cqw" alt=""><div style="flex:1;min-width:0"><div class="big" style="font-size:5.4cqw">${esc(e.a)}</div><div style="font:italic 600 3.6cqw 'Playfair Display';color:#D6DBFF">${esc(e.t)}</div><div class="jauge"><i style="width:${i?49:51}%"></i></div></div></div>`).join("")}
+   <div class="big" style="margin-top:auto;font-size:4.4cqw;text-align:center">0 % D'ÉCART · <span class="grad">QUI L'EMPORTE ?</span></div>`)],
+ ["3 · L'appel et le clip", "À l'appel du #3, le vrai clip joue une minute avec le nom à l'écran.", tel(`
+   <div style="margin-top:14cqw" class="lbl">BÉNIN · TOP 5</div>
+   <div class="big grad" style="font-size:30cqw">#3</div>
+   <div class="clip" style="margin-top:2cqw"><img src="${yt(BJ[2].yt)}" alt=""><span class="play">${ico('play',14)} CLIP OFFICIEL · 1:00</span></div>
+   <div class="big" style="font-size:7cqw;margin-top:4cqw">${esc(BJ[2].a)}</div><div style="font:italic 600 4.6cqw 'Playfair Display';color:#D6DBFF">${esc(BJ[2].t)}</div>
+   <div class="verre" style="margin-top:auto;padding:2.6cqw 3.6cqw;font-size:3cqw;font-weight:600">Relevé sur Deezer, Apple Music et YouTube · cauricharts.com</div>`)],
+ ["4 · Le silence", "La musique coupe et la lumière baisse avant le N°1.", tel(`
+   <div style="margin:auto;text-align:center"><div class="lbl">BÉNIN</div><div class="big" style="font-size:16cqw;margin-top:4cqw;opacity:.9">N°1</div>
+   <div style="display:flex;gap:4cqw;justify-content:center;margin-top:6cqw">${[0,1,2].map(()=>`<i style="width:4cqw;height:4cqw;border-radius:50%;background:linear-gradient(135deg,#7CC8FA,#7B5CFF);display:block"></i>`).join("")}</div></div>`)],
+ ["5 · Le N°1", "Révélation, clip, puis la distinction officielle.", tel(`
+   <div style="margin-top:12cqw;display:flex;align-items:center;gap:3cqw"><img class="fl" src="${fl('BJ')}" alt=""><span class="big" style="font-size:6.5cqw">BÉNIN · N°1</span></div>
+   <div class="clip" style="margin-top:5cqw"><img src="${yt(BJ[0].yt)}" alt=""><span class="play">${ico('play',14)} CLIP OFFICIEL</span></div>
+   <div class="big" style="font-size:10cqw;margin-top:5cqw">${esc(BJ[0].a)}</div><div style="font:italic 600 5cqw 'Playfair Display';color:#D6DBFF">${esc(BJ[0].t)}</div>
+   <div class="verre" style="margin-top:auto;padding:3cqw 4cqw;display:flex;gap:3cqw;align-items:center">${ico('award',40)}<div><div style="font-weight:800;font-size:3.2cqw;letter-spacing:.08em">DISTINCTION OFFICIELLE</div><div style="font-size:3cqw;color:#D6DBFF">Top 5 · Bénin · Octobre 2026</div></div></div>`)],
+ ["6 · Le tableau des pays", "Entre deux scènes, le tableau des N°1 déjà révélés, façon Eurovision.", tel(`
+   <div style="margin-top:14cqw" class="lbl">LE TABLEAU DE LA SOIRÉE</div>
+   <div class="big" style="font-size:9cqw;margin:2cqw 0 5cqw">LES N°1 RÉVÉLÉS</div>
+   <div class="verre tab" style="padding:4cqw">${["BJ","GN","ML","SN"].map((k,i)=>`<img class="fl" style="width:7cqw;height:7cqw" src="${fl(k)}" alt=""><span>${esc(D[k][0].a)}</span><span class="${i<3?'on':''}">${i<3?'révélé':'…'}</span>`).join("")}
+   ${["TG","GH","NG"].map(k=>`<img class="fl" style="width:7cqw;height:7cqw;opacity:.5" src="${fl(k)}" alt=""><span style="opacity:.5">${NOMS[k]}</span><span style="opacity:.5">à venir</span>`).join("")}</div>`)],
+];
+document.getElementById("ecrans").innerHTML = E.map(([t,s,h]) => `<figure>${h}<figcaption><b>${t}</b><span>${s}</span></figcaption></figure>`).join("");
+
+// ordre de passage (écart décroissant ; même artiste au N°1 et N°2 au milieu ; BIG 5 à la fin)
+const ordre = pays.slice().sort((a,b) => ecart(D[b]) - ecart(D[a]));
+document.getElementById("ordre").innerHTML = ordre.map((k,i) => `<tr><td>${i+1}</td><td>${NOMS[k]}<small>${esc(D[k][0].a)} devant ${esc(D[k][1].a)}</small></td><td>${ecart(D[k])} % d'écart</td></tr>`).join("") +
+  `<tr><td>Final</td><td>BIG 5 · Afrique de l'Ouest<small>${esc(WA[0].a)} devant ${esc(WA[1].a)}</small></td><td>${ecart(WA)} % d'écart</td></tr>`;
+
+// conducteur
+const C = [
+ ["0:00","Ouverture à froid","On entre directement dans la première scène, sans « bienvenue » : le son du premier pays, dans le noir.","6 min"],
+ ["6:00","Générique et enjeu de la soirée","Logo, « 10 pays, 1 BIG 5 ». Le Prix du public est annoncé.","1 min"],
+ ["7:00","Scènes 2 et 3","Couronnement, puis Les légendes.","13 min"],
+ ["20:00","Rubrique : Tubes de demain","Les titres qui montent le plus (Buzz Chart), un extrait chacun.","3 min"],
+ ["23:00","Sondage annoncé et Moment Supporters","Vote du pays suivant, cadeaux et noms à l'écran.","3 min"],
+ ["26:00","Scènes 4 et 5","Blind test, puis Le règne.","13 min"],
+ ["39:00","Le Flash et le tableau des pays","Les autres N°1 en 90 s, puis le tableau complet.","3 min"],
+ ["42:00","Scène 6 : Photo-finish","La course la plus serrée de la soirée.","5 min"],
+ ["47:00","Prix spéciaux et Prix du public","Biggest Climber, Fresh, Artist of the Month, Legend, et le vote du public.","3 min"],
+ ["50:00","BIG 5","Afrique de l'Ouest #5 → #1, le clip du N°1 en entier, puis la clôture.","6 min"],
+];
+document.getElementById("cond").innerHTML = C.map(([t,a,b,d]) => `<tr><td>${t}</td><td><b>${a}</b><small>${b}</small></td><td>${d}</td></tr>`).join("");
+
+// sources
+const S = [
+ ["Eurovision : nouvelle présentation des résultats (2019)", "https://escbubble.com/2019/03/a-change-in-the-results-presentation-for-eurovision-2019/"],
+ ["Eurovision : comment se marquent les points (ESC Insight)", "https://escinsight.com/2022/05/05/how-do-you-score-points-at-the-eurovision-song-contest/"],
+ ["Top of the Pops", "https://en.wikipedia.org/wiki/Top_of_the_Pops"], ["Top of the Pops 2", "https://en.wikipedia.org/wiki/Top_of_the_Pops_2"],
+ ["Total Request Live", "https://en.wikipedia.org/wiki/Total_Request_Live"],
+ ["The Game Awards 2025 : 171 millions de diffusions", "https://www.techradar.com/gaming/the-game-awards-announces-an-estimated-171-million-global-livestreams-of-the-full-broadcast-breaking-the-shows-record-for-its-11th-year"],
+ ["The Game Awards : moitié prix, moitié révélations", "https://videogameschronicle.com/news/keighley-explains-why-tgas-are-moving-away-from-world-premiere-branding"],
+ ["SAG Awards : habillage graphique (Creative Mammals)", "https://oldbrief.promax.org/article/creative-mammals-designs-sag-awards-graphics-package"],
+ ["Trace Awards & Festival", "https://en.wikipedia.org/wiki/Trace_Awards_%26_Festival"],
+ ["Tenir l'audience d'un live (LiveReacting)", "https://blog.livereacting.com/7-live-streaming-tips-to-increase-watch-time-and-keep-viewers-engaged/"],
+ ["Musique protégée en live (LiveReacting)", "https://blog.livereacting.com/how-to-play-music-in-live-stream-without-copyright/"],
+ ["Intégrer des vidéos YouTube (aide YouTube)", "https://support.google.com/youtube/answer/171780"],
+ ["Production des remises de prix en direct", "https://www.thinkinglion.net/post/how-live-broadcast-production-works-behind-award-shows"],
+];
+document.getElementById("sources").innerHTML = S.map(([t,u]) => `<li><a href="${u}" target="_blank" rel="noopener">${t}</a></li>`).join("");
+</script>
+</body>
+</html>

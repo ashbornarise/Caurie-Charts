@@ -15,9 +15,9 @@
         <div class="show-verre"><b data-u="s">–</b><span>{{ t('show.seconds') }}</span></div>
     </div>
     <div class="show-actions">
-        <a class="show-btn" href="#rappel">🔔 {{ t('show.remind_me') }}</a>
-        <a class="show-btn show-btn--verre" href="{{ path('show/agenda.ics') }}">📅 {{ t('show.add_calendar') }}</a>
-        <a class="show-btn show-btn--verre" href="https://wa.me/?text={{ (t('show.share_text') ~ ' ' ~ url('show'))|urlencode }}" target="_blank" rel="noopener">{{ t('show.share') }}</a>
+        <a class="show-btn" href="#rappel">{{ icon('bell', 18) }}{{ t('show.remind_me') }}</a>
+        <a class="show-btn show-btn--verre" href="{{ path('show/agenda.ics') }}">{{ icon('calendar', 18) }}{{ t('show.add_calendar') }}</a>
+        <a class="show-btn show-btn--verre" href="https://wa.me/?text={{ (t('show.share_text') ~ ' ' ~ url('show'))|urlencode }}" target="_blank" rel="noopener">{{ icon('share', 18) }}{{ t('show.share') }}</a>
     </div>
     {% if show.trailer_url %}
     <div class="show-video show-verre">
@@ -30,12 +30,12 @@
     <p class="k">{{ t('show.program_kicker') }}</p>
     <h2>{{ t('show.program_title') }}</h2>
     <div class="show-grid">
-        <div class="show-verre"><div class="show-ico">🎰</div><b>{{ t('show.p1_title') }}</b><p>{{ t('show.p1_text') }}</p></div>
-        <div class="show-verre"><div class="show-ico">🔢</div><b>{{ t('show.p2_title') }}</b><p>{{ t('show.p2_text') }}</p></div>
-        <div class="show-verre"><div class="show-ico">🏅</div><b>{{ t('show.p3_title') }}</b><p>{{ t('show.p3_text') }}</p></div>
-        <div class="show-verre"><div class="show-ico">🗳</div><b>{{ t('show.p4_title') }}</b><p>{{ t('show.p4_text') }}</p></div>
-        <div class="show-verre"><div class="show-ico">🎁</div><b>{{ t('show.p5_title') }}</b><p>{{ t('show.p5_text') }}</p></div>
-        <div class="show-verre"><div class="show-ico">👑</div><b>{{ t('show.p6_title') }}</b><p>{{ t('show.p6_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">{{ icon('shuffle', 22) }}</div><b>{{ t('show.p1_title') }}</b><p>{{ t('show.p1_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">{{ icon('list-ordered', 22) }}</div><b>{{ t('show.p2_title') }}</b><p>{{ t('show.p2_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">{{ icon('award', 22) }}</div><b>{{ t('show.p3_title') }}</b><p>{{ t('show.p3_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">{{ icon('message', 22) }}</div><b>{{ t('show.p4_title') }}</b><p>{{ t('show.p4_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">{{ icon('gift', 22) }}</div><b>{{ t('show.p5_title') }}</b><p>{{ t('show.p5_text') }}</p></div>
+        <div class="show-verre"><div class="show-ico">{{ icon('crown', 22) }}</div><b>{{ t('show.p6_title') }}</b><p>{{ t('show.p6_text') }}</p></div>
     </div>
 </section>
 
@@ -67,7 +67,7 @@
         <label class="show-check{{ ' field--error' if errors.get('consent') }}"><input type="checkbox" name="consent" value="1" {{ 'checked' if old.get('consent') }}>
             <span>{{ t('show.form_consent') }} <a href="{{ path('confidentialite') }}">{{ t('legal.confidentialite') }}</a>.</span></label>
         {% if errors.get('consent') %}<p class="field__error">{{ errors.consent }}</p>{% endif %}
-        <button class="button" type="submit">🔔 {{ t('show.form_submit') }}</button>
+        <button class="button" type="submit">{{ icon('bell', 18) }} {{ t('show.form_submit') }}</button>
         {% if count >= 20 %}<p class="show-count">{{ t('show.count', n=count) }}</p>{% endif %}
     </form>
 </section>

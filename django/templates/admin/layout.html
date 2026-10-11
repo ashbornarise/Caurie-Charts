@@ -1,7 +1,7 @@
 {%- set current = request_path() -%}
 {%- set nav = [('admin', t('admin.nav_dashboard')), ('admin/classements', t('admin.nav_charts')), ('admin/declarations', t('admin.nav_submissions')),
                ('admin/import', t('admin.nav_import')), ('admin/releves', t('admin.nav_snapshots')), ('admin/catalogue', t('admin.nav_catalog')),
-               ('admin/actualites', t('admin.nav_news')), ('admin/actu-artistes', 'Actu des artistes'), ('admin/distinctions', 'Distinctions'), ('admin/posts', t('admin.nav_posts')), ('admin/partenaires', t('admin.nav_partners')),
+               ('admin/actualites', t('admin.nav_news')), ('admin/actu-artistes', 'Actu des artistes'), ('admin/distinctions', 'Distinctions'), ('admin/show', 'Show'), ('admin/posts', t('admin.nav_posts')), ('admin/partenaires', t('admin.nav_partners')),
                ('admin/messages', t('admin.nav_messages')), ('admin/analyses', 'Analyses'), ('admin/controles', 'Contrôles')] -%}
 {%- if user and user.role == 'admin' %}{% do nav.extend([('admin/formule', t('admin.nav_formula')), ('admin/journal', t('admin.nav_audit')), ('admin/equipe', 'Équipe')]) %}{% endif -%}
 <!doctype html>

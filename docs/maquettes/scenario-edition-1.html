@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scénario Édition 1</title>
+<style>
+@font-face { font-family:"Poppins"; font-weight:500; src:url(../../public/assets/show/fonts/poppins-500.woff2) format("woff2"); }
+@font-face { font-family:"Poppins"; font-weight:700; src:url(../../public/assets/show/fonts/poppins-700.woff2) format("woff2"); }
+@font-face { font-family:"Poppins"; font-weight:800; src:url(../../public/assets/show/fonts/poppins-800.woff2) format("woff2"); }
+@font-face { font-family:"Poppins"; font-weight:900; src:url(../../public/assets/show/fonts/poppins-900.woff2) format("woff2"); }
+:root { --nuit:#0A0E2A; --nuit2:#171148; --ciel:#7CC8FA; --ciel2:#3BA3F0; --violet:#7B5CFF; --lilas:#B496FF; --texte:#14121F; --doux:#555066; --page:#F6F8FD; --carte:#FFFFFF; --ligne:rgba(20,18,31,.09); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --texte:#EEEBFF; --doux:#B4AED3; --page:#0E0D1C; --carte:#18162F; --ligne:rgba(255,255,255,.09); } }
+:root[data-theme="dark"] { --texte:#EEEBFF; --doux:#B4AED3; --page:#0E0D1C; --carte:#18162F; --ligne:rgba(255,255,255,.09); }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:Poppins, system-ui, sans-serif; color:var(--texte); background:var(--page); line-height:1.55; font-size:15.5px; overflow-x:hidden; }
+.wrap { max-width:1160px; margin:0 auto; padding:0 18px; }
+a { color:var(--violet); }
+.grad { background:linear-gradient(120deg, var(--ciel), var(--lilas)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+header { color:#fff; padding:60px 0 46px; background:radial-gradient(60% 70% at 85% 0%, rgba(124,200,250,.35), transparent 60%), radial-gradient(50% 70% at 0% 100%, rgba(123,92,255,.45), transparent 60%), linear-gradient(180deg, var(--nuit), var(--nuit2)); }
+.pill { display:inline-block; padding:6px 14px; border-radius:99px; font-weight:700; font-size:12px; letter-spacing:.14em; text-transform:uppercase; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.25); }
+h1 { font-weight:900; font-size:clamp(34px,6vw,72px); line-height:1; margin:16px 0 12px; letter-spacing:-.02em; }
+header p { color:#D6DBFF; max-width:820px; font-size:17px; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+.chips span { padding:8px 14px; border-radius:99px; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); font-weight:600; font-size:13.5px; }
+nav.sommaire { position:sticky; top:0; z-index:5; background:var(--page); border-bottom:1px solid var(--ligne); }
+nav.sommaire .wrap { display:flex; gap:6px; overflow-x:auto; padding-top:10px; padding-bottom:10px; }
+nav.sommaire a { white-space:nowrap; text-decoration:none; font-weight:700; font-size:13px; padding:6px 12px; border-radius:99px; background:var(--carte); border:1px solid var(--ligne); color:var(--texte); }
+section { padding:46px 0 10px; }
+.k { font-weight:700; letter-spacing:.24em; font-size:12px; text-transform:uppercase; color:var(--violet); }
+h2 { font-weight:900; font-size:clamp(26px,3.8vw,40px); line-height:1.1; margin:6px 0 12px; }
+h3 { font-weight:800; font-size:19px; margin:24px 0 8px; }
+p.intro { color:var(--doux); max-width:820px; margin-bottom:18px; }
+.carte { background:var(--carte); border:1px solid var(--ligne); border-radius:18px; padding:18px 20px; }
+.grille { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; }
+.grille .carte b { display:block; margin-bottom:4px; }
+.grille .carte p { color:var(--doux); font-size:14.5px; }
+.tab { overflow-x:auto; border-radius:16px; border:1px solid var(--ligne); background:var(--carte); }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th { text-align:left; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--doux); padding:10px 12px; border-bottom:1px solid var(--ligne); white-space:nowrap; }
+td { padding:10px 12px; border-bottom:1px solid var(--ligne); vertical-align:top; }
+tr:last-child td { border-bottom:0; }
+td.h { font-weight:800; color:var(--violet); white-space:nowrap; }
+tr.pause td { background:rgba(123,92,255,.08); }
+tr.resp td { background:rgba(124,200,250,.10); }
+tr.acte td { background:linear-gradient(90deg, var(--nuit), var(--nuit2)); color:#fff; font-weight:800; letter-spacing:.06em; }
+.tag { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:99px; margin:1px 2px; background:rgba(123,92,255,.12); color:var(--violet); }
+.tag.s { background:rgba(59,163,240,.14); color:var(--ciel2); }
+.alerte { border-left:5px solid var(--violet); }
+.alerte li, .liste li { margin:7px 0 0 18px; color:var(--doux); }
+.alerte li b, .liste li b { color:var(--texte); }
+.rouge { border-left-color:#e0446a; }
+.legende { font-size:13px; color:var(--doux); margin-top:8px; }
+footer { padding:40px 0 70px; color:var(--doux); font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <span class="pill">Scénario complet · de A à Z</span>
+    <h1>THE <span class="grad">MONTHLY SHOW</span> · ÉDITION 1</h1>
+    <p>La remise des prix Cauri Charts en direct, samedi 7 novembre 2026. Avant-show à 19 h 30, émission de 20 h 00 à 23 h 45, après-show jusqu'à 00 h 15 (GMT). Ce document réunit le travail de quatre spécialistes : conducteur, interaction avec le public, habillage lumière et son, droits et conformité.</p>
+    <div class="chips"><span>3 h 45 d'émission</span><span>10 pays · 10 N°1</span><span>4 prix spéciaux</span><span>BIG 5 en finale</span><span>6 pauses du public</span><span>3 blocs de clips</span><span>Sans animateur ni voix off</span></div>
+  </div>
+</header>
+<nav class="sommaire"><div class="wrap">
+  <a href="#principes">Principes</a><a href="#arc">Arc</a><a href="#conducteur">Conducteur</a><a href="#public">Distinctions du public</a><a href="#vote">Vote</a>
+  <a href="#plateau">Plateau</a><a href="#segments">Segments</a><a href="#son">Son</a><a href="#scenes">10 scènes</a><a href="#reseaux">Site / réseaux</a>
+  <a href="#equipe">Équipe</a><a href="#planb">Plans B</a><a href="#droits">Droits</a><a href="#todo">À faire</a>
+</div></nav>
+
+<section class="wrap" id="principes">
+  <div class="k">1 · Les principes</div>
+  <h2>Huit règles qui commandent tout</h2>
+  <div class="grille">
+    <div class="carte"><b>1. L'émission parle sans voix</b><p>Pas d'animateur, pas de voix off. Tout passe par le texte à l'écran, la lumière, les clips, les bruitages et le public. Chaque son a son événement lumineux : on comprend aussi sans le son.</p></div>
+    <div class="carte"><b>2. Le show complet est sur le site</b><p>cauricharts.com/show joue les clips officiels dans le lecteur YouTube intégré. Les réseaux reçoivent la version « plateau » : jamais de clip ni de musique protégée, et un renvoi vers le site.</p></div>
+    <div class="carte"><b>3. Des données réelles, gelées à J-3</b><p>Aucun chiffre ne passe à l'écran s'il ne sort pas de la base. Les Top 5 et les distinctions sont vérifiés deux fois.</p></div>
+    <div class="carte"><b>4. Le vote du public ne touche jamais aux classements</b><p>Il décide seulement des catégories du public, toujours marquées « Vote du public ». Seul le site compte des voix officielles. Les commentaires des réseaux font l'ambiance.</p></div>
+    <div class="carte"><b>5. Un cadeau ne vaut jamais une voix</b><p>On remercie les cadeaux sans contrepartie. Il n'y a ni classement des donateurs, ni avantage lié à un don : c'est un risque de « gift baiting » et un risque juridique.</p></div>
+    <div class="carte"><b>6. Ne pas tout remplir</b><p>Environ 25 % du temps, l'écran ne montre que le clip et le logo de coin. Il y a trois blocs de clips « respiration ». Au moins trois clips de N°1 sont joués en entier, sans rien autour.</p></div>
+    <div class="carte"><b>7. La loi du 3 et du contraste</b><p>Un même mécanisme ne revient pas avant 3 segments. Chaque segment s'oppose au précédent sur au moins 2 axes : plein ou vide, rapide ou lent, bleu ou violet, gros plan ou plan large, musique ou silence.</p></div>
+    <div class="carte"><b>8. Garder le meilleur pour la fin</b><p>Le platine iridescent ne sert qu'aux N°1 et au BIG 5. Le plan large du plateau, les 12 projecteurs et la fumée n'apparaissent qu'en finale. La soirée monte parce qu'on a gardé ces éléments en réserve.</p></div>
+  </div>
+</section>
+
+<section class="wrap" id="arc">
+  <div class="k">2 · L'arc dramatique</div>
+  <h2>Cinq temps, une montée continue</h2>
+  <div class="tab"><table>
+    <tr><th>Acte</th><th>Horaire</th><th>Titre</th><th>Intention</th></tr>
+    <tr><td class="h">Prologue</td><td>19:30 – 20:00</td><td><b>La salle se remplit</b></td><td>Faire venir le public, lui apprendre à participer et ouvrir les pronostics.</td></tr>
+    <tr><td class="h">Acte I</td><td>20:00 – 21:00</td><td><b>L'éveil</b></td><td>Victoires nettes d'abord, puis FRESH OF THE MONTH. Rythme rapide pour montrer que le show tient ses promesses.</td></tr>
+    <tr><td class="h">Acte II</td><td>21:04 – 22:00</td><td><b>Le voyage</b></td><td>Formats variés (Blind test, Les légendes, Le règne), LEGEND, la carte qui s'agrandit, la mi-temps, BIGGEST CLIMBER.</td></tr>
+    <tr><td class="h">Acte III</td><td>22:04 – 23:00</td><td><b>La course</b></td><td>Les photo-finish avec vote du public, puis le Top 20 Afrique de l'Ouest de #20 à #6.</td></tr>
+    <tr><td class="h">Acte IV</td><td>23:04 – 23:45</td><td><b>Le sacre</b></td><td>ARTIST OF THE MONTH, puis le BIG 5 et le N°1 de l'Afrique de l'Ouest.</td></tr>
+    <tr><td class="h">Épilogue</td><td>23:45 – 00:15</td><td><b>La fête continue</b></td><td>Palmarès, boucle des N°1, partages. De quoi nourrir la diffusion du lendemain.</td></tr>
+  </table></div>
+  <p class="legende">Créneaux des pays, attribués à J-3 sur les données gelées. Pays A et B : les plus grands écarts (Couronnement). I et J : écarts sous 5 % (Photo-finish), le plus serré en dernier. G : même artiste N°1 et N°2 (Le règne). C : un pays dont les 5 titres ont un clip (Blind test). E ou F : des classiques installés (Les légendes). Jamais deux formats identiques à la suite. On alterne francophone, anglophone et lusophone.</p>
+</section>
+
+<section class="wrap" id="conducteur">
+  <div class="k">3 · Le conducteur</div>
+  <h2>Minute par minute</h2>
+  <p class="intro"><span class="tag s">SITE</span> : version complète avec les clips YouTube intégrés. <span class="tag">RS</span> : version plateau pour TikTok, Instagram et Facebook, sans musique protégée. Le code « P0 », « P3 »… renvoie aux états de plateau de la section 6. Les noms et les chiffres sont remplis depuis la base à J-3.</p>
+  <div class="tab"><table>
+    <tr><th>Heure</th><th>Durée</th><th>Segment</th><th>À l'écran</th><th>Son</th><th>Public</th></tr>
+    <tr class="acte"><td colspan="6">AVANT-SHOW · P0 Veille</td></tr>
+    <tr><td class="h">19:30</td><td>10′</td><td><b>Mire d'attente</b></td><td>Plateau au repos, deux projecteurs qui balaient lentement, compte à rebours, logo.</td><td>Lit de veille original, très bas.</td><td>« D'où regardez-vous ? » Les pays cités s'allument sur la carte.</td></tr>
+    <tr><td class="h">19:40</td><td>3′</td><td><b>Comment participer</b></td><td>Trois cartes avec icônes au trait : commenter, voter « 1 » ou « 2 », pronostiquer le N°1 de l'Afrique de l'Ouest sur le site (QR code). Ce tutoriel repasse à 19:52.</td><td>Un tic de verre par carte.</td><td>Création de compte sur le site.</td></tr>
+    <tr><td class="h">19:43</td><td>5′</td><td><b>Le mois en chiffres</b></td><td>10 pays classés, 6 bientôt classés, nombres réels de titres et d'artistes suivis.</td><td>Lit de veille.</td><td>—</td></tr>
+    <tr><td class="h">19:48</td><td>7′</td><td><b>Ouverture des pronostics</b></td><td>« Qui sera N°1 de l'Afrique de l'Ouest ? Pronostic sur le site avant 20 h 00. »</td><td>Montée lente.</td><td>Pronostics horodatés.</td></tr>
+    <tr class="pause"><td class="h">19:55</td><td>2′</td><td><b>Distinction P-001 · Premier au rendez-vous</b></td><td>Pseudo du premier compte à valider « je suis là ».</td><td>Carillon.</td><td>Badge sur le site.</td></tr>
+    <tr><td class="h">19:57</td><td>3′</td><td><b>Compte à rebours final</b></td><td>Chiffres géants, la lumière baisse.</td><td>Montée jusqu'au noir.</td><td>« Restez, ça commence. »</td></tr>
+    <tr class="acte"><td colspan="6">ACTE I · L'ÉVEIL</td></tr>
+    <tr><td class="h">20:00</td><td>40″</td><td><b>Ouverture à froid</b> · P4 → P5</td><td>2 s de noir, une phrase écrite lettre par lettre : « Ce soir, 10 pays couronnent leur N°1. », puis un éclair blanc.</td><td>Impact (sub et verre).</td><td>—</td></tr>
+    <tr><td class="h">20:01</td><td>1′</td><td><b>Générique</b> · P1</td><td>Les panneaux de verre pivotent pour former « CAURI CHARTS · THE MONTHLY SHOW · Édition 1 », puis 3 lignes de programme.</td><td>Thème original avec le motif « Cauri » à la kora.</td><td>—</td></tr>
+    <tr><td class="h">20:02</td><td>2′</td><td><b>Ce soir</b></td><td>La carte s'allume pays par pays. Les 6 pays bientôt classés sont en pointillé. 10 N°1, 4 prix, le BIG 5.</td><td>Lit pulsé.</td><td>« Votre pays est-il sur la carte ? »</td></tr>
+    <tr><td class="h">20:04</td><td>7′</td><td><b>Scène 1 · Pays A · Le couronnement</b></td><td>Ambiance → enjeu → #5 à #2 (clip d'une minute chacun sur SITE) → silence → N°1, clip long et distinction.</td><td>Signatures « Le Passage » et « Le Lancer ».</td><td>Pronostic pendant l'ambiance.</td></tr>
+    <tr><td class="h">20:11</td><td>7′</td><td><b>Scène 2 · Pays B · victoire nette</b></td><td>Format v2, autre façon d'appeler (Escalier express) et autre révélation.</td><td>Idem.</td><td>Pronostic.</td></tr>
+    <tr><td class="h">20:18</td><td>8′</td><td><b>Prix FRESH OF THE MONTH</b> · P6</td><td>Critère affiché : « sorti depuis moins de 8 semaines ». Nommés de #5 à #2, silence, lauréat avec clip et distinction (liseré violet).</td><td>Annonce du prix sur le motif.</td><td>« Lequel avez-vous découvert ? »</td></tr>
+    <tr><td class="h">20:26</td><td>4′</td><td><b>Ouverture du vote « Clip du mois (vote du public) »</b> · P9</td><td>« Votez toute la soirée. Ce vote ne change aucun classement. » QR code.</td><td>« L'Urne ».</td><td>Vote ouvert jusqu'à 22:58.</td></tr>
+    <tr class="pause"><td class="h">20:30</td><td>4′</td><td><b>PAUSE 1 · P-002 Commentaire de la demi-heure</b> · P7</td><td>Le commentaire choisi est cité en grand, sur verre.</td><td>« La Respiration », puis « Le Verdict ».</td><td>Choix de l'équipe, avec une grille annoncée.</td></tr>
+    <tr class="acte"><td colspan="6">ACTE II · LE VOYAGE</td></tr>
+    <tr><td class="h">20:34</td><td>8′</td><td><b>Scène 3 · Pays C · Blind test</b></td><td>Cinq pochettes floutées numérotées de A à E. Le public devine l'ordre, puis on révèle de #5 à #1.</td><td>Lit percussif original, calé sur le tempo de chaque titre.</td><td>« Tapez votre ordre : C-A-E-B-D. »</td></tr>
+    <tr class="resp"><td class="h">20:42</td><td>8′</td><td><b>RESPIRATION 1 · Replay en musique</b> · P8</td><td>Uniquement des clips déjà révélés, avec une simple bande titre et artiste.</td><td>Le clip seul (SITE). Lit original (RS).</td><td>Libre.</td></tr>
+    <tr><td class="h">20:50</td><td>7′</td><td><b>Scène 4 · Pays D</b></td><td>Format v2. Appel en Triptyque.</td><td>—</td><td>Pronostic.</td></tr>
+    <tr><td class="h">20:57</td><td>3′</td><td><b>Le tableau des N°1</b> · P1</td><td>Les 4 N°1 révélés, façon Eurovision.</td><td>« Clac » de verre.</td><td>—</td></tr>
+    <tr class="pause"><td class="h">21:00</td><td>4′</td><td><b>PAUSE 2 · P-003 Le pays qui fait le plus de bruit</b></td><td>La carte s'allume selon les votants uniques de chaque pays sur le site.</td><td>« Le Verdict ».</td><td>Visuel « Pays le plus engagé ».</td></tr>
+    <tr><td class="h">21:04</td><td>8′</td><td><b>Prix LEGEND</b> · P6</td><td>« Le titre installé le plus longtemps », avec la durée réelle. Habillage plus chaud et plus lent.</td><td>Motif au piano.</td><td>« Quel souvenir vous rappelle ce titre ? »</td></tr>
+    <tr><td class="h">21:12</td><td>7′</td><td><b>Scène 5 · Pays E · Les légendes</b></td><td>Révélation par carte retournée, distinction en éventail.</td><td>—</td><td>Commentaires « souvenir ».</td></tr>
+    <tr><td class="h">21:19</td><td>4′</td><td><b>La carte s'agrandit</b></td><td>Les 6 pays « bientôt classés » en pointillé : pas encore assez de données.</td><td>Motif qui monte.</td><td>Vote « prochain pays classé » sur le site, et « quels artistes suivre chez vous ? ».</td></tr>
+    <tr><td class="h">21:23</td><td>7′</td><td><b>Scène 6 · Pays F</b></td><td>Format v2, Clip d'abord.</td><td>—</td><td>Pronostic.</td></tr>
+    <tr class="pause"><td class="h">21:30</td><td>4′</td><td><b>PAUSE 3 · P-004 Pronostiqueur du soir</b></td><td>Podium de trois pseudos avec leur score (par exemple « 4/6 »).</td><td>« Le Verdict ».</td><td>Code secret n° 1 affiché (Fidèle du live).</td></tr>
+    <tr class="resp"><td class="h">21:34</td><td>10′</td><td><b>RESPIRATION 2 · Mi-temps</b> · P8</td><td>Clips révélés. En coin : « Reprise à 21 h 44 ». <b>Relance planifiée du live Instagram</b> si sa durée maximale l'exige.</td><td>Le clip seul.</td><td>Libre.</td></tr>
+    <tr><td class="h">21:44</td><td>8′</td><td><b>Prix BIGGEST CLIMBER</b> · violet « laboratoire »</td><td>Courbe réelle de progression de chaque nommé.</td><td>Une note qui monte par courbe.</td><td>« Vous l'aviez vu monter ? »</td></tr>
+    <tr><td class="h">21:52</td><td>8′</td><td><b>Scène 7 · Pays G · Le règne</b></td><td>Le #2 est révélé, faux suspense, puis le doublé. Cartes des mois empilées.</td><td>—</td><td>« Qui peut faire un doublé ? »</td></tr>
+    <tr class="pause"><td class="h">22:00</td><td>4′</td><td><b>PAUSE 4 · P-005 Ambassadeur</b></td><td>Le plus d'inscriptions validées grâce à son lien de parrainage.</td><td>« Le Verdict ».</td><td>Code secret n° 2.</td></tr>
+    <tr class="acte"><td colspan="6">ACTE III · LA COURSE</td></tr>
+    <tr><td class="h">22:04</td><td>7′</td><td><b>Scène 8 · Pays H</b></td><td>Format v2, révélation « verre qui se fissure », avec le seul faux départ de lumière de la soirée.</td><td>—</td><td>Pronostic.</td></tr>
+    <tr><td class="h">22:11</td><td>9′</td><td><b>Scène 9 · Pays I · Photo-finish</b> · P9</td><td>De #5 à #3, puis duel des deux finalistes en écran partagé. Vote de 90 s : « 1 » ou « 2 ». Mention : « Le vote est un pronostic, le classement vient des données. »</td><td>Battement de cœur, puis silence, puis « Le Lancer ».</td><td>Vote et moment de foule.</td></tr>
+    <tr><td class="h">22:20</td><td>9′</td><td><b>Scène 10 · Pays J · Photo-finish, le plus serré</b></td><td>Duel de statistiques en 3 manches. L'écart réel n'est montré qu'après la révélation.</td><td>Idem.</td><td>Vote.</td></tr>
+    <tr><td class="h">22:29</td><td>1′</td><td><b>Les 10 N°1</b></td><td>La carte complète, les 10 pays allumés.</td><td>Impact.</td><td>—</td></tr>
+    <tr class="pause"><td class="h">22:30</td><td>4′</td><td><b>PAUSE 5 · P-006 Le flair des duels et Voix de la diaspora</b></td><td>Les bons pronostics des deux photo-finish, et le votant connecté depuis le pays le plus éloigné.</td><td>« Le Verdict ».</td><td>Code secret n° 3.</td></tr>
+    <tr class="resp"><td class="h">22:34</td><td>6′</td><td><b>RESPIRATION 3 · Les N°1 en musique</b></td><td>Courts enchaînements des clips des N°1.</td><td>Le clip seul.</td><td>Libre.</td></tr>
+    <tr><td class="h">22:40</td><td>9′</td><td><b>Top 20, #20 à #11 · Le mur</b></td><td>Les pochettes tombent en cascade avec rang, titre, artiste et pays. Pas de clip.</td><td>Lit original rythmé.</td><td>« Votre pays est-il dans le Top 20 ? »</td></tr>
+    <tr><td class="h">22:49</td><td>9′</td><td><b>Top 20, #10 à #6</b></td><td>Un clip d'une minute par rang, avec une fiche courte.</td><td>Notes de rang.</td><td>Réactions.</td></tr>
+    <tr><td class="h">22:58</td><td>2′</td><td><b>« Il en reste cinq »</b></td><td>Cinq pochettes floutées. Le vote « Clip du mois » se ferme.</td><td>Grondement sourd.</td><td>Les pronostics BIG 5 sont rappelés.</td></tr>
+    <tr class="pause"><td class="h">23:00</td><td>4′</td><td><b>PAUSE 6 · P-007 Clip du mois (vote du public)</b></td><td>Le clip le plus voté, avec la mention « distinction du public, hors classement ».</td><td>« Le Verdict » renforcé.</td><td>Résultat issu du comptage réel du site.</td></tr>
+    <tr class="acte"><td colspan="6">ACTE IV · LE SACRE</td></tr>
+    <tr><td class="h">23:04</td><td>8′</td><td><b>Prix ARTIST OF THE MONTH</b></td><td>Les points réels par titre de chaque nommé.</td><td>Habillage solennel.</td><td>« Il le mérite ? »</td></tr>
+    <tr><td class="h">23:12</td><td>2′</td><td><b>Entrée de la finale</b> · P10</td><td>Tout le plateau s'allume, 12 projecteurs, fumée. Répartition des pronostics, sans aucun nom.</td><td>Thème version finale.</td><td>—</td></tr>
+    <tr><td class="h">23:14</td><td>16′</td><td><b>BIG 5, #5 à #2</b></td><td>Pour chaque rang : fiche de 20 s, clip de 90 s, distinction, carte des pays où le titre est classé. #3 et #2 en duel.</td><td>Notes de rang graves.</td><td>Réactions à chaud.</td></tr>
+    <tr><td class="h">23:30</td><td>1′</td><td><b>Le silence</b></td><td>Décompte 3-2-1 en chiffres fins, puis noir et un seul projecteur.</td><td>Silence total sur SITE, 2 s d'ambiance sur RS.</td><td>—</td></tr>
+    <tr><td class="h">23:31</td><td>6′</td><td><b>Le N°1 de l'Afrique de l'Ouest</b></td><td>Premier plan large du plateau de la soirée, platine, clip en entier sur SITE, puis la distinction en plein écran.</td><td>« Le Lancer », version longue.</td><td>Les réactions explosent sur le mur.</td></tr>
+    <tr class="pause"><td class="h">23:37</td><td>4′</td><td><b>Palmarès · P-008 Meilleur pronostic BIG 5 · P-009 Fidèles et supporters</b></td><td>Tableau final, puis le mur des pseudos (avec leur accord) qui ont trouvé tous les codes et voté à chaque fenêtre.</td><td>Thème triomphal.</td><td>Badges pour tous.</td></tr>
+    <tr><td class="h">23:41</td><td>4′</td><td><b>Clôture</b> · P11</td><td>Mosaïque des 10 N°1, « Merci », date de l'édition 2, QR code.</td><td>Thème au piano et à la kora.</td><td>« Partagez votre N°1. »</td></tr>
+    <tr class="acte"><td colspan="6">APRÈS-SHOW · P0</td></tr>
+    <tr class="resp"><td class="h">23:45</td><td>15′</td><td><b>Boucle des 10 N°1</b></td><td>Clips des N°1 sur SITE, mosaïque sur RS. Pages palmarès publiées.</td><td>—</td><td>—</td></tr>
+    <tr><td class="h">00:00</td><td>15′</td><td><b>Le mur du public, puis fermeture</b></td><td>Meilleurs commentaires et lauréats P-001 à P-009. Sur RS, commentaire épinglé vers le site. Le site passe en mode replay.</td><td>Lit de veille.</td><td>—</td></tr>
+  </table></div>
+  <p class="legende">Répartition des 225 minutes d'émission : environ 72 % de révélations et de prix, 7 % de liaisons, 11 % de distinctions du public et 11 % de respiration pure. Avec les clips, la musique occupe environ la moitié de l'écran. Toutes les 10 minutes (5 à 7 sur les réseaux), une pastille de 5 s s'affiche pour ceux qui arrivent : « Vous arrivez ? 4/10 N°1 révélés · BIG 5 à 23 h ».</p>
+</section>
+
+<section class="wrap" id="public">
+  <div class="k">4 · Les distinctions du public</div>
+  <h2>Une pause toutes les 30 minutes, un critère mesurable</h2>
+  <p class="intro">Chaque pause dure 4 min (2 min en cas de retard) et n'est jamais supprimée. Elle ferme un vote et en ouvre un autre : c'est cette boucle qui garde le public. Les numéros P-001… ne se confondent jamais avec les distinctions officielles N°0001… Les lots sont symboliques : badge sur le site, mention à l'antenne, reprise en story. Ni argent, ni tirage au sort.</p>
+  <div class="tab"><table>
+    <tr><th>N°</th><th>Distinction</th><th>Critère et mesure réelle</th><th>À l'écran</th><th>Le gagnant reçoit</th></tr>
+    <tr><td class="h">P-001</td><td><b>Premier au rendez-vous</b></td><td>Premier compte du site à valider « je suis là » (horodatage en base).</td><td>Pseudo et pays, gong.</td><td>Badge « Premier au rendez-vous · éd. 1 ».</td></tr>
+    <tr><td class="h">P-002</td><td><b>Commentaire de la demi-heure</b></td><td>Choix de l'équipe selon une grille annoncée (drôle, juste, respectueux). Annoncé comme « choix de l'équipe ».</td><td>Citation en grand sur verre.</td><td>Commentaire épinglé et reprise en story.</td></tr>
+    <tr><td class="h">P-003</td><td><b>Le pays qui fait le plus de bruit</b></td><td>Le plus de votants uniques sur le site pendant la demi-heure (pays déclaré à l'inscription).</td><td>La carte s'allume.</td><td>Visuel « Pays le plus engagé », repris par les pages de fans.</td></tr>
+    <tr><td class="h">P-004</td><td><b>Pronostiqueur du soir</b></td><td>Le plus de bons pronostics sur les révélations écoulées (base de données). À égalité, le plus ancien l'emporte.</td><td>Podium de 3 pseudos.</td><td>Badge et pronostic en avant-première à l'édition 2.</td></tr>
+    <tr><td class="h">P-005</td><td><b>Ambassadeur</b></td><td>Le plus d'inscriptions validées par son lien de parrainage personnel.</td><td>Pseudo et nombre d'amis amenés.</td><td>Badge et page « Ambassadeurs ».</td></tr>
+    <tr><td class="h">P-006</td><td><b>Le flair des duels · Voix de la diaspora</b></td><td>Bon N°1 dans les photo-finish. Votant connecté depuis le pays le plus éloigné.</td><td>Pseudos, et « Message reçu de [pays] ».</td><td>Badges.</td></tr>
+    <tr><td class="h">P-007</td><td><b>Clip du mois (vote du public)</b></td><td>Le clip le plus voté sur le site, un vote par compte.</td><td>Clip et pourcentage.</td><td>Distinction du public, hors classement.</td></tr>
+    <tr><td class="h">P-008</td><td><b>Meilleur pronostic BIG 5</b></td><td>Pronostic du N°1 de l'Afrique de l'Ouest déposé avant 20 h 00.</td><td>Pseudos.</td><td>Badge.</td></tr>
+    <tr><td class="h">P-009</td><td><b>Fidèles et supporters</b></td><td>Avoir saisi tous les codes secrets (un toutes les 30 min, valable 5 min) et voté à chaque fenêtre.</td><td>Mur des pseudos, avec leur accord.</td><td>Badge « Fidèle » pour tous : pas de tirage, donc pas de jeu de hasard.</td></tr>
+  </table></div>
+  <div class="carte alerte" style="margin-top:14px"><b>À ne pas créer</b><ul>
+    <li><b>« Plus gros donateur » ou « plus de likes envoyés » :</b> ce serait récompenser une dépense ou une interaction contre une contrepartie.</li>
+    <li><b>Tout ce qui exige de s'abonner, de partager sur son journal ou d'envoyer un cadeau.</b></li>
+    <li><b>Pseudo à l'écran sans accord :</b> on affiche un pseudo seulement avec la case cochée sur le site, ou le pseudo public de la plateforme. Jamais de nom réel, jamais de photo.</li>
+  </ul></div>
+</section>
+
+<section class="wrap" id="vote">
+  <div class="k">5 · Le vote et les réactions</div>
+  <h2>Seul le site compte, les réseaux font l'ambiance</h2>
+  <div class="grille">
+    <div class="carte"><b>Où on vote</b><p>cauricharts.com/vote est la seule source officielle (compte requis). Les commentaires (« 1 », « 2 », drapeau, nom) alimentent les jauges, toujours marquées « tendance des commentaires (échantillon) ». Les sondages natifs restent affichés à part. Les cadeaux ne comptent jamais.</p></div>
+    <div class="carte"><b>Déroulé d'un vote</b><p>Bandeau « VOTE OUVERT » avec QR code et compte à rebours de 8 à 12 min. La jauge s'affiche en pourcentages, rafraîchie toutes les 5 à 10 s. À la dernière minute, la jauge est masquée (« sous scellé »). Clôture, puis 2 à 3 min de clip, puis la révélation. Le lendemain, on publie le nombre de voix valides et écartées.</p></div>
+    <div class="carte"><b>Contre la triche</b><p>Compte par lien e-mail ou Google. Une voix par compte et par catégorie, imposée par la base. Captcha invisible (Cloudflare Turnstile). Limite par compte et par appareil. L'IP sert d'alerte, jamais de verdict : beaucoup de mobiles partagent la même. E-mails jetables bloqués, journal complet, voix suspectes mises en quarantaine.</p></div>
+    <div class="carte"><b>Compter sans API</b><p>Un modérateur par plateforme, avec un bouton +1 par option dans un formulaire partagé. On compte sur des fenêtres fixes (les 60 dernières secondes, toutes les 2 min). Un commentaire par personne et par fenêtre. Un deuxième modérateur recompte une fenêtre sur trois.</p></div>
+    <div class="carte"><b>Réactions à l'écran</b><p>Jauge des 10 pays. Compteur de votants seulement au-delà d'un seuil, sinon « Le vote chauffe ». 1 à 3 commentaires validés par un humain, jamais affichés automatiquement. Un moment de foule par vote : « 30 secondes : tout le monde écrit son pays ». Duel avec battement de cœur. 10 s de silence avant chaque révélation.</p></div>
+    <div class="carte"><b>Plateforme par plateforme</b><p><b>TikTok :</b> tapotements pour la jauge (symbolique), mots-clés courts, artiste nommé en invité. <b>Instagram :</b> invités, stories avec sondage et lien. <b>Facebook :</b> sondage natif, commentaires longs. <b>Site :</b> voix officielles, codes, pronostics.</p></div>
+  </div>
+</section>
+
+<section class="wrap" id="plateau">
+  <div class="k">6 · Le plateau</div>
+  <h2>Les états de plateau, de P0 à P11</h2>
+  <p class="intro">Un seul bouton de la régie règle à la fois la lumière, la matière, le mouvement et le lit sonore. Décor : la Voûte (jusqu'à 12 projecteurs), les Lames de verre givré, l'Écran central, le Sol miroir, la Ligne d'horizon (filet lumineux qui sert de jauge) et le Logo de coin (« CAURI CHARTS · EN DIRECT » + chapitre).</p>
+  <div class="tab"><table>
+    <tr><th>Code</th><th>Moment</th><th>Lumière et couleur</th><th>Projecteurs</th><th>Mouvement</th><th>Lit sonore</th></tr>
+    <tr><td class="h">P0 Veille</td><td>Avant et après-show</td><td>Bleu nuit, 30 %</td><td>2 faisceaux bleu ciel, balayage en 12 s</td><td>Rien ne change en moins de 8 s</td><td>Nappe et pulsation à 90 BPM, cauris très bas</td></tr>
+    <tr><td class="h">P1 Plateau ouvert</td><td>Générique, retours, Flash, tableau</td><td>Indigo, 100 %</td><td>6 faisceaux en éventail, bleu et violet</td><td>Coupes sur le temps à 120 BPM</td><td>Thème ou lit de rubrique</td></tr>
+    <tr><td class="h">P2 Ambiance</td><td>Ouverture d'une scène</td><td>Nuit et pochettes floutées, 20 %</td><td>1 poursuite douce</td><td>Plans de 4 à 6 s, zoom lent</td><td>Lit percussif original</td></tr>
+    <tr><td class="h">P3 Compétition</td><td>#5 à #2</td><td>60 %, puis +10 % par rang</td><td>Faisceaux qui se resserrent, de 40° à 10°</td><td>Tempo qui accélère</td><td>Note de rang, puis le clip</td></tr>
+    <tr><td class="h">P4 Silence</td><td>Avant le N°1</td><td>Nuit, 5 %</td><td>1 faisceau vertical fin</td><td>Immobilité totale</td><td>Rien (site) / battement sourd (réseaux)</td></tr>
+    <tr><td class="h">P5 Révélation</td><td>N°1</td><td>De 5 à 100 % en 0,4 s, platine</td><td>8 faisceaux qui convergent</td><td>Un éclat, puis 6 s de tenue</td><td>« Le Lancer », puis le clip</td></tr>
+    <tr><td class="h">P6 Célébration</td><td>Distinctions, prix</td><td>Violet polymère, 80 %</td><td>Rotation lente</td><td>Éclats de verre en chute lente</td><td>Clip filtré ou thème</td></tr>
+    <tr><td class="h">P7 Salon public</td><td>Pauses du public</td><td>Violet doux, 50 %</td><td>Immobiles, lumière diffuse</td><td>8 à 10 s par plan</td><td>Lit lounge à 95 BPM</td></tr>
+    <tr><td class="h">P8 Respiration</td><td>Blocs de clips</td><td>Le plateau s'efface</td><td>Éteints</td><td>Aucune animation</td><td>Le clip seul</td></tr>
+    <tr><td class="h">P9 Vote</td><td>Vote en direct</td><td>Bleu ciel froid, 70 %</td><td>Pulsés sur le tic</td><td>Barres de verre qui se remplissent</td><td>« L'Urne »</td></tr>
+    <tr><td class="h">P10 Finale</td><td>BIG 5</td><td>Toute la palette</td><td>12 faisceaux, fumée au sol</td><td>Seul plan large de la soirée</td><td>Thème version finale</td></tr>
+    <tr><td class="h">P11 Clôture</td><td>Fin</td><td>Retour vers P0</td><td>Ils se couchent un par un</td><td>Décélération</td><td>Thème au piano et à la kora</td></tr>
+  </table></div>
+  <div class="grille" style="margin-top:14px">
+    <div class="carte"><b>Palette</b><p>Nuit #05081A, bleu nuit #0B1640, indigo #1B1F5E, violet verre #6C3BFF à 35 %, violet polymère #9B6BFF, bleu ciel #7CCBFF, bleu pâle #CDEBFF, texte blanc. Le platine (blanc, bleu glacé, lilas) est réservé aux N°1 et au BIG 5.</p></div>
+    <div class="carte"><b>Grille 9:16 et zones sûres</b><p>Information uniquement dans la zone y 300 à 1350, x 70 à 950. Le haut est occupé par l'interface des plateformes, la droite par leurs boutons, le bas par les commentaires : ces zones ne reçoivent que du décor.</p></div>
+    <div class="carte"><b>Typographie et icônes</b><p>Poppins 800 à 900 pour les titres, Playfair italique pour les titres de chansons. 64 px minimum pour un titre, 7 mots par ligne au plus. Icônes Lucide au trait. Pas d'émojis, pas de drapeaux en émoji : le pays s'écrit en code de trois lettres (GHA, NGA…).</p></div>
+    <div class="carte"><b>Accessibilité</b><p>Voile sombre derrière le texte (contraste d'au moins 7:1), jamais plus de 3 éclairs par seconde, aucune information portée par la couleur seule. Chaque son a son événement lumineux.</p></div>
+  </div>
+</section>
+
+<section class="wrap" id="segments">
+  <div class="k">7 · Les segments</div>
+  <h2>21 fiches, chacune avec ses variantes</h2>
+  <div class="tab"><table>
+    <tr><th>Segment</th><th>Composition et mouvement</th><th>Son</th><th>Durée</th><th>Variantes anti-répétition</th></tr>
+    <tr><td><b>Ouverture à froid</b></td><td>Noir, puis une phrase en Playfair écrite lettre par lettre, puis une phrase en Poppins, puis un seul éclair.</td><td>Vide, puis le premier coup du motif (sub et verre).</td><td>25–40 s</td><td>Aux éditions suivantes : le N°1 du mois précédent remet son titre en jeu, ou un chiffre-record seul à l'écran.</td></tr>
+    <tr><td><b>Générique</b></td><td>Les Lames de verre pivotent pour former le logo, puis 3 lignes de programme.</td><td>Thème à 120 BPM, motif à la kora, talking drum.</td><td>20–25 s</td><td>Mini-générique de 4 s au retour de chaque pause.</td></tr>
+    <tr><td><b>Ambiance</b></td><td>Pochette floutée plein cadre, forme d'onde, aucun nom. Le pays apparaît à la fin.</td><td>Lit percussif original (voir les droits).</td><td>30–45 s</td><td>Mosaïque 3 × 3 qui s'éteint, chiffres flottants seuls, ou « Devinez ».</td></tr>
+    <tr><td><b>L'enjeu</b></td><td>Un seul chiffre de 380 px avec un compteur qui monte, puis une phrase de contexte.</td><td>Tic qui accélère, impact de verre.</td><td>8–12 s</td><td>Jamais deux enjeux du même type à la suite : écart, durée, progression, record, année.</td></tr>
+    <tr><td><b>Appel + clip (#5 à #2)</b></td><td>Pochette nette, rang en contour (le chiffre plein est réservé au N°1), titre mot par mot. La carte se replie en pastille, puis le clip 16:9 prend l'Écran central.</td><td>Note de rang qui monte : do, ré, mi, sol.</td><td>70–80 s</td><td>Classique, Triptyque, Clip d'abord, Carte seule. Au plus 2 clips d'une minute avant le N°1.</td></tr>
+    <tr><td><b>Le duel</b></td><td>Écran coupé en deux : bleu en haut, violet en bas. La Ligne d'horizon sert de jauge d'écart.</td><td>Talking drum contre djembé (réseaux).</td><td>45–75 s</td><td>Duel de statistiques en 3 manches, ou duel du public. Deux fois au plus dans la soirée.</td></tr>
+    <tr><td><b>Le silence</b></td><td>Coupe au noir en 0,3 s, jamais en fondu, avec l'Écran central vide.</td><td>Silence total (site), ambiance de pièce (réseaux).</td><td>2,5–4 s</td><td>Silence, deux battements, faux départ (une fois), ou 3-2-1 (BIG 5).</td></tr>
+    <tr><td><b>Révélation du N°1</b></td><td>Pochette de 760 px dans un cadre platine, « N°1 » plein. Le clip démarre sur son passage fort.</td><td>« Le Lancer ».</td><td>8–12 s + clip</td><td>9 mécanismes : rideau dégivré, faisceau, carte retournée, lettres, mosaïque, zoom arrière, cartes empilées, onde vers pochette, verre fissuré.</td></tr>
+    <tr><td><b>Distinction officielle</b></td><td>Carte de verre : award, « N°1 · Ghana · Octobre 2026 », numéro en compteur, QR code. Elle part ensuite se ranger dans le tableau.</td><td>Tics du compteur et sceau.</td><td>12–18 s</td><td>Trophée typographique, éventail des mois (Les légendes).</td></tr>
+    <tr><td><b>Bloc clips</b></td><td>Le clip seul, avec une bande titre de 6 s et « pourquoi ce clip ».</td><td>Le clip seul.</td><td>4–8 min</td><td>Le mois en 4 clips, Nouveaux visages, Votre choix, Débloqué par un défi.</td></tr>
+    <tr><td><b>Pause public</b></td><td>3 cartes de nommés avec barres, bulles de chat modérées. On ferme un vote et on en ouvre un autre.</td><td>« La Respiration », « Le Verdict ».</td><td>4 min</td><td>Barres, face-à-face, nuage de mots du chat, carte des votes.</td></tr>
+    <tr><td><b>Vote en direct</b></td><td>Question, 2 à 4 options, la Ligne d'horizon comme minuteur. Pastille « Vote ouvert » ensuite.</td><td>« L'Urne », tic à 120 BPM.</td><td>60–90 s</td><td>Pronostic éclair, préférence, défi (« 5 000 votes et le clip passe en entier »).</td></tr>
+    <tr><td><b>Résultat du vote</b></td><td>Les barres se figent, les perdants à 30 %, le gagnant en plein cadre.</td><td>« Le Verdict ».</td><td>15–25 s</td><td>Du 3e au 1er, ou coude-à-coude.</td></tr>
+    <tr><td><b>Tableau des N°1</b></td><td>10 lignes. Les lignes fermées sont en verre givré avec un « ? ».</td><td>« Clac » et arpège.</td><td>12–60 s</td><td>Liste, carte au trait, mur 2 × 5, constat transversal.</td></tr>
+    <tr><td><b>Le Flash</b></td><td>« N°1 » fixe en haut, contenus qui glissent sur chaque temps fort.</td><td>Lit à 128 BPM, deux coups de verre.</td><td>90–120 s</td><td>Toujours placé après un moment lent.</td></tr>
+    <tr><td><b>Tubes de demain</b></td><td>Grille « laboratoire », courbes de progression.</td><td>Bulle qui monte, lit à 100 BPM.</td><td>3–4 min</td><td>Courbes, radar, pari sur le N°1 du mois suivant.</td></tr>
+    <tr><td><b>Prix spéciaux</b></td><td>Chaque prix a son image propre. Liseré violet (le platine reste aux N°1).</td><td>Le motif joué sur un instrument différent.</td><td>2–8 min</td><td>FRESH, LEGEND, BIGGEST CLIMBER, ARTIST OF THE MONTH.</td></tr>
+    <tr><td><b>BIG 5</b></td><td>Carte de règle, #5 à #2 en version longue, 3-2-1, silence de 4 s, plan large, clip du N°1 en entier.</td><td>« Le Lancer » long.</td><td>20–30 min</td><td>#3 et #2 en duel.</td></tr>
+    <tr><td><b>Clôture</b></td><td>Mosaïque des N°1, « Merci », date de l'édition 2.</td><td>Thème au piano et à la kora.</td><td>2–3 min</td><td>—</td></tr>
+    <tr><td><b>Après-show</b></td><td>Boucle des N°1 (site) et cartes récapitulatives (réseaux).</td><td>Lit de veille.</td><td>10–30 min</td><td>—</td></tr>
+    <tr><td><b>Repère pour les arrivants</b></td><td>Pastille de 5 s : « Vous arrivez ? 4/10 N°1 révélés · BIG 5 à 23 h ».</td><td>—</td><td>Toutes les 10 min</td><td>Toutes les 5 à 7 min sur les réseaux.</td></tr>
+  </table></div>
+</section>
+
+<section class="wrap" id="son">
+  <div class="k">8 · L'identité sonore, sans voix</div>
+  <h2>Un motif, trois matières, cinq signatures</h2>
+  <div class="grille">
+    <div class="carte"><b>Le motif « Cauri »</b><p>4 notes : ré, la, si, fa#. Il change d'instrument selon le moment : kora au générique, cristal pour les N°1, balafon pour le Flash, sub pour le BIG 5, piano pour la clôture.</p></div>
+    <div class="carte"><b>Trois matières</b><p><b>Verre</b> (l'interface), <b>cauris</b> (la marque : coquillages secoués ou lâchés sur une calebasse, sans aucune image rituelle), <b>peau</b> (talking drum, djembé étouffé, sub).</p></div>
+    <div class="carte"><b>« Le Lancer » · N°1</b><p>Souffle qui monte, vide, puis impact : sub, poignée de cauris, accord de cristal. La lumière passe à 100 % sur l'impact. Il existe une version longue pour le BIG 5.</p></div>
+    <div class="carte"><b>« Le Passage » · changement de pays</b><p>Glissando de talking drum et souffle de verre. Il monte d'un demi-ton à chaque pays : la soirée monte.</p></div>
+    <div class="carte"><b>« L'Urne » · ouverture du vote</b><p>Arpège de marimba et clave, puis tic à 120 BPM avec cauris en croches.</p></div>
+    <div class="carte"><b>« Le Verdict » · « La Respiration »</b><p>Roulement de djembé, coup de verre et bref applaudissement pour un résultat. Nappe descendante et carillon de 3 notes pour les pauses.</p></div>
+  </div>
+  <p class="legende">Fabrication : une heure d'enregistrement de vrais cauris, d'une calebasse et de verres. En complément : Freesound (CC0 uniquement), Sonniss GDC, Pixabay, Mixkit. Éviter BBC Sound Effects, dont la licence est non commerciale. Le thème original peut être composé dans FL Studio. Niveaux : clips à -14 LUFS, lits de -24 à -28 LUFS, signatures avec des crêtes à -3 dBTP.</p>
+</section>
+
+<section class="wrap" id="scenes">
+  <div class="k">9 · Varier les 10 scènes</div>
+  <h2>Au moins 4 leviers changent d'une scène à l'autre</h2>
+  <div class="tab"><table>
+    <tr><th>Scène</th><th>Format (données)</th><th>Appel #5 à #2</th><th>Révélation</th><th>Couleur</th><th>Caméra</th><th>Clip du N°1</th><th>Public</th></tr>
+    <tr><td class="h">S1 · A</td><td>Couronnement</td><td>Classique</td><td>Faisceau qui s'arrête</td><td>Bleu ciel</td><td>Face fixe</td><td>90 s</td><td>Pronostic</td></tr>
+    <tr><td class="h">S2 · B</td><td>Victoire nette</td><td>Escalier express</td><td>Lettres qui s'assemblent</td><td>Violet</td><td>Travelling</td><td>En entier</td><td>—</td></tr>
+    <tr><td class="h">S3 · C</td><td>Blind test</td><td>Clip d'abord</td><td>Zoom arrière sur la pochette</td><td>Les deux</td><td>Contre-plongée</td><td>60 s</td><td>Ordre deviné</td></tr>
+    <tr><td class="h">S4 · D</td><td>Standard</td><td>Triptyque</td><td>Mosaïque qui s'éteint</td><td>Bleu ciel</td><td>Orbite</td><td>90 s</td><td>Pronostic</td></tr>
+    <tr><td class="h">S5 · E</td><td>Les légendes</td><td>Classique</td><td>Carte retournée</td><td>Violet</td><td>Plongée</td><td>90 s + éventail</td><td>Souvenirs</td></tr>
+    <tr><td class="h">S6 · F</td><td>Standard</td><td>Clip d'abord</td><td>Onde vers pochette</td><td>Les deux</td><td>Face fixe</td><td>60 s</td><td>Pronostic</td></tr>
+    <tr><td class="h">S7 · G</td><td>Le règne</td><td>Escalier express</td><td>Cartes des mois empilées</td><td>Violet</td><td>Travelling</td><td>En entier</td><td>« Doublé ? »</td></tr>
+    <tr><td class="h">S8 · H</td><td>Standard</td><td>Classique long</td><td>Verre fissuré + faux départ</td><td>Bleu ciel</td><td>Orbite</td><td>90 s</td><td>Pronostic</td></tr>
+    <tr><td class="h">S9 · I</td><td>Photo-finish</td><td>Duel d'extraits visuels</td><td>Rideau dégivré</td><td>Les deux</td><td>Face fixe</td><td>60 s</td><td>Vote</td></tr>
+    <tr><td class="h">S10 · J</td><td>Photo-finish (le plus serré)</td><td>Duel de statistiques</td><td>Faisceau (non utilisé depuis S1)</td><td>Bleu ciel</td><td>Contre-plongée</td><td>En entier</td><td>Vote</td></tr>
+  </table></div>
+  <p class="legende">Chaque pays a son accent propre : liseré du drapeau sur la Ligne d'horizon, hauteur de « Le Passage », et un constat qui lui appartient dans l'enjeu, jamais avec la même tournure de phrase. Si deux pays tombent sur le même format, ils doivent se distinguer à la fois par la façon d'appeler, la révélation, la couleur et la durée.</p>
+</section>
+
+<section class="wrap" id="reseaux">
+  <div class="k">10 · Site et réseaux</div>
+  <h2>Deux sorties, un seul conducteur</h2>
+  <div class="tab"><table>
+    <tr><th></th><th>Sortie A · cauricharts.com/show</th><th>Sortie B · TikTok, Instagram, Facebook</th></tr>
+    <tr><td><b>Clips officiels</b></td><td>Lecteur YouTube intégré : rien par-dessus, pas d'autre son pendant le clip, commandé uniquement par l'API officielle.</td><td><b>Jamais</b>, pas même 5 secondes.</td></tr>
+    <tr><td><b>Musique de fond</b></td><td>Lits originaux, ou Mixkit vérifiés morceau par morceau.</td><td>Les mêmes, uniquement.</td></tr>
+    <tr><td><b>Ambiance</b></td><td>Pochettes floutées et lit percussif original.</td><td>Identique, avec « Il joue en ce moment sur cauricharts.com/show ».</td></tr>
+    <tr><td><b>Pendant la minute du clip</b></td><td>Le clip.</td><td>Fenêtres de remplacement, à tour de rôle : le chiffre derrière le titre, le chat à l'antenne, mini-quiz, pronostic, « pendant ce temps sur le site » (QR code et temps restant du clip), coulisses des données.</td></tr>
+    <tr><td><b>Silence</b></td><td>Jusqu'à 4 s.</td><td>2 s au plus, avec une ambiance de pièce.</td></tr>
+    <tr><td><b>Révélations</b></td><td colspan="2">Toujours montrées en direct, en même temps, sur les deux sorties.</td></tr>
+  </table></div>
+</section>
+
+<section class="wrap" id="equipe">
+  <div class="k">11 · L'équipe et le cycle de 30 minutes</div>
+  <h2>5 personnes au minimum, 7 idéalement</h2>
+  <div class="grille">
+    <div class="carte"><b>R · Régisseur</b><p>OBS et habillage, déclenche les états de plateau, les jauges et les clips. Dernier mot sur ce qui s'affiche.</p></div>
+    <div class="carte"><b>D · Données et vote</b><p>Ouvre et ferme les votes, surveille les anomalies, valide les résultats et sort les gagnants des distinctions. Valide les Top 5.</p></div>
+    <div class="carte"><b>M · Modérateurs (3)</b><p>Un pour TikTok, un pour Instagram (stories en plus), un pour Facebook et le site. Mots interdits, décompte, proposition de commentaires, gestion des invités.</p></div>
+    <div class="carte"><b>L · Liaison artistes (idéal)</b><p>Fait entrer les artistes nommés en invités au moment de leur pays.</p></div>
+    <div class="carte"><b>P · Extraits (idéal)</b><p>Découpe et publie des extraits sans musique protégée pendant le live.</p></div>
+  </div>
+  <div class="tab" style="margin-top:14px"><table>
+    <tr><th>Minute</th><th>R · régie</th><th>D · vote</th><th>Modérateurs</th></tr>
+    <tr><td class="h">:00–:03</td><td>Ouverture du bloc</td><td>Prépare le vote</td><td>Épinglent le lien, répondent</td></tr>
+    <tr><td class="h">:03–:08</td><td>Révélations</td><td>—</td><td>Repèrent 3 commentaires</td></tr>
+    <tr><td class="h">:08–:16</td><td>« VOTE OUVERT », jauge</td><td>Ouvre le vote, surveille</td><td>Décompte toutes les 2 min</td></tr>
+    <tr><td class="h">:16–:17</td><td>Moment de foule (30 s)</td><td>—</td><td>Comptent les drapeaux</td></tr>
+    <tr><td class="h">:17–:19</td><td>Jauge sous scellé</td><td>Ferme et valide</td><td>« Dernière minute »</td></tr>
+    <tr><td class="h">:19–:22</td><td>Clip libre, sans rien</td><td>Transmet le résultat</td><td>Pause tournante</td></tr>
+    <tr><td class="h">:22–:25</td><td>N°2, N°1, choix du public</td><td>—</td><td>Épinglent le résultat</td></tr>
+    <tr><td class="h">:25–:30</td><td>Distinction du public, respiration</td><td>Gagnants (pseudos avec accord)</td><td>Félicitent, renouvellent l'épinglage</td></tr>
+  </table></div>
+</section>
+
+<section class="wrap" id="planb">
+  <div class="k">12 · Les plans B</div>
+  <h2>Ce qu'on fait quand ça casse</h2>
+  <div class="grille">
+    <div class="carte"><b>Clip bloqué</b><p>Vérifier chaque intégration à J-1 puis à H-2, en navigation privée. Repli : pochette animée, distinction et lien. Jamais de version non officielle, jamais d'extrait Deezer.</p></div>
+    <div class="carte"><b>Coupure réseau</b><p>Routeur 4G de secours, second ordinateur avec les mêmes scènes OBS. Sur le site, carte « Nous revenons ». Les scènes peuvent être pré-rendues en vidéo, pour que le direct se limite à lancer des fichiers.</p></div>
+    <div class="carte"><b>Peu de participation</b><p>Jamais de faux commentaires. Questions plus simples, pauses réduites à 2 min, respiration allongée. Les distinctions sont décernées quand même.</p></div>
+    <div class="carte"><b>Réseau qui coupe</b><p>La sortie B ne contient aucune musique protégée, par construction. Si un live tombe : écran « Le show continue sur cauricharts.com », relance, et D note l'heure et la cause.</p></div>
+    <div class="carte"><b>Retard</b><p>On coupe dans cet ordre : respiration 3, respiration 2, « la carte s'agrandit », pauses ramenées à 2 min. On ne coupe jamais le BIG 5 ni un N°1.</p></div>
+    <div class="carte"><b>Erreur de données ou pic de trafic</b><p>Données gelées à J-3 et vérifiées deux fois. Test de charge de /show et mise en cache des pages palmarès.</p></div>
+  </div>
+</section>
+
+<section class="wrap" id="droits">
+  <div class="k">13 · Droits et conformité</div>
+  <h2>Ce qui est permis, et ce que ça change pour nous</h2>
+  <div class="tab"><table>
+    <tr><th>Élément</th><th>Sur le site</th><th>Retransmis sur les réseaux</th></tr>
+    <tr><td>Clips YouTube intégrés</td><td>Permis : rien par-dessus, pas d'autre son pendant le clip, pas de lecture cachée, commande par l'API officielle, une seule lecture automatique à la fois.</td><td>Interdit sans accord des ayants droit, et risque fort de coupure.</td></tr>
+    <tr><td>Extraits Deezer en musique de fond</td><td><b>Non permis</b> : l'API les réserve à un usage privé, non commercial et sans marque.</td><td>Non permis.</td></tr>
+    <tr><td>Photos et pochettes</td><td>Risque faible si elles servent à identifier le titre, avec mention de la source et retrait sous 48 à 72 h sur demande.</td><td>Même règle.</td></tr>
+    <tr><td>Musique et bruitages Mixkit</td><td>Probablement permis : vérifier le badge de chaque morceau (gratuit ou « restreint »).</td><td>Zone grise en direct. Garder la preuve de licence en cas de réclamation.</td></tr>
+    <tr><td>Votes et distinctions gratuites</td><td>Oui, avec un règlement publié.</td><td>Oui, avec la mention « non associé à TikTok, Meta et YouTube ».</td></tr>
+    <tr><td>Cadeaux liés à une récompense</td><td>—</td><td>À éviter : risque de « gift baiting ».</td></tr>
+  </table></div>
+  <div class="carte alerte rouge" style="margin-top:14px"><b>Ce que ça change dans ce qu'on a déjà construit</b><ul>
+    <li><b>Lecteur du show :</b> les extraits Deezer (ambiance, tubes de demain, duel, Flash, prix) doivent être remplacés par des lits originaux et des pochettes. Seuls les clips officiels portent la vraie musique.</li>
+    <li><b>Trailer Édition 1 :</b> seule la version « sans chansons » est publiable. La version « avec chansons » utilise des extraits Deezer : elle reste interne, sauf accord écrit des artistes.</li>
+    <li><b>Autorisations écrites :</b> les demander aux artistes et labels indépendants du Top. Elles permettraient de diffuser leurs clips aussi sur les réseaux, à condition que leur distributeur mette nos comptes sur liste blanche.</li>
+  </ul></div>
+</section>
+
+<section class="wrap" id="todo">
+  <div class="k">14 · À faire avant le 7 novembre</div>
+  <h2>Par ordre d'urgence</h2>
+  <div class="grille">
+    <div class="carte alerte rouge"><b>Bloquant, avant le 17 octobre</b><ul class="liste">
+      <li>Retirer les extraits Deezer du show et les remplacer par des lits originaux.</li>
+      <li>Vérifier que @caurichartsofficial peut faire un LIVE et recevoir des cadeaux, et a accès à une clé de diffusion (sinon : téléphone qui filme l'écran).</li>
+      <li>Créer l'app Meta et lancer l'App Review, pour lire les commentaires de Facebook et d'Instagram. Sinon, décompte manuel.</li>
+      <li>Construire la page de vote : compte, Turnstile, contraintes d'unicité, jauges, codes secrets, parrainage.</li>
+      <li>Concevoir la scène OBS « Clip en cours » pour la sortie B.</li>
+    </ul></div>
+    <div class="carte alerte"><b>Important, avant le 24 octobre</b><ul class="liste">
+      <li>Publier le règlement du vote et des distinctions (gratuit, sans achat, mention de non-association).</li>
+      <li>Mettre à jour la politique de confidentialité : votes, YouTube, hébergeurs étrangers, durées de conservation, âge minimum.</li>
+      <li>Envoyer le modèle d'autorisation et le kit « Nominé officiel » aux artistes.</li>
+      <li>Vérifier les licences Mixkit morceau par morceau, et composer le thème et les 5 signatures.</li>
+      <li>Se renseigner sur la déclaration à l'IPDCP (loi togolaise 2019-014) et sur le BUTODRA.</li>
+    </ul></div>
+    <div class="carte alerte"><b>Avant le 31 octobre</b><ul class="liste">
+      <li>Répétition de 15 min sur un compte secondaire de chaque plateforme, avec le vrai montage OBS.</li>
+      <li>Recruter et former l'équipe (5 à 7 personnes), avec les listes de mots interdits et les réponses types.</li>
+      <li>Lancer la campagne : un pays de nominés par jour pendant 10 jours, des posts Collab avec les artistes, le trailer « sans chansons ».</li>
+    </ul></div>
+    <div class="carte alerte"><b>J-3 à J</b><ul class="liste">
+      <li>Geler les données à J-3 et générer les distinctions officielles.</li>
+      <li>Attribuer les créneaux des pays selon les règles.</li>
+      <li>Vérifier les clips à J-1 et à H-2. Deux répétitions générales.</li>
+      <li>Le soir même, à l'antenne : « Participation gratuite. Les cadeaux ne donnent aucun avantage. »</li>
+    </ul></div>
+  </div>
+</section>
+
+<footer class="wrap">Cauri Charts · scénario interne de The Monthly Show · Édition 1 · réalisé le 10 octobre 2026 avec quatre agents spécialisés (production, live et communauté, habillage, juridique). Ce document n'est pas un avis juridique : les points marqués « à vérifier » doivent être confirmés avant le direct. Sources juridiques principales : <a href="https://developers.google.com/youtube/terms/required-minimum-functionality">YouTube RMF</a>, <a href="https://developers.google.com/youtube/terms/developer-policies">YouTube Developer Policies</a>, <a href="https://developers.deezer.com/termsofuse">Deezer API ToU</a>, <a href="https://help.instagram.com/179379842258600">Instagram, promotions</a>, <a href="https://help.instagram.com/629037417957828">Instagram, musique</a>, <a href="https://newsroom.tiktok.com/updating-our-gifting-policies">TikTok, cadeaux</a>, <a href="https://mixkit.co/license/">Licence Mixkit</a>, <a href="https://dataprotection.africa/?p=2922">Loi togolaise sur les données</a>.</footer>
+</body>
+</html>

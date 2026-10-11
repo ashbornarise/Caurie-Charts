@@ -1,0 +1,52 @@
+{#- Régie du vote du public (Monthly Show). -#}
+<h1>Show · régie du vote <span class="muted">({{ key }})</span></h1>
+<p class="muted">Le vote du public ne touche jamais aux classements. Seules les voix valides comptent ; les voix suspectes sont mises de côté et décomptées à part. Comptes vérifiés : <b>{{ comptes }}</b>.
+    Page publique : <a href="{{ path('show/vote') }}" target="_blank" rel="noopener">/show/vote</a> · écran : <a href="{{ path('show/resultats.json') }}" target="_blank" rel="noopener">resultats.json</a></p>
+<form method="post" class="toolbar">{{ csrf_field() }}<button class="button" name="action" value="preparer" type="submit">Préparer les votes depuis le conducteur</button></form>
+
+<h2>Votes</h2>
+{% if not polls %}<p class="muted">Aucun vote préparé.</p>{% endif %}
+{% for p in polls %}
+<article class="box" id="v{{ p.id }}">
+    <p><strong>{{ p.title }}</strong> <span class="tag">{{ p.kind }}</span> <span class="status status--{{ 'ok' if p.status == 'ouvert' else 'pending' }}">{{ p.status }}</span>
+        · {{ p.res.total }} voix valides{% if p.res.ecartees %} · {{ p.res.ecartees }} mises de côté{% endif %}</p>
+    <form method="post" class="toolbar">{{ csrf_field() }}<input type="hidden" name="action" value="statut"><input type="hidden" name="poll" value="{{ p.id }}">
+        {% for s in statuts if s != p.status %}<button class="button button--small{{ ' button--ghost' if s != 'ouvert' }}" name="statut" value="{{ s }}" type="submit">{{ {'brouillon': 'Remettre en brouillon', 'ouvert': 'Ouvrir', 'scelle': 'Sceller (dernière minute)', 'ferme': 'Fermer'}[s] }}</button>{% endfor %}
+    </form>
+    <table class="data-table"><tr><th>Option</th><th>Voix valides</th><th>%</th></tr>
+        {% for o in p.res.options %}<tr><td>{{ o.label }}</td><td>{{ p.res.brut.get(o.key, 0) }}</td><td>{{ o.pct }} %</td></tr>{% endfor %}</table>
+    {% if p.kind == 'pronostic' %}
+    <form method="post" class="toolbar">{{ csrf_field() }}<input type="hidden" name="action" value="reponse"><input type="hidden" name="poll" value="{{ p.id }}">
+        <label>Bonne réponse (après la révélation) :
+            <select name="answer"><option value="">—</option>{% for o in p.opts %}<option value="{{ o.key }}" {{ 'selected' if p.answer == o.key }}>{{ o.label }}{{ ' · ' ~ o.sub if o.sub }}</option>{% endfor %}</select></label>
+        <button class="button button--small" type="submit">Enregistrer</button></form>
+    {% endif %}
+</article>
+{% endfor %}
+
+<h2 id="codes">Codes secrets</h2>
+<p class="muted">Un code toutes les 30 minutes, affiché à l’écran 5 minutes. Activer un code expire le précédent.</p>
+<table class="data-table"><tr><th>Code</th><th>Statut</th><th>Saisies</th><th></th></tr>
+{% for c in codes %}<tr><td><b>{{ c.code }}</b></td><td>{{ c.status }}</td><td>{{ c.n }}</td><td>
+    <form method="post" class="inline">{{ csrf_field() }}<input type="hidden" name="action" value="code"><input type="hidden" name="code" value="{{ c.id }}">
+    {% if c.status != 'actif' %}<button class="button button--small" name="statut" value="actif" type="submit">Activer</button>{% endif %}
+    {% if c.status == 'actif' %}<button class="button button--small button--ghost" name="statut" value="expire" type="submit">Expirer</button>{% endif %}</form></td></tr>{% endfor %}
+</table>
+
+<h2>Distinctions du public · gagnants mesurés</h2>
+<p class="muted">Seulement les comptes qui ont accepté l’affichage de leur pseudo.</p>
+<div class="grid-3">
+    <div class="box"><strong>P-001 Premiers au rendez-vous</strong><ol>{% for r in gagnants.premiers %}<li>{{ r.pseudo }}{{ ' · ' ~ r.country_code if r.country_code }}</li>{% else %}<li class="muted">—</li>{% endfor %}</ol></div>
+    <div class="box"><strong>P-003 Le pays qui fait le plus de bruit</strong><ol>{% for r in gagnants.pays %}<li>{{ r.country_code }} · {{ r.n }} votants</li>{% else %}<li class="muted">—</li>{% endfor %}</ol></div>
+    <div class="box"><strong>P-004 Pronostiqueur du soir</strong><ol>{% for r in gagnants.pronostiqueurs %}<li>{{ r.pseudo }} · {{ r.bons }} bon(s)</li>{% else %}<li class="muted">— (indiquer les bonnes réponses)</li>{% endfor %}</ol></div>
+    <div class="box"><strong>P-005 Ambassadeur</strong><ol>{% for r in gagnants.ambassadeurs %}<li>{{ r.pseudo }} · {{ r.n }} ami(s)</li>{% else %}<li class="muted">—</li>{% endfor %}</ol></div>
+    <div class="box"><strong>P-009 Fidèles (tous les codes)</strong><p>{% for r in gagnants.fideles %}{{ r.pseudo }}{{ ', ' if not loop.last }}{% else %}<span class="muted">—</span>{% endfor %}</p></div>
+</div>
+
+<h2 id="suspectes">Voix mises de côté</h2>
+{% if not suspectes %}<p class="muted">Aucune.</p>{% else %}
+<table class="data-table"><tr><th>Vote</th><th>Choix</th><th>Pseudo</th><th>E-mail</th><th>Heure</th><th></th></tr>
+{% for v in suspectes %}<tr><td>{{ v.slug }}</td><td>{{ v.option_key }}</td><td>{{ v.pseudo }}</td><td>{{ v.email }}</td><td>{{ v.created_at }}</td><td>
+    <form method="post" class="inline">{{ csrf_field() }}<input type="hidden" name="action" value="voix"><input type="hidden" name="vote" value="{{ v.id }}">
+    <button class="button button--small button--ghost" name="flag" value="0" type="submit">Valider la voix</button></form></td></tr>{% endfor %}
+</table>{% endif %}

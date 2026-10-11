@@ -58,6 +58,8 @@ def _all() -> dict:
             "duration_minutes": 45,
             "trailer_url": env.get("SHOW_TRAILER_URL", ""),
             "trailer_poster": env.get("SHOW_TRAILER_POSTER", ""),
+            # Fichiers vidéo des clips fournis par les artistes (régie seulement : <id YouTube>.mp4) ; vide sur le site en ligne
+            "clips_dir": env.get("SHOW_CLIPS_DIR", ""),
             "channels": [
                 {"name": "TikTok", "handle": "@caurichartsofficial", "url": "https://www.tiktok.com/@caurichartsofficial"},
                 {"name": "Instagram", "handle": "@cauricharts", "url": "https://www.instagram.com/cauricharts"},

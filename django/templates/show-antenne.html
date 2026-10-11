@@ -1,0 +1,16 @@
+{#- Antenne seule, plein cadre : la page que filme OBS (source navigateur 1080×1920) pour TikTok, Instagram et Facebook. -#}
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>{{ meta.title }}</title>
+    <link rel="stylesheet" href="{{ asset('css/show-player.css') }}">
+</head>
+<body class="sp-antenne">
+    <div id="sp" class="sp" data-programme="{{ path('show/programme.json') }}" data-start="{{ start_iso }}" data-speed="{{ speed }}"
+         data-jump="{{ jump }}" data-rehearsal="{{ '1' if rehearsal else '0' }}" data-assets="/assets/show/" data-flags="/assets/img/flags/"></div>
+    <script src="{{ asset('js/show-player.js') }}" defer></script>
+</body>
+</html>

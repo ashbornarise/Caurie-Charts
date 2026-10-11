@@ -1,0 +1,91 @@
+{#- Vote du public du Monthly Show : inscription par lien e-mail, votes ouverts, codes secrets, parrainage. Ne touche à aucun classement. -#}
+<link rel="stylesheet" href="{{ asset('css/show.css') }}">
+<div class="show">
+<section class="show-hero wrap">
+    <span class="show-live"><i></i>Vote du public</span>
+    <p class="kicker">THE MONTHLY SHOW · ÉDITION 1</p>
+    <h1>À TOI DE <span class="show-grad">VOTER</span></h1>
+    <p class="lead">Pronostics, Clip du mois, présence et codes secrets : tes votes alimentent les distinctions du public pendant le direct. Gratuit, sans achat, une voix par vote. Le vote du public ne change aucun classement officiel.</p>
+</section>
+
+{% if not cpt %}
+<section class="show-sec wrap" id="inscription">
+    <h2 class="show-center">Recevoir mon lien pour voter</h2>
+    <form class="form show-form show-verre" method="post" action="{{ path('show/vote') }}" novalidate>
+        {{ csrf_field() }}
+        <div class="hp" aria-hidden="true"><label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        {{ partial('partials/field', name='email', label=t('form.email'), type='email', attrs='autocomplete="email" maxlength="190"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='pseudo', label='Pseudo (affiché à l’écran si tu l’acceptes)', attrs='maxlength="40" autocomplete="nickname"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='country', label=t('show.form_country'), type='select', options=country_options, required=false, old=old, errors=errors) }}
+        <label class="show-check"><input type="checkbox" name="affichage" value="1" {{ 'checked' if old.get('affichage') }}>
+            <span>J’accepte que mon pseudo apparaisse à l’écran pendant le direct (distinctions du public).</span></label>
+        <label class="show-check{{ ' field--error' if errors.get('age') }}"><input type="checkbox" name="age" value="1" {{ 'checked' if old.get('age') }}>
+            <span>J’ai au moins 13 ans. J’ai lu la <a href="{{ path('confidentialite') }}">politique de confidentialité</a>.</span></label>
+        {% if errors.get('age') %}<p class="field__error">{{ errors.age }}</p>{% endif %}
+        {% if turnstile %}<div class="cf-turnstile" data-sitekey="{{ turnstile }}"></div>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
+        <button class="button" type="submit">{{ icon('bell', 18) }} Recevoir mon lien</button>
+        <p class="fineprint">Pas de mot de passe : on t’envoie un lien valable 30 minutes. Participation gratuite. Les cadeaux virtuels des réseaux ne donnent aucun avantage. Ce vote n’est ni organisé ni parrainé par TikTok, Meta ou YouTube.</p>
+    </form>
+</section>
+{% else %}
+<section class="show-sec wrap">
+    <div class="show-verre show-compte">
+        <div><b>{{ cpt.pseudo }}</b>{% if cpt.country_code %} · {{ country_name(cpt.country_code) }}{% endif %}
+            <br><span class="muted">{{ 'Ton pseudo peut apparaître à l’écran.' if cpt.display_ok else 'Ton pseudo n’apparaîtra pas à l’écran.' }}</span></div>
+        <form method="post" action="{{ path('show/deconnexion') }}">{{ csrf_field() }}<button class="show-btn show-btn--verre" type="submit">Se déconnecter</button></form>
+    </div>
+</section>
+{% endif %}
+
+<section class="show-sec wrap">
+    <p class="k">Votes ouverts</p>
+    <h2>{{ 'Les votes de la soirée' if polls else 'Aucun vote ouvert pour le moment' }}</h2>
+    {% if not polls %}<p>Les votes s’ouvrent pendant le direct, le {{ config('show.start_utc')[8:10] }}/{{ config('show.start_utc')[5:7] }} à 20 h GMT. Inscris-toi dès maintenant pour être prêt.</p>{% endif %}
+    {% for p in polls %}
+    <article class="show-verre show-poll" id="{{ p.slug }}">
+        <h3>{{ p.title }}{% if p.status == 'scelle' %} <span class="show-tag">résultat sous scellé</span>{% endif %}</h3>
+        {% if p.ma_voix %}
+            <p class="muted">Ta voix est enregistrée.</p>
+            {% if p.res and p.res.total_suffisant and p.status != 'scelle' %}
+            <ul class="show-res">{% for o in p.res.options %}<li><span>{{ o.label }}</span><b>{{ o.pct }} %</b><i class="show-res__b" data-p="{{ o.pct }}"></i></li>{% endfor %}</ul>
+            {% elif p.status != 'scelle' %}<p class="muted">Le vote chauffe…</p>{% endif %}
+        {% elif cpt and p.status == 'ouvert' %}
+            <form method="post" action="{{ path('show/vote/' ~ p.slug) }}" class="show-options">
+                {{ csrf_field() }}
+                {% for o in p.options %}
+                <button class="show-option" type="submit" name="option" value="{{ o.key }}">
+                    {% if o.image %}<img src="{{ o.image }}" alt="" loading="lazy">{% endif %}
+                    <span><b>{{ o.label }}</b>{% if o.sub %}<br><small>{{ o.sub }}</small>{% endif %}</span>
+                </button>
+                {% endfor %}
+            </form>
+        {% elif not cpt %}<p class="muted">Inscris-toi plus haut pour voter.</p>
+        {% else %}<p class="muted">Ce vote se termine, résultat à l’écran dans un instant.</p>{% endif %}
+    </article>
+    {% endfor %}
+</section>
+
+{% if cpt %}
+<section class="show-sec wrap" id="codes">
+    <div class="show-grid">
+        <div class="show-verre show-pad">
+            <div class="show-ico">{{ icon('sparkles', 22) }}</div>
+            <b>Codes secrets</b>
+            <p>Toutes les 30 minutes, un code apparaît à l’écran pendant 5 minutes. Saisis-les tous pour devenir « Fidèle du live ».</p>
+            <form method="post" action="{{ path('show/code') }}" class="show-code">{{ csrf_field() }}
+                <input name="code" maxlength="12" autocomplete="off" aria-label="Code secret" placeholder="CODE">
+                <button class="button" type="submit">Valider</button></form>
+        </div>
+        <div class="show-verre show-pad">
+            <div class="show-ico">{{ icon('share', 22) }}</div>
+            <b>Ton lien d’ambassadeur</b>
+            <p>Chaque ami qui s’inscrit avec ton lien compte pour la distinction « Ambassadeur ». Amis inscrits : <b>{{ filleuls }}</b>.</p>
+            <p class="show-lien">{{ lien_parrain }}</p>
+            <a class="show-btn" href="https://wa.me/?text={{ ('Viens voter au Cauri Charts Monthly Show : ' ~ lien_parrain)|urlencode }}" target="_blank" rel="noopener">{{ icon('share', 18) }}Partager sur WhatsApp</a>
+        </div>
+    </div>
+</section>
+{% endif %}
+</div>
+<script src="{{ asset('js/show-vote.js') }}" defer></script>

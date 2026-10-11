@@ -2,7 +2,7 @@
 from django.urls import path, re_path
 
 from core import views, views_claim, views_cron, views_show, views_widget
-from core.backoffice import analytics_views, team
+from core.backoffice import analytics_views, show_admin, team
 from core.backoffice import views as admin
 
 P = r"(?P<period>semaine|mois|annee)"
@@ -34,6 +34,7 @@ urlpatterns = [
     path("presse", views.presse),
     path("cron/nuit", views_cron.nuit),
     path("cron/rattrapage", views_cron.rattrapage),
+    path("cron/monde", views_cron.monde),
     re_path(r"^distinctions/(?P<did>\d+)$", views.distinction),
     re_path(r"^distinctions/(?P<did>\d+)/(?P<kind>impression|reconnaissance)\.pdf$", views.distinction),
     re_path(r"^distinctions/(?P<did>\d+)/(?P<kind>kit)\.zip$", views.distinction),
@@ -42,6 +43,16 @@ urlpatterns = [
     path("partenaires", views.partners),
     path("show", views_show.show_page),
     path("show/agenda.ics", views_show.show_ics),
+    path("show/repetition", views_show.show_rehearsal),
+    path("show/antenne", views_show.show_antenna),
+    path("show/programme.json", views_show.show_programme),
+    path("show/vote", views_show.show_vote),
+    re_path(r"^show/vote/(?P<slug>[a-z0-9-]+)$", views_show.show_vote_post),
+    re_path(r"^show/connexion/(?P<token>[A-Za-z0-9_-]{20,60})$", views_show.show_login),
+    path("show/code", views_show.show_code),
+    path("show/deconnexion", views_show.show_logout),
+    path("show/resultats.json", views_show.show_results),
+    re_path(r"^show/clip/(?P<vid>[A-Za-z0-9_-]{6,20})\.mp4$", views_show.show_clip),
     re_path(r"^langue/(?P<loc>[a-z]{2})$", views.set_locale_view),
     re_path(r"^partage/(?P<run_id>\d+)-(?P<fmt>square|story)$", views.share_image),
     re_path(r"^apercu/(?P<kind>classement|titre|artiste|edition|defaut)/(?P<key>[a-z0-9-]+)\.jpg$", views.apercu),
@@ -97,6 +108,7 @@ urlpatterns = [
     path("admin/controles", analytics_views.controles),
     path("admin/actu-artistes", analytics_views.artist_news),
     path("admin/distinctions", analytics_views.distinctions),
+    path("admin/show", show_admin.show),
     re_path(r"^admin/distinctions/(?P<did>\d+)$", analytics_views.distinctions),
     re_path(r"^admin/distinctions/(?P<did>\d+)/(?P<kind>carte|impression|dorure|cadre|reconnaissance|plaque|bloc|kit|telephone|pc|carre|post|certificat|enveloppe|carte_cauri|carte_code|carte_qr|ensemble)$", analytics_views.distinctions),
     re_path(r"^admin/actu-artistes/(?P<eid>\d+)$", analytics_views.artist_news),
