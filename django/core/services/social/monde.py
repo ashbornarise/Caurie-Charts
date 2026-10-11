@@ -176,7 +176,8 @@ def _redige(histoires: list) -> list:
         ' "accroche": "une phrase qui donne envie, 110 caractères max",\n'
         ' "resume": "2 à 3 phrases factuelles, 330 caractères max",\n'
         ' "choc": 0-100 (100 = info mondiale majeure : sortie surprise d\'une star, record historique, annonce Grammy, décès d\'une légende),\n'
-        ' "sensible": true si décès, santé, justice, violence}\n'
+        ' "sensible": true si décès, santé, justice, violence,\n'
+        ' "ancien": true si le fait principal (cérémonie, record, sortie) date de plus de 30 jours, même si l\'article est récent}\n'
         "rubrique : sorties = un album/single/projet qui sort ou est annoncé avec date ; records = record, chiffre historique, "
         "projet personnel d'un artiste (marque, film, livre, tournée record) ; monde = le reste (cérémonies, événements, industrie).\n"
         "Français impeccable, aucun anglicisme (concerts et pas shows), noms propres exacts, phrases complètes.\n"
@@ -195,8 +196,8 @@ def _redige(histoires: list) -> list:
             h = histoires[int(f["i"])]
         except (KeyError, ValueError, IndexError, TypeError):
             continue
-        if not f.get("musique", True):
-            continue
+        if not f.get("musique", True) or f.get("ancien"):
+            continue   # hors musique, ou vieille nouvelle remise en avant : pas de l'actualité
         out.append({**h, "rubrique": f.get("rubrique") if f.get("rubrique") in RUBRIQUES else "monde",
                     "artiste": coupe(f.get("artiste"), 60), "une": coupe(f.get("une"), 60).rstrip("…"),
                     "titre": coupe(f.get("titre") or h["items"][0]["title"], 95),
@@ -451,7 +452,7 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
     hashtags = "#CauriMonde #CauriCharts #ActuMusique #Musique #" + re.sub(r"\W", "", _sans_accents(une_fiche["artiste"]).title())[:30]
     faits = {"day": jour.isoformat(), "fiches": [{k: v for k, v in f.items() if k not in ("items", "mots", "noms", "date")} for f in fiches]}
     if rendu_seul:
-        return {"fichiers": fichiers, "legende": legende, "cover": cover}
+        return {"fichiers": fichiers, "legende": legende, "cover": cover, "fiches": fiches, "hashtags": hashtags, "faits": faits}
     return E.save_post(theme, jour.isoformat(), kicker, legende, hashtags, fichiers, faits)
 
 
@@ -480,7 +481,13 @@ def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
         choix = [f for f in fiches if f["rubrique"] == "monde"]
         choix += [f for f in fiches if f["rubrique"] != "monde"]
     else:
-        choix = [f for f in fiches if f["rubrique"] in ("records", "sorties")] + [f for f in fiches if f["rubrique"] == "monde"]
+        # 20 h : records et projets d'abord — caps de streams réels (Kworb) et chercheur web, puis sorties
+        extra = []
+        try:
+            extra = caps_streams()[:2] + recherche_records()
+        except Exception as exc:  # noqa: BLE001
+            log_write("monde", "warning", f"chercheur : {exc}")
+        choix = extra + [f for f in fiches if f["rubrique"] in ("records", "sorties")] + [f for f in fiches if f["rubrique"] == "monde"]
     tries, vus_artistes = sorted(choix, key=lambda f: (not f["sensible"], score(f)), reverse=True), set()
     choix = []
     for f in tries:   # une seule info par artiste et par édition : de la variété
@@ -562,9 +569,121 @@ def guette() -> dict | None:
     au moins 2 médias, jamais publiée ni déjà jugée ? La rédaction lui donne une note ; ≥ SEUIL_FLASH → à publier.
     Renvoie la fiche retenue (le rendu et la publication se font ensuite sur GitHub, plus puissant)."""
     neuves = [h for h in regroupe(collecte(3)) if confirme(h) and not deja_publie(h["cle"]) and not vu(h["cle"])]
-    if not neuves:
-        return None
-    fiches = redige(neuves[:6])
+    fiches = redige(neuves[:6]) if neuves else []
     marque_vu([h["cle"] for h in neuves[:6]])      # chaque info n'est jugée qu'une fois
+    # un cap historique franchi aujourd'hui (≥ 10 milliards de streams) est un flash à lui seul
+    try:
+        caps = [f for f in caps_streams(0) if f["choc"] >= 85 and not vu(f["cle"])]
+        marque_vu([f["cle"] for f in caps])
+        fiches += caps
+    except Exception as exc:  # noqa: BLE001
+        log_write("monde", "warning", f"caps : {exc}")
     retenue = max(fiches, key=lambda f: f["choc"], default=None)
     return retenue if retenue and retenue["choc"] >= SEUIL_FLASH else None
+
+
+# ---------------------------------------------------------------- le chercheur : records, certifications, caps de streams
+
+# Artistes suivis de près pour leurs records (en plus de STARS) : la scène francophone et ouest-africaine qui fait des chiffres
+CHERCHES = STARS + ["Tiakola", "Damso", "SDM", "Werenoi", "Gazo", "Himra", "Didi B", "Josey", "Innoss'B", "Dadju", "Tayc",
+                    "Joé Dwèt Filé", "Shatta Wale", "Stonebwoy", "Sarkodie", "KiDi", "Omah Lay", "CKay", "Fireboy DML",
+                    "Kizz Daniel", "Oxlade", "Seyi Vibez", "Olamide", "Victony", "Shallipopi", "Toofan", "Magic System",
+                    "Booba", "PNL", "Orelsan", "Angèle", "Soolking", "Naps", "Zola"]
+AFRICAINS = {_sans_accents(n).lower() for n in [
+    "Burna Boy", "Wizkid", "Davido", "Tems", "Rema", "Asake", "Ayra Starr", "Tyla", "Fally Ipupa", "Black Sherif", "Didi B",
+    "Josey", "Innoss'B", "Shatta Wale", "Stonebwoy", "Sarkodie", "KiDi", "Omah Lay", "CKay", "Fireboy DML", "Kizz Daniel",
+    "Oxlade", "Seyi Vibez", "Olamide", "Victony", "Shallipopi", "Toofan", "Magic System", "Aya Nakamura", "Tiakola", "Dadju",
+    "Tayc", "Gims"]}
+MOTS_RECORDS = ("(record OR certifié OR \"disque de platine\" OR \"disque d'or\" OR \"disque de diamant\" OR milliard "
+                "OR \"millions de streams\" OR démarrage OR \"numéro un\" OR historique)")
+
+
+def _flux_records() -> list:
+    from urllib.parse import quote
+    lots = [CHERCHES[i:i + 6] for i in range(0, len(CHERCHES), 6)]
+    return [{"name": "Google Actualités", "url": GOOGLE_NEWS + quote("(" + " OR ".join(f'"{n}"' for n in lot) + ") " + MOTS_RECORDS + " when:7d"),
+             "poids": 1} for lot in lots]
+
+
+def recherche_records() -> list:
+    """Le chercheur web : les articles récents sur les records et certifications des artistes suivis.
+    Seuls les faits des vrais articles trouvés sont gardés (sources citées) ; un record sans chiffre est écarté."""
+    def un(feed):
+        try:
+            return [{**it, "source": feed["name"], "poids": feed["poids"]} for it in parse_feed(http_get(feed["url"]) or "")]
+        except Exception:  # noqa: BLE001
+            return []
+    with ThreadPoolExecutor(6) as ex:
+        items = [it for lot in ex.map(un, _flux_records()) for it in lot]
+    for it in items:
+        if " - " in it["title"]:
+            it["title"], it["source"] = it["title"].rsplit(" - ", 1)
+            it["poids"] = 2
+        d = it.get("published_at")
+        if isinstance(d, str):
+            try:
+                d = datetime.fromisoformat(d.replace("Z", "+00:00"))
+            except ValueError:
+                d = None
+        if d is not None and d.tzinfo is None:
+            d = d.replace(tzinfo=timezone.utc)
+        it["date"] = d or datetime.now(timezone.utc)
+    histoires = [h for h in regroupe(items) if not deja_publie(h["cle"])]
+    fiches = redige(histoires[:20])
+    return [{**f, "rubrique": "records"} for f in fiches if re.search(r"\d", f["titre"] + f["resume"])]
+
+
+def _kworb() -> list:
+    """Top 3 000 Spotify (Kworb, compteurs publics) : [(nom, total en millions, par jour en millions)]."""
+    import html as H
+    page = http_get("https://kworb.net/spotify/artists.html") or ""
+    rows = re.findall(r'<a href="/spotify/artist/[^"]+">([^<]+)</a></div></td>\s*<td>([\d,.]+)</td>\s*<td>([\d,.]+)</td>', page)
+    return [(H.unescape(n), float(t.replace(",", "")), float(dj.replace(",", ""))) for n, t, dj in rows]
+
+
+def _volume(m: float) -> str:
+    if m >= 1000:
+        v = m / 1000
+        txt = f"{v:,.1f}".replace(",", " ").replace(".0", "").replace(".", ",")
+        return txt + (" milliards" if v >= 2 else " milliard")
+    return f"{m:,.0f}".replace(",", " ") + " millions"
+
+
+def caps_streams(jours_annonce: int = 3) -> list:
+    """Caps ronds franchis aujourd'hui (ou dans ≤ jours_annonce jours) sur Spotify, calculés sur les vrais compteurs :
+    tous les 10 milliards au-delà de 10 Md, chaque milliard en dessous ; artistes africains : tous les 500 millions."""
+    out = []
+    suivis = {_sans_accents(n).lower() for n in CHERCHES} | AFRICAINS
+    for nom, total, jour in _kworb():
+        afr = _sans_accents(nom).lower() in AFRICAINS
+        if _sans_accents(nom).lower() not in suivis and total < 30000:
+            continue   # seulement les visages que tout le monde connaît (ou les géants au-delà de 30 milliards)
+        pas = 10000 if total >= 10000 else (500 if afr and total >= 500 else (1000 if total >= 1000 else None))
+        if not pas or jour <= 0:
+            continue
+        cap = (total // pas) * pas
+        if cap > 0 and total - jour < cap <= total:
+            etat, cible = "franchi", cap
+        else:
+            cible = cap + pas
+            if (cible - total) / jour > jours_annonce:
+                continue
+            etat = "bientot"
+        cle = hashlib.sha1(f"kworb-{nom}-{cible:.0f}-{etat}".encode()).hexdigest()[:12]
+        if deja_publie(cle):
+            continue
+        n_jours = max(1, round((cible - total) / jour))
+        if etat == "franchi":
+            titre = f"{nom} franchit les {_volume(cible)} de streams sur Spotify"
+            une = f"{nom} : {_volume(cible)} de streams"
+        else:
+            titre = f"{nom} va franchir les {_volume(cible)} de streams sur Spotify d'ici {n_jours} jour{'s' if n_jours > 1 else ''}"
+            une = f"{nom} : bientôt {_volume(cible)}"
+        resume = (f"Selon les compteurs publics de Spotify relevés par Kworb, {nom} totalise {_volume(total)} de streams, "
+                  f"avec {jour:.1f} millions de streams par jour en ce moment.").replace(".", ",", 0)
+        out.append({"items": [{"title": titre, "url": "https://kworb.net/spotify/artists.html", "summary": resume}],
+                    "sources": ["Spotify (via Kworb)"], "poids": 3, "date": datetime.now(timezone.utc), "cle": cle,
+                    "rubrique": "records", "artiste": nom, "une": une.upper(), "titre": titre, "accroche": titre, "resume": resume,
+                    "choc": (95 if cible >= 50000 else 85 if cible >= 10000 else 70) if etat == "franchi" else 55,
+                    "sensible": False, "mots": set(), "noms": set()})
+    return sorted(out, key=lambda f: -f["choc"])
