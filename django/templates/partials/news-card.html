@@ -4,7 +4,7 @@
 <li class="news-card news-card--tone-{{ i % 6 }}">
     <a class="news-card__media" href="{{ href }}"{% if external %} target="_blank" rel="noopener noreferrer"{% endif %} tabindex="-1" aria-hidden="true">
         {% if n.image_path %}
-        <img src="/media/news/{{ rawurlencode(n.image_path.split('/')[-1]) }}" alt="" loading="lazy" width="720" height="405">
+        <img src="/{{ news_image(n.image_path) }}" alt="" loading="lazy" width="720" height="405">
         {% else %}
         <span class="news-card__placeholder">{{ initials(n.source_name or brand()) }}</span>
         {% endif %}

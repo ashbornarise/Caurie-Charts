@@ -32,6 +32,13 @@ def url(p: str = "/", query: dict | None = None) -> str:
     return conf.get("app.url") + "/" + p.lstrip("/") + _qs(query)
 
 
+def news_image(image_path: str | None) -> str | None:
+    """Adresse (relative) de l'image d'un article : « social/… » = couverture d'un post Cauri ; sinon media/news/<fichier>."""
+    if not image_path:
+        return None
+    return "media/" + image_path if image_path.startswith("social/") else "media/news/" + image_path.split("/")[-1]
+
+
 def path(p: str = "/", query: dict | None = None) -> str:
     return "/" + p.lstrip("/") + _qs(query)
 

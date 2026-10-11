@@ -11,7 +11,7 @@ from django.template.loader import get_template
 
 from core import clock
 from core import conf, db, repos, storage
-from core.helpers import PERIOD_SLUGS, brand, chart_path, country_name, path, period_label, url
+from core.helpers import PERIOD_SLUGS, brand, chart_path, country_name, news_image, path, period_label, url
 from core.i18n import locale, set_locale, t
 from core.services import insights, live_chart
 
@@ -519,7 +519,7 @@ def news_item(request, slug: str):
         if m and repos.news_by_slug(f"cauri-matin-{m.group(1)}"):
             return redirect(path(f"actualites/cauri-matin-{m.group(1)}"), 301)
         raise Http404
-    image = url("media/news/" + item["image_path"]) if item.get("image_path") else None
+    image = url(news_image(item["image_path"])) if item.get("image_path") else None
     slides = edition_slides(item)
     if slides:
         image = og_image("edition", item["slug"])  # aperçu léger 1200 × 630 avec la une du numéro
@@ -655,7 +655,7 @@ def sitemap(request):
         dated[u] = n["published_at"]
         imgs = [(sl, f"{n['title']} · page {i + 1}") for i, sl in enumerate(edition_slides(n))]
         if not imgs and n.get("image_path"):
-            imgs = [(url("media/news/" + n["image_path"]), n["title"])]
+            imgs = [(url(news_image(n["image_path"])), n["title"])]
         if imgs:
             images[u] = imgs[:10]
     track_urls = []

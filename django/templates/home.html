@@ -24,7 +24,7 @@
         {% set lead = homeNews[0] %}
         <article class="une__lead">
             <a class="une__media" href="{{ news_href(lead) }}"{{ news_ext(lead) }} tabindex="-1" aria-hidden="true">
-                {% if lead.image_path %}<img src="/media/news/{{ rawurlencode(lead.image_path.split('/')[-1]) }}" alt="" width="1280" height="720">{% endif %}
+                {% if lead.image_path %}<img src="/{{ news_image(lead.image_path) }}" alt="" width="1280" height="720">{% endif %}
             </a>
             <p class="une__meta"><span class="news-card__tag">{{ t('news.cat_' ~ lead.category) }}</span> {{ fmt_date(lead.published_at[:10], false) }}</p>
             <h3 class="une__title"><a href="{{ news_href(lead) }}"{{ news_ext(lead) }}>{{ lead.title }}</a></h3>
@@ -34,7 +34,7 @@
             {% for n in homeNews[1:5] %}
             <li class="une__item">
                 <a class="une__thumb" href="{{ news_href(n) }}"{{ news_ext(n) }} tabindex="-1" aria-hidden="true">
-                    {% if n.image_path %}<img src="/media/news/{{ rawurlencode(n.image_path.split('/')[-1]) }}" alt="" loading="lazy" width="320" height="180">{% endif %}
+                    {% if n.image_path %}<img src="/{{ news_image(n.image_path) }}" alt="" loading="lazy" width="320" height="180">{% endif %}
                 </a>
                 <div>
                     <p class="une__meta"><span class="news-card__tag">{{ t('news.cat_' ~ n.category) }}</span> {{ fmt_date(n.published_at[:10], false) }}</p>

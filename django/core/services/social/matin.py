@@ -126,5 +126,5 @@ def article(post: dict) -> str:
     body = caption.replace("Classement en direct : lien en bio.", "Classement complet et méthode sur cauricharts.com.")
     db.insert("news", {"title": title[:200], "slug": f"cauri-matin-{f['day']}",  # adresse stable
                        "summary": caption.split("\n\n")[0][:400], "body": body, "category": "classement", "country_id": None,
-                       "source_name": "Cauri Charts", "source_url": None, "image_path": None, "origin": "manual", "external_guid": guid, "status": "published", "published_at": now_utc()})
+                       "source_name": "Cauri Charts", "source_url": None, "image_path": ("social/" + post["image_square"])[:120] if post.get("image_square") else None, "origin": "manual", "external_guid": guid, "status": "published", "published_at": now_utc()})
     return "article publié dans Actualités"

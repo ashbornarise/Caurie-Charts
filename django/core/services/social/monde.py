@@ -177,6 +177,7 @@ def _redige(histoires: list) -> list:
         ' "resume": "2 à 3 phrases factuelles, 330 caractères max",\n'
         ' "choc": 0-100 (100 = info mondiale majeure : sortie surprise d\'une star, record historique, annonce Grammy, décès d\'une légende),\n'
         ' "sensible": true si décès, santé, justice, violence,\n'
+        ' "question": "une question courte au public, qui pousse à commenter, terminée par ⁉️ (ex. Vous attendiez cet album ⁉️)",\n'
         ' "ancien": true si le fait principal (cérémonie, record, sortie) date de plus de 30 jours, même si l\'article est récent}\n'
         "rubrique : sorties = un album/single/projet qui sort ou est annoncé avec date ; records = record, chiffre historique, "
         "projet personnel d'un artiste (marque, film, livre, tournée record) ; monde = le reste (cérémonies, événements, industrie).\n"
@@ -202,6 +203,7 @@ def _redige(histoires: list) -> list:
                     "artiste": coupe(f.get("artiste"), 60), "une": coupe(f.get("une"), 60).rstrip("…"),
                     "titre": coupe(f.get("titre") or h["items"][0]["title"], 140),
                     "accroche": coupe(f.get("accroche"), 130), "resume": coupe(f.get("resume"), 420),
+                    "question": coupe(f.get("question") or "Vous en pensez quoi ⁉️", 110),
                     "choc": int(f.get("choc") or 0), "sensible": bool(f.get("sensible"))})
     return out
 
@@ -209,8 +211,16 @@ def _redige(histoires: list) -> list:
 # ---------------------------------------------------------------- photo (Deezer, photo d'artiste officielle)
 
 def photo(artiste: str):
+    """Photo de l'artiste : d'abord celle de notre base (vérifiée), sinon Deezer par nom exact (homonymes possibles)."""
     if not artiste:
         return None
+    try:
+        nous = db.value("""SELECT COALESCE(NULLIF(image_hd_url, ''), NULLIF(image_url, '')) FROM artists
+                           WHERE LOWER(name) = LOWER(?) AND status = 'active' LIMIT 1""", [artiste])
+        if nous:
+            return nous
+    except Exception:  # noqa: BLE001
+        pass
     try:
         from urllib.parse import quote
         r = json.loads(http_get("https://api.deezer.com/search/artist?limit=1&q=" + quote(artiste)) or "{}")
@@ -298,7 +308,8 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
     haut, bas, cote = (70 * k, 90 * k, 80 * k) if fmt == "feed" else (250 * k, 440 * k, 90 * k)
     img = Image.new("RGB", (W, H), INK)
     # la photo d'un artiste seulement si son nom est bien dans le titre de l'info (jamais la photo d'un autre)
-    nom_ok = f.get("artiste") and _sans_accents(f["artiste"]).lower() in _sans_accents((diapo or {}).get("titre") or f.get("titre", "") or f.get("une", "")).lower()
+    texte_sujet = " ".join([(diapo or {}).get("titre") or "", f.get("titre", "") or "", f.get("une", "") or ""])
+    nom_ok = f.get("photo_ok") or (f.get("artiste") and _sans_accents(f["artiste"]).lower() in _sans_accents(texte_sujet).lower())
     url = None if ((diapo or {}).get("fond") or not nom_ok) else photo(f["artiste"])
     src = (diapo or {}).get("fond")
     if not src and not url:   # pas de photo sûre : l'objet du sujet, sinon (plus bas) une scène de concert
@@ -356,14 +367,17 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
     # la phrase d'abord (taille fixe), puis le titre le plus grand possible SANS dépasser le tiers bas : le visage reste visible
     ft2 = PI.font(str(fb if not diapo else fs), (38 if not diapo else 30) * k)
     interl2 = (52 if not diapo else 44) * k
-    phrase, l2, cur = ((diapo or {}).get("texte") or f["titre"]), [], ""
-    for m in phrase.split():
-        essai = (cur + " " + m).strip()
-        if d.textlength(essai, font=ft2) <= largeur:
-            cur = essai
-        else:
-            l2.append(cur); cur = m
-    l2 = (l2 + [cur])[:3 if not diapo else 4]
+    phrase, l2 = ((diapo or {}).get("texte") or f["titre"]), []
+    for para in phrase.split("\n"):
+        cur = ""
+        for m in para.split():
+            essai = (cur + " " + m).strip()
+            if d.textlength(essai, font=ft2) <= largeur:
+                cur = essai
+            else:
+                l2.append(cur); cur = m
+        l2.append(cur)
+    l2 = [x for x in l2 if x][:3 if not diapo else (6 if "\n" in phrase else 4)]
     budget = H * (.42 if fmt == "feed" else .55)          # hauteur maximale du bloc de texte (TikTok : marge basse plus grande)
     fixe = bas + 34 * k + 40 * k + len(l2) * interl2 + 34 * k
     max_lignes = 4 if diapo else 3
@@ -421,6 +435,8 @@ def _legende(fiches: list, entete: str) -> str:
     lignes = [entete]
     for f in fiches:
         lignes.append(f"▪️ {f['titre']}\n{f['resume']}\n(Sources : {', '.join(f['sources'])})")
+    if fiches and fiches[0].get("question"):
+        lignes.append(fiches[0]["question"] + " Dites-le en commentaire ‼️")
     lignes.append("Cauri Charts, la référence de la musique ouest-africaine. Le classement en direct : lien en bio.")
     return "\n\n".join(lignes)
 
@@ -467,7 +483,7 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
     return E.save_post(theme, jour.isoformat(), kicker, legende, hashtags, fichiers, faits)
 
 
-def archive(fiches: list) -> None:
+def archive(fiches: list, image: str | None = None) -> None:
     """Chaque info publiée devient aussi un article dans Actualités (le site comme un journal) et ne repassera plus."""
     from core.views import now_utc
     for f in fiches:
@@ -479,7 +495,8 @@ def archive(fiches: list) -> None:
         db.insert("news", {"title": f["titre"][:200], "slug": slug, "summary": (f["accroche"] or f["resume"])[:400],
                            "body": f["resume"] + "\n\nSources : " + ", ".join(f["sources"]) + ".", "category": CATEGORIE_SITE[f["rubrique"]],
                            "country_id": None, "source_name": ", ".join(f["sources"])[:120], "source_url": src["url"][:500],
-                           "image_path": None, "origin": "manual", "external_guid": guid, "status": "published", "published_at": now_utc()})
+                           "image_path": ("social/" + image)[:120] if image else None, "origin": "manual", "external_guid": guid,
+                           "status": "published", "published_at": now_utc()})
 
 
 def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
@@ -523,7 +540,7 @@ def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
         entete = f"🌍 Cauri Monde · {f['titre']}"
         posts.append(construit([f], jour, f"monde-{quand}-{i + 1}", kicker, entete, final, rendu_seul, due=due))
         if not rendu_seul:
-            archive([f])
+            archive([f], posts[-1].get("image_square"))
     return posts[0] if rendu_seul else {"title": f"{len(posts)} posts Cauri Monde ({quand})", "posts": posts}
 
 
@@ -542,7 +559,7 @@ def flash(rendu_seul: bool = False, forcer: bool = False) -> dict | None:
     post = construit([f], maintenant.date(), f"flash-{maintenant:%H%M}", kicker, entete,
                      "Info confirmée par " + " et ".join(f["sources"][:3]) + ". Suivez Cauri Charts pour ne rien manquer.", rendu_seul)
     if not rendu_seul:
-        archive([f])
+        archive([f], post.get("image_square"))
     return post
 
 
@@ -709,7 +726,7 @@ def en_attente() -> list:
     """Posts Cauri Monde arrivés à leur heure et pas encore envoyés (requête légère, appelée toutes les 10 min)."""
     maintenant = datetime.now(timezone.utc)
     out = []
-    for r in db.all("""SELECT id, facts FROM social_posts WHERE theme LIKE 'monde-%' AND slot_date >= CURRENT_DATE - 1
+    for r in db.all("""SELECT id, facts FROM social_posts WHERE (theme LIKE 'monde-%' OR theme LIKE 'format-%') AND slot_date >= CURRENT_DATE - 1
                        AND status = 'approved' ORDER BY id"""):
         try:
             due = json.loads(r["facts"]).get("due")

@@ -8,7 +8,7 @@
     {% if slides %}
         <figure class="article-hero article-hero--cover"><img src="{{ slides[0] }}" alt="La une de {{ item.title.split(' :')[0] }}" width="1080" height="1350"></figure>
     {% elif item.image_path %}
-        <figure class="article-hero"><img src="{{ path('media/news/' ~ item.image_path) }}" alt="" width="720" height="405"></figure>
+        <figure class="article-hero"><img src="/{{ news_image(item.image_path) }}" alt="" width="720" height="405"></figure>
     {% endif %}
     <p class="lead">{{ item.summary }}</p>
     {% if item.body %}

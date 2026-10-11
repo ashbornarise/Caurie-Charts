@@ -55,7 +55,7 @@ def environment(**options) -> Environment:
         "slugify": helpers.slugify, "initials": helpers.initials, "country_name": helpers.country_name,
         "chart_name": helpers.chart_name, "period_label": helpers.period_label, "movement": helpers.movement,
         "is_group_label": helpers.is_group_label, "chart_path": helpers.chart_path, "rank_chart_svg": helpers.rank_chart_svg,
-        "flag": helpers.flag, "legal": helpers.legal, "platform_name": helpers.platform_name, "url_with": helpers.url_with,
+        "flag": helpers.flag, "news_image": helpers.news_image, "legal": helpers.legal, "platform_name": helpers.platform_name, "url_with": helpers.url_with,
         "spotify_url": helpers.spotify_url, "period_slug": helpers.period_slug, "rawurlencode": helpers.rawurlencode,
         "ucfirst": helpers.ucfirst, "dict": dict, "from_json": helpers.from_json, "to_json": helpers.to_json, "php_str": helpers.php_str, "add_days": helpers.add_days, "number_format": helpers.number_format, "php_round": _php_round, "today": lambda: clock.today().isoformat(), "nl2br": helpers.nl2br, "paragraphs": helpers.paragraphs, "url_host": helpers.url_host, "share_url": helpers.share_url, "Markup": Markup, "live_sources": _live_sources, "now_year": lambda: clock.today().year, "trim": lambda s: str(s or "").strip(),
         "enumerate": enumerate, "len": len, "min": min, "max": max, "int": int, "str": str, "round": round,

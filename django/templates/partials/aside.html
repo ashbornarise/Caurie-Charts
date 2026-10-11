@@ -43,7 +43,7 @@
             <li class="news-thumb news-card--tone-{{ loop.index0 % 6 }}">
                 <a class="news-thumb__img" href="{{ href }}"{% if external %} target="_blank" rel="noopener noreferrer"{% endif %} tabindex="-1" aria-hidden="true">
                     {% if n.image_path %}
-                        <img src="/media/news/{{ rawurlencode(n.image_path.split('/')[-1]) }}" alt="" width="72" height="54" loading="lazy">
+                        <img src="/{{ news_image(n.image_path) }}" alt="" width="72" height="54" loading="lazy">
                     {% else %}
                         <span>{{ initials(n.source_name or brand()) }}</span>
                     {% endif %}

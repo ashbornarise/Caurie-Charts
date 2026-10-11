@@ -142,6 +142,12 @@ class DailyPipeline:
                     return ["aucun artiste avec assez de faits sourcés aujourd'hui"]
                 return [post["title"]] + publish(post, buffer.evening(clock.today()))
             self._step("8 quater. Portrait d'artiste", portrait)
+        # Formats récurrents (versus, 10 titres classés, qui est X, promo, classement mensuel) : préparés la nuit,
+        # envoyés à leur heure par la file d'attente de Cauri Monde (réveil toutes les 10 min)
+        def formats():
+            from core.services.social import formats as F
+            return F.du_jour(clock.today()) or ["aucun format aujourd'hui"]
+        self._step("8 sexies. Formats récurrents", formats)
 
         if weekday == 7:
             # Dimanche : l'article de la semaine (Cauri Hebdo) dans Actualités, écrit à partir des chiffres réels

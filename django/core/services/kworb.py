@@ -29,7 +29,7 @@ def auditeurs() -> dict:
     return {i: (int(_nombre(a)), int(_nombre(p))) for i, a, p in rows}
 
 
-def chiffres(spotify_id: str) -> dict | None:
+def chiffres(spotify_id: str, n_titres: int = 3) -> dict | None:
     """Les chiffres Spotify d'un artiste : total de streams, streams par jour, auditeurs mensuels et record,
     titres les plus écoutés, prochain cap rond et délai estimé. None si Kworb ne suit pas cet artiste."""
     if not spotify_id or not re.fullmatch(r"[A-Za-z0-9]{22}", spotify_id):
@@ -50,7 +50,7 @@ def chiffres(spotify_id: str) -> dict | None:
     cap = (total // pas + 1) * pas
     jours = round((cap - total) / jour) if jour > 0 else None
     return {"total": total, "jour": jour, "auditeurs": aud[0] if aud else None, "record_auditeurs": aud[1] if aud else None,
-            "titres": sorted(titres, key=lambda t: -t["streams"])[:3], "cap": cap, "jours_cap": jours}
+            "titres": sorted(titres, key=lambda t: -t["streams"])[:n_titres], "cap": cap, "jours_cap": jours}
 
 
 def volume(n: float) -> str:
