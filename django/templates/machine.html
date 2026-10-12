@@ -1,0 +1,361 @@
+{#- Article « De 0 à 1 » : comment la machine Cauri Charts fonctionne. Page autonome (styles : /assets/css/machine.css). -#}
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ meta.title }}</title>
+<meta name="description" content="{{ meta.description }}">
+<link rel="canonical" href="{{ meta.url }}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="{{ meta.title }}">
+<meta property="og:description" content="{{ meta.description }}">
+<meta property="og:url" content="{{ meta.url }}">
+<meta property="og:image" content="{{ meta.image }}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="{{ asset('img/brand/monogram.svg') }}" type="image/svg+xml">
+<link rel="icon" href="{{ asset('img/brand/favicon-32.png') }}" type="image/png" sizes="32x32">
+<link rel="stylesheet" href="{{ asset('css/machine.css') }}">
+{% if meta.jsonld %}<script type="application/ld+json">{{ meta.jsonld }}</script>{% endif %}
+</head>
+<body class="machine">
+<header class="machine-bar">
+  <a href="/">Cauri <i>Charts</i></a>
+  <a class="dl" href="/assets/machine/de-0-a-1-cauri-charts.pdf" download>Télécharger le PDF</a>
+</header>
+<main class="machine-doc">
+<!-- 1. COUVERTURE -->
+<section class="page cover">
+  <div class="bg"></div><div class="grid"></div>
+  <div class="in">
+    <div class="brand">Cauri <i>Charts</i> · Article technique · Octobre 2026</div>
+    <div class="zero"><span>0</span><span class="arrow">→</span><span class="one">1</span></div>
+    <h1>Treize jours pour construire une rédaction qui ne dort jamais</h1>
+    <p class="sub">Comment une machine de collecte, de calcul, d'écriture, de design et de diffusion fabrique seule, chaque jour, l'information musicale de l'Afrique de l'Ouest et du monde, avec des sources gratuites, des agents qui se surveillent entre eux et zéro employé de nuit.</p>
+    <div class="u1 stats">
+      <div class="stat glasscard"><b>59 214</b><span>relevés de classements en 13 jours</span></div>
+      <div class="stat glasscard"><b>23 705</b><span>titres suivis</span></div>
+      <div class="stat glasscard"><b>3 205</b><span>artistes connus, dont 671 actifs</span></div>
+      <div class="stat glasscard"><b>0 €</b><span>dépensés en données : uniquement des sources publiques et gratuites</span></div>
+    </div>
+    <div class="meta">
+      <div><b class="u2">cauricharts.com</b><br>La référence de la musique ouest-africaine</div>
+      <div class="u3">Premier commit : 29 septembre 2026<br>Rédigé le 12 octobre 2026</div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. LE MOMENT 0 → 1 -->
+<section class="page">
+  <div class="kicker">Ouverture · Le passage de 0 à 1</div>
+  <h2>Le jour où le site s'est mis à <em>travailler sans nous</em></h2>
+  <p class="lead">Passer de 0 à 1, ce n'est pas publier une première page. C'est le moment où un système fait quelque chose d'utile alors que personne ne le lui demande. Pour Cauri Charts, ce moment a une heure précise : 1 h du matin, heure de Lomé, quand un réveil déclenche une chaîne de vingt étapes qui collecte, calcule, écrit, illustre, programme, puis se relit elle-même.</p>
+  <div class="cols">
+    <p class="drop">L'Afrique de l'Ouest produit l'une des musiques les plus écoutées de la planète, mais elle n'a jamais eu de classement de référence qui lui soit propre. Les plateformes publient chacune leurs tops, dans leur coin et selon leurs règles. Les médias spécialisés existent, mais une rédaction coûte cher, et l'actualité ne s'arrête pas à 18 h.</p>
+    <p>Cauri Charts part d'une hypothèse simple : <b>une industrie de l'information peut se compresser en logiciel</b>. Un classement, c'est des relevés et une formule. Une rédaction, c'est un agenda, des sources, un style et une relecture. Un studio graphique, c'est une charte et des règles de composition. Une régie de diffusion, c'est un calendrier et des canaux. Chacun de ces métiers peut être décrit précisément, donc automatisé, à condition de ne jamais confondre automatique et approximatif.</p>
+    <p>Le premier commit date du 29 septembre 2026. Le 30 septembre, la base enregistrait ses premiers relevés. Treize jours plus tard, elle en compte 59 214, venus d'Apple Music, Shazam, Deezer et YouTube, sur 16 pays. Le site publie chaque jour un classement, des magazines, des portraits d'artistes et des posts sur Instagram, Facebook, TikTok et Telegram. Depuis le 11 octobre, il couvre aussi l'actualité musicale mondiale, deux fois par jour, avec des flashs déclenchés toutes les dix minutes si une vraie nouvelle tombe.</p>
+    <p>Cet article raconte comment cette machine est pensée : ses capteurs, sa formule, son horloge, ses agents d'intelligence artificielle, sa façon de chercher l'information, son atelier visuel et sa diffusion. Il raconte aussi ses garde-fous, parce que l'essentiel de l'ingéniosité n'est pas de produire beaucoup, mais de produire <b>vrai</b>, sans surveillance humaine permanente.</p>
+  </div>
+  <div class="quote">« Une machine qui publie seule n'a de valeur que si l'on peut lui faire confiance quand personne ne regarde. »</div>
+  <div class="box glass">
+    <h4>Ce que fait la machine en une journée</h4>
+    <div class="three">
+      <ul class="clean"><li>Relève les tops de plusieurs plateformes par pays</li><li>Calcule quatre classements : Prime, Buzz, Fresh, Icon</li><li>Découvre de nouveaux artistes et confirme leur pays</li></ul>
+      <ul class="clean"><li>Écrit Cauri Matin, Cauri Hebdo et Cauri Monde</li><li>Cherche les records et les chiffres de streams</li><li>Détecte les flashs et les fait confirmer</li></ul>
+      <ul class="clean"><li>Compose des visuels en 4:5 et 9:16</li><li>Programme les posts dans Buffer et Telegram</li><li>Relit tout le site et note ses propres erreurs</li></ul>
+    </div>
+  </div>
+  <div class="folio"><span>De 0 à 1 · Cauri Charts</span><span>2 / 10</span></div>
+</section>
+
+<!-- 3. ARCHITECTURE -->
+<section class="page">
+  <div class="kicker">Architecture · Vue d'ensemble</div>
+  <h2>Cinq organes, <em>une boucle fermée</em></h2>
+  <p class="lead">La machine est pensée comme un organisme : des capteurs qui perçoivent, un cerveau qui calcule, un atelier qui fabrique, une voix qui diffuse et un système immunitaire qui contrôle. Chaque organe peut tomber en panne sans entraîner les autres.</p>
+  <div class="flow">
+    <div class="node"><div class="n">01</div><b>Capteurs</b><p>Importeurs par plateforme et par pays, relevé des vues YouTube, popularité Deezer, flux RSS de 9 grands médias, Google Actualités, compteurs Kworb.</p></div>
+    <div class="node v"><div class="n">02</div><b>Cerveau</b><p>Normalisation, rapprochement titre/artiste, classement par pays, formule de points, plafonds par pays, détection des montées.</p></div>
+    <div class="node"><div class="n">03</div><b>Atelier</b><p>Rédaction par IA encadrée, moteur de couvertures, gabarits de carrousels, magazines, portraits, formats récurrents.</p></div>
+    <div class="node v"><div class="n">04</div><b>Voix</b><p>Site Django, Buffer (Instagram, Facebook, TikTok), Telegram, stockage Blob, file d'attente des posts à l'heure dite.</p></div>
+    <div class="node"><div class="n">05</div><b>Contrôle</b><p>Agents de relecture nocturnes, rapport du matin, rattrapage automatique, sauvegarde hebdomadaire.</p></div>
+  </div>
+  <div class="loop">↺ Les constats du contrôle corrigent les données du lendemain : la machine apprend de ses propres erreurs</div>
+
+  <div class="u4 two">
+    <div>
+      <h3>La pile technique</h3>
+      <table>
+        <tr><th>Couche</th><th>Choix</th></tr>
+        <tr><td>Application</td><td>Django (Python), gabarits Jinja</td></tr>
+        <tr><td>Hébergement</td><td>Vercel (fonctions + cache CDN)</td></tr>
+        <tr><td>Base de données</td><td>PostgreSQL serverless (Neon)</td></tr>
+        <tr><td>Fichiers</td><td>Vercel Blob (images des posts)</td></tr>
+        <tr><td>Calcul lourd</td><td>GitHub Actions (5 workflows)</td></tr>
+        <tr><td>Images</td><td>Pillow, rendu en 2160 × 2700 et 2160 × 3840</td></tr>
+        <tr><td>IA</td><td>Gemini, puis Groq, puis OpenRouter en secours</td></tr>
+        <tr><td>Diffusion</td><td>API Buffer, API Telegram</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Trois principes de conception</h3>
+      <div class="box"><h4>1 · Le réel uniquement</h4><p>Aucun chiffre n'est inventé. Une donnée manquante produit un « pas encore assez de données », jamais un remplissage. Un pays qui suit moins de 8 artistes n'a pas de classement.</p></div>
+      <div class="box"><h4>2 · Gratuit par construction</h4><p>Chaque source est publique et gratuite : tops des plateformes, API Deezer, YouTube, flux RSS, Kworb. L'IA tourne sur les offres gratuites, avec un budget d'appels surveillé.</p></div>
+      <div class="box"><h4>3 · Tout est rejouable</h4><p>Chaque étape est idempotente : relancer la nuit ne crée ni doublon ni second post. Une contrainte d'unicité (jour + rubrique) protège la file de publication.</p></div>
+    </div>
+  </div>
+  <p class="u5">Le code tient en un peu plus de 20 000 lignes de Python réparties en 29 services. Ce chiffre surprend souvent : la complexité n'est pas dans la quantité de code, mais dans la précision des règles. Chaque règle est née d'un cas réel, par exemple un homonyme sur Deezer, une pochette dont le texte se mêlait au titre, ou un post annonçant « ce soir » une émission déjà passée.</p>
+  <div class="folio"><span>De 0 à 1 · Cauri Charts</span><span>3 / 10</span></div>
+</section>
+
+<!-- 4. CAPTEURS ET FORMULE -->
+<section class="page">
+  <div class="kicker">Données · Capteurs et formule</div>
+  <h2>Transformer le bruit des plateformes en <em>un seul classement</em></h2>
+  <div class="cols">
+    <p class="drop">Chaque plateforme parle sa propre langue. Apple Music publie un top par pays, Shazam mesure ce que les gens cherchent, YouTube compte des vues, Deezer expose une popularité. Le premier travail de la machine est de faire parler toutes ces sources d'une seule voix.</p>
+    <p>Les importeurs relèvent les classements chaque nuit, pays par pays. Un normaliseur nettoie les titres (« feat. », « Remix », « Official Video », accents, majuscules), puis un module de rapprochement associe chaque entrée à un titre et à un artiste uniques. C'est l'étape la plus délicate : « Rema » sur une plateforme peut désigner un autre artiste sur la suivante. La règle retenue est stricte : l'identité se confirme par plusieurs indices concordants, et le pays d'un artiste n'est retenu qu'une fois confirmé.</p>
+    <p>Autour du cœur tourne une ronde d'agents de découverte : liste de suivi, découverte d'artistes, profils (photo, nombre de fans), classification par pays, chaînes YouTube complètes, photos HD depuis Apple Music, Wikimedia Commons, YouTube et Deezer. En treize jours, la base est passée de quelques dizaines d'artistes à 3 205, dont 671 actifs.</p>
+  </div>
+  <table class="u6">
+    <tr><th>Source</th><th>Relevés</th><th>Ce qu'elle mesure</th></tr>
+    <tr><td>Popularité Deezer</td><td class="t">21 064</td><td>Popularité calculée des titres trouvés sur Deezer</td></tr>
+    <tr><td>Apple Music</td><td class="t">14 800</td><td>Tops officiels par pays</td></tr>
+    <tr><td>Shazam</td><td class="t">10 200</td><td>Ce que le public cherche à identifier : signal de découverte</td></tr>
+    <tr><td>Vues YouTube</td><td class="t">8 179</td><td>Progression des vues des clips relevés chaque nuit</td></tr>
+    <tr><td>Deezer</td><td class="t">3 800</td><td>Tops Deezer par pays</td></tr>
+    <tr><td>Tendances YouTube</td><td class="t">1 080</td><td>Tendances musique par pays</td></tr>
+  </table>
+  <h3>La formule</h3>
+  <p>Chaque apparition dans un top rapporte des points selon la position, normalisés par la taille du top : être 1<sup>er</sup> d'un top 10 vaut autant qu'être 1<sup>er</sup> d'un top 200.</p>
+  <div class="formula">points = 100 × (taille + 1 − position) ÷ taille ÷ nb_sources(pays)
+    <small>La division par le nombre de sources du pays donne le même poids à chaque pays : un pays riche en plateformes n'écrase pas les autres.</small></div>
+  <div class="two">
+    <div class="box"><h4>Quatre lectures du même marché</h4>
+      <ul class="clean">
+        <li><b>Prime</b> : la somme des points, avec un plafond de titres par pays dans le Top régional</li>
+        <li><b>Buzz</b> : hors Top, les titres qui montent le plus et ceux portés par les signaux de découverte (Shazam)</li>
+        <li><b>Fresh</b> : les sorties de moins de 8 semaines et les artistes émergents</li>
+        <li><b>Icon</b> : la durée, sur toute l'histoire de la base</li>
+      </ul></div>
+    <div class="box"><h4>Les règles anti-triche</h4>
+      <ul class="clean">
+        <li>Un pays ne classe que ses propres artistes : un tube nigérian au Liberia ne remplit pas le Top libérien</li>
+        <li>Sous 8 artistes suivis, pas de classement national</li>
+        <li>Égalité départagée par le nombre de plateformes, puis par la meilleure position</li>
+        <li>Le classement officiel hebdomadaire est un brouillon validé dans l'administration</li>
+      </ul></div>
+  </div>
+  <div class="folio"><span>De 0 à 1 · Cauri Charts</span><span>4 / 10</span></div>
+</section>
+
+<!-- 5. LES CRONS -->
+<section class="page">
+  <div class="kicker">Orchestration · Les crons</div>
+  <h2>Une horloge à <em>trois réveils</em></h2>
+  <p class="lead">Une machine autonome dépend de son horloge. Or aucune horloge gratuite n'est fiable à 100 %. La solution retenue : trois réveils indépendants qui se couvrent les uns les autres, et des tâches conçues pour pouvoir être relancées sans risque.</p>
+  <div class="clock">
+    <div></div><div class="on"></div><div></div><div></div><div class="mid"></div><div class="on"></div><div class="mid"></div><div class="on"></div><div></div><div></div><div></div><div></div>
+    <div class="mid"></div><div></div><div></div><div></div><div></div><div class="mid"></div><div class="mid"></div><div class="on"></div><div></div><div class="mid"></div><div></div><div></div>
+  </div>
+  <div class="hours"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span><span>23</span></div>
+  <p class="u7">Une journée en heures UTC (= heure de Lomé). Barres pleines : réveils principaux. Barres claires : secours et posts programmés. En plus, un réveil toutes les 10 minutes, jour et nuit.</p>
+  <table class="u6">
+    <tr><th>Heure (UTC)</th><th>Réveil</th><th>Ce qui se passe</th></tr>
+    <tr><td class="t">01:00</td><td>Vercel</td><td>Chaîne de nuit complète : relevés, calculs, articles, posts, agents de contrôle</td></tr>
+    <tr><td class="t">04:23</td><td>GitHub Actions</td><td>Secours : relance la nuit uniquement si elle n'a pas tourné</td></tr>
+    <tr><td class="t">05:00</td><td>Vercel</td><td>Rattrape les étapes en échec (sources indisponibles, quotas)</td></tr>
+    <tr><td class="t">06:37</td><td>GitHub Actions</td><td>Second secours du rattrapage</td></tr>
+    <tr><td class="t">07:00</td><td>Vercel</td><td>Cauri Monde, édition de 8 h : l'actualité musicale mondiale</td></tr>
+    <tr><td class="t">19:00</td><td>Vercel</td><td>Cauri Monde, édition de 20 h : projets, records, sorties</td></tr>
+    <tr><td class="t">toutes les 10 min</td><td>Réveil externe</td><td>Publie les posts arrivés à échéance, puis guette un flash</td></tr>
+    <tr><td class="t">dim. 03:30</td><td>GitHub Actions</td><td>Sauvegarde hebdomadaire de la base</td></tr>
+  </table>
+  <div class="u6 two">
+    <div>
+      <h3>Pourquoi trois réveils ?</h3>
+      <p>Les crons de Vercel sont précis mais limités en durée d'exécution. Ceux de GitHub Actions ont beaucoup de temps de calcul, mais partent souvent en retard. Aucun service gratuit ne propose un réveil toutes les dix minutes. La machine combine donc les trois : Vercel donne l'heure, GitHub Actions fournit la puissance, et un réveil externe, authentifié par un jeton secret, donne la fréquence.</p>
+      <p>Chaque réveil passe par un point d'entrée protégé qui ne fait que <b>déléguer</b> : il déclenche le bon workflow GitHub (édition matin, soir, flash ou file) et répond en quelques millisecondes. Le travail lourd ne consomme donc jamais le temps de calcul du site.</p>
+    </div>
+    <div class="box glass">
+      <h4>La chaîne de nuit, étape par étape</h4>
+      <ul class="u8 clean mono">
+        <li>1 · Classements des plateformes</li><li>2 · Relevé des vues · 3 · Sources calculées</li><li>4 · Actualités</li>
+        <li>7 · Classement officiel (brouillon)</li><li>8 · Posts réseaux · 8a Cauri Matin</li><li>8 bis Telegram · 8 ter Cauri Hebdo</li>
+        <li>8 quater Portrait · 8 sexies Formats récurrents</li><li>10a–h · Suivi, découverte, profils, pays, Deezer, YouTube, photos HD</li>
+        <li>10k · Distinctions du mois · 10l Actu des artistes</li><li>10i · Statistiques des publications</li><li>10j · Agents de contrôle</li><li>11 · Ménage (cache, fichiers orphelins)</li>
+      </ul>
+      <p class="u5">Chaque étape a son propre budget de temps. Une étape en échec est notée et rattrapée, sans bloquer les suivantes.</p>
+    </div>
+  </div>
+  <div class="folio"><span>De 0 à 1 · Cauri Charts</span><span>5 / 10</span></div>
+</section>
+
+<!-- 6. AGENTS IA -->
+<section class="page">
+  <div class="kicker">Intelligence artificielle · Les agents</div>
+  <h2>L'IA rédige, <em>elle ne témoigne jamais</em></h2>
+  <p class="lead">Le choix fondateur tient en une phrase : un modèle de langage n'est jamais une source. Il reformule, résume, titre et classe des faits qu'on lui fournit, mais il n'a pas le droit d'en ajouter. Toute l'architecture des agents découle de ce principe.</p>
+  <div class="cols">
+    <p>Ce principe vient d'un test. On a demandé à une IA, sans accès au web, les records de l'album d'un rappeur français. Elle a répondu avec assurance, avec des chiffres précis et faux. Depuis, aucun agent ne travaille « de mémoire ». Chaque agent reçoit un dossier fermé (les articles, les relevés, les chiffres calculés) et doit répondre dans un format JSON strict, champ par champ. Une réponse hors format est rejetée ; une affirmation absente du dossier est supprimée par le relecteur.</p>
+    <p>Les agents utilisent les offres gratuites de plusieurs fournisseurs, avec une chaîne de secours : Gemini d'abord, puis Groq, puis OpenRouter. Les demandes sont groupées par lots de dix sujets pour économiser les quotas. Quand tous les quotas sont épuisés, la machine ne publie pas un texte bâclé : elle reporte l'étape au rattrapage.</p>
+  </div>
+  <div class="u6 three">
+    <div class="agent"><span class="role">Rédacteur</span><b>Cauri Monde</b><p>Pour chaque sujet : rubrique, artiste, titre percutant, accroche, résumé, mot choc, question au public. Il signale aussi si le sujet est sensible ou ancien.</p></div>
+    <div class="agent"><span class="role">Chercheur</span><b>Records</b><p>Interroge Google Actualités sur environ 90 artistes suivis avec des mots-clés (record, certifié, platine…). Il ne garde que les faits tirés des articles et contenant au moins un chiffre.</p></div>
+    <div class="agent"><span class="role">Guetteur</span><b>Flash</b><p>Toutes les 10 minutes, il cherche une nouvelle importante. Il exige au moins un grand média de référence ou trois médias concordants avant toute publication.</p></div>
+    <div class="agent"><span class="role">Calculateur</span><b>Caps de streams</b><p>Sans IA : il lit les compteurs publics Kworb, calcule le prochain palier rond et annonce « bientôt » à 3 jours ou moins. Au-delà de 10 milliards, il déclenche un flash.</p></div>
+    <div class="agent"><span class="role">Journaliste</span><b>Cauri Matin &amp; Hebdo</b><p>Écrit le numéro du jour et le magazine de la semaine à partir du même classement que la page d'accueil. Un n°1 contradictoire est impossible.</p></div>
+    <div class="agent"><span class="role">Biographe</span><b>Portraits</b><p>Assemble le parcours d'un artiste, ses meilleures positions et ses chiffres Spotify (auditeurs mensuels, pic, titres les plus écoutés).</p></div>
+  </div>
+  <h3 class="u9">Les cinq agents de contrôle (chaque nuit, après la publication)</h3>
+  <table>
+    <tr><th>Agent</th><th>Question posée</th><th>Action</th></tr>
+    <tr><td><b>Éditions</b></td><td>Cauri Matin et Cauri Hebdo donnent-ils le même n°1 que le classement ?</td><td>Corrige</td></tr>
+    <tr><td><b>Catalogue</b></td><td>Les artistes du Top 50 ont-ils un pays confirmé, une photo, une chaîne YouTube ?</td><td>Correction ciblée</td></tr>
+    <tr><td><b>Publications</b></td><td>Les posts programmés ne montrent-ils que des artistes confirmés, avec des images en ligne ?</td><td>Bloque ou alerte</td></tr>
+    <tr><td><b>Relecteur IA</b></td><td>La légende affirme-t-elle quelque chose qui n'est pas dans ses faits ?</td><td>Alerte</td></tr>
+    <tr><td><b>Pages</b></td><td>Les pages répondent-elles, sans « None » ni image cassée ?</td><td>Alerte</td></tr>
+  </table>
+  <div class="u10 quote">Les agents ne se font pas confiance entre eux. Le rédacteur écrit, le relecteur doute, le guetteur exige des preuves : c'est une rédaction en miniature, avec ses contre-pouvoirs.</div>
+  <div class="folio"><span>De 0 à 1 · Cauri Charts</span><span>6 / 10</span></div>
+</section>
+
+<!-- 7. RECHERCHES / CAURI MONDE -->
+<section class="page">
+  <div class="kicker">Recherche · Cauri Monde</div>
+  <h2>Lire 9 rédactions à la fois, <em>n'en garder que le vrai</em></h2>
+  <div class="two">
+    <div>
+      <p class="drop">Les fans voulaient l'actualité mondiale. Le défi était de la couvrir sans rédaction, sans inventer, et sans changer d'identité : Cauri Charts reste « la référence de la musique ouest-africaine », qui regarde aussi le monde.</p>
+      <h3>1 · Collecter</h3>
+      <p>La machine lit les flux RSS de neuf médias musicaux et culturels de référence (Billboard, Rolling Stone, Variety, Pitchfork, NME, Consequence, HipHopDX, Music Business Worldwide, RFI). Elle ajoute une veille Google Actualités ciblée sur une liste de stars mondiales et de géants africains.</p>
+      <h3>2 · Regrouper</h3>
+      <p>Une même nouvelle apparaît dans plusieurs médias sous des titres différents. Les articles sont regroupés par noms propres et mots significatifs communs. Un groupe = un sujet. Le nombre de médias dans un groupe devient un indice de fiabilité et d'importance.</p>
+      <h3>3 · Classer</h3>
+      <p>Les sujets sont classés par audience des artistes concernés (nombre de fans Deezer) et par couverture médiatique. Règle éditoriale : <b>une info par artiste et par édition</b>, et des visages connus en priorité.</p>
+      <h3>4 · Filtrer</h3>
+      <p>Une nouvelle de plus de 30 jours est écartée. Une version non officielle d'un clip est refusée. Un sujet que l'IA marque comme « sensible » ou « ancien » sort de l'édition. Chaque sujet publié est inscrit dans une mémoire pour ne jamais être publié deux fois.</p>
+    </div>
+    <div>
+      <figure class="u11"><img src="/assets/machine/img4.jpg" alt=""><figcaption>Une couverture Cauri Monde générée automatiquement : vraie photo de l'artiste, titre géant, zone de texte floutée pour rester lisible.</figcaption></figure>
+      <div class="box glass">
+        <h4>Une info = un post = un visage</h4>
+        <p>Chaque édition publie au plus 4 sujets, chacun dans son propre post, espacés d'au moins 45 minutes. La première image doit dire exactement de quoi on parle : si le nom de l'artiste n'est pas dans le titre, sa photo n'est pas utilisée.</p>
+      </div>
+    </div>
+  </div>
+  <div class="u5 box">
+    <h4>Le flash : du signal à la publication</h4>
+    <table class="u12">
+      <tr><td class="t">T + 0</td><td>Le réveil externe déclenche le guetteur. La file publie d'abord les posts arrivés à échéance.</td></tr>
+      <tr><td class="t">T + 1 min</td><td>Le guetteur relit les flux, regroupe et cherche un sujet majeur qui n'a pas encore été vu.</td></tr>
+      <tr><td class="t">T + 2 min</td><td>Confirmation : au moins un grand média de référence ou trois sources. Sinon, rien ne part.</td></tr>
+      <tr><td class="t">T + 4 min</td><td>Rédaction, couverture « choc » en 4:5 et 9:16, archivage sur le site, envoi vers Buffer et Telegram.</td></tr>
+    </table>
+  </div>
+  <div class="folio"><span>De 0 à 1 · Cauri Charts</span><span>7 / 10</span></div>
+</section>
+
+<!-- 8. ATELIER VISUEL -->
+<section class="page">
+  <div class="kicker">Design génératif · L'atelier</div>
+  <h2>Un directeur artistique <em>écrit en Python</em></h2>
+  <p class="lead">Un post doit arrêter le pouce en moins d'une seconde. Pour cela, l'atelier compose chaque image à partir de règles qu'un graphiste appliquerait : hiérarchie, contraste, respiration, et surtout ne jamais cacher un visage.</p>
+  <figure class="u11"><img src="/assets/machine/img0.jpg" alt=""><figcaption>Planche de styles : le même moteur, des combinaisons différentes. Chaque post tire son style d'une « graine » (son nom unique), et toutes les images d'un carrousel partagent ce style.</figcaption></figure>
+  <div class="two">
+    <div>
+      <h3>Le moteur de styles</h3>
+      <p>Pour chaque post, le moteur choisit une police parmi six (Anton, Bebas Neue, Archivo Black, Alfa Slab One, Bungee, Abril Fatface), une couleur d'accent parmi six, un traitement du titre (dernière ligne colorée, première ligne, surligné, alterné), une mise en page (texte en bas, en haut, ou affiche avec photo encadrée), un alignement et un style de bandeau.</p>
+      <div class="u13 formula">6 × 6 × 4 × 3 × 2 × 3 = 2 592<small>combinaisons possibles, tirées de façon déterministe : un post régénéré garde le même style.</small></div>
+    </div>
+    <div>
+      <h3>Les règles de composition</h3>
+      <ul class="clean">
+        <li><b>Budget de texte</b> : le titre reste dans le tiers bas (ou haut) de l'image, pour ne jamais couvrir un visage.</li>
+        <li><b>Zone floutée et assombrie</b> sous le texte, plus une ombre portée : lisible sur une pochette blanche comme sur une photo de nuit.</li>
+        <li><b>Coupe propre</b> des titres trop longs, sans couper un mot ni un caractère spécial.</li>
+        <li><b>Jamais de fond uni</b> : photo de l'artiste (notre base d'abord, puis Deezer seulement si le nom correspond exactement), objet du sujet (trophée, vinyle, micro, domaine public) ou scène de concert.</li>
+        <li><b>Rendu en double définition</b> (2160 px de large) pour les formats feed 4:5 et story 9:16.</li>
+      </ul>
+    </div>
+  </div>
+  <figure class="u14"><img src="/assets/machine/img1.jpg" alt=""><figcaption>Mise en page « affiche » : fond de couleur, photo encadrée, texte sous le cadre.</figcaption></figure>
+  <div class="folio"><span>De 0 à 1 · Cauri Charts</span><span>8 / 10</span></div>
+</section>
+
+<!-- 9. PLATEFORMES -->
+<section class="page">
+  <div class="kicker">Diffusion · Les posts sur les plateformes</div>
+  <h2>Une grille de programmes <em>comme une chaîne de télé</em></h2>
+  <p class="lead">Publier n'est pas « poster quand c'est prêt ». La machine tient une grille : des rendez-vous fixes que le public apprend à attendre, et des posts d'actualité qui s'y glissent.</p>
+  <div class="two">
+    <div>
+      <h3>La grille hebdomadaire</h3>
+      <table>
+        <tr><th>Quand</th><th>Format</th></tr>
+        <tr><td class="t">Chaque matin</td><td>Cauri Matin : le n°1 du jour et l'annonce de la soirée</td></tr>
+        <tr><td class="t">8 h · 20 h</td><td>Cauri Monde : jusqu'à 4 posts par édition</td></tr>
+        <tr><td class="t">Lundi 21 h</td><td>10 titres classés</td></tr>
+        <tr><td class="t">Mercredi 21 h</td><td>Versus : deux artistes face à face, le public vote</td></tr>
+        <tr><td class="t">Vendredi 21 h</td><td>Qui est X ? Portrait d'un artiste</td></tr>
+        <tr><td class="t">1<sup>er</sup> du mois</td><td>Classement mensuel des artistes</td></tr>
+        <tr><td class="t">1<sup>er</sup> lundi</td><td>Promo Cauri</td></tr>
+        <tr><td class="t">Semaine</td><td>Cauri Hebdo : magazine et carrousel</td></tr>
+        <tr><td class="t">À tout moment</td><td>Flash, si une vraie nouvelle tombe</td></tr>
+      </table>
+      <h3>Une question dans chaque post</h3>
+      <p>Chaque post Cauri Monde se termine par une question au public, écrite par l'agent rédacteur à partir du sujet. Les commentaires deviennent un signal : ils alimentent les votes de l'émission mensuelle.</p>
+    </div>
+    <div>
+      <figure class="u15"><img src="/assets/machine/img2.jpg" alt=""><figcaption>Les formats récurrents : versus, 10 titres classés, qui est X, classement mensuel, promo.</figcaption></figure>
+      <h3>Le circuit d'un post</h3>
+      <ul class="clean">
+        <li>Les images sont rendues, puis envoyées sur le stockage Blob sous un <b>nom unique horodaté</b>, pour qu'aucun cache ne serve une ancienne version.</li>
+        <li>Le post est enregistré dans la base (une seule ligne par jour et par rubrique) avec son heure de publication.</li>
+        <li>À l'heure dite, la file l'envoie à Buffer, qui publie sur Instagram et Facebook.</li>
+        <li><b>TikTok en mode notification</b> : le fondateur reçoit le post sur son téléphone et ajoute un son tendance avant de publier. C'est le seul geste humain, et il est voulu : le son tendance fait la portée sur TikTok.</li>
+        <li>En parallèle, la chaîne Telegram reçoit le classement et les éditions.</li>
+        <li>Chaque article est aussi archivé sur le site, dans sa série (Cauri Matin, Cauri Hebdo, Cauri Monde), avec la couverture du post comme image.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="u5 box glass"><h4>Le site comme vitrine permanente</h4><p>Pages des classements (Prime, Buzz, Fresh, Icon, par pays et par plateforme), pages des séries, et la rubrique « Les plus écoutés dans le monde » alimentée par les compteurs publics de Spotify. Toutes ces pages sont servies depuis le cache CDN : un visiteur de plus ne coûte presque rien.</p></div>
+  <div class="folio"><span>De 0 à 1 · Cauri Charts</span><span>9 / 10</span></div>
+</section>
+
+<!-- 10. SHOW, LEÇONS, CONCLUSION -->
+<section class="page">
+  <div class="kicker">Au-delà · Le direct, les leçons, la suite</div>
+  <h2>Quand la machine <em>passe à l'antenne</em></h2>
+  <div class="two">
+    <div>
+      <p class="drop">Le même cerveau qui produit les posts alimente The Monthly Show, la remise des prix mensuelle diffusée en direct comme une émission de télévision. Une antenne graphique (Remotion dans le navigateur, capturée par OBS) affiche les classements, les nominés et les clips officiels. Une régie pilote le conducteur. Un collecteur lit en temps réel les commentaires du direct TikTok pour compter les votes du public.</p>
+      <p>Le son suit les mêmes règles que les images : des ambiances tirées de banques sonores réelles, des musiques du domaine public, et aucun effet bon marché.</p>
+    </div>
+    <div class="box">
+      <h4>Ce que les pannes nous ont appris</h4>
+      <ul class="clean">
+        <li><b>Le cache est un organe vital.</b> Un simple en-tête <span class="mono">Vary: Cookie</span> empêchait le CDN de servir les pages : chaque visite relançait Django et le quota de calcul a été épuisé. Corrigé par un middleware qui purge cet en-tête sur les pages publiques. Le cache répond désormais.</li>
+        <li><b>Un nom de fichier est une promesse.</b> Réutiliser un nom d'image faisait publier l'ancienne version, servie par les caches. Tous les fichiers sont désormais horodatés.</li>
+        <li><b>Une seule source de vérité.</b> Cauri Matin et la page d'accueil calculaient deux n°1 différents. Ils lisent maintenant le même classement, et un agent le vérifie chaque nuit.</li>
+        <li><b>L'IA sans dossier invente.</b> D'où la règle : elle résume, elle ne raconte pas.</li>
+      </ul>
+    </div>
+  </div>
+  <h3 class="u16">Ce que « de 0 à 1 » veut vraiment dire ici</h3>
+  <p>L'innovation de Cauri Charts n'est pas une technologie isolée. Ni Django, ni Pillow, ni les modèles de langage ne sont nouveaux. Ce qui est nouveau, c'est l'<b>assemblage</b> : une agence de données, une rédaction, un studio graphique, une régie de diffusion et un service qualité, compressés en un seul système qui se réveille seul, travaille seul, se relit seul et ne coûte presque rien en données. C'est cela, passer de 0 à 1 : créer une catégorie qui n'existait pas, une <b>industrie de l'information musicale autonome</b> pour une région que les grands classements ignoraient.</p>
+  <div class="stats">
+    <div class="stat"><b>16</b><span>pays dans la base</span></div>
+    <div class="stat"><b>~20</b><span>étapes dans la chaîne de nuit</span></div>
+    <div class="stat"><b>144</b><span>réveils flash par jour</span></div>
+    <div class="stat"><b>1</b><span>geste humain : le son TikTok</span></div>
+  </div>
+  <h3>La suite</h3>
+  <p>Votes Instagram en direct, antenne verticale pour le direct mobile, émission complète de près de quatre heures, moteur de styles étendu à toutes les rubriques. Objectif : 10 000 abonnés d'ici fin décembre 2026. La machine, elle, a déjà commencé : pendant que vous lisiez cet article, elle a probablement vérifié deux fois s'il y avait un flash.</p>
+  <div class="end">La musique ouest-africaine avait ses stars.<br><span class="u17">Elle a maintenant sa machine.</span></div>
+  <div class="folio"><span>De 0 à 1 · Cauri Charts · cauricharts.com</span><span>10 / 10</span></div>
+</section>
+</main>
+</body>
+</html>

@@ -34,6 +34,7 @@ urlpatterns = [
     path("les-plus-ecoutes-dans-le-monde", views.world_listeners),
     path("actu-artistes", views.artist_news_page),
     path("presse", views.presse),
+    path("la-machine", views.machine),
     path("cron/nuit", views_cron.nuit),
     path("cron/rattrapage", views_cron.rattrapage),
     path("cron/monde", views_cron.monde),

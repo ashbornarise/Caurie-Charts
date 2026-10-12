@@ -86,7 +86,7 @@ def tiktok_copies(files: list, base: str) -> list:
             img = Image.open(io.BytesIO(data)).convert("RGB")
             img = img.resize(TIKTOK_SIZE, Image.LANCZOS) if img.size[0] > TIKTOK_SIZE[0] else img
             out = io.BytesIO()
-            img.save(out, "JPEG", quality=90, optimize=True)
+            img.save(out, "JPEG", quality=95, subsampling=0, optimize=True)  # couleurs pleines : le texte coloré reste net après la recompression de TikTok
             storage.blob_put(f"media/social/{small}", out.getvalue(), "image/jpeg")
             # une copie toute neuve n'est pas toujours servie tout de suite : Buffer la téléchargerait trop tôt
             # (« Image could not be read from its URL », portrait du 6 octobre 2026) -> on attend qu'elle soit lisible

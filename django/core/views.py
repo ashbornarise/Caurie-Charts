@@ -629,7 +629,7 @@ def robots(request):
 def sitemap(request):
     """Plan du site avec ses images (photos d'artistes, pochettes, unes et pages des numéros, aperçus) pour Google Images."""
     from core.helpers import e
-    urls = [url("/"), url("methodologie"), url("a-propos"), url("contact"), url("declarer")]
+    urls = [url("/"), url("la-machine"), url("methodologie"), url("a-propos"), url("contact"), url("declarer")]
     images: dict = {url("/"): [(og_image("classement", "wa"), "Top 20 Afrique de l’Ouest · Cauri Charts")]}
     for c in repos.countries():
         for code, ch in conf.get("charts").items():
@@ -792,6 +792,20 @@ def news_series(request, serie: str):
         "pages": math.ceil(repos.news_count_published(prefix) / NEWS_PER_PAGE), "heading": title, "note": note, "base": serie,
         "meta": {"title": title + " · " + brand(), "description": note},
     })
+
+
+def machine(request):
+    """Article « De 0 à 1 » : comment la machine Cauri Charts collecte, calcule, écrit, illustre et publie seule (version web du PDF)."""
+    use_locale(request)
+    title = "De 0 à 1 : treize jours pour construire une rédaction qui ne dort jamais · " + brand()
+    desc = ("Comment Cauri Charts collecte, calcule, écrit, illustre et publie seul l'information musicale de l'Afrique de l'Ouest "
+            "et du monde : données, formule, crons, agents IA et diffusion.")
+    article = {"@type": "Article", "headline": "De 0 à 1 : treize jours pour construire une rédaction qui ne dort jamais",
+               "description": desc, "datePublished": "2026-10-12", "inLanguage": "fr",
+               "image": url("assets/machine/og.jpg"), "author": {"@type": "Organization", "name": brand()},
+               "publisher": {"@type": "Organization", "name": brand()}}
+    return render(request, "machine", {"meta": {"title": title, "description": desc, "type": "article",
+                                                "image": url("assets/machine/og.jpg"), "jsonld": [article]}}, layout=None)
 
 
 def world_listeners(request):
