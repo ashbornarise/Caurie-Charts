@@ -141,7 +141,8 @@ def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = Fal
         assets = [{"image": {"url": p}} for p in pics]
     # Vidéo sur Instagram et TikTok : Buffer prévient le téléphone à l'heure dite et ouvre l'application, où l'on ajoute
     # un son de leur bibliothèque (impossible par API). Facebook reçoit le reel par le partage automatique d'Instagram.
-    notify = reel and service in NOTIFY_REELS
+    # TikTok : TOUJOURS en notification (carrousels compris) — le fondateur ajoute lui-même un son tendance (12/10/2026)
+    notify = (reel and service in NOTIFY_REELS) or service == "tiktok"
     data = {"channelId": channel["id"], "text": text(post, service), "assets": assets,
             "schedulingType": "notification" if notify else "automatic", "needsApproval": False,
             "mode": "customScheduled" if due_at else "addToQueue"}
