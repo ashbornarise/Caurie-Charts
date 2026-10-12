@@ -41,6 +41,7 @@ def _post(theme: str, jour: date, due: datetime, titre: str, pages: list, legend
     from core.services.social import image as PI
     PI.DIR.mkdir(parents=True, exist_ok=True)
     nom = f"{jour.isoformat()}-{theme}-{datetime.now(timezone.utc):%H%M%S}"
+    M.STYLE_GRAINE = nom   # un même style (police, couleurs, mise en page) sur toutes les images du post
     fichiers = []
     for n, (f, kk, dp) in enumerate(pages):
         a = PI.save_jpeg(M.couverture_choc(f, kk, False, "feed", dp), PI.DIR / f"{nom}-{n}.jpg")

@@ -296,17 +296,44 @@ def _scene(graine: str):
     return SCENES[int(hashlib.sha1(graine.encode()).hexdigest(), 16) % len(SCENES)] if SCENES else None
 
 
+STYLE_GRAINE = ""   # posée par construit() / formats._post : un même style sur toutes les images d'un post
+
+# Polices de titre (fichier, facteur de taille : les polices étroites montent plus haut) et police du texte associée
+POLICES = [("Anton-Regular.ttf", 1.0, "Poppins"), ("BebasNeue-Regular.ttf", 1.18, "Lato"), ("ArchivoBlack-Regular.ttf", .74, "Poppins"),
+           ("AlfaSlabOne-Regular.ttf", .76, "PT_Sans"), ("Bungee-Regular.ttf", .70, "Lato"), ("AbrilFatface-Regular.ttf", .86, "PT_Sans")]
+TEXTES = {"Poppins": ("Poppins-Bold.ttf", "Poppins-Regular.ttf"), "Lato": ("Lato-Bold.ttf", "Lato-Regular.ttf"),
+          "PT_Sans": ("PT_Sans-Web-Bold.ttf", "PT_Sans-Web-Regular.ttf")}
+ACCENTS = [(255, 190, 40), (90, 220, 255), (255, 70, 170), (190, 255, 80), (255, 120, 90), (255, 255, 255)]
+BANDEAUX = [(139, 82, 255), (20, 120, 210), (229, 33, 59), (14, 12, 20), (0, 150, 120)]
+
+
+def style(graine: str) -> dict:
+    """Style d'un post, tiré de façon stable de sa graine : police, couleurs, traitement du titre, mise en page."""
+    import random
+    r = random.Random(hashlib.sha1(("style-" + graine).encode()).hexdigest())
+    police, facteur, texte = r.choice(POLICES)
+    accent = r.choice(ACCENTS)
+    return {"police": police, "facteur": facteur, "gras": TEXTES[texte][0], "normal": TEXTES[texte][1], "accent": accent,
+            "titre": r.choice(["derniere", "premiere", "surligne", "alterne", "derniere"]),
+            "align": r.choice(["gauche", "gauche", "centre"]), "position": r.choice(["bas", "bas", "haut", "affiche", "affiche"]),
+            "bandeau": r.choice(["bloc", "pastille", "souligne"]), "couleur_bandeau": r.choice(BANDEAUX)}
+
+
 def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", diapo: dict | None = None):
-    """Première image qui dit EXACTEMENT de quoi on parle : photo de l'artiste plein cadre, bandeau FLASH / CAURI MONDE,
-    l'accroche en très grand, la phrase-titre, les médias qui donnent l'info. Rendu ×2 (4K) comme le reste."""
+    """Image d'un post : photo du sujet plein cadre, bandeau, titre géant qui dit exactement de quoi on parle, phrase,
+    sources. Le STYLE change d'un post à l'autre (police, couleurs, titre surligné ou bicolore, texte en haut ou en bas,
+    aligné à gauche ou centré) ; la lisibilité reste garantie (zone floutée + assombrie, ombre). Rendu ×2 (4K)."""
     from io import BytesIO
-    from PIL import Image, ImageDraw, ImageFilter
+    from PIL import Image, ImageDraw, ImageFilter, ImageStat
     from core.services.social import image as PI
-    from core.services.social.editorial import GOLD, INK, VIOLET
+    from core.services.social.editorial import INK, VIOLET
+    st = style(STYLE_GRAINE or f.get("cle") or kicker)
     k = 2
     W, H = (1080 * k, 1350 * k) if fmt == "feed" else (1080 * k, 1920 * k)
     haut, bas, cote = (70 * k, 90 * k, 80 * k) if fmt == "feed" else (250 * k, 440 * k, 90 * k)
-    img = Image.new("RGB", (W, H), INK)
+    en_haut = st["position"] == "haut"
+    affiche = st["position"] == "affiche"   # fond de couleur unie, photo en carte encadrée, texte dessous
+    img = Image.new("RGB", (W, H), st["couleur_bandeau"] if affiche else INK)
     # la photo d'un artiste seulement si son nom est bien dans le titre de l'info (jamais la photo d'un autre)
     texte_sujet = " ".join([(diapo or {}).get("titre") or "", f.get("titre", "") or "", f.get("une", "") or ""])
     nom_ok = f.get("photo_ok") or (f.get("artiste") and _sans_accents(f["artiste"]).lower() in _sans_accents(texte_sujet).lower())
@@ -319,52 +346,91 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
             src = BytesIO(http_get(url, binary=True)) if url else _scene(f.get("cle", "") + (diapo or {}).get("graine", ""))
         except Exception:  # noqa: BLE001
             src = _scene(f.get("cle", ""))
-    if src:
+    if src and affiche:
+        try:
+            ph = Image.open(src).convert("RGB")
+            bw, bh = W - 2 * cote, int(H * (.43 if fmt == "feed" else .30))
+            r = max(bw / ph.width, bh / ph.height)
+            ph = ph.resize((int(ph.width * r), int(ph.height * r)), Image.LANCZOS)
+            x1 = (ph.width - bw) // 2
+            ph = ph.crop((x1, 0, x1 + bw, bh))
+            y_carte = haut + 130 * k
+            ImageDraw.Draw(img).rounded_rectangle([cote - 12 * k, y_carte - 12 * k, cote + bw + 12 * k, y_carte + bh + 12 * k], radius=34 * k, fill=(255, 255, 255))
+            masque = Image.new("L", (bw, bh), 0)
+            ImageDraw.Draw(masque).rounded_rectangle([0, 0, bw, bh], radius=26 * k, fill=255)
+            img.paste(ph, (cote, y_carte), masque)
+        except Exception as exc:  # noqa: BLE001
+            log_write("monde", "warning", f"photo affiche : {exc}")
+    elif src:
         try:
             ph = Image.open(src).convert("RGB")
             r = max(W / ph.width, H * .78 / ph.height)
             ph = ph.resize((int(ph.width * r), int(ph.height * r)), Image.LANCZOS)
-            img.paste(ph, ((W - ph.width) // 2, 0))
+            # texte en haut : la photo descend (le visage reste dégagé sous le texte)
+            img.paste(ph, ((W - ph.width) // 2, H - ph.height if en_haut else 0))
         except Exception as exc:  # noqa: BLE001
             log_write("monde", "warning", f"photo couverture : {exc}")
     else:
-        fond = Image.new("RGB", (W, H), VIOLET)
-        img = Image.blend(img, fond, .55)
-    # zone du texte : floutée (le texte d'une pochette ne se mélange jamais au nôtre), puis assombrie
+        img = Image.blend(img, Image.new("RGB", (W, H), VIOLET), .55)
+
     def rampe(debut, fin, fort=1.0):
         m = Image.new("L", (1, 256))
         for y in range(256):
-            m.putpixel((0, y), int(255 * fort * max(0, min(1, (y / 255 - debut) / (fin - debut)))))
+            v = max(0, min(1, (y / 255 - debut) / (fin - debut)))
+            m.putpixel((0, 255 - y if en_haut else y), int(255 * fort * v))
         return m.resize((W, H))
-    img = Image.composite(img.filter(ImageFilter.GaussianBlur(22 * k)), img, rampe(.50, .64))
-    # fond clair (pochette blanche…) : on assombrit d'autant plus que la zone du texte est lumineuse
-    from PIL import ImageStat
-    lum = ImageStat.Stat(img.crop((0, int(H * .55), W, H)).convert("L")).mean[0] / 255
-    img = Image.blend(img, Image.new("RGB", (W, H), INK), min(.35, max(.05, (lum - .3) * .8)))
-    img = Image.composite(Image.new("RGB", (W, H), INK), img, rampe(.46, .74, .95))
+    if not affiche:
+        # zone du texte : floutée (le texte d'une pochette ne se mélange jamais au nôtre), puis assombrie
+        img = Image.composite(img.filter(ImageFilter.GaussianBlur(22 * k)), img, rampe(.50, .64))
+        zone = (0, 0, W, int(H * .45)) if en_haut else (0, int(H * .55), W, H)
+        lum = ImageStat.Stat(img.crop(zone).convert("L")).mean[0] / 255
+        img = Image.blend(img, Image.new("RGB", (W, H), INK), min(.35, max(.05, (lum - .3) * .8)))
+        img = Image.composite(Image.new("RGB", (W, H), INK), img, rampe(.46, .74, .95))
     d = ImageDraw.Draw(img)
-    fd, fb, fs = PI.FONT_DIR / "Anton-Regular.ttf", PI.FONT_DIR / "Poppins-Bold.ttf", PI.FONT_DIR / "Poppins-Regular.ttf"
-    # bandeau
+    fd = PI.FONT_DIR / st["police"]
+    fb, fs = PI.FONT_DIR / st["gras"], PI.FONT_DIR / st["normal"]
+    fband = PI.FONT_DIR / "Anton-Regular.ttf"
+    accent = st["accent"]
+    if affiche and st["couleur_bandeau"] in ((229, 33, 59),) and accent in ((255, 70, 170), (255, 120, 90)):
+        accent = (255, 190, 40)
+
+    # ---- bandeau (bloc, pastille ou souligné) + « CAURI CHARTS »
     etiquette = (diapo or {}).get("etiquette") or ("FLASH" if est_flash else "CAURI MONDE")
-    fe = PI.font(str(fd), 64 * k)
+    coul = ROUGE if est_flash else ((diapo or {}).get("couleur") or st["couleur_bandeau"])
+    if affiche and coul == st["couleur_bandeau"]:
+        coul = INK if coul != INK else (139, 82, 255)
+    fe = PI.font(str(fband), 60 * k)
     x0, y0 = cote, haut
     wl = d.textlength(etiquette, font=fe)
-    d.rectangle([x0, y0, x0 + wl + 44 * k, y0 + 92 * k], fill=(diapo or {}).get("couleur") or (ROUGE if est_flash else VIOLET))
-    d.text((x0 + 22 * k, y0 + 46 * k), etiquette, font=fe, fill="white", anchor="lm")
     kicker = re.sub(r"^(cauri monde|flash)\s*·?\s*", "", kicker, flags=re.I)
-    fk = PI.font(str(fb), 26 * k)
-    d.rectangle([x0 + wl + 44 * k, y0, x0 + wl + 44 * k + d.textlength(kicker.upper(), font=fk) + 40 * k, y0 + 92 * k], fill=(255, 255, 255))
-    d.text((x0 + wl + 64 * k, y0 + 46 * k), kicker.upper(), font=fk, fill=INK, anchor="lm")
-    fm = PI.font(str(fd), 34 * k)
-    fin_bandeau = x0 + wl + 84 * k + d.textlength(kicker.upper(), font=fk)
+    fk = PI.font(str(fb), 25 * k)
+    wk = d.textlength(kicker.upper(), font=fk)
+    if st["bandeau"] == "pastille":
+        d.rounded_rectangle([x0, y0, x0 + wl + 48 * k, y0 + 88 * k], radius=44 * k, fill=coul)
+        d.text((x0 + 24 * k, y0 + 44 * k), etiquette, font=fe, fill="white", anchor="lm")
+        d.rounded_rectangle([x0 + wl + 60 * k, y0 + 14 * k, x0 + wl + 100 * k + wk, y0 + 74 * k], radius=30 * k, fill=(255, 255, 255))
+        d.text((x0 + wl + 80 * k, y0 + 44 * k), kicker.upper(), font=fk, fill=INK, anchor="lm")
+        fin_bandeau = x0 + wl + 100 * k + wk
+    elif st["bandeau"] == "souligne":
+        d.text((x0, y0 + 44 * k), etiquette, font=fe, fill="white", anchor="lm")
+        d.rectangle([x0, y0 + 84 * k, x0 + wl, y0 + 94 * k], fill=accent if not est_flash else ROUGE)
+        d.text((x0 + wl + 24 * k, y0 + 44 * k), kicker.upper(), font=fk, fill=(235, 235, 245), anchor="lm")
+        fin_bandeau = x0 + wl + 24 * k + wk
+    else:
+        d.rectangle([x0, y0, x0 + wl + 44 * k, y0 + 92 * k], fill=coul)
+        d.text((x0 + 22 * k, y0 + 46 * k), etiquette, font=fe, fill="white", anchor="lm")
+        d.rectangle([x0 + wl + 44 * k, y0, x0 + wl + 84 * k + wk, y0 + 92 * k], fill=(255, 255, 255))
+        d.text((x0 + wl + 64 * k, y0 + 46 * k), kicker.upper(), font=fk, fill=INK, anchor="lm")
+        fin_bandeau = x0 + wl + 84 * k + wk
+    fm = PI.font(str(fband), 34 * k)
     wm = d.textlength("CAURI CHARTS", font=fm)
     if W - cote - wm - 40 * k > fin_bandeau + 30 * k:   # pastille sombre : lisible sur toutes les photos
         d.rounded_rectangle([W - cote - wm - 40 * k, y0 + 14 * k, W - cote, y0 + 78 * k], radius=32 * k, fill=INK)
         d.text((W - cote - 20 * k, y0 + 46 * k), "CAURI CHARTS", font=fm, fill="white", anchor="rm")
-    # titre géant (2 à 3 lignes), dernière ligne en or
+
+    # ---- textes : phrase (taille fixe), puis titre le plus grand possible dans le budget de hauteur
     une = ((diapo or {}).get("titre") or f["une"] or f["artiste"]).upper()
     largeur = W - 2 * cote
-    # la phrase d'abord (taille fixe), puis le titre le plus grand possible SANS dépasser le tiers bas : le visage reste visible
     ft2 = PI.font(str(fb if not diapo else fs), (38 if not diapo else 30) * k)
     interl2 = (52 if not diapo else 44) * k
     phrase, l2 = ((diapo or {}).get("texte") or f["titre"]), []
@@ -378,42 +444,81 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
                 l2.append(cur); cur = m
         l2.append(cur)
     l2 = [x for x in l2 if x][:3 if not diapo else (6 if "\n" in phrase else 4)]
-    budget = H * (.42 if fmt == "feed" else .55)          # hauteur maximale du bloc de texte (TikTok : marge basse plus grande)
+    budget = H * (.42 if fmt == "feed" else .55)
+    carte_bas = haut + 130 * k + int(H * (.43 if fmt == "feed" else .30)) + 12 * k
+    if affiche:   # le texte vit sous la carte photo : tout l'espace restant, jamais par-dessus
+        budget = H - carte_bas - 40 * k
     fixe = bas + 34 * k + 40 * k + len(l2) * interl2 + 34 * k
     max_lignes = 4 if diapo else 3
-    for px in range(160 if not diapo else 104, 50, -4):
+    surligne = st["titre"] == "surligne"
+    marge_x = 18 * k if surligne else 0
+    for px0 in range(160 if not diapo else 104, 44, -4):
+        px = int(px0 * st["facteur"])
         ft = PI.font(str(fd), px * k)
         mots, lignes, cur = une.split(), [], ""
         for m in mots:
             essai = (cur + " " + m).strip()
-            if d.textlength(essai, font=ft) <= largeur:
+            if d.textlength(essai, font=ft) <= largeur - 2 * marge_x:
                 cur = essai
             else:
                 lignes.append(cur); cur = m
         lignes.append(cur)
-        if (len(lignes) <= max_lignes and all(d.textlength(l, font=ft) <= largeur for l in lignes)
-                and fixe + len(lignes) * px * k * .96 <= budget):
+        pas = int(px * k * (1.12 if surligne else .96))
+        if (len(lignes) <= max_lignes and all(d.textlength(l, font=ft) <= largeur - 2 * marge_x for l in lignes)
+                and fixe + len(lignes) * pas <= budget):
             break
-    pas = int(px * k * .96)          # interligne (lignes posées sur leur ligne de base)
     fsrc = PI.font(str(fb), 24 * k)
-    y_src = H - bas - 34 * k
-    y_phr = y_src - 40 * k - len(l2) * interl2
-    base = y_phr - 34 * k            # ligne de base de la dernière ligne du titre, au-dessus de la phrase
-    ops = [((cote, base - (len(lignes) - 1 - i) * pas), l, ft, "ls", GOLD if (i == len(lignes) - 1 and len(lignes) > 1) else (255, 255, 255))
-           for i, l in enumerate(lignes)]
-    ops += [((cote, y_phr + i * interl2), l, ft2, "la", (235, 235, 245)) for i, l in enumerate(l2)]
+    src = ("SOURCES · " + " · ".join(s.upper() for s in f["sources"][:4])) if f.get("sources") else "CAURICHARTS.COM"
+    wsrc = d.textlength(src, font=fsrc)
+
+    # positions : bloc en bas (titre → phrase → sources) ou en haut sous le bandeau
+    if en_haut or affiche:
+        base0 = (carte_bas + 50 * k if affiche else haut + 140 * k) + pas * .82
+        bases = [base0 + i * pas for i in range(len(lignes))]
+        y_phr = bases[-1] + 34 * k
+        y_src = y_phr + len(l2) * interl2 + 30 * k
+    else:
+        y_src = H - bas - 34 * k
+        y_phr = y_src - 40 * k - len(l2) * interl2
+        bases = [y_phr - 34 * k - (len(lignes) - 1 - i) * pas for i in range(len(lignes))]
+    centre = st["align"] == "centre"
+    x_txt, anc_t, anc_p = (W // 2, "ms", "ma") if centre else (cote, "ls", "la")
+
+    def couleur(i):
+        n = len(lignes)
+        if surligne or n == 1:
+            return (255, 255, 255) if not surligne else INK
+        if st["titre"] == "premiere":
+            return accent if i == 0 else (255, 255, 255)
+        if st["titre"] == "alterne":
+            return accent if i % 2 else (255, 255, 255)
+        return accent if i == n - 1 else (255, 255, 255)
+
+    # titre surligné : un pavé de couleur derrière chaque ligne (contraste maximal)
+    if surligne:
+        fond_ligne = accent if accent != (255, 255, 255) else (255, 255, 255)
+        for l, b in zip(lignes, bases):
+            bb = d.textbbox((x_txt, b), l, font=ft, anchor=anc_t)
+            d.rectangle([bb[0] - marge_x, bb[1] - 10 * k, bb[2] + marge_x, bb[3] + 12 * k], fill=fond_ligne)
+    ops = [((x_txt, b), l, ft, anc_t, couleur(i)) for i, (l, b) in enumerate(zip(lignes, bases))]
+    ops += [((x_txt, y_phr + i * interl2), l, ft2, anc_p, (235, 235, 245)) for i, l in enumerate(l2)]
     ombre = Image.new("L", (W, H), 0)
     do = ImageDraw.Draw(ombre)
-    for xy, l, fnt, anc, _ in ops:
+    for j, (xy, l, fnt, anc, _) in enumerate(ops):
+        if surligne and j < len(lignes):
+            continue   # pas d'ombre sur un texte posé sur son pavé
         do.text((xy[0], xy[1] + 6 * k), l, font=fnt, anchor=anc, fill=200)
     img = Image.composite(Image.new("RGB", (W, H), (0, 0, 0)), img, ombre.filter(ImageFilter.GaussianBlur(10 * k)))
     d = ImageDraw.Draw(img)
+    if surligne:   # les pavés ont été recouverts par l'ombre : on les repose
+        for l, b in zip(lignes, bases):
+            bb = d.textbbox((x_txt, b), l, font=ft, anchor=anc_t)
+            d.rectangle([bb[0] - marge_x, bb[1] - 10 * k, bb[2] + marge_x, bb[3] + 12 * k], fill=accent)
     for xy, l, fnt, anc, col in ops:
         d.text(xy, l, font=fnt, anchor=anc, fill=col)
-    src = ("SOURCES · " + " · ".join(s.upper() for s in f["sources"][:4])) if f.get("sources") else "CAURICHARTS.COM"
-    wsrc = d.textlength(src, font=fsrc)
-    d.rounded_rectangle([cote, y_src - 6 * k, cote + wsrc + 36 * k, y_src + 46 * k], radius=26 * k, fill=(255, 255, 255))
-    d.text((cote + 18 * k, y_src + 20 * k), src, font=fsrc, fill=INK, anchor="lm")
+    xs = (W - wsrc - 36 * k) // 2 if centre else cote
+    d.rounded_rectangle([xs, y_src - 6 * k, xs + wsrc + 36 * k, y_src + 46 * k], radius=26 * k, fill=(255, 255, 255))
+    d.text((xs + 18 * k, y_src + 20 * k), src, font=fsrc, fill=INK, anchor="lm")
     return img
 
 
@@ -460,6 +565,8 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
     from core.services.social.editorial import GOLD, VIOLET
     PI.DIR.mkdir(parents=True, exist_ok=True)
     est_flash = theme.startswith("flash")
+    global STYLE_GRAINE
+    STYLE_GRAINE = nom
     total = len(fiches) + 2
     pages = [(une_fiche, kicker, None)]
     for i, f in enumerate(fiches):
