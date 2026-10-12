@@ -57,7 +57,7 @@ def facts(day: date) -> dict:
                                  AND country_id IS NOT NULL AND published_at >= LOCALTIMESTAMP - INTERVAL '3 days'
                                  ORDER BY published_at DESC LIMIT 15""")
             if is_about_music(x["title"].lower()) and not OFF_TOPIC.search(x["title"])][:3]  # le titre parle de musique
-    tonight = db.one("SELECT title FROM social_posts WHERE slot_date = ? AND theme NOT IN ('matin', 'hebdo', 'presentation') ORDER BY id DESC LIMIT 1",
+    tonight = db.one("SELECT title FROM social_posts WHERE slot_date = ? AND theme NOT IN ('matin', 'hebdo', 'presentation') AND theme NOT LIKE 'monde-%' AND theme NOT LIKE 'format-%' AND theme NOT LIKE 'flash-%' ORDER BY id DESC LIMIT 1",
                      [day.isoformat()])
     number = int(db.value("SELECT COUNT(*) FROM social_posts WHERE theme = 'matin' AND slot_date < ?", [day.isoformat()]) or 0) + 1
     return {"day": day.isoformat(), "number": number, "since": since, "one": ok[0] if ok else None, "movers": movers,
@@ -93,7 +93,9 @@ def post(day: date) -> dict | None:
                    "body": "Le classement complet, en direct, sur cauricharts.com. Prochain numéro de Cauri Matin : "
                            + ("mercredi" if day.isoweekday() == 1 else "vendredi" if day.isoweekday() == 3 else "lundi") + " à 7 h.",
                    "cta": "S'ABONNER"})
-    name = f"{day.isoformat()}-matin-{n}"
+    # nom unique à chaque fabrication : une image refaite n'est jamais servie depuis le cache sous l'ancienne version
+    from datetime import datetime as _dt
+    name = f"{day.isoformat()}-matin-{n}-{_dt.utcnow():%H%M%S}"
     cover = {"kicker": f"Cauri Matin n°{n} · {day:%d/%m}", "headline": one["artist_name"],
              "subtitle": f"« {one['title']} » · n°{one['rank']} Afrique de l'Ouest",
              "photo": one.get("artist_image") or own_image(one) or one.get("cover_url")}
