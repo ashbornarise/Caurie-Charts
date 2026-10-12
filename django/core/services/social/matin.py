@@ -36,7 +36,8 @@ def previous() -> dict | None:
 
 
 def facts(day: date) -> dict:
-    top = [r for r in live_chart.build(None, None, 50, "prime", 20, "latest")["rows"] if not r.get("is_artist")]
+    # le même Top 20 que l'accueil du site (semaine glissante) : le n°1 annoncé est celui que le public voit
+    top = [r for r in live_chart.build(None, None, 50, "prime", 20, "week")["rows"] if not r.get("is_artist")]
     ok = [r for r in top if r.get("status") == "active"]
     prev = previous()
     before = {int(k): v for k, v in ((prev or {}).get("ranks") or {}).items()}
