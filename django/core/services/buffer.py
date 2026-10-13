@@ -56,11 +56,12 @@ def channels(http: HttpClient | None = None) -> list:
 
 def text(post: dict, service: str) -> str:
     """Légende : titre, texte, hashtags ; le lien n'est cliquable que sur Facebook (« lien en bio » ailleurs)."""
-    link = url("/") if service == "facebook" else "Lien en bio : cauricharts.com"
+    from core.services.social import bilingue
+    link = url("/") if service == "facebook" else bilingue.LIEN
     if "localhost" in link or "127.0.0.1" in link:
         link = "https://www.cauricharts.com/"  # un post programmé depuis un poste de travail garde le vrai lien du site
-    body = f"{post['title']}\n\n{post.get('caption') or ''}\n\n{link}\n\n{post.get('hashtags') or ''}".strip()
-    return body[:2200]  # limite des légendes Instagram et TikTok
+    # Français puis anglais (🇬🇧), dans la limite des légendes Instagram et TikTok (2 200 caractères)
+    return bilingue.legende(post, link)
 
 
 TIKTOK_SIZE = (1080, 1920)  # TikTok refuse les photos de plus de 2 073 600 pixels : nos visuels 4K sont réduits

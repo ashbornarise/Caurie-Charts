@@ -127,6 +127,14 @@ def send_post(post: dict, force: bool = False, http: HttpClient | None = None) -
             if k == 0:
                 media[0].update({"caption": caption, "parse_mode": "HTML"})
             call("sendMediaGroup", {"chat_id": chat, "media": media}, http)
+    try:
+        from core.services.social import bilingue
+        anglais = bilingue.en(post, 3000)   # la même traduction que sur Instagram, TikTok et Facebook
+        if anglais:
+            call("sendMessage", {"chat_id": chat, "text": f"{bilingue.DRAPEAU_EN} <b>{escape(anglais['title'])}</b>\n\n{escape(anglais['caption'])}",
+                                 "parse_mode": "HTML", "disable_web_page_preview": True}, http)
+    except PlatformException:
+        pass   # la version anglaise ne bloque jamais l'envoi du post
     audit.log(None, "telegram.post", "social_post", post["id"], key, {"images": len(photos)}, None)
     return f"envoyé ({key}, {len(photos)} images)"
 
