@@ -49,6 +49,39 @@ def number_ones() -> dict:
     return {r["code"]: r for r in rows}
 
 
+def official_tops(limit: int = 5) -> list[dict]:
+    """Dernier classement officiel hebdomadaire publié de chaque pays (Top N, photo, nouvelles vues de la semaine)."""
+    import json as _json
+    runs = db.all(
+        """SELECT DISTINCT ON (r.country_id) r.id, r.period_key, r.period_start, r.period_end, c.code, c.sort_order
+           FROM chart_runs r JOIN chart_types ct ON ct.id = r.chart_type_id AND ct.code = 'prime'
+           JOIN countries c ON c.id = r.country_id
+           WHERE r.period_type = 'week' AND r.status = 'published' AND r.is_provisional = 0
+           ORDER BY r.country_id, r.period_end DESC""")
+    if not runs:
+        return []
+    latest = max(r["period_end"] for r in runs)
+    out = []
+    for r in sorted((r for r in runs if r["period_end"] == latest), key=lambda r: r["sort_order"]):
+        rows = db.all(
+            """SELECT e.position, e.details, t.title, t.slug AS track_slug, a.name AS artist_name, a.slug AS artist_slug,
+                      COALESCE(a.image_url, a.image_hd_url) AS image
+               FROM chart_entries e JOIN tracks t ON t.id = e.track_id JOIN artists a ON a.id = COALESCE(e.artist_id, t.artist_id)
+               WHERE e.chart_run_id = ? ORDER BY e.position LIMIT ?""", [r["id"], limit])
+        for e in rows:
+            # « Blaqbonez- Ikebe 3000 » : le nom de l'artiste répété en tête du titre est retiré
+            pre = (e["artist_name"] or "") + "-"
+            if e["title"] and e["title"].lower().replace(" -", "-").startswith(pre.lower()):
+                e["title"] = e["title"][len(pre):].lstrip(" -")
+            try:
+                e["views"] = int(sum(v.get("delta", 0) for k, v in (_json.loads(e.pop("details") or "{}")).items() if k == "youtube"))
+            except (ValueError, AttributeError):
+                e["views"] = 0
+        if rows:
+            out.append({**r, "rows": rows})
+    return out
+
+
 def latest_run(country_id, chart_code: str, period_type: str) -> dict | None:
     return db.one(
         """SELECT r.*, ct.code AS chart_code, ct.kind FROM chart_runs r JOIN chart_types ct ON ct.id = r.chart_type_id

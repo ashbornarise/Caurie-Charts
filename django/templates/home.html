@@ -12,6 +12,7 @@
            title=t('home.title', {'country': country_name(code), 'size': country.chart_size}),
            day=(period_label(run) if run else (t('chart.live_day', {'date': fmt_date(live.day)}) if live and live.day else '')),
            more='#classement') }}
+{{ partial('partials/official-tops', tops=officialTops) }}
 {%- macro news_href(n) -%}{{ n.source_url if (n.origin or 'manual') == 'feed' and n.source_url else path('actualites/' ~ n.slug) }}{%- endmacro -%}
 {%- macro news_ext(n) -%}{{ Markup(' target="_blank" rel="noopener noreferrer"') if (n.origin or 'manual') == 'feed' and n.source_url }}{%- endmacro -%}
 {% if homeNews %}

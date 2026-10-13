@@ -173,7 +173,7 @@ def home(request):
         }
     return render(request, "home", {
         "country": country, "regional": regional, "chartCode": chart_code, "run": run, "entries": entries, "live": live,
-        "periodType": period_type, "highlights": highlights, "aside": aside(country), "numberOnes": repos.number_ones(),
+        "periodType": period_type, "highlights": highlights, "aside": aside(country), "numberOnes": repos.number_ones(), "officialTops": repos.official_tops() if regional and period_type == "week" else [],
         "hotArtists": repos.hot_artists(None if regional else int(country["id"])),
         "homeNews": _une(repos.news_latest(8, None if regional else int(country["id"]))),
         "artistNews": _artist_news(),

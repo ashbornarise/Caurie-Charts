@@ -1,0 +1,35 @@
+{#- Classement officiel de la semaine : le Top 5 de chaque pays publié, N°1 en avant, nouvelles vues de la semaine. -#}
+{% if tops %}
+<section class="wrap official" aria-labelledby="official-title">
+    <div class="official__head">
+        <div>
+            <p class="eyebrow">Classement officiel · semaine du {{ fmt_date(tops[0].period_start, false) }} au {{ fmt_date(tops[0].period_end) }}</p>
+            <h2 id="official-title">Les N°1 officiels de la semaine</h2>
+        </div>
+        <a class="link-arrow" href="{{ path('methodologie') }}">Méthode publique</a>
+    </div>
+    <div class="official__grid">
+        {% for c in tops %}{% set one = c.rows[0] %}
+        <article class="official__card">
+            <p class="official__country">{{ flag(c.code, 18) }}{{ country_name(c.code) }}</p>
+            <a class="official__one" href="{{ path('artiste/' ~ one.artist_slug) }}">
+                <span class="official__photo">{% if one.image %}<img src="{{ one.image }}" alt="" loading="lazy" width="320" height="320">{% else %}<span class="cover__initials">{{ initials(one.artist_name) }}</span>{% endif %}</span>
+                <span class="official__badge">N°1</span>
+                <span class="official__title">{{ one.title }}</span>
+                <span class="official__artist">{{ one.artist_name }}</span>
+                {% if one.views %}<span class="official__views">+{{ fmt_number(one.views) }} vues cette semaine</span>{% endif %}
+            </a>
+            <ol class="official__list" start="2">
+                {% for e in c.rows[1:] %}
+                <li><span class="official__pos">{{ e.position }}</span>
+                    <span class="official__txt"><b>{{ e.title }}</b> <a href="{{ path('artiste/' ~ e.artist_slug) }}">{{ e.artist_name }}</a></span>
+                    {% if e.views %}<span class="official__v">+{{ fmt_number(e.views) }}</span>{% endif %}</li>
+                {% endfor %}
+            </ol>
+            <a class="link-arrow official__more" href="{{ chart_path(c.code, 'prime', 'week') }}">Le Top {{ country_name(c.code) }} complet</a>
+        </article>
+        {% endfor %}
+    </div>
+    <p class="official__note">Les autres pays rejoignent le classement officiel dès que nous suivons au moins 8 de leurs artistes. Chiffres : nouvelles vues YouTube de la semaine.</p>
+</section>
+{% endif %}
