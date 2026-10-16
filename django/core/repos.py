@@ -64,7 +64,7 @@ def official_tops(limit: int = 5) -> list[dict]:
     out = []
     for r in sorted((r for r in runs if r["period_end"] == latest), key=lambda r: r["sort_order"]):
         rows = db.all(
-            """SELECT e.position, e.details, t.title, t.slug AS track_slug, a.name AS artist_name, a.slug AS artist_slug,
+            """SELECT e.position, e.details, e.track_id, t.title, t.slug AS track_slug, a.name AS artist_name, a.slug AS artist_slug,
                       COALESCE(a.image_url, a.image_hd_url) AS image
                FROM chart_entries e JOIN tracks t ON t.id = e.track_id JOIN artists a ON a.id = COALESCE(e.artist_id, t.artist_id)
                WHERE e.chart_run_id = ? ORDER BY e.position LIMIT ?""", [r["id"], limit])

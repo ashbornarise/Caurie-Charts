@@ -109,6 +109,13 @@ def send_post(post: dict, force: bool = False, http: HttpClient | None = None) -
         slides = json.loads(post.get("carousel") or "[]") or []
     except ValueError:
         slides = []
+    if post.get("video") and not slides:
+        # Post vidéo (extrait de clip au refrain) : la vidéo elle-même, légende dessous
+        chat = env.get("TELEGRAM_CHAT_ID")
+        call("sendVideo", {"chat_id": chat, "video": f"{base}/media/social/{post['video']}", "caption": post_caption(post),
+                           "parse_mode": "HTML", "supports_streaming": True}, http)
+        audit.log(None, "telegram.post", "social_post", post["id"], key, {"video": post["video"]}, None)
+        return f"envoyé ({key}, vidéo)"
     files = [s["file"] if isinstance(s, dict) else s for s in slides] or [post.get("image_square")]
     photos = [f"{base}/media/social/{f}" for f in files if f][:20]
     if not photos:
