@@ -171,11 +171,18 @@ def _redige(histoires: list) -> list:
         "Voici des actualités musicales du monde (plusieurs articles = même info vue par plusieurs médias).\n"
         "Pour CHAQUE entrée, rends un objet JSON :\n"
         '{"i": n, "musique": true|false, "rubrique": "monde"|"records"|"sorties", "artiste": "nom principal ou événement",\n'
-        ' "une": "accroche de couverture, 28 caractères max, percutante, en MAJUSCULES, dit le sujet (ex. RIHANNA : 9E ALBUM)",\n'
-        ' "titre": "phrase de 70 caractères max qui dit EXACTEMENT ce qui se passe, avec le chiffre clé s\'il y en a un",\n'
-        ' "accroche": "une phrase qui donne envie, 110 caractères max",\n'
-        ' "resume": "2 à 3 phrases factuelles, 330 caractères max",\n'
-        ' "choc": 0-100 (100 = info mondiale majeure : sortie surprise d\'une star, record historique, annonce Grammy, décès d\'une légende),\n'
+        ' "une": "accroche de couverture, 28 caractères max, en MAJUSCULES, qui donne ENVIE de savoir la suite : le détail le plus fou '
+        'de l\'info (un chiffre, un refus, une première, un clash), jamais un résumé plat. Ex. : « 10 MILLIONS EN 24 H », '
+        '« ELLE A DIT NON À 50 M$ », « PERSONNE N\'AVAIT FAIT ÇA », « RIHANNA : 9E ALBUM ». Interdit : mentir, exagérer, inventer",\n'
+        ' "titre": "phrase de 70 caractères max qui dit EXACTEMENT ce qui se passe, l\'élément le plus surprenant en premier, '
+        'avec le chiffre clé s\'il y en a un",\n'
+        ' "accroche": "110 caractères max : la question que le lecteur se pose (pourquoi ? comment ? et maintenant ?), pour qu\'il '
+        'fasse défiler",\n'
+        ' "resume": "3 phrases, 330 caractères max, qui racontent : 1) le fait, 2) pourquoi c\'est énorme (contexte, comparaison, '
+        'record battu), 3) ce qui va se passer ensuite. Ton vivant, comme un ami passionné qui raconte, sans jamais rien ajouter '
+        'aux articles",\n'
+        ' "choc": 0-100 (100 = info mondiale majeure : sortie surprise d\'une star, record historique, annonce Grammy, décès d\'une légende ; '
+        'note aussi plus haut l\'argent (contrats, fortunes, cachets), les clashs publics, les révélations, les premières historiques),\n'
         ' "sensible": true si décès, santé, justice, violence,\n'
         ' "question": "une question courte au public, qui pousse à commenter, terminée par ⁉️ (ex. Vous attendiez cet album ⁉️)",\n'
         ' "ancien": true si le fait principal (cérémonie, record, sortie) date de plus de 30 jours, même si l\'article est récent}\n'
@@ -210,10 +217,23 @@ def _redige(histoires: list) -> list:
 
 # ---------------------------------------------------------------- photo (Deezer, photo d'artiste officielle)
 
+_PHOTOS: dict = {}
+
+
 def photo(artiste: str):
-    """Photo de l'artiste : d'abord celle de notre base (vérifiée), sinon Deezer par nom exact (homonymes possibles)."""
+    """Image de couverture de l'artiste : une image du pôle média (plans de clips officiels, photos de scène libres)
+    qui n'a pas servi depuis 10 jours ; à défaut, sa photo de notre base ou de Deezer. Une seule image par artiste et
+    par exécution : toutes les diapositives d'un post montrent la même."""
     if not artiste:
         return None
+    if artiste not in _PHOTOS:
+        from core.services.social import medias
+        _PHOTOS[artiste] = medias.choisit(artiste, _photo_portrait(artiste), alterne=len(_PHOTOS))
+    return _PHOTOS[artiste]
+
+
+def _photo_portrait(artiste: str):
+    """Photo de l'artiste : d'abord celle de notre base (vérifiée), sinon Deezer par nom exact (homonymes possibles)."""
     try:
         nous = db.value("""SELECT COALESCE(NULLIF(image_hd_url, ''), NULLIF(image_url, '')) FROM artists
                            WHERE LOWER(name) = LOWER(?) AND status = 'active' LIMIT 1""", [artiste])
@@ -542,6 +562,10 @@ def _legende(fiches: list, entete: str) -> str:
         lignes.append(f"▪️ {f['titre']}\n{f['resume']}\n(Sources : {', '.join(f['sources'])})")
     if fiches and fiches[0].get("question"):
         lignes.append(fiches[0]["question"] + " Dites-le en commentaire ‼️")
+    from core.services.social import medias
+    images = medias.credits([_PHOTOS.get(f.get("artiste")) for f in fiches])
+    if images:
+        lignes.append(images)
     lignes.append("Cauri Charts, la référence de la musique ouest-africaine. Le classement en direct : lien en bio.")
     return "\n\n".join(lignes)
 
