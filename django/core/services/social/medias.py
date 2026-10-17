@@ -9,12 +9,15 @@ rassemble plusieurs images réelles, puis on prend celle qui n'a pas servi depui
 Le crédit de chaque image est gardé (CREDITS[url]) et repris dans la légende du post."""
 import hashlib
 import json
+import re
 from urllib.parse import quote
 
 from core import db
 from core.services.platforms import log_write
 
 CREDITS: dict = {}
+MUSIQUE = re.compile(r"concert|live|stage|scene|perform|singer|chanteu|rapper|rappeur|musician|musicien|festival|show|tour|"
+                     r"music|musique|gig|artist|artiste|album|award|grammy|headies|afrima|mic\b|microphone", re.I)
 _CACHE: dict = {}
 
 
@@ -67,8 +70,10 @@ def scenes_libres(artiste: str, n: int = 8) -> list[dict]:
         nom = _sans_accents(artiste)
         for r in d.get("results") or []:
             titre = _sans_accents(r.get("title") or "")
-            # « X performed at Burna Boy concert » : l'artiste n'est pas le sujet de la photo
-            if nom not in titre or f"at {nom}" in titre or f"for {nom}" in titre:
+            # Le nom comme mot entier, et un contexte musical : « Josey » donnait un joueur de football (Josey Jewell, 17/10)
+            if not re.search(rf"\b{re.escape(nom)}\b", titre) or f"at {nom}" in titre or f"for {nom}" in titre:
+                continue
+            if not MUSIQUE.search(titre + " " + _sans_accents(" ".join(t.get("name", "") for t in (r.get("tags") or [])))):
                 continue
             if r.get("width") and (r["width"] < 900 or (r.get("height") or 0) < 700):   # taille parfois absente
                 continue
@@ -112,8 +117,11 @@ def videos_concert(artiste: str, n: int = 3) -> list[dict]:
         for it in d.get("items", []):
             sn, vid = it["snippet"], it["id"].get("videoId")
             titre, chaine = _sans_accents(sn.get("title", "")), sn.get("channelTitle", "")
-            officielle = _sans_accents(chaine) in chaines or nom.replace(" ", "") in _sans_accents(chaine).replace(" ", "")
-            if vid and nom in titre and officielle:
+            # Chaîne officielle : celle d'un festival reconnu, ou exactement le nom de l'artiste (+ officiel, VEVO, music, TV) —
+            # « Jai'Len Josey » n'est pas Josey (17/10/2026)
+            ch = re.sub(r"\b(officiel|official|vevo|music|musique|tv)\b", "", _sans_accents(chaine)).replace(" ", "")
+            officielle = _sans_accents(chaine) in chaines or ch == nom.replace(" ", "")
+            if vid and re.search(rf"\b{re.escape(nom)}\b", titre) and officielle:
                 _CACHE[cle].append({"id": vid, "titre": sn.get("title", ""), "chaine": chaine,
                                     "credit": f"Vidéo : {chaine}, licence CC BY (YouTube)"})
                 if len(_CACHE[cle]) >= n:

@@ -10,6 +10,7 @@ Refrain : la partie à la fois la plus forte et la plus répétée du morceau (m
 spectrale, calculée avec numpy). Téléchargement : yt-dlp (avec Node pour le JavaScript de YouTube) ; sur un poste
 de travail, les serveurs de GitHub étant souvent bloqués par YouTube."""
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -179,6 +180,26 @@ def monte(clip: str, debut: float, fin: float, calque_png: str, out: str) -> str
     return out if os.path.isfile(out) else None
 
 
+def _pochette(url: str | None, tmp: str) -> str | None:
+    """Image 2160 × 3840 : pochette en grand au centre, fond = la même pochette agrandie, floutée et assombrie."""
+    if not url:
+        return None
+    from core.services.news import http_get
+    try:
+        hd = re.sub(r"/\d+x\d+bb\.", "/1400x1400bb.", url)   # Apple Music : la plus grande taille disponible
+        im = Image.open(__import__("io").BytesIO(http_get(hd, binary=True) or http_get(url, binary=True))).convert("RGB")
+    except Exception:  # noqa: BLE001
+        return None
+    cote = H * 2   # fond : la pochette agrandie à la hauteur de l'écran, recadrée au centre en largeur
+    fond = im.resize((cote, cote), Image.LANCZOS).crop(((cote - W * 2) // 2, 0, (cote + W * 2) // 2, cote))
+    fond = fond.filter(ImageFilter.GaussianBlur(60)).point(lambda v: int(v * 0.45))
+    c = int(W * 2 * 0.82)
+    fond.paste(im.resize((c, c), Image.LANCZOS), ((W * 2 - c) // 2, int(H * 2 * 0.30)))
+    p = os.path.join(tmp, "pochette.jpg")
+    fond.save(p, quality=92)
+    return p
+
+
 CONCERT_S = 6.0
 
 
@@ -212,8 +233,8 @@ def maison(track_id: int, haut: str, chiffre: str, out: str, par_photo: float = 
     photos libres (Openverse, crédit du photographe) et photo de notre base, en lent zoom, avec l'habillage Cauri.
     Muette : le son officiel s'ajoute dans l'application (bibliothèque sous licence), au refrain."""
     from core.services.social import medias
-    t = db.one("""SELECT t.title, a.name AS artist, COALESCE(NULLIF(a.image_hd_url, ''), a.image_url) AS photo, a.image_credit
-                  FROM tracks t JOIN artists a ON a.id = t.artist_id WHERE t.id = ?""", [track_id])
+    t = db.one("""SELECT t.title, t.cover_url, a.name AS artist, COALESCE(NULLIF(a.image_hd_url, ''), a.image_url) AS photo,
+                         a.image_credit FROM tracks t JOIN artists a ON a.id = t.artist_id WHERE t.id = ?""", [track_id])
     if not t:
         return None
     images = [(s["url"], s["credit"]) for s in medias.scenes_libres(t["artist"], 8)]
@@ -243,6 +264,10 @@ def maison(track_id: int, haut: str, chiffre: str, out: str, par_photo: float = 
                 credits.append(credit)
         if not fichiers:
             return None
+        # La pochette de la chanson, entière au centre sur son propre fond flou (jamais recadrée) : en 2e position
+        pochette = _pochette(t.get("cover_url"), tmp)
+        if pochette:
+            fichiers.insert(min(1, len(fichiers)), pochette)
         while len(fichiers) < 3:   # une ou deux photos seulement : on les reprend avec d'autres mouvements (≥ 12 s)
             fichiers.append(fichiers[len(fichiers) % max(1, len(fichiers))])
         png = os.path.join(tmp, "calque.png")

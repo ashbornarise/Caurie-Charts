@@ -35,12 +35,29 @@ def _deja(track_id: int, jours: int = 21) -> bool:
     return False
 
 
+MAX_ABONNES = 1_000_000   # au-delà, artiste presque toujours chez une major : vidéo maison
+
+
 def _autorise(track_id: int) -> bool:
-    """Clip utilisable : artiste ou label sur la liste des accords écrits (conf « social.refrain.autorises »)."""
+    """Extrait du clip autorisé ?
+    - oui si l'artiste ou son label a donné son accord écrit (conf « social.refrain.autorises ») ;
+    - jamais s'il est sur la liste noire (conf « social.refrain.exclus », ex. après un blocage) ;
+    - sinon, règle du fondateur (17/10/2026) : les artistes indépendants hors Nigeria, avec moins d'un million d'abonnés
+      YouTube, ne sont presque jamais bloqués (Piesie Esther est passée, Ayra Starr — Mavin/Universal — bloquée)."""
     from core import conf
+    r = db.one("""SELECT a.name, a.label_owner, a.youtube_subscribers, COALESCE(a.base_country, gc.code) AS pays
+                  FROM tracks t JOIN artists a ON a.id = t.artist_id LEFT JOIN countries gc ON gc.id = a.guessed_country_id
+                  WHERE t.id = ?""", [track_id])
+    if not r:
+        return False
+    nom, label = r["name"].lower(), (r.get("label_owner") or "").lower()
+    if nom in R.exclus() or (label and label in R.exclus()):
+        return False
     ok = {x.lower() for x in (conf.get("social.refrain.autorises") or [])}
-    r = db.one("SELECT a.name, a.label_owner FROM tracks t JOIN artists a ON a.id = t.artist_id WHERE t.id = ?", [track_id])
-    return bool(r) and (r["name"].lower() in ok or (r.get("label_owner") or "").lower() in ok)
+    if nom in ok or (label and label in ok):
+        return True
+    plafond = int(conf.get("social.refrain.max_abonnes") or MAX_ABONNES)
+    return r.get("pays") not in (None, "NG") and int(r.get("youtube_subscribers") or 0) < plafond
 
 
 def candidats() -> list[dict]:
