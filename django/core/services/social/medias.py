@@ -83,6 +83,42 @@ def scenes_libres(artiste: str, n: int = 8) -> list[dict]:
     return out
 
 
+# Chaînes officielles de festivals et d'organisateurs dont les vidéos sous licence libre sont fiables (en plus des
+# chaînes des artistes eux-mêmes) — les comptes de « reposts » cochent parfois « licence libre » sans en avoir le droit
+CHAINES_CONCERT = ["One Africa Music Fest"]
+
+
+def videos_concert(artiste: str, n: int = 3) -> list[dict]:
+    """Vidéos de concert de l'artiste sous licence Creative Commons (YouTube), publiées par une chaîne officielle :
+    la sienne ou celle d'un festival connu. Une recherche (100 unités de quota) par artiste et par exécution."""
+    cle = "cc:" + artiste.lower()
+    if cle in _CACHE:
+        return _CACHE[cle]
+    _CACHE[cle] = []
+    try:
+        from core import conf
+        from core.services.platforms import clients
+        yt = clients()["youtube"]
+        if not yt.is_available() or yt.remaining_quota() < 1500:
+            return []
+        chaines = {_sans_accents(c) for c in (conf.get("social.concert.chaines") or CHAINES_CONCERT)}
+        d = yt._get("search", {"part": "snippet", "type": "video", "maxResults": 15, "videoLicense": "creativeCommon",
+                               "order": "viewCount", "q": f"{artiste} live performance"}, 100)
+        nom = _sans_accents(artiste)
+        for it in d.get("items", []):
+            sn, vid = it["snippet"], it["id"].get("videoId")
+            titre, chaine = _sans_accents(sn.get("title", "")), sn.get("channelTitle", "")
+            officielle = _sans_accents(chaine) in chaines or nom.replace(" ", "") in _sans_accents(chaine).replace(" ", "")
+            if vid and nom in titre and officielle:
+                _CACHE[cle].append({"id": vid, "titre": sn.get("title", ""), "chaine": chaine,
+                                    "credit": f"Vidéo : {chaine}, licence CC BY (YouTube)"})
+                if len(_CACHE[cle]) >= n:
+                    break
+    except Exception as exc:  # noqa: BLE001
+        log_write("monde", "warning", f"vidéos de concert {artiste} : {exc}")
+    return _CACHE[cle]
+
+
 def _cle(url: str) -> str:
     return "img-" + hashlib.md5(url.encode()).hexdigest()[:16]
 

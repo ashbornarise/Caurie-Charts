@@ -179,6 +179,34 @@ def monte(clip: str, debut: float, fin: float, calque_png: str, out: str) -> str
     return out if os.path.isfile(out) else None
 
 
+CONCERT_S = 6.0
+
+
+def _concert(artiste: str, tmp: str) -> dict | None:
+    """6 s d'un concert de l'artiste sous licence libre (medias.videos_concert), au moment le plus animé (énergie du son :
+    foule, refrain repris par le public), recadrées en 9:16 et SANS son."""
+    from core.services.social import medias
+    for v in medias.videos_concert(artiste, 2):
+        src = telecharge(v["id"], tmp)
+        if not src:
+            continue
+        try:
+            y = _audio(src, 8000)
+            pas = 8000 // 2
+            rms = np.sqrt(np.convolve(y ** 2, np.ones(pas) / pas, mode="valid")[::pas])     # énergie par demi-seconde
+            fen = int(CONCERT_S * 2)
+            moy = np.convolve(rms, np.ones(fen) / fen, mode="valid")
+            debut = 15 * 2 + int(np.argmax(moy[30:])) if len(moy) > 40 else 0
+            out = os.path.join(tmp, "concert.mp4")
+            subprocess.run([ffmpeg(), "-y", "-v", "error", "-ss", f"{debut / 2:.1f}", "-t", f"{CONCERT_S}", "-i", src, "-an",
+                            "-vf", f"scale=-2:{H},crop={W}:{H},fps=30,eq=brightness=-0.05", "-c:v", "libx264", "-preset", "veryfast",
+                            "-crf", "20", out], capture_output=True, timeout=300, check=True)
+            return {"file": out, "credit": v["credit"]}
+        except Exception as exc:  # noqa: BLE001 — sans ouverture de concert, la vidéo reste faite de photos
+            log_write("social", "warning", f"concert {artiste} : {str(exc)[:200]}")
+    return None
+
+
 def maison(track_id: int, haut: str, chiffre: str, out: str, par_photo: float = 4.0, n_photos: int = 4) -> dict | None:
     """Vidéo maison 9:16 SANS image ni son de label (décision du 17/10/2026, après le blocage d'UMG sur Instagram) :
     photos libres (Openverse, crédit du photographe) et photo de notre base, en lent zoom, avec l'habillage Cauri.
@@ -228,18 +256,25 @@ def maison(track_id: int, haut: str, chiffre: str, out: str, par_photo: float = 
         Image.alpha_composite(ombre, c).save(png)
         frames = int(par_photo * 30)
         args, filtres = [], []
+        # Ouverture : 6 s d'ambiance d'un concert sous licence libre (chaîne officielle), sans son, si on en trouve
+        concert = _concert(t["artist"], tmp)
+        if concert:
+            args += ["-i", concert["file"]]
+            credits.insert(0, concert["credit"])
+        o = 1 if concert else 0
         for i, p in enumerate(fichiers):
             args += ["-i", p]   # une seule image : zoompan en tire d images (par_photo secondes)
             zoom, x = [("min(zoom+0.0012,1.15)", "iw/2-(iw/zoom/2)"), ("if(eq(on,1),1.15,max(zoom-0.0012,1))", "iw/2-(iw/zoom/2)"),
                        ("1.12", "(iw-iw/zoom)*on/" + str(frames))][i % 3]   # zoom avant, zoom arrière, panoramique
-            filtres.append(f"[{i}:v]zoompan=z='{zoom}':d={frames}:x='{x}':y='ih/3-(ih/zoom/3)':s={W}x{H}:fps=30,"
+            filtres.append(f"[{i + o}:v]zoompan=z='{zoom}':d={frames}:x='{x}':y='ih/3-(ih/zoom/3)':s={W}x{H}:fps=30,"
                            f"eq=brightness=-0.06,setsar=1,fade=t=in:d=0.25[p{i}]")
         n = len(fichiers)
-        duree = par_photo * n
-        filtres.append("".join(f"[p{i}]" for i in range(n)) + f"concat=n={n}:v=1:a=0[film]")
-        filtres.append(f"[film][{n}:v]overlay=0:0,format=yuv420p[v]")
+        duree = par_photo * n + (CONCERT_S if concert else 0)
+        tete = "[0:v]fps=30,setsar=1[cc];[cc]" if concert else ""
+        filtres.append(tete + "".join(f"[p{i}]" for i in range(n)) + f"concat=n={n + o}:v=1:a=0[film]")
+        filtres.append(f"[film][{n + o}:v]overlay=0:0,format=yuv420p[v]")
         args += ["-loop", "1", "-t", f"{duree}", "-i", png, "-f", "lavfi", "-t", f"{duree}", "-i", "anullsrc=r=44100:cl=stereo"]
-        cmd = [ffmpeg(), "-y", "-v", "error", *args, "-filter_complex", ";".join(filtres), "-map", "[v]", "-map", f"{n + 1}:a",
+        cmd = [ffmpeg(), "-y", "-v", "error", *args, "-filter_complex", ";".join(filtres), "-map", "[v]", "-map", f"{n + o + 1}:a",
                "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "96k", "-shortest", "-movflags", "+faststart", out]
         try:
             subprocess.run(cmd, capture_output=True, text=True, timeout=900, check=True)

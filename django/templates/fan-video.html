@@ -1,0 +1,32 @@
+{#- Les fans proposent leurs vidéos de concert : lien + autorisation écrite de publier, toujours avec leur nom. -#}
+<article class="prose">
+    <p class="eyebrow">Cauri Live</p>
+    <h1>Envoie ta vidéo de concert</h1>
+    <p class="lead">Tu as filmé un concert, un showcase ou un festival ? Envoie-nous ta vidéo : les meilleures passent sur nos pages
+        Instagram, TikTok, Facebook et Telegram, <strong>toujours avec ton nom et ton compte</strong>.</p>
+    <ul>
+        <li>Une vidéo que <strong>tu as filmée toi-même</strong> (pas un repost).</li>
+        <li>Envoie un <strong>lien</strong> : Google Drive, WeTransfer, Dropbox, ou ton post Instagram ou TikTok.</li>
+        <li>Plus c'est net, mieux c'est : vertical, au moins 10 secondes, le son du public compris.</li>
+    </ul>
+    <form class="form" method="post" action="{{ path('envoie-ta-video') }}" novalidate>
+        {{ csrf_field() }}
+        <div class="hp" aria-hidden="true"><label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        {{ partial('partials/field', name='link', label='Lien de la vidéo', type='url', attrs='maxlength="500" placeholder="https://"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='artist', label='Artiste sur scène', attrs='maxlength="150"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='event', label='Concert ou événement', attrs='maxlength="200"', hint='Ex. : Afro Nation, showcase au Palais des congrès…', old=old, errors=errors) }}
+        {{ partial('partials/field', name='city', label='Ville', attrs='maxlength="120"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='event_date', label='Date du concert', type='date', old=old, errors=errors) }}
+        {{ partial('partials/field', name='name', label='Ton nom', attrs='autocomplete="name" maxlength="150"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='handle', label='Ton compte Instagram ou TikTok (pour le crédit)', attrs='maxlength="120" placeholder="@toncompte"', old=old, errors=errors) }}
+        {{ partial('partials/field', name='email', label='Ton e-mail', type='email', attrs='autocomplete="email" maxlength="190"', old=old, errors=errors) }}
+        <div class="field{{ ' field--error' if errors.consent }}">
+            <label class="check"><input type="checkbox" name="consent" value="1"{{ ' checked' if old.consent }}>
+                J'ai filmé cette vidéo moi-même et j'autorise Cauri Charts à la publier et à la monter sur ses pages et son site,
+                gratuitement, en citant mon nom ou mon compte. Je peux retirer cette autorisation à tout moment en écrivant via la page contact.</label>
+            {% if errors.consent %}<p class="field__error">{{ errors.consent }}</p>{% endif %}
+        </div>
+        <p class="fineprint">Nous gardons ton e-mail seulement pour te prévenir quand ta vidéo passe. <a href="{{ path('confidentialite') }}">{{ t('legal.confidentialite') }}</a>.</p>
+        <button class="button" type="submit">Envoyer ma vidéo</button>
+    </form>
+</article>

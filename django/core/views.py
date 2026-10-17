@@ -408,6 +408,50 @@ def _contact_send(request):
     return redirect("/contact")
 
 
+def fan_video(request):
+    """« Envoie ta vidéo de concert » : les fans proposent leurs vidéos (lien + autorisation écrite de publier avec crédit)."""
+    use_locale(request)
+    meta = {"title": "Envoie ta vidéo de concert · " + brand(),
+            "description": "Tu as filmé un concert ? Envoie ta vidéo à Cauri Charts : les meilleures passent sur nos pages, avec ton nom."}
+    if request.method != "POST":
+        return render(request, "fan-video", {"old": {}, "errors": {}, "meta": meta})
+    if req_str(request, "website"):
+        return redirect("/envoie-ta-video")   # pot de miel : robot
+    old = {k: req_str(request, k)[:n] for k, n in (("link", 500), ("artist", 150), ("event", 200), ("city", 120), ("event_date", 10),
+                                                    ("name", 150), ("handle", 120), ("email", 190))}
+    old["consent"] = request.POST.get("consent") == "1"
+    errors = {}
+    if not old["link"].startswith(("https://", "http://")):
+        errors["link"] = "Colle le lien complet de ta vidéo (il commence par https://)."
+    for f in ("artist", "name"):
+        if not old[f]:
+            errors[f] = t("form.required")
+    if not EMAIL_RE.match(old["email"]):
+        errors["email"] = t("form.invalid_email")
+    if not old["consent"]:
+        errors["consent"] = "Coche l'autorisation : sans elle, nous ne pouvons pas publier ta vidéo."
+    date_concert = None
+    if old["event_date"]:
+        try:
+            date_concert = datetime.strptime(old["event_date"], "%Y-%m-%d").date()
+        except ValueError:
+            errors["event_date"] = t("form.required")
+    h = ip_hash(request)
+    if int(db.value("SELECT COUNT(*) FROM fan_videos WHERE ip_hash = ? AND created_at > ?", [h, now_utc(-86400)])) >= 10:
+        errors["link"] = t("form.rate_limited")
+    if errors:
+        return render(request, "fan-video", {"old": old, "errors": errors, "meta": meta}, 422)
+    db.insert("fan_videos", {"name": old["name"], "email": old["email"], "handle": old["handle"] or None, "artist": old["artist"],
+                             "event": old["event"] or None, "city": old["city"] or None, "event_date": date_concert,
+                             "link": old["link"], "consent": 1, "ip_hash": h})
+    from core import mail
+    mail.notify_admin(f"Vidéo de concert proposée : {old['artist']}",
+                      f"De : {old['name']} {old['handle']} <{old['email']}>\nConcert : {old['event']} · {old['city']} · {old['event_date']}\n"
+                      f"Lien : {old['link']}\nAutorisation de publier avec crédit : oui", old["email"])
+    flash(request, "success", "Merci ! Ta vidéo est bien arrivée. Si elle passe sur nos pages, on te prévient par e-mail.")
+    return redirect("/envoie-ta-video")
+
+
 def set_locale_view(request, loc: str):
     if loc in conf.get("app.locales"):
         request.session["locale"] = loc
