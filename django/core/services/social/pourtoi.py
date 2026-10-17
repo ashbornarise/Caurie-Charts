@@ -137,6 +137,51 @@ def une(photo, titre: str, accent: str | None = None, fmt: str = "feed", couleur
     return img
 
 
+def citation(photo, texte: str, auteur: str, contexte: str = "", fmt: str = "feed", couleur=None, note: str = "") -> Image.Image:
+    """Citation choc (style Instrurap) : visage à gauche plein cadre, la phrase en grandes capitales serif à droite,
+    le nom de l'auteur au-dessus, le contexte en dessous. note : « traduit de l'anglais » le cas échéant."""
+    w, h = FORMATS[fmt]
+    couleur = couleur or (214, 190, 150)       # beige doré des citations de référence
+    im = charge(photo)
+    img = cadre(im, w, h, 0.15) if im else Image.new("RGB", (w, h), (14, 14, 18))
+    # voile sombre progressif sur la droite, où se pose le texte
+    voile = Image.new("L", (w, 1))
+    for x in range(w):
+        voile.putpixel((x, 0), int(235 * max(0.0, min(1.0, (x / w - 0.30) / 0.30))))
+    img.paste(Image.new("RGB", (w, h), (10, 10, 14)), (0, 0), voile.resize((w, h)))
+    d = ImageDraw.Draw(img)
+    x0, largeur = int(w * 0.50), int(w * 0.44)
+    texte = "« " + texte.strip().strip("«»\"“” ").upper() + " »"
+    for taille in range(170, 60, -6):
+        f = ImageFont.truetype(str(RES / "fonts" / "DMSerifDisplay-Regular.ttf"), taille)
+        lignes, cur = [], ""
+        for m in texte.split():
+            essai = (cur + " " + m).strip()
+            if d.textlength(essai, font=f) <= largeur:
+                cur = essai
+            else:
+                lignes.append(cur); cur = m
+        lignes.append(cur)
+        if len(lignes) * taille * 1.08 <= h * 0.42:
+            break
+    hauteur = len(lignes) * int(taille * 1.08)
+    y = (h - hauteur) // 2
+    fa = police(46, "Poppins-Bold.ttf")
+    d.text((x0 + (largeur - d.textlength(auteur.upper(), font=fa)) / 2, y - 150), auteur.upper(), font=fa, fill=BLANC)
+    d.line([(x0 + largeur * 0.3, y - 70), (x0 + largeur * 0.7, y - 70)], fill=(200, 200, 200), width=3)
+    for i, l in enumerate(lignes):
+        fill = couleur if i in (len(lignes) // 2,) else BLANC
+        d.text((x0 + (largeur - d.textlength(l, font=f)) / 2, y), l, font=f, fill=fill)
+        y += int(taille * 1.08)
+    d.line([(x0 + largeur * 0.3, y + 40), (x0 + largeur * 0.7, y + 40)], fill=(200, 200, 200), width=3)
+    fc = police(38, "Poppins-Regular.ttf")
+    for k, ligne in enumerate([contexte, note]):
+        if ligne:
+            d.text((x0 + (largeur - d.textlength(ligne, font=fc)) / 2, y + 80 + k * 56), ligne, font=fc, fill=(205, 205, 210))
+    _marque(img, 110, 110 if fmt == "feed" else 260, 300)
+    return img
+
+
 def trio(personnes: list, titre: str, accent: str | None = None, fmt: str = "feed", couleur=None) -> Image.Image:
     """Trois visages côte à côte ; sous chacun, son nom et son chiffre (en couleur). personnes : [{photo, nom, chiffre, legende}]."""
     w, h = FORMATS[fmt]

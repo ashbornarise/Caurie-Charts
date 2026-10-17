@@ -72,6 +72,10 @@ def scenes_libres(artiste: str, n: int = 8) -> list[dict]:
                 continue
             if r.get("width") and (r["width"] < 900 or (r.get("height") or 0) < 700):   # taille parfois absente
                 continue
+            # Licences « pas d'usage commercial » (NC) ou « pas de modification » (ND) : exclues — on est un média et on
+            # pose du texte sur l'image
+            if any(k in (r.get("license") or "").lower() for k in ("nc", "nd")):
+                continue
             lic = f"CC {(r.get('license') or '').upper()} {r.get('license_version') or ''}".strip()
             out.append({"url": r["url"], "type": "scene",
                         "credit": f"Photo : {r.get('creator') or 'auteur inconnu'}, {lic} ({r.get('source') or 'Openverse'})"})
@@ -123,19 +127,37 @@ def _cle(url: str) -> str:
     return "i" + hashlib.md5(url.encode()).hexdigest()[:15]   # 16 caractères : taille de monde_vus.cle
 
 
+_LISIBLES: dict = {}
+
+
+def lisible(url: str) -> bool:
+    """L'image se télécharge et s'ouvre vraiment (certains sites, comme Flickr, refusent les robots)."""
+    if url not in _LISIBLES:
+        try:
+            from io import BytesIO
+            from PIL import Image
+            from core.services.news import http_get
+            Image.open(BytesIO(http_get(url, binary=True))).verify()
+            _LISIBLES[url] = True
+        except Exception:  # noqa: BLE001
+            _LISIBLES[url] = False
+    return _LISIBLES[url]
+
+
 def choisit(artiste: str, secours: str | None = None, alterne: int = 0) -> str | None:
     """Une image de l'artiste pas encore utilisée ces 10 jours ; alterne plans de clips et photos de scène."""
     from core.services.social import monde as M
     clips, scenes = plans_de_clips(artiste), scenes_libres(artiste)
     ordre = (clips + scenes) if alterne % 2 == 0 else (scenes + clips)
     for c in ordre:
-        if not M.vu(_cle(c["url"])):
+        if not M.vu(_cle(c["url"])) and lisible(c["url"]):
             M.marque_vu([_cle(c["url"])])
             CREDITS[c["url"]] = c["credit"]
             return c["url"]
-    if ordre:   # tout a déjà servi : on reprend la plus ancienne source plutôt que rien
-        CREDITS[ordre[0]["url"]] = ordre[0]["credit"]
-        return ordre[0]["url"]
+    deja = [c for c in ordre if lisible(c["url"])]
+    if deja:   # tout a déjà servi : on reprend une image lisible plutôt que rien
+        CREDITS[deja[0]["url"]] = deja[0]["credit"]
+        return deja[0]["url"]
     return secours
 
 

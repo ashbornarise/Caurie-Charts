@@ -8,9 +8,11 @@
 
 Chaque post finit par une question au public. Rendu : couverture choc sur vraies photos (monde.couverture_choc).
 Les posts sont enregistrés avec leur heure (« due ») et partent un par un via la file d'attente (monde.publie_file).
-Calendrier (heure de Lomé) : lundi 21 h top10, mercredi 21 h versus, vendredi 21 h qui_est, 1er du mois 12 h power,
+Calendrier (heure de Lomé) : lundi 21 h top10, mardi et samedi 21 h citation, mercredi 21 h versus, jeudi et dimanche
+21 h histoire, vendredi 21 h qui_est, 1er du mois 12 h power,
 1er lundi du mois 12 h promo."""
 import json
+import re
 from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
@@ -35,8 +37,10 @@ def _deja(theme: str, cle: str, semaines: int = 12) -> bool:
     return False
 
 
-def _post(theme: str, jour: date, due: datetime, titre: str, pages: list, legende: str, hashtags: str, cle: str) -> dict:
-    """pages : [(fiche, kicker, diapo)] → images 4:5 et 9:16, post enregistré avec son heure de départ."""
+def _post(theme: str, jour: date, due: datetime, titre: str, pages: list, legende: str, hashtags: str, cle: str,
+          couverture=None) -> dict:
+    """pages : [(fiche, kicker, diapo)] → images 4:5 et 9:16, post enregistré avec son heure de départ.
+    couverture(fmt) : image de la 1re page dessinée à part (modèles « Pour toi »), fmt = « feed » ou « story »."""
     from core.services.social import editorial as E
     from core.services.social import image as PI
     PI.DIR.mkdir(parents=True, exist_ok=True)
@@ -44,6 +48,11 @@ def _post(theme: str, jour: date, due: datetime, titre: str, pages: list, legend
     M.STYLE_GRAINE = nom   # un même style (police, couleurs, mise en page) sur toutes les images du post
     fichiers = []
     for n, (f, kk, dp) in enumerate(pages):
+        if n == 0 and couverture:
+            a = PI.save_jpeg(couverture("feed"), PI.DIR / f"{nom}-{n}.jpg")
+            b = PI.save_jpeg(couverture("story"), PI.DIR / f"{nom}-{n}-916.jpg")
+            fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": titre})
+            continue
         a = PI.save_jpeg(M.couverture_choc(f, kk, False, "feed", dp), PI.DIR / f"{nom}-{n}.jpg")
         b = PI.save_jpeg(M.couverture_choc(f, kk, False, "tiktok", dp), PI.DIR / f"{nom}-{n}-916.jpg")
         fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": (dp or {}).get("titre") or f.get("une") or titre})
@@ -267,6 +276,138 @@ def power(jour: date, due: datetime) -> dict | None:
     return _post("format-power", jour, due, f"Classement des artistes · {mois}", pages, legende, "#CauriCharts #TopArtistes #AfriqueDeLOuest", cle)
 
 
+# ---------------------------------------------------------------- 6. citation choc
+
+_GUILLEMETS = re.compile(r"[«“\"]\s*([^»”\"]{25,170}?)\s*[»”\"]")
+
+
+def citation(jour: date, due: datetime) -> dict | None:
+    """La phrase choc d'une star, tirée MOT POUR MOT d'un article (jamais réécrite par l'IA) : l'auteur doit être nommé
+    dans le titre de l'article ; propos insultants ou sensibles écartés ; une citation étrangère est traduite avec la
+    mention « traduit de l'anglais » et l'original est donné dans la légende."""
+    from core.services import ai
+    from core.services.social import medias, pourtoi
+    cands = []
+    for it in M.collecte(48):
+        texte = f"{it['title']} {it.get('summary') or ''}"
+        for q in dict.fromkeys(_GUILLEMETS.findall(texte)):
+            if len(q.split()) >= 5 and not _deja("format-citation", q[:60], 26):
+                cands.append({"i": len(cands), "titre": it["title"][:200], "resume": (it.get("summary") or "")[:300],
+                              "citation": q, "source": it.get("source"), "url": it.get("url")})
+    if not cands:
+        return None
+    consigne = ("Voici des citations relevées dans des articles musicaux. Pour chacune, rends un objet JSON :\n"
+                '{"i": n, "auteur": "nom exact de la personne qui parle, tel qu\'écrit dans le titre", "musique": true si c\'est un '
+                'artiste ou une figure de la musique, "force": 0-100 (phrase qui fait réagir : ambition, argent, clash, '
+                'confidence, prise de position), "sensible": true si insulte, propos sexiste ou raciste, accusation, santé, '
+                'décès, justice, "langue": "fr" ou "en" ou autre, "francais": "traduction française fidèle si la citation '
+                'n\'est pas en français, sinon recopie-la", "contexte": "8 mots max, tirés du titre ou du résumé, qui situent la '
+                'phrase"}\nRends une liste JSON, rien d\'autre.\n\n' + json.dumps(cands[:40], ensure_ascii=False))
+    try:
+        r = ai.make().ask(M.SYSTEME, consigne, max_tokens=5000)
+        texte = r["text"]
+        notes = json.loads(texte[texte.find("["): texte.rfind("]") + 1])
+    except Exception as exc:  # noqa: BLE001
+        log_write("social", "error", f"citation : {exc}")
+        return None
+    bonnes = []
+    for n in notes:
+        try:
+            c = cands[int(n["i"])]
+        except (KeyError, ValueError, IndexError, TypeError):
+            continue
+        auteur = (n.get("auteur") or "").strip()
+        # garde-fous : l'auteur est nommé dans le titre, pas de propos sensible, figure de la musique
+        if not auteur or M._sans_accents(auteur).lower() not in M._sans_accents(c["titre"]).lower():
+            continue
+        if n.get("sensible") or not n.get("musique"):
+            continue
+        bonnes.append({**c, **n, "note_finale": int(n.get("force") or 0) + min(30, M.fans(auteur) // 200000)})
+    if not bonnes:
+        return None
+    b = max(bonnes, key=lambda x: x["note_finale"])
+    etrangere = (b.get("langue") or "fr") != "fr"
+    phrase = (b.get("francais") or b["citation"]).strip() if etrangere else b["citation"]
+    photo = medias.choisit(b["auteur"], M._photo_portrait(b["auteur"]))
+    note = "Traduit de l'anglais" if b.get("langue") == "en" else ("Traduit" if etrangere else "")
+    couverture = lambda fmt: pourtoi.citation(photo, phrase, b["auteur"], b.get("contexte") or "", fmt, note=note)  # noqa: E731
+    legende = (f"🗣️ {b['auteur']} : « {phrase} »\n\n"
+               + (f"Version originale : « {b['citation']} »\n\n" if etrangere else "")
+               + f"{b.get('contexte') or ''}\n(Source : {b.get('source') or 'presse'})\n\n"
+               + "Vous êtes d'accord ⁉️ Dites-le en commentaire ‼️"
+               + (f"\n\n{medias.credits([photo])}" if medias.credits([photo]) else ""))
+    tags = "#CauriCharts #Citation #" + "".join(ch for ch in b["auteur"] if ch.isalnum()) + " #Musique"
+    return _post("format-citation", jour, due, f"{b['auteur']} : « {phrase[:80]} »", [(_fiche(b["auteur"], "", "", [], b["citation"][:60]), "", None)],
+                 legende, tags, b["citation"][:60], couverture=couverture)
+
+
+# ---------------------------------------------------------------- 7. les projets qui ont marqué l'histoire
+
+# (artiste, projet, langue Wikipédia, page) : des projets ouest-africains dont l'histoire est documentée
+HISTOIRE = [
+    ("Wizkid", "Made in Lagos", "en", "Made_in_Lagos"), ("Burna Boy", "African Giant", "en", "African_Giant"),
+    ("Burna Boy", "Twice as Tall", "en", "Twice_as_Tall"), ("Burna Boy", "Love, Damini", "en", "Love,_Damini"),
+    ("Davido", "Timeless", "en", "Timeless_(Davido_album)"), ("Rema", "Rave & Roses", "en", "Rave_%26_Roses"),
+    ("Ayra Starr", "19 & Dangerous", "en", "19_%26_Dangerous"), ("Asake", "Work of Art", "en", "Work_of_Art_(Asake_album)"),
+    ("Rema", "Calm Down", "en", "Calm_Down_(Rema_song)"), ("CKay", "Love Nwantiti", "en", "Love_Nwantiti"),
+    ("Wizkid", "Essence", "en", "Essence_(Wizkid_song)"), ("Burna Boy", "Last Last", "en", "Last_Last"),
+    ("Davido", "Fall", "en", "Fall_(Davido_song)"), ("Wizkid", "Ojuelegba", "en", "Ojuelegba_(song)"),
+    ("Magic System", "Premier Gaou", "fr", "Premier_Gaou"), ("Youssou N'Dour", "7 Seconds", "en", "7_Seconds_(song)"),
+    ("Tems", "Free Mind", "en", "Free_Mind_(song)"), ("Kizz Daniel", "Buga", "en", "Buga_(song)"),
+]
+
+
+def histoire(jour: date, due: datetime) -> dict | None:
+    """« Le projet qui a changé l'histoire » : 3 faits tirés de Wikipédia (chaque chiffre doit figurer dans le texte source)."""
+    from core.services import ai
+    from core.services.news import http_get
+    from core.services.social import medias, pourtoi
+    for artiste, projet, lang, page in HISTOIRE:
+        cle = f"{artiste}|{projet}"
+        if _deja("format-histoire", cle, 52):
+            continue
+        try:
+            d = json.loads(http_get(f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{page}") or "{}")
+        except Exception:  # noqa: BLE001
+            continue
+        texte = d.get("extract") or ""
+        if len(texte) < 300:
+            continue
+        consigne = ("Voici le résumé Wikipédia d'un projet musical. Rends un objet JSON :\n"
+                    '{"titre": "6 à 9 mots, en français, qui disent pourquoi ce projet a marqué l\'histoire", "accent": "le mot ou '
+                    'chiffre à mettre en couleur, recopié du titre", "faits": ["3 faits marquants en français, un par phrase de '
+                    '20 mots max, chacun présent dans le texte (chiffres recopiés exactement)"], "question": "une question au public '
+                    'terminée par ⁉️"}\nN\'ajoute rien qui ne soit pas dans le texte.\n\n' + texte)
+        try:
+            r = ai.make().ask(M.SYSTEME, consigne, max_tokens=1500)
+            o = json.loads(r["text"][r["text"].find("{"): r["text"].rfind("}") + 1])
+        except Exception as exc:  # noqa: BLE001
+            log_write("social", "error", f"histoire {projet} : {exc}")
+            continue
+        chiffres_source = set(re.findall(r"\d+", texte.replace(",", "").replace(" ", "")))
+        faits = [f for f in o.get("faits") or [] if all(c in chiffres_source for c in re.findall(r"\d+", f.replace(" ", "").replace(",", "")))]
+        if len(faits) < 2 or not o.get("titre"):
+            continue
+        # Photo de scène libre ou portrait de l'artiste — jamais le plan d'un autre clip que le projet raconté
+        libres = medias.scenes_libres(artiste)
+        libres = [x for x in libres if medias.lisible(x["url"])]
+        photo = libres[0]["url"] if libres else M._photo_portrait(artiste)
+        if libres:
+            medias.CREDITS[photo] = libres[0]["credit"]
+        couverture = lambda fmt, t=o["titre"], a=o.get("accent"): pourtoi.une(photo, t, a, fmt, surtitre="Ça a changé l'histoire")  # noqa: E731
+        pages = [(_fiche(artiste, "", "", [], cle), "", None)]
+        for k, f in enumerate(faits[:3]):
+            pages.append((_fiche(artiste, "", "", ["Wikipédia"], cle), f"{k + 2} / {len(faits[:3]) + 2}",
+                          _diapo(projet.upper(), (VIOLET, BLEU, ROUGE)[k % 3], f"FAIT N°{k + 1}", f, f"h{k}")))
+        pages.append(_fin(o.get("question") or "Vous l'écoutez encore ⁉️", cle))
+        legende = (f"📀 {o['titre']} — « {projet} » de {artiste}\n\n" + "\n".join(f"▪️ {f}" for f in faits[:3])
+                   + f"\n\n{o.get('question') or ''} Dites-le en commentaire ‼️\n\nSource : Wikipédia ({lang}.wikipedia.org/wiki/{page})"
+                   + (f"\n{medias.credits([photo])}" if medias.credits([photo]) else ""))
+        tags = "#CauriCharts #Histoire #" + "".join(ch for ch in artiste if ch.isalnum()) + " #Afrobeats"
+        return _post("format-histoire", jour, due, f"{projet} ({artiste}) : {o['titre']}", pages, legende, tags, cle, couverture=couverture)
+    return None
+
+
 # ---------------------------------------------------------------- calendrier
 
 def du_jour(jour: date) -> list:
@@ -277,7 +418,8 @@ def du_jour(jour: date) -> list:
         prevus.append((power, a_heure(12)))
     if jour.isoweekday() == 1 and jour.day <= 7:
         prevus.append((promo, a_heure(12) + timedelta(minutes=30 if jour.day == 1 else 0)))
-    prevus.append({1: (top10, a_heure(21)), 3: (versus, a_heure(21)), 5: (qui_est, a_heure(21))}.get(jour.isoweekday()))
+    prevus.append({1: (top10, a_heure(21)), 2: (citation, a_heure(21)), 3: (versus, a_heure(21)), 4: (histoire, a_heure(21)),
+                   5: (qui_est, a_heure(21)), 6: (citation, a_heure(21)), 7: (histoire, a_heure(21))}.get(jour.isoweekday()))
     lignes = []
     for p in filter(None, prevus):
         fn, due = p
