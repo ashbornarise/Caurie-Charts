@@ -174,6 +174,7 @@ def _redige(histoires: list) -> list:
         ' "une": "accroche de couverture, 28 caractères max, en MAJUSCULES, qui donne ENVIE de savoir la suite : le détail le plus fou '
         'de l\'info (un chiffre, un refus, une première, un clash), jamais un résumé plat. Ex. : « 10 MILLIONS EN 24 H », '
         '« ELLE A DIT NON À 50 M$ », « PERSONNE N\'AVAIT FAIT ÇA », « RIHANNA : 9E ALBUM ». Interdit : mentir, exagérer, inventer",\n'
+        ' "accent": "LE mot ou chiffre du titre à mettre en couleur sur la couverture (le plus fort : un chiffre, un nom, un mot choc), recopié tel quel",\n'
         ' "titre": "phrase de 70 caractères max qui dit EXACTEMENT ce qui se passe, l\'élément le plus surprenant en premier, '
         'avec le chiffre clé s\'il y en a un",\n'
         ' "accroche": "110 caractères max : la question que le lecteur se pose (pourquoi ? comment ? et maintenant ?), pour qu\'il '
@@ -208,7 +209,7 @@ def _redige(histoires: list) -> list:
             continue   # hors musique, ou vieille nouvelle remise en avant : pas de l'actualité
         out.append({**h, "rubrique": f.get("rubrique") if f.get("rubrique") in RUBRIQUES else "monde",
                     "artiste": coupe(f.get("artiste"), 60), "une": coupe(f.get("une"), 60).rstrip("…"),
-                    "titre": coupe(f.get("titre") or h["items"][0]["title"], 140),
+                    "titre": coupe(f.get("titre") or h["items"][0]["title"], 140), "accent": coupe(f.get("accent"), 30),
                     "accroche": coupe(f.get("accroche"), 130), "resume": coupe(f.get("resume"), 420),
                     "question": coupe(f.get("question") or "Vous en pensez quoi ⁉️", 110),
                     "choc": int(f.get("choc") or 0), "sensible": bool(f.get("sensible"))})
@@ -243,13 +244,21 @@ def _photo_portrait(artiste: str):
         pass
     try:
         from urllib.parse import quote
-        r = json.loads(http_get("https://api.deezer.com/search/artist?limit=1&q=" + quote(artiste)) or "{}")
-        a = (r.get("data") or [None])[0]
-        if a and _sans_accents(a["name"]).lower() == _sans_accents(artiste).lower() and "/artist//" not in (a.get("picture_xl") or "/artist//"):
+        a = _deezer_artiste(artiste)
+        if a and "/artist//" not in (a.get("picture_xl") or "/artist//"):
             return a["picture_xl"]
     except Exception as exc:  # noqa: BLE001
         log_write("monde", "warning", f"photo {artiste} : {exc}")
     return None
+
+
+def _deezer_artiste(artiste: str) -> dict | None:
+    """L'artiste Deezer de ce nom exact qui a le plus de fans : « Jul » donnait un homonyme à 1 285 fans au lieu du rappeur
+    (11 millions de fans, 5e résultat de la recherche) — 17/10/2026."""
+    from urllib.parse import quote
+    r = json.loads(http_get("https://api.deezer.com/search/artist?limit=10&q=" + quote(artiste)) or "{}")
+    memes = [a for a in (r.get("data") or []) if _sans_accents(a.get("name", "")).lower() == _sans_accents(artiste).lower()]
+    return max(memes, key=lambda a: int(a.get("nb_fan") or 0)) if memes else None
 
 
 _FANS: dict = {}
@@ -263,8 +272,8 @@ def fans(artiste: str) -> int:
         _FANS[artiste] = 0
         try:
             from urllib.parse import quote
-            a = (json.loads(http_get("https://api.deezer.com/search/artist?limit=1&q=" + quote(artiste)) or "{}").get("data") or [None])[0]
-            if a and _sans_accents(a["name"]).lower() == _sans_accents(artiste).lower():
+            a = _deezer_artiste(artiste)
+            if a:
                 _FANS[artiste] = int(a.get("nb_fan") or 0)
         except Exception:  # noqa: BLE001
             pass
@@ -601,7 +610,17 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
     pages.append(({"artiste": "", "cle": nom, "sources": [], "une": "", "titre": ""}, f"{total} / {total}",
                   {"etiquette": "CAURI CHARTS", "couleur": (20, 20, 30), "titre": "La référence de la musique ouest-africaine", "texte": final, "graine": "fin"}))
     fichiers = []
+    from core.services.social import pourtoi
+    nom_ok = _sans_accents(une_fiche["artiste"]).lower() in _sans_accents(une_fiche["titre"] + " " + une_fiche["une"]).lower()
+    photo_une = photo(une_fiche["artiste"]) if nom_ok else None
     for n, (f, kk, dp) in enumerate(pages):
+        if n == 0 and photo_une:
+            # Couverture « Pour toi » (17/10/2026) : visage plein cadre, titre énorme, un mot en couleur, rien d'autre
+            sur, coul = ("Flash", pourtoi.ACCENTS[0]) if est_flash else (None, None)
+            a = PI.save_jpeg(pourtoi.une(photo_une, f["titre"], f.get("accent"), "feed", coul, surtitre=sur), PI.DIR / f"{nom}-{n}.jpg")
+            b = PI.save_jpeg(pourtoi.une(photo_une, f["titre"], f.get("accent"), "story", coul, surtitre=sur), PI.DIR / f"{nom}-{n}-916.jpg")
+            fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": f["titre"]})
+            continue
         a = PI.save_jpeg(couverture_choc(f, kk, est_flash, "feed", dp), PI.DIR / f"{nom}-{n}.jpg")
         b = PI.save_jpeg(couverture_choc(f, kk, est_flash, "tiktok", dp), PI.DIR / f"{nom}-{n}-916.jpg")
         fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": (dp or {}).get("titre") or une_fiche["une"] or une_fiche["artiste"]})

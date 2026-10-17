@@ -127,6 +127,21 @@ def video_url(post: dict) -> str | None:
     return f"{base}/media/social/{post['video']}" if base and post.get("video") else None
 
 
+INSTAGRAM_PAR_JOUR = 4
+# Ce qui mérite Instagram (moins de posts, mieux faits — analyse du 17/10/2026) : vidéos du jour et formats,
+# classements officiels, flashs, la première actu de chaque édition Cauri Monde, le magazine de la semaine
+INSTAGRAM_THEMES = ("format-", "flash", "monde-matin-1", "monde-soir-1", "hebdo")
+
+
+def instagram_ok(post: dict) -> bool:
+    """Post retenu pour Instagram : thème prioritaire et moins de INSTAGRAM_PAR_JOUR posts déjà envoyés aujourd'hui."""
+    if not str(post.get("theme") or "").startswith(INSTAGRAM_THEMES):
+        return False
+    deja = int(db.value("""SELECT COUNT(DISTINCT reason) FROM audit_log WHERE action = 'buffer.post' AND reason LIKE 'post-%-instagram%'
+                           AND created_at >= CURRENT_DATE""") or 0)
+    return deja < INSTAGRAM_PAR_JOUR
+
+
 def video_muette(post: dict) -> bool:
     """Vidéo maison sans son (photos libres) : Instagram et TikTok en notification, pour ajouter le son officiel."""
     try:
@@ -160,8 +175,9 @@ def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = Fal
     # un son de leur bibliothèque (impossible par API). Facebook reçoit le reel par le partage automatique d'Instagram.
     # TikTok : TOUJOURS en notification (carrousels compris) — le fondateur ajoute lui-même un son tendance (12/10/2026)
     # Vidéo au refrain (son du clip déjà dedans) : publiée automatiquement partout, TikTok compris (17/10/2026)
-    notify = (video_muette(post) and service in NOTIFY_REELS) or (
-        not video_seule(post) and ((reel and service in NOTIFY_REELS) or service == "tiktok"))
+    # Règle du fondateur (17/10/2026) : jamais de notification sur Instagram (il ajoute la musique après publication) ;
+    # TikTok en notification (le son ne s'ajoute pas après coup), sauf l'extrait de clip autorisé qui a déjà le sien
+    notify = service == "tiktok" and not (video_seule(post) and not video_muette(post))
     data = {"channelId": channel["id"], "text": text(post, service), "assets": assets,
             "schedulingType": "notification" if notify else "automatic", "needsApproval": False,
             "mode": "customScheduled" if due_at else "addToQueue"}
@@ -234,6 +250,9 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
         if len(todo(jobs)) > free:
             return f"file Buffer pleine : {room[1]}/{room[0]} posts programmés, il faut {len(todo(jobs))} places — rien programmé"
     for ch in chans:
+        if ch["service"] == "instagram" and not instagram_ok(post):
+            done.append("instagram : réservé aux meilleurs posts du jour")
+            continue
         for suffix, reel, when in jobs:
             if reel and ch["service"] not in NOTIFY_REELS and (not video_seule(post) or video_muette(post)):
                 continue  # Facebook : le reel publié sur Instagram y est repartagé automatiquement, avec son son

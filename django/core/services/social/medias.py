@@ -120,7 +120,7 @@ def videos_concert(artiste: str, n: int = 3) -> list[dict]:
 
 
 def _cle(url: str) -> str:
-    return "img-" + hashlib.md5(url.encode()).hexdigest()[:16]
+    return "i" + hashlib.md5(url.encode()).hexdigest()[:15]   # 16 caractères : taille de monde_vus.cle
 
 
 def choisit(artiste: str, secours: str | None = None, alterne: int = 0) -> str | None:
