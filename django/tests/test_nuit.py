@@ -118,7 +118,7 @@ def buffer_ready(monkeypatch):
     monkeypatch.setattr(buffer, "payload", lambda post, ch, when, reel=False: {"channelId": ch["id"], "reel": reel})
 
 
-POST = {"id": 87, "title": "Top Ghana", "caption": "…", "carousel": "[]", "video": "top.mp4"}
+POST = {"id": 87, "theme": "format-officiel", "title": "Top Ghana", "caption": "…", "carousel": "[]", "video": "top.mp4"}
 DUE = datetime(2026, 10, 5, 18, tzinfo=timezone.utc)
 
 
@@ -140,6 +140,14 @@ def test_buffer_ne_publie_jamais_un_carrousel_sur_un_seul_reseau(buffer_ready):
     http = buffer_http(limit=10, used=9)  # 1 place : rien plutôt qu'Instagram seul
     result = buffer.schedule(POST, DUE, http=http)
     assert http.created == [] and result.startswith("file Buffer pleine") and buffer.failed(result)
+
+
+def test_instagram_reserve_aux_meilleurs_posts(buffer_ready):
+    """Rubrique ordinaire : Facebook et TikTok seulement ; Instagram garde ses 4 places du jour pour les meilleurs posts."""
+    http = buffer_http(limit=10, used=0)
+    result = buffer.schedule({**POST, "theme": "monde-matin-3", "video": None}, DUE, http=http)
+    assert sorted(c["channelId"] for c in http.created) == ["facebook", "tiktok"]
+    assert "instagram : réservé aux meilleurs posts du jour" in result
 
 
 def test_compte_rendu_buffer():

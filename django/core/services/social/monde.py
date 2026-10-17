@@ -175,7 +175,7 @@ def _redige(histoires: list) -> list:
         'de l\'info (un chiffre, un refus, une première, un clash), jamais un résumé plat. Ex. : « 10 MILLIONS EN 24 H », '
         '« ELLE A DIT NON À 50 M$ », « PERSONNE N\'AVAIT FAIT ÇA », « RIHANNA : 9E ALBUM ». Interdit : mentir, exagérer, inventer",\n'
         ' "accent": "LE mot ou chiffre du titre à mettre en couleur sur la couverture (le plus fort : un chiffre, un nom, un mot choc), recopié tel quel",\n'
-        ' "titre": "phrase de 70 caractères max qui dit EXACTEMENT ce qui se passe, l\'élément le plus surprenant en premier, '
+        ' "titre": "phrase de 6 à 9 mots (60 caractères max) qui dit EXACTEMENT ce qui se passe, l\'élément le plus surprenant en premier, '
         'avec le chiffre clé s\'il y en a un",\n'
         ' "accroche": "110 caractères max : la question que le lecteur se pose (pourquoi ? comment ? et maintenant ?), pour qu\'il '
         'fasse défiler",\n'
