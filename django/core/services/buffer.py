@@ -127,10 +127,18 @@ def video_url(post: dict) -> str | None:
     return f"{base}/media/social/{post['video']}" if base and post.get("video") else None
 
 
+def video_muette(post: dict) -> bool:
+    """Vidéo maison sans son (photos libres) : Instagram et TikTok en notification, pour ajouter le son officiel."""
+    try:
+        return json.loads(post.get("facts") or "{}").get("kind") == "format-video"
+    except ValueError:
+        return False
+
+
 def video_seule(post: dict) -> bool:
     """Post vidéo à part entière (extrait de clip au refrain) : la vidéo est le post, avec son propre son."""
     try:
-        return json.loads(post.get("facts") or "{}").get("kind") == "format-clip" and bool(post.get("video"))
+        return json.loads(post.get("facts") or "{}").get("kind") in ("format-clip", "format-video") and bool(post.get("video"))
     except ValueError:
         return False
 
@@ -152,7 +160,8 @@ def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = Fal
     # un son de leur bibliothèque (impossible par API). Facebook reçoit le reel par le partage automatique d'Instagram.
     # TikTok : TOUJOURS en notification (carrousels compris) — le fondateur ajoute lui-même un son tendance (12/10/2026)
     # Vidéo au refrain (son du clip déjà dedans) : publiée automatiquement partout, TikTok compris (17/10/2026)
-    notify = not video_seule(post) and ((reel and service in NOTIFY_REELS) or service == "tiktok")
+    notify = (video_muette(post) and service in NOTIFY_REELS) or (
+        not video_seule(post) and ((reel and service in NOTIFY_REELS) or service == "tiktok"))
     data = {"channelId": channel["id"], "text": text(post, service), "assets": assets,
             "schedulingType": "notification" if notify else "automatic", "needsApproval": False,
             "mode": "customScheduled" if due_at else "addToQueue"}
@@ -213,7 +222,7 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
 
     def todo(js):
         return [(ch, s, r, w) for ch in chans for s, r, w in js
-                if not (r and ch["service"] not in NOTIFY_REELS and not video_seule(post))  # Facebook : reel d'Instagram repartagé
+                if not (r and ch["service"] not in NOTIFY_REELS and (not video_seule(post) or video_muette(post)))  # Facebook : reel d'Instagram repartagé
                 and (force or not db.value("SELECT 1 FROM audit_log WHERE action = 'buffer.post' AND reason = ? LIMIT 1",
                                            [f"post-{post['id']}-{ch['service']}{s}"]))]
     room = capacity(http)
@@ -226,7 +235,7 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
             return f"file Buffer pleine : {room[1]}/{room[0]} posts programmés, il faut {len(todo(jobs))} places — rien programmé"
     for ch in chans:
         for suffix, reel, when in jobs:
-            if reel and ch["service"] not in NOTIFY_REELS and not video_seule(post):
+            if reel and ch["service"] not in NOTIFY_REELS and (not video_seule(post) or video_muette(post)):
                 continue  # Facebook : le reel publié sur Instagram y est repartagé automatiquement, avec son son
             label = ch["service"] + (" (vidéo)" if reel else "")
             key = f"post-{post['id']}-{ch['service']}{suffix}"

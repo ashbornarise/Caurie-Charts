@@ -35,6 +35,14 @@ def _deja(track_id: int, jours: int = 21) -> bool:
     return False
 
 
+def _autorise(track_id: int) -> bool:
+    """Clip utilisable : artiste ou label sur la liste des accords écrits (conf « social.refrain.autorises »)."""
+    from core import conf
+    ok = {x.lower() for x in (conf.get("social.refrain.autorises") or [])}
+    r = db.one("SELECT a.name, a.label_owner FROM tracks t JOIN artists a ON a.id = t.artist_id WHERE t.id = ?", [track_id])
+    return bool(r) and (r["name"].lower() in ok or (r.get("label_owner") or "").lower() in ok)
+
+
 def candidats() -> list[dict]:
     """Titres possibles, du plus fort au plus faible : {track_id, haut, chiffre}."""
     out = []
@@ -80,11 +88,15 @@ def du_jour(jour: date | None = None, n: int = 3, essai: bool = False) -> list[s
         if theme in deja_faits:
             k += 1
             continue
-        if _deja(c["track_id"]) or not R.clip_officiel(c["track_id"]):
+        if _deja(c["track_id"]):
             continue
+        # Extrait du clip seulement avec l'accord écrit de l'artiste ou du label (conf « social.refrain.autorises ») ;
+        # sinon vidéo maison muette (photos libres), le son officiel s'ajoutant dans l'application (blocage UMG, 16/10/2026)
+        autorise = _autorise(c["track_id"]) and bool(R.clip_officiel(c["track_id"]))
         nom = f"{jour.isoformat()}-clip-{k + 1}-{datetime.now(timezone.utc):%H%M%S}"
         video = PI.DIR / f"{nom}.mp4"
-        res = R.extrait(c["track_id"], c["haut"], c["chiffre"], str(video))
+        res = R.extrait(c["track_id"], c["haut"], c["chiffre"], str(video)) if autorise else \
+            R.maison(c["track_id"], c["haut"], c["chiffre"], str(video))
         if not res:
             lignes.append(f"titre {c['track_id']} : extrait impossible")
             continue
@@ -96,19 +108,21 @@ def du_jour(jour: date | None = None, n: int = 3, essai: bool = False) -> list[s
         titre = f"{c['haut']} : {res['title']} · {res['artist']}"
         legende = (f"🎬 {c['haut']} : « {res['title']} » de {res['artist']}\n\n"
                    + (f"📈 {c['chiffre']}\n\n" if c["chiffre"] else "")
-                   + "Le refrain qui tourne en boucle en ce moment. Vous l'avez déjà en tête ⁉️ Dites-le en commentaire ‼️\n\n"
-                   + f"Extrait du clip officiel : youtube.com/watch?v={res['video_id']}")
-        tags = "#CauriCharts #" + "".join(ch for ch in res["artist"] if ch.isalnum()) + " #Afrobeats #MusiqueAfricaine #Clip"
+                   + "Le refrain qui tourne en boucle en ce moment. Vous l'avez déjà en tête ⁉️ Dites-le en commentaire ‼️"
+                   + (f"\n\nExtrait du clip officiel : youtube.com/watch?v={res['video_id']}" if autorise else "")
+                   + (f"\n\n{res['credits']}" if res.get("credits") else ""))
+        tags = "#CauriCharts #" + "".join(ch for ch in res["artist"] if ch.isalnum()) + " #Afrobeats #MusiqueAfricaine"
+        genre = "extrait du clip" if autorise else "vidéo maison, son à ajouter dans l'appli"
         if essai:
-            lignes.append(f"[essai] {titre} → {video.name} (refrain {res['debut']}–{res['fin']} s)")
+            lignes.append(f"[essai] {titre} → {video.name} ({genre})")
             k += 1
             continue
         storage.publish_media_files("social", [video.name, vignette.name])
         db.insert("social_posts", {"slot_date": jour.isoformat(), "theme": theme, "title": titre[:160], "caption": legende,
                                    "hashtags": tags[:300], "image_square": vignette.name, "image_story": vignette.name, "carousel": "[]",
                                    "video": video.name, "status": "approved",
-                                   "facts": json.dumps({"kind": "format-clip", "due": due.isoformat(), "track_id": c["track_id"],
-                                                        "source": res["source"], "refrain": [res["debut"], res["fin"]]}, ensure_ascii=False)})
-        lignes.append(f"{titre} → {due:%H:%M} (refrain {res['debut']}–{res['fin']} s)")
+                                   "facts": json.dumps({"kind": "format-clip" if autorise else "format-video", "due": due.isoformat(),
+                                                        "track_id": c["track_id"], "source": res.get("source")}, ensure_ascii=False)})
+        lignes.append(f"{titre} → {due:%H:%M} ({genre})")
         k += 1
     return lignes

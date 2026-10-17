@@ -179,6 +179,76 @@ def monte(clip: str, debut: float, fin: float, calque_png: str, out: str) -> str
     return out if os.path.isfile(out) else None
 
 
+def maison(track_id: int, haut: str, chiffre: str, out: str, par_photo: float = 4.0, n_photos: int = 4) -> dict | None:
+    """Vidéo maison 9:16 SANS image ni son de label (décision du 17/10/2026, après le blocage d'UMG sur Instagram) :
+    photos libres (Openverse, crédit du photographe) et photo de notre base, en lent zoom, avec l'habillage Cauri.
+    Muette : le son officiel s'ajoute dans l'application (bibliothèque sous licence), au refrain."""
+    from core.services.social import medias
+    t = db.one("""SELECT t.title, a.name AS artist, COALESCE(NULLIF(a.image_hd_url, ''), a.image_url) AS photo, a.image_credit
+                  FROM tracks t JOIN artists a ON a.id = t.artist_id WHERE t.id = ?""", [track_id])
+    if not t:
+        return None
+    images = [(s["url"], s["credit"]) for s in medias.scenes_libres(t["artist"], 8)]
+    if t["photo"]:
+        images.insert(1 if images else 0, (t["photo"], t.get("image_credit")))
+    images = images[:n_photos]
+    if not images:
+        return None
+    from core.services.news import http_get
+    with tempfile.TemporaryDirectory(prefix="cauri-maison-") as tmp:
+        fichiers, credits = [], []
+        for i, (url, credit) in enumerate(images):
+            try:
+                im = Image.open(__import__("io").BytesIO(http_get(url, binary=True))).convert("RGB")
+            except Exception:  # noqa: BLE001 — image illisible : on passe à la suivante
+                continue
+            # cadrage 9:16 centré sur le haut de l'image (les visages), 2× la taille finale pour un zoom net
+            w, h = im.size
+            cible = 9 / 16
+            if w / h > cible:
+                nw = int(h * cible); im = im.crop(((w - nw) // 2, 0, (w - nw) // 2 + nw, h))
+            else:
+                nh = int(w / cible); im = im.crop((0, 0, w, min(h, nh)))
+            p = os.path.join(tmp, f"p{i}.jpg"); im.resize((W * 2, H * 2), Image.LANCZOS).save(p, quality=92)
+            fichiers.append(p)
+            if credit:
+                credits.append(credit)
+        if not fichiers:
+            return None
+        while len(fichiers) < 3:   # une ou deux photos seulement : on les reprend avec d'autres mouvements (≥ 12 s)
+            fichiers.append(fichiers[len(fichiers) % max(1, len(fichiers))])
+        png = os.path.join(tmp, "calque.png")
+        c = calque(haut, t["title"], t["artist"], chiffre, "Photos : voir la légende")
+        # Dégradés sombres derrière les textes : lisibles sur toutes les photos
+        ombre = Image.new("RGBA", (W, H), (0, 0, 0, 0)); od = ImageDraw.Draw(ombre)
+        for y in range(0, 620):
+            od.line([(0, y), (W, y)], fill=(0, 0, 0, int(190 * (1 - y / 620))))
+        for y in range(1380, 1700):
+            od.line([(0, y), (W, y)], fill=(0, 0, 0, int(170 * min(1, (y - 1380) / 120, (1700 - y) / 120))))
+        Image.alpha_composite(ombre, c).save(png)
+        frames = int(par_photo * 30)
+        args, filtres = [], []
+        for i, p in enumerate(fichiers):
+            args += ["-i", p]   # une seule image : zoompan en tire d images (par_photo secondes)
+            zoom, x = [("min(zoom+0.0012,1.15)", "iw/2-(iw/zoom/2)"), ("if(eq(on,1),1.15,max(zoom-0.0012,1))", "iw/2-(iw/zoom/2)"),
+                       ("1.12", "(iw-iw/zoom)*on/" + str(frames))][i % 3]   # zoom avant, zoom arrière, panoramique
+            filtres.append(f"[{i}:v]zoompan=z='{zoom}':d={frames}:x='{x}':y='ih/3-(ih/zoom/3)':s={W}x{H}:fps=30,"
+                           f"eq=brightness=-0.06,setsar=1,fade=t=in:d=0.25[p{i}]")
+        n = len(fichiers)
+        duree = par_photo * n
+        filtres.append("".join(f"[p{i}]" for i in range(n)) + f"concat=n={n}:v=1:a=0[film]")
+        filtres.append(f"[film][{n}:v]overlay=0:0,format=yuv420p[v]")
+        args += ["-loop", "1", "-t", f"{duree}", "-i", png, "-f", "lavfi", "-t", f"{duree}", "-i", "anullsrc=r=44100:cl=stereo"]
+        cmd = [ffmpeg(), "-y", "-v", "error", *args, "-filter_complex", ";".join(filtres), "-map", "[v]", "-map", f"{n + 1}:a",
+               "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-c:a", "aac", "-b:a", "96k", "-shortest", "-movflags", "+faststart", out]
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, timeout=900, check=True)
+        except (OSError, subprocess.SubprocessError) as exc:
+            log_write("social", "error", f"vidéo maison : {str(exc)[:300]}")
+            return None
+    return {"file": out, "title": t["title"], "artist": t["artist"], "credits": " · ".join(dict.fromkeys(credits))}
+
+
 def extrait(track_id: int, haut: str, chiffre: str, out: str, duree: float = 35.0) -> dict | None:
     """Du titre à la vidéo finie : clip officiel → refrain → montage habillé. Rien n'est gardé du clip complet."""
     c = clip_officiel(track_id)
