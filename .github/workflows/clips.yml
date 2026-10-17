@@ -46,7 +46,7 @@ jobs:
       - name: Dépendances (Python, ffmpeg, yt-dlp)
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
-          pip install -r requirements.txt "yt-dlp[default]"
+          pip install -r requirements.txt numpy "yt-dlp[default]"
       - name: Vidéos du jour
         working-directory: django
         run: python manage.py clips ${{ github.event.inputs.essai == 'oui' && '--essai' || '' }}
