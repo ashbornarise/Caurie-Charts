@@ -1,0 +1,60 @@
+# Vidéos du jour : 3 vidéos (13 h, 17 h, 21 h, heure de Lomé), fabriquées à 10 h sur les serveurs de GitHub (plus besoin du PC).
+# Extrait du clip au refrain pour les artistes indépendants (règle de clips._autorise) ; si YouTube refuse le téléchargement
+# depuis un serveur, la machine fait la vidéo maison (photos, pochette, concert libre) à la place. Lançable à la main.
+name: Vidéos du jour
+
+on:
+  schedule:
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+    inputs:
+      essai:
+        description: "oui = rendu seul, rien n'est programmé"
+        required: false
+        default: "non"
+
+concurrency:
+  group: clips
+  cancel-in-progress: false
+
+jobs:
+  clips:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TIMEZONE: Africa/Lome
+      TZ: Africa/Lome
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Dépendances (Python, ffmpeg, yt-dlp)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
+          pip install -r requirements.txt "yt-dlp[default]"
+      - name: Vidéos du jour
+        working-directory: django
+        run: python manage.py clips ${{ github.event.inputs.essai == 'oui' && '--essai' || '' }}
+      - name: Journaux
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journaux-clips-${{ github.run_id }}
+          path: storage/logs/
+          retention-days: 7
+          if-no-files-found: ignore

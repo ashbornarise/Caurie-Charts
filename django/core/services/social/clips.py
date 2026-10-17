@@ -112,8 +112,11 @@ def du_jour(jour: date | None = None, n: int = 3, essai: bool = False) -> list[s
         autorise = _autorise(c["track_id"]) and bool(R.clip_officiel(c["track_id"]))
         nom = f"{jour.isoformat()}-clip-{k + 1}-{datetime.now(timezone.utc):%H%M%S}"
         video = PI.DIR / f"{nom}.mp4"
-        res = R.extrait(c["track_id"], c["haut"], c["chiffre"], str(video)) if autorise else \
-            R.maison(c["track_id"], c["haut"], c["chiffre"], str(video))
+        res = R.extrait(c["track_id"], c["haut"], c["chiffre"], str(video)) if autorise else None
+        if not res:
+            # Pas d'accord, ou YouTube a refusé le téléchargement (fréquent depuis un serveur) : vidéo maison
+            autorise = False
+            res = R.maison(c["track_id"], c["haut"], c["chiffre"], str(video))
         if not res:
             lignes.append(f"titre {c['track_id']} : extrait impossible")
             continue
