@@ -295,6 +295,7 @@ def citation(jour: date, due: datetime) -> dict | None:
                 cands.append({"i": len(cands), "titre": it["title"][:200], "resume": (it.get("summary") or "")[:300],
                               "citation": q, "source": it.get("source"), "url": it.get("url")})
     if not cands:
+        log_write("social", "info", "citation : aucune citation dans les articles des 48 dernières heures")
         return None
     consigne = ("Voici des citations relevées dans des articles musicaux. Pour chacune, rends un objet JSON :\n"
                 '{"i": n, "auteur": "nom exact de la personne qui parle, tel qu\'écrit dans le titre", "musique": true si c\'est un '
@@ -324,6 +325,8 @@ def citation(jour: date, due: datetime) -> dict | None:
             continue
         bonnes.append({**c, **n, "note_finale": int(n.get("force") or 0) + min(30, M.fans(auteur) // 200000)})
     if not bonnes:
+        log_write("social", "info", f"citation : {len(cands)} candidates, aucune retenue (auteur absent du titre, sensible ou hors musique)",
+                  {"notes": [{k: n.get(k) for k in ("i", "auteur", "musique", "sensible")} for n in notes[:12]]})
         return None
     b = max(bonnes, key=lambda x: x["note_finale"])
     etrangere = (b.get("langue") or "fr") != "fr"
