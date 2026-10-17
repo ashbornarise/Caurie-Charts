@@ -12,6 +12,10 @@ on:
         description: "oui = rendu seul, rien n'est programmé"
         required: false
         default: "non"
+      jour:
+        description: "AAAA-MM-JJ (vide = aujourd'hui)"
+        required: false
+        default: ""
 
 concurrency:
   group: clips
@@ -49,7 +53,7 @@ jobs:
           pip install -r requirements.txt numpy "yt-dlp[default]"
       - name: Vidéos du jour
         working-directory: django
-        run: python manage.py clips ${{ github.event.inputs.essai == 'oui' && '--essai' || '' }}
+        run: python manage.py clips ${{ github.event.inputs.essai == 'oui' && '--essai' || '' }} ${{ github.event.inputs.jour && format('--jour {0}', github.event.inputs.jour) || '' }}
       - name: Journaux
         if: always()
         uses: actions/upload-artifact@v4

@@ -97,16 +97,20 @@ def du_jour(jour: date | None = None, n: int = 3, essai: bool = False) -> list[s
     PI.DIR.mkdir(parents=True, exist_ok=True)
     faits_du_jour = db.all("SELECT theme FROM social_posts WHERE slot_date = ? AND theme LIKE 'format-clip-%'", [jour.isoformat()])
     deja_faits = {r["theme"] for r in faits_du_jour}
-    lignes, k = [], 0
+    lignes, k, artistes = [], 0, set()
     for c in candidats():
         if k >= n:
             break
+        artiste = db.value("SELECT artist_id FROM tracks WHERE id = ?", [c["track_id"]])
+        if artiste in artistes:
+            continue   # un artiste par vidéo et par jour (Asake deux fois le 17/10)
         theme = f"format-clip-{k + 1}"
         if theme in deja_faits:
             k += 1
             continue
         if _deja(c["track_id"]):
             continue
+        artistes.add(artiste)
         # Extrait du clip seulement avec l'accord écrit de l'artiste ou du label (conf « social.refrain.autorises ») ;
         # sinon vidéo maison muette (photos libres), le son officiel s'ajoutant dans l'application (blocage UMG, 16/10/2026)
         autorise = _autorise(c["track_id"]) and bool(R.clip_officiel(c["track_id"]))

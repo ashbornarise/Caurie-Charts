@@ -17,9 +17,12 @@ class Command(BaseCommand):
     def add_arguments(self, p):
         p.add_argument("--n", type=int, default=3)
         p.add_argument("--essai", action="store_true")
+        p.add_argument("--jour", help="AAAA-MM-JJ (par défaut aujourd'hui)")
 
     def handle(self, *args, **o):
         def task():
-            for line in C.du_jour(n=o["n"], essai=o["essai"]) or ["aucune vidéo fabriquée"]:
+            from datetime import date
+            jour = date.fromisoformat(o["jour"]) if o.get("jour") else None
+            for line in C.du_jour(jour, n=o["n"], essai=o["essai"]) or ["aucune vidéo fabriquée"]:
                 out(line)
         run("clips", task)
