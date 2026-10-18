@@ -30,6 +30,9 @@ jobs:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+      META_IG_ID: ${{ secrets.META_IG_ID }}
       SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
       SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
       BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
@@ -49,6 +52,8 @@ jobs:
           cache: pip
       - name: Dépendances
         run: pip install -r requirements.txt -r requirements-pipeline.txt
+      - name: Chromium pour Playwright
+        run: python -m playwright install --with-deps chromium
       - name: Rapport hebdomadaire
         working-directory: django
         run: python manage.py rapport_hebdo

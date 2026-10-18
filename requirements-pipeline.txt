@@ -1,3 +1,4 @@
 # Dépendances de la chaîne de nuit seulement (GitHub Actions), pas du site Vercel :
 # détourage pour la une de magazine (modèle isnet-general-use, téléchargé une fois puis gardé en cache)
 rembg[cpu]==2.0.85
+playwright>=1.49,<2

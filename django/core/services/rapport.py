@@ -73,6 +73,7 @@ def _collecte_plage(start: date, end: date) -> dict:
                             "reactions": (values.get("reactions", 0) or 0) + (values.get("likes", 0) or 0),
                             "commentaires": values.get("comments", 0) or 0})
     pages = db.all("SELECT path, SUM(views) AS vues FROM page_views WHERE day BETWEEN ? AND ? GROUP BY path ORDER BY vues DESC LIMIT 10", [debut, fin])
+    visites_jour = db.all("SELECT day AS jour, SUM(views) AS vues FROM page_views WHERE day BETWEEN ? AND ? GROUP BY day ORDER BY day", [debut, fin])
     nuits = db.all("SELECT ran_at, seconds, failed, steps FROM pipeline_runs WHERE ran_at >= ? AND ran_at < (?::date + INTERVAL '1 day') ORDER BY ran_at", [debut, fin])
     failures = []
     for n in nuits:
@@ -81,7 +82,7 @@ def _collecte_plage(start: date, end: date) -> dict:
         except (ValueError, TypeError):
             pass
     return {"debut": debut, "fin": fin, "posts_crees": len(posts), "posts_par_type": par_type, "posts_par_reseau": reseaux,
-            "metriques_posts": metric_rows, "meilleurs_posts": sorted(metric_rows, key=lambda x: x["vues"], reverse=True)[:5],
+            "metriques_posts": metric_rows, "visites_par_jour": visites_jour, "meilleurs_posts": sorted(metric_rows, key=lambda x: x["vues"], reverse=True)[:5],
             "pires_posts": sorted(metric_rows, key=lambda x: x["vues"])[:5],
             "visites": sum(int(p["vues"] or 0) for p in pages), "pages_plus_vues": pages,
             "releves_classements": int(db.value("SELECT COUNT(*) FROM chart_observations WHERE observed_on BETWEEN ? AND ?", [debut, fin]) or 0),
@@ -98,7 +99,9 @@ def _collecte_plage(start: date, end: date) -> dict:
 def collecter(couts_path: Path | None = None, aujourdhui: date | None = None) -> dict:
     derniere, precedente = semaines(aujourdhui)
     couts = json.loads((couts_path or ROOT / "config" / "couts.json").read_text(encoding="utf-8"))
+    from core.services.stats_reseaux import collecter as collecter_reseaux
     return {"semaine": _collecte_plage(*derniere), "semaine_precedente": _collecte_plage(*precedente),
+            "reseaux_stats": collecter_reseaux(derniere[1]),
             "couts": couts, "depenses_semaine": [c for c in couts if c.get("date_depense") and derniere[0].isoformat() <= c["date_depense"] <= derniere[1].isoformat()],
             "echeances_mois_prochain": echeances_mois_suivant(couts, aujourdhui)}
 
