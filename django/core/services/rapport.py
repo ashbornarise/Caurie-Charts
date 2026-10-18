@@ -156,7 +156,7 @@ def _markdown(texte: str) -> str:
                 out.append("</ul>"); liste = False
             continue
         h = html.escape(l)
-        h = re.sub(r"\*\*(.+?)\*\*", r"<b></b>", h)
+        h = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", h)
         if l.startswith("#"):
             if liste:
                 out.append("</ul>"); liste = False
