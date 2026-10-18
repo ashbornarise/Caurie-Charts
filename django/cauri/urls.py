@@ -1,7 +1,7 @@
 """Routes : mêmes adresses que public/index.php (site PHP de référence)."""
 from django.urls import path, re_path
 
-from core import views, views_claim, views_cron, views_show, views_widget
+from core import views, views_claim, views_cron, views_show, views_widget, views_tiktok
 from core.backoffice import analytics_views, show_admin, team
 from core.backoffice import views as admin
 
@@ -9,6 +9,8 @@ P = r"(?P<period>semaine|mois|annee)"
 K = r"(?P<key>\d{4}(?:-W\d{2}|-\d{2})?)"
 
 urlpatterns = [
+    path("tiktok/connecter", views_tiktok.connecter),
+    path("tiktok/retour", views_tiktok.retour),
     path("", views.home),
     re_path(r"^classements/afrique-de-l-ouest$", views.regional),
     re_path(rf"^classements/afrique-de-l-ouest/{P}$", views.regional),

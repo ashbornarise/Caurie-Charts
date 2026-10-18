@@ -30,9 +30,9 @@ def html_rapport(data: dict, texte: str, exemple: bool = False) -> str:
     posts = s.get("metriques_posts", [])
     stats = data.get("reseaux_stats", {})
     abonnements = []
-    for nom in ("instagram", "facebook", "telegram"):
+    for nom in ("instagram", "facebook", "telegram", "tiktok"):
         bloc = stats.get(nom, {})
-        cle = "member_count" if nom == "telegram" else "followers_count"
+        cle = "member_count" if nom == "telegram" else "follower_count" if nom == "tiktok" else "followers_count"
         val = bloc.get(cle, "non disponible")
         if isinstance(val, int):
             abonnements.append((nom.title(), val))
