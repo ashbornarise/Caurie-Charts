@@ -702,6 +702,71 @@ def punchline(jour: date, due: datetime, essais: int = 8) -> dict | None:
 
 # ---------------------------------------------------------------- calendrier
 
+def bandeaux(jour: date, due: datetime) -> dict | None:
+    """Quatre artistes ouest-africains, classés par abonnés YouTube ou auditeurs Spotify vérifiés."""
+    from core.services import kworb
+    from core.services.social import pourtoi
+    spotify = jour.isocalendar().week % 2 == 0
+    if spotify:
+        chiffres = kworb.auditeurs()
+        rows = db.all("""SELECT a.*, COALESCE(a.base_country, gc.code) AS country FROM artists a
+                         LEFT JOIN countries gc ON gc.id = a.guessed_country_id
+                         WHERE a.status = 'active' AND a.spotify_id IS NOT NULL AND a.spotify_id <> ''
+                         AND COALESCE(a.base_country, gc.code) IN ('BJ','BF','CV','CI','GM','GH','GN','GW','LR','ML','MR','NE','NG','SN','SL','TG')""")
+        mesures = [(r, chiffres[r['spotify_id']][0]) for r in rows if r['spotify_id'] in chiffres]
+        label, source = "auditeurs mensuels Spotify", "Spotify (compteurs publics relevés par Kworb)"
+    else:
+        rows = db.all("""SELECT a.*, COALESCE(a.base_country, gc.code) AS country FROM artists a
+                         LEFT JOIN countries gc ON gc.id = a.guessed_country_id
+                         WHERE a.status = 'active' AND a.youtube_subscribers IS NOT NULL AND a.youtube_subscribers > 0
+                         AND COALESCE(a.base_country, gc.code) IN ('BJ','BF','CV','CI','GM','GH','GN','GW','LR','ML','MR','NE','NG','SN','SL','TG')""")
+        mesures = [(r, int(r['youtube_subscribers'])) for r in rows]
+        label, source = "abonnés YouTube", "YouTube (compteurs publics enregistrés dans Cauri Charts)"
+    candidats = []
+    for artiste, nombre in sorted(mesures, key=lambda x: -x[1]):
+        photo = M.photo(artiste['name'])
+        if photo:
+            candidats.append((artiste, nombre, photo))
+        if len(candidats) == 4:
+            break
+    if len(candidats) < 4:
+        return None
+    personnes = [{"photo": p, "nom": a['name'], "chiffre": f"{n:,}".replace(',', ' ')} for a, n, p in candidats]
+    cle = f"{'spotify' if spotify else 'youtube'}-{jour:%G-%V}"
+    titre = f"LES PLUS SUIVIS SUR {'SPOTIFY' if spotify else 'YOUTUBE'}"
+    couverture = lambda fmt: pourtoi.bandeaux(personnes, titre, fmt=fmt, couleur=BLEU if spotify else ROUGE)
+    pages = [(_fiche(candidats[0][0]['name'], titre, f"Les artistes ouest-africains les plus suivis · {label}.", [source], cle), "Top 4", None)]
+    legende = (f"📊 Les artistes ouest-africains les plus suivis sur {'Spotify' if spotify else 'YouTube'} ({label}) :\n\n"
+               + "\n".join(f"▪️ {a['name']} — {n:,}".replace(',', ' ') for a, n, _ in candidats)
+               + f"\n\nSource : {source}.\n\nQui manque à ce classement ?")
+    return _post("format-bandeaux", jour, due, titre, pages, legende, "#CauriCharts #AfriqueDeLOuest #YouTube #Spotify", cle, couverture=couverture)
+
+
+def record(jour: date, due: datetime) -> dict | None:
+    """L'artiste ayant le plus de clips officiels dont le dernier relevé dépasse 10 millions."""
+    from core.services.social import pourtoi
+    r = db.one("""SELECT a.id, a.name, COUNT(DISTINCT p.id) AS clips FROM artists a
+                   JOIN tracks t ON t.artist_id = a.id
+                   JOIN track_platform_ids p ON p.track_id = t.id
+                   JOIN snapshots s ON s.track_platform_id = p.id
+                   WHERE a.status = 'active' AND p.platform = 'youtube' AND p.kind = 'clip' AND p.is_official = 1
+                   AND s.captured_on = (SELECT MAX(s2.captured_on) FROM snapshots s2 WHERE s2.track_platform_id = p.id)
+                   AND s.plays > 10000000
+                   GROUP BY a.id, a.name HAVING COUNT(DISTINCT p.id) > 0
+                   ORDER BY clips DESC, a.name LIMIT 1""")
+    if not r:
+        return None
+    photo = M.photo(r['name'])
+    if not photo:
+        return None
+    n = int(r['clips'])
+    phrase = f"{r['name']} : {n} clips officiels au-delà de 10 millions de vues"
+    cle = str(r['id'])
+    couverture = lambda fmt: pourtoi.record(photo, phrase, str(n), fmt=fmt, couleur=OR)
+    page = (_fiche(r['name'], phrase.upper(), phrase, ["YouTube (derniers snapshots des clips officiels)", "Cauri Charts"], cle), "Record", None)
+    legende = f"🏆 {phrase}.\n\nComptage recalculé depuis les derniers relevés disponibles de chaque clip officiel.\n\nSource : YouTube, snapshots de Cauri Charts."
+    return _post("format-record", jour, due, f"Record : {r['name']}", [page], legende, "#CauriCharts #Record #YouTube", cle, couverture=couverture)
+
 def du_jour(jour: date) -> list:
     """Les formats prévus aujourd'hui (appelé par la chaîne de nuit) ; chacun part à son heure via la file d'attente."""
     a_heure = lambda h: datetime(jour.year, jour.month, jour.day, h, 0, tzinfo=timezone.utc)
@@ -710,13 +775,18 @@ def du_jour(jour: date) -> list:
         prevus.append((power, a_heure(12)))
     if jour.isoweekday() == 1 and jour.day <= 7:
         prevus.append((promo, a_heure(12) + timedelta(minutes=30 if jour.day == 1 else 0)))
+    if jour.isoweekday() == 6:
+        prevus.append((bandeaux, a_heure(12)))
     prevus.append({1: (top10, a_heure(21)), 2: (citation, a_heure(21)), 3: (versus, a_heure(21)), 4: (histoire, a_heure(21)),
                    5: (qui_est, a_heure(21)), 6: (citation, a_heure(21)), 7: (histoire, a_heure(21))}.get(jour.isoweekday()))
     # « Le saviez-vous ? » chaque jour à 12 h ; les jours où power ou promo occupent déjà midi, il passe à 13 h
     midi_pris = any(p and p[1].hour == 12 for p in prevus)
-    prevus.append((anecdote, a_heure(13 if midi_pris else 12)))
+    if jour.isoweekday() != 6:
+        prevus.append((anecdote, a_heure(13 if midi_pris else 12)))
     if jour.isoweekday() in (1, 3):   # lundi et mercredi 18 h : la punchline
         prevus.append((punchline, a_heure(18)))
+    if jour.isoweekday() == 4:
+        prevus.append((record, a_heure(18)))
     lignes = []
     for p in filter(None, prevus):
         fn, due = p

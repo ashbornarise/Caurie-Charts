@@ -56,7 +56,7 @@ def test_stars_sans_doublon():
 
 def test_anecdote_chaque_jour_a_midi(monkeypatch):
     vus = []
-    for nom in ("power", "promo", "top10", "citation", "versus", "histoire", "qui_est", "anecdote", "punchline"):
+    for nom in ("power", "promo", "top10", "citation", "versus", "histoire", "qui_est", "anecdote", "punchline", "bandeaux", "record"):
         fn = (lambda n: (lambda jour, due: vus.append((n, due.hour)) or None))(nom)
         fn.__name__ = nom
         monkeypatch.setattr(F, nom, fn)
@@ -68,3 +68,17 @@ def test_anecdote_chaque_jour_a_midi(monkeypatch):
     vus.clear()
     F.du_jour(date(2026, 10, 1))             # le 1er du mois : power à midi, l'anecdote passe à 13 h
     assert ("power", 12) in vus and ("anecdote", 13) in vus
+    vus.clear()
+    F.du_jour(date(2026, 10, 24))            # samedi : bandeaux à midi, pas d'anecdote
+    assert ("bandeaux", 12) in vus and not any(n == "anecdote" for n, _ in vus)
+    vus.clear()
+    F.du_jour(date(2026, 10, 22))            # jeudi : record à 18 h
+    assert ("record", 18) in vus
+
+
+def test_pourtoi_bandeaux_et_record_dimensions():
+    from PIL import Image
+    from core.services.social import pourtoi as P
+    personnes = [{"photo": Image.new("RGB", (100, 100), (i * 30, 50, 80)), "nom": f"Artiste {i}", "chiffre": str(1000 + i)} for i in range(4)]
+    assert P.bandeaux(personnes, "LES PLUS SUIVIS").size == P.FORMATS["feed"]
+    assert P.record(Image.new("RGB", (100, 100)), "RECORD OFFICIEL", "4").size == P.FORMATS["feed"]

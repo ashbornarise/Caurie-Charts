@@ -455,3 +455,53 @@ def trio(personnes: list, titre: str, accent: str | None = None, fmt: str = "fee
     _titre(d, titre, accent, couleur, marge, bas, w - 2 * marge, max_lignes=2, taille_max=260)
     _marque(img, 110, 110 if fmt == "feed" else 260, 300)
     return img
+
+
+def bandeaux(personnes: list, titre: str, fmt: str = "feed", couleur=None) -> Image.Image:
+    """Quatre bandeaux horizontaux avec photo, nom et chiffre réel. Chaque personne : photo, nom, chiffre, legende."""
+    w, h = FORMATS[fmt]
+    couleur = couleur or (47, 168, 255)
+    img = Image.new("RGB", (w, h), (8, 8, 12))
+    items = personnes[:4]
+    marge = int(w * 0.045)
+    haut_titre = int(h * 0.19)
+    espace = int(h * 0.018)
+    hauteur = (h - haut_titre - marge - espace * 3) // 4
+    for i, p in enumerate(items):
+        y = haut_titre + i * (hauteur + espace)
+        im = charge(p.get("photo"))
+        if im:
+            img.paste(cadre(im, int(w * 0.34), hauteur, 0.12), (marge, y))
+        voile = Image.new("L", (w - 2 * marge, hauteur), 190)
+        img.paste(Image.new("RGB", (w - 2 * marge, hauteur), (12, 12, 18)), (marge, y), voile)
+        d = ImageDraw.Draw(img)
+        x = marge + int(w * 0.37)
+        nom = p["nom"].upper()
+        fn = police(90)
+        while d.textlength(nom, font=fn) > w * 0.54 and fn.size > 42:
+            fn = police(fn.size - 6)
+        d.text((x, y + hauteur * 0.12), nom, font=fn, fill=BLANC)
+        chiffre = str(p.get("chiffre") or "")
+        fc = police(150)
+        while d.textlength(chiffre, font=fc) > w * 0.52 and fc.size > 60:
+            fc = police(fc.size - 6)
+        d.text((x, y + hauteur * 0.42), chiffre, font=fc, fill=couleur)
+    d = ImageDraw.Draw(img)
+    _titre(d, titre, None, couleur, marge, haut_titre - 12, w - 2 * marge, max_lignes=2, taille_max=180)
+    _marque(img, 75, 55, 180)
+    return img
+
+
+def record(photo, phrase: str, chiffre: str, fmt: str = "feed", couleur=None) -> Image.Image:
+    """Photo plein cadre et pastille contenant le chiffre vérifié."""
+    img = une(photo, phrase, fmt=fmt, couleur=couleur or ACCENTS[0])
+    d = ImageDraw.Draw(img)
+    w, h = img.size
+    r = int(w * 0.16)
+    cx, cy = w - r - int(w * 0.08), int(h * 0.23)
+    d.ellipse((cx-r, cy-r, cx+r, cy+r), fill=couleur or ACCENTS[0], outline=BLANC, width=max(5, w // 300))
+    f = police(max(55, int(w * 0.095)))
+    while d.textlength(chiffre, font=f) > r * 1.65 and f.size > 34:
+        f = police(f.size - 5)
+    d.text((cx - d.textlength(chiffre, font=f) / 2, cy - f.size / 2), chiffre, font=f, fill=BLANC)
+    return img
