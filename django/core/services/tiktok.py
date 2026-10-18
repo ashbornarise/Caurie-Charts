@@ -62,6 +62,8 @@ def rafraichit(ligne=None):
         expire = ligne.get("access_expire")
         if isinstance(expire, str):
             expire = datetime.fromisoformat(expire.replace("Z", "+00:00"))
+        if expire and expire.tzinfo is None:
+            expire = expire.replace(tzinfo=timezone.utc)  # la base renvoie l'heure UTC sans fuseau
         if expire and expire > datetime.now(timezone.utc) + timedelta(hours=1):
             return ligne.get("access_token")
         reponse = requests.post(TOKEN_URL, data={"client_key": env.get("TIKTOK_CLIENT_KEY", CLIENT_KEY_DEFAUT),
@@ -85,7 +87,7 @@ def rafraichit(ligne=None):
 
 def stats(debut, fin):
     """Récupère profil et vidéos de la période ; protège chaque appel externe."""
-    vide = {"followers_count": INDISPONIBLE, "following_count": INDISPONIBLE,
+    vide = {"follower_count": INDISPONIBLE, "following_count": INDISPONIBLE,
             "likes_count": INDISPONIBLE, "video_count": INDISPONIBLE, "videos": []}
     try:
         ligne = _ligne_active()
