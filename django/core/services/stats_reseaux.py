@@ -31,7 +31,7 @@ def _nombre(valeur):
 
 def _insights(url: str, token: str, names: list[str], depuis: str, jusqua: str) -> dict:
     resultat = {nom: INDISPONIBLE for nom in names}
-    data = _get(url, {"metric": ",".join(names), "metric_type": "total_value", "since": depuis,
+    data = _get(url, {"metric": ",".join(names), "metric_type": "total_value", "period": "day", "since": depuis,
                       "until": jusqua, "access_token": token}).get("data", [])
     for item in data if isinstance(data, list) else []:
         nom = item.get("name")
