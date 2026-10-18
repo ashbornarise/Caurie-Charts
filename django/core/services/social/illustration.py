@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
-from PIL import Image
+from PIL import Image, ImageEnhance
 from io import BytesIO
 
 from core import db, env, storage, clock
@@ -13,11 +13,12 @@ from core.services.platforms import log_write
 
 FAMILLES = {"monde", "histoire", "anecdote", "record", "citation", "punchline", "evenement"}
 # Style « colors room » (décision du 19/10/2026) : une pièce d'une seule couleur unie, contrastes forts, color blocking
-COULEURS = ["deep violet", "electric sky blue", "vivid orange", "bold red", "sunflower yellow", "emerald green",
-            "hot pink", "cobalt blue"]
-STYLE = ("Minimalist music studio session in the style of a colors room: seamless backdrop, walls and floor painted in ONE solid "
-         "{couleur} color, strong contrast, color blocking, clean graphic composition, soft studio light with deep shadows, "
-         "premium editorial photography, sharp, high-end magazine look.")
+COULEURS = ["electric violet", "electric sky blue", "neon orange", "candy red", "sunflower yellow", "vivid emerald green",
+            "hot pink", "electric cobalt blue"]
+STYLE = ("Glossy high-end music studio session in the style of a colors room: seamless backdrop, walls and floor painted in ONE "
+         "solid, ultra-saturated, vivid {couleur} color (bold, rich, intense, never muted or matte), strong color blocking. "
+         "Bright high-key beauty lighting, luminous and polished: glowing radiant skin, smooth sleek glossy fabrics and surfaces, "
+         "crisp highlights, clean soft shadows, vibrant pop colors, ultra sharp, premium fashion advertising look, 8k.")
 # Des personnes, oui, mais anonymes : jamais un visage reconnaissable, jamais une célébrité (décision du 19/10/2026)
 INTERDIT = ("The person is anonymous: face NOT visible (seen from behind, silhouette, face hidden by a hat brim "
             "or shadow, or cropped below the eyes). No recognizable person, no celebrity, no text, no letters, no logos, no watermark")
@@ -109,7 +110,12 @@ def genere(sujet: str, famille: str, ratio: str = "4:5") -> str | None:
         with Image.open(BytesIO(raw)) as image:
             image.load()
             out = BytesIO()
-            image.convert("RGB").save(out, format="PNG", optimize=True)
+            image = image.convert("RGB")
+            image = ImageEnhance.Color(image).enhance(1.18)        # couleurs plus « grasses »
+            image = ImageEnhance.Contrast(image).enhance(1.08)
+            image = ImageEnhance.Brightness(image).enhance(1.05)    # personnes plus claires
+            image = ImageEnhance.Sharpness(image).enhance(1.15)
+            image.save(out, format="PNG", optimize=True)
         digest = hashlib.sha256((famille + "|" + (sujet or "")).encode("utf-8")).hexdigest()
         filename = f"{digest[:20]}-{datetime.now(timezone.utc):%Y%m%d%H%M%S%f}.png"
         storage.store_media("illustrations", filename, out.getvalue(), "image/png")
