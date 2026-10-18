@@ -41,9 +41,9 @@ class Response:
         return {"candidates": [{"content": {"parts": [{"inlineData": {"data": _png(), "mimeType": "image/png"}}]}}]}
 
 
-def test_prompt_impose_absence_de_personnes_et_n_envoie_pas_le_nom(monkeypatch):
+def test_prompt_impose_anonymat_et_n_envoie_pas_le_nom(monkeypatch):
     prompt = I._prompt("Burna Boy, concert afrobeats", "monde")
-    assert "No text, no letters, no logos, no people, no faces, no hands" in prompt
+    assert "face NOT visible" in prompt and "No recognizable person, no celebrity, no text" in prompt
     assert "Burna" not in prompt and "Boy" not in prompt and "concert afrobeats" not in prompt
 
 

@@ -1,7 +1,6 @@
 """Illustrations abstraites de secours pour les couvertures sans photo."""
 import base64
 import hashlib
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -13,20 +12,34 @@ from core import db, env, storage, clock
 from core.services.platforms import log_write
 
 FAMILLES = {"monde", "histoire", "anecdote", "record", "citation", "punchline", "evenement"}
-STYLE = ("Premium 3D product photography, predominantly white background, sky-blue glass and violet glass or polymer, "
-         "soft studio lighting, refined minimal composition. Create abstract objects and atmosphere only.")
-INTERDIT = "No text, no letters, no logos, no people, no faces, no hands"
-OBJETS = {
-    "musique": "a translucent sound wave sculpture, tiny abstract music notes as shapes (not glyphs)",
-    "album": "a blank white jewel case, translucent discs and floating geometric sound waves",
-    "record": "a glossy translucent vinyl record, a small trophy shaped from blue glass",
-    "histoire": "a blank archival sleeve, a translucent vinyl record and a violet glass timeline made of dots",
-    "anecdote": "a curious glass magnifying lens above a small music object",
-    "citation": "a blank glass speech bubble beside a translucent vinyl record",
-    "evenement": "abstract stage lights represented as glass beams, with no stage or audience",
-    "punchline": "a sculptural microphone made from sky-blue glass and violet polymer",
-    "monde": "a glass globe, translucent music objects and soft blue-violet reflections",
-    "recording": "a blank studio microphone, glass sound waves and a translucent disc",
+# Style « colors room » (décision du 19/10/2026) : une pièce d'une seule couleur unie, contrastes forts, color blocking
+COULEURS = ["deep violet", "electric sky blue", "vivid orange", "bold red", "sunflower yellow", "emerald green",
+            "hot pink", "cobalt blue"]
+STYLE = ("Minimalist music studio session in the style of a colors room: seamless backdrop, walls and floor painted in ONE solid "
+         "{couleur} color, strong contrast, color blocking, clean graphic composition, soft studio light with deep shadows, "
+         "premium editorial photography, sharp, high-end magazine look.")
+# Des personnes, oui, mais anonymes : jamais un visage reconnaissable, jamais une célébrité (décision du 19/10/2026)
+INTERDIT = ("The person is anonymous: face NOT visible (seen from behind, silhouette, face hidden by a hat brim "
+            "or shadow, or cropped below the eyes). No recognizable person, no celebrity, no text, no letters, no logos, no watermark")
+SCENES = {
+    "histoire": ["A man in a wide-brim hat seen from behind holding an old vinyl sleeve, a vintage record player on a stool.",
+                 "A musician seen from behind playing a kora, sitting on a single wooden chair.",
+                 "Hands holding a stack of old highlife vinyl records, cropped at the chest, matching monochrome outfit."],
+    "monde": ["A singer with braids seen from behind facing a vintage microphone on a stand.",
+              "A man in a bucket hat, head down so the face is hidden, headphones around the neck, arms crossed.",
+              "A woman in a wax-print dress walking out of frame, face turned away, one hand raised."],
+    "anecdote": ["Close-up of hands on a drum machine and a small synthesizer on a table, face out of frame.",
+                 "A guitarist cropped below the eyes playing an electric guitar, contrasting outfit color.",
+                 "A producer seen from behind at a laptop and mixing controller, big headphones."],
+    "record": ["A dancer mid-movement in a contrasting color outfit, face hidden by a hat and motion.",
+               "A silhouette holding a golden trophy high, face in shadow, confetti falling.",
+               "A man in a tailored suit seen from behind standing next to a giant golden vinyl record."],
+    "citation": ["A young woman seen from behind wearing headphones, sitting on a single stool.",
+                 "A man in a fedora sitting, face in shadow, writing lyrics in a notebook."],
+    "punchline": ["A rapper cropped below the eyes holding a microphone close, gold chain, strong side light.",
+                  "A silhouette with a microphone, one arm raised, backlit, face unreadable."],
+    "evenement": ["Two elegant silhouettes in evening wear seen from behind on a single spotlight circle.",
+                  "A microphone stand alone under a spotlight, a guest in evening wear walking out of frame."],
 }
 
 
@@ -38,10 +51,12 @@ def _ensure_table():
 
 
 def _prompt(sujet: str, famille: str) -> str:
-    tokens = re.findall(r"[a-zà-ÿ]+", (sujet or "").lower())
-    concepts = [OBJETS[t] for t in tokens if t in OBJETS]
-    concept = "; ".join(dict.fromkeys(concepts)) or OBJETS.get(famille, OBJETS["musique"])
-    return f"{STYLE}\nOBJETS/AMBIANCE: {concept}.\n{INTERDIT}."
+    """Une scène de la famille, choisie selon le sujet (jamais le nom de l'artiste dans le prompt)."""
+    scenes = SCENES.get(famille) or SCENES["monde"]
+    h = int(hashlib.sha256((sujet or famille).encode("utf-8")).hexdigest(), 16)
+    scene = scenes[h % len(scenes)]
+    couleur = COULEURS[(h // 7 + clock.today().toordinal()) % len(COULEURS)]   # une couleur différente d'un jour à l'autre
+    return f"{scene} {STYLE.format(couleur=couleur)} {INTERDIT}."
 
 
 def _path(fichier: str) -> Path:
