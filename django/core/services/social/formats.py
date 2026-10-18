@@ -10,7 +10,7 @@ Chaque post finit par une question au public. Rendu : couverture choc sur vraies
 Les posts sont enregistrés avec leur heure (« due ») et partent un par un via la file d'attente (monde.publie_file).
 Calendrier (heure de Lomé) : lundi 21 h top10, mardi et samedi 21 h citation, mercredi 21 h versus, jeudi et dimanche
 21 h histoire, vendredi 21 h qui_est, 1er du mois 12 h power,
-1er lundi du mois 12 h promo ; chaque jour 12 h anecdote (« Le saviez-vous ? », 13 h les jours de power ou promo)."""
+1er lundi du mois 12 h promo ; chaque jour 12 h anecdote (« Le saviez-vous ? », 13 h les jours de power ou promo) ; lundi et mercredi 18 h punchline (1 à 2 lignes de paroles, LRCLIB)."""
 import json
 import re
 from datetime import date, datetime, timedelta, timezone
@@ -492,6 +492,15 @@ def _candidats_anecdote() -> list:
     return out
 
 
+def credit_photo(url: str) -> str:
+    """Crédit de la photo : celui des médias libres ou des clips, sinon la provenance du portrait."""
+    from core.services.social import medias
+    c = medias.credits([url])
+    if c or not url:
+        return c
+    return "Photo : Deezer (photo d'artiste)" if "dzcdn" in str(url) else "Photo : portrait officiel de l'artiste"
+
+
 def _sans_emoji(s: str) -> str:
     """Le texte posé sur une image : jamais d'émoji (⁉️ ‼️ → ? !)."""
     s = (s or "").replace("⁉️", " ?").replace("⁉", " ?").replace("‼️", " !").replace("‼", " !")
@@ -543,7 +552,7 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
                 continue
             faits.append(M.coupe(f, 220))
         faits = faits[:3]
-        if len(faits) < 2 or not (5 <= len(titre.split()) <= 10) or not chiffres_verifies(titre, texte):
+        if len(faits) < 2 or not (6 <= len(titre.split()) <= 9) or not chiffres_verifies(titre, texte):
             log_write("social", "info", f"anecdote {nom} : écartée (faits vérifiés : {len(faits)}, titre « {titre} »)")
             continue
         # Photo : scène sous licence libre, sinon portrait de notre base ou de Deezer (comme histoire())
@@ -562,12 +571,132 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
                           _diapo("LE SAVIEZ-VOUS ?", (VIOLET, BLEU, ROUGE)[k % 3], nom.upper() if k == 0 else f"ANECDOTE · {k + 1}", f, f"a{k}")))
         pages.append((_fiche("", "", "", [], nom), "À vous",
                        _diapo("CAURI CHARTS", NUIT, _sans_emoji(question), "Répondez en commentaire. Cauri Charts, la référence de la musique ouest-africaine.", "fin")))
-        credit = medias.credits([photo])
+        credit = credit_photo(photo)
         legende = (f"💡 Le saviez-vous ? {titre}\n\n" + "\n".join(f"▪️ {f}" for f in faits)
                    + f"\n\n{question} Dites-le en commentaire ‼️\n\nSource : Wikipédia ({w['url']}), texte sous licence CC BY-SA"
                    + (f"\n{credit}" if credit else ""))
         tags = "#CauriCharts #LeSaviezVous #" + "".join(ch for ch in nom if ch.isalnum()) + " #MusiqueAfricaine"
         return _post("format-anecdote", jour, due, f"Le saviez-vous ? {titre}", pages, legende, tags, nom, couverture=couverture)
+    return None
+
+
+# ---------------------------------------------------------------- 9. punchline (1 à 2 lignes de paroles)
+
+LANGUES = {"en": "de l'anglais", "pcm": "du pidgin", "yo": "du yoruba", "ig": "de l'igbo", "ha": "du haoussa", "tw": "du twi",
+           "ln": "du lingala", "wo": "du wolof", "sw": "du swahili", "zu": "du zoulou", "es": "de l'espagnol", "pt": "du portugais",
+           "ee": "de l'éwé", "fon": "du fon", "nouchi": "du nouchi", "dyu": "du dioula"}
+
+
+def _norme(s: str) -> str:
+    """Pour comparer des paroles : apostrophes et guillemets unifiés, espaces réduits, minuscules."""
+    s = (s or "").replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"').replace(" ", " ")
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
+def ligne_dans_paroles(ligne: str, paroles: str) -> str | None:
+    """La ligne choisie (1 ou 2 vers, séparés par « / » ou un retour à la ligne) figure-t-elle MOT POUR MOT dans les
+    paroles, en vers consécutifs ? Rend la ligne telle qu'écrite dans les paroles (vers joints par « / »), sinon None."""
+    morceaux = [m for m in re.split(r"\s*/\s*|\n", ligne or "") if m.strip()]
+    vers = [v for v in (paroles or "").split("\n") if v.strip()]
+    if not 1 <= len(morceaux) <= 2 or len(" ".join(morceaux)) > 170:
+        return None
+    for i in range(len(vers) - len(morceaux) + 1):
+        if all(_norme(m) in _norme(vers[i + k]) for k, m in enumerate(morceaux)):
+            if any(len(_norme(m)) < 8 for m in morceaux):
+                return None   # bout de vers trop court : ce n'est pas une punchline
+            return " / ".join(m.strip() for m in morceaux)
+    return None
+
+
+def _paroles(artiste: str, titre: str) -> str | None:
+    """Paroles LRCLIB (API libre, sans clé) : le titre exact d'abord, sinon la recherche (même artiste)."""
+    from urllib.parse import urlencode
+    from core.services.news import http_get
+    try:
+        d = json.loads(http_get("https://lrclib.net/api/get?" + urlencode({"artist_name": artiste, "track_name": titre})) or "{}")
+        if d.get("plainLyrics") and not d.get("instrumental"):
+            return d["plainLyrics"]
+        for r in json.loads(http_get("https://lrclib.net/api/search?" + urlencode({"artist_name": artiste, "track_name": titre})) or "[]")[:10]:
+            if r.get("plainLyrics") and M._sans_accents(artiste).lower() in M._sans_accents(r.get("artistName") or "").lower():
+                return r["plainLyrics"]
+    except Exception as exc:  # noqa: BLE001
+        log_write("social", "warning", f"punchline paroles {artiste} – {titre} : {exc}")
+    return None
+
+
+def _titres_punchline() -> list:
+    """(artiste, titre) : les titres de nos classements d'abord, puis le titre le plus écouté (Deezer) des stars africaines."""
+    out = []
+    try:
+        from core.services import live_chart
+        out += [(r["artist_name"], r["title"]) for r in live_chart.build(None, limit=30)["rows"] if r.get("title")]
+    except Exception as exc:  # noqa: BLE001
+        log_write("social", "warning", f"punchline : classement illisible ({exc})")
+    from core.services.news import http_get
+    for nom in [n for n in M.STARS if M._sans_accents(n).lower() in M.AFRICAINS][:20]:
+        try:
+            a = M._deezer_artiste(nom)
+            if not a:
+                continue
+            top = json.loads(http_get(f"https://api.deezer.com/artist/{a['id']}/top?limit=3") or "{}").get("data") or []
+            # titres en solo seulement : dans un duo, la ligne choisie pourrait être celle de l'invité (Tems sur « Raindance »
+            # de Dave, essai du 18/10/2026)
+            out += [(nom, t["title"]) for t in top if len(t.get("contributors") or [1]) == 1 and not re.search(r"feat|ft\.|with", t["title"], re.I)][:2]
+        except Exception:  # noqa: BLE001
+            continue
+    return list(dict.fromkeys(out))
+
+
+def punchline(jour: date, due: datetime, essais: int = 8) -> dict | None:
+    """« Punchline » : 1 à 2 lignes des paroles d'un titre (LRCLIB), jamais un couplet. L'IA choisit la ligne la plus
+    forte, mais elle n'est publiée que si elle figure MOT POUR MOT dans les paroles (ligne_dans_paroles) ; une ligne
+    étrangère est traduite, avec la mention « Traduit de… » et l'original en légende."""
+    from core.services import ai
+    from core.services.social import medias, pourtoi
+    cands = [c for c in _titres_punchline() if not _deja("format-punchline", f"{c[0]}|{c[1]}", 26)]
+    if not cands:
+        return None
+    depart = jour.toordinal() % len(cands)
+    for artiste, titre in (cands[depart:] + cands[:depart])[:essais]:
+        paroles = _paroles(artiste, titre)
+        if not paroles or len(paroles) < 200:
+            continue
+        consigne = (f"Voici les paroles de « {titre} » de {artiste}. Choisis LA punchline : la ligne la plus forte et la plus "
+                    "partageable (phrase culte, ambition, fierté, sagesse, image forte, amour sans sous-entendu), 1 ou 2 vers "
+                    f"consécutifs MAXIMUM, jamais un couplet, chantés par {artiste} (pas par un invité). Rends un objet JSON :\n"
+                    '{"ligne": "le ou les 2 vers recopiés EXACTEMENT, caractère pour caractère, séparés par « / »", '
+                    '"langue": "code de la langue de la ligne : fr, en, pcm (pidgin), yo, ig, tw, ln, wo, sw…", '
+                    '"francais": "traduction française fidèle si la ligne n\'est pas en français, sinon recopie-la", '
+                    '"sensible": true si insulte, allusion sexuelle (même légère), violence, arme, drogue, alcool, "question": "question courte au public, '
+                    'terminée par ⁉️"}\n\n' + paroles[:3500])
+        try:
+            r = ai.make().ask(M.SYSTEME, consigne, max_tokens=800)
+            o = json.loads(r["text"][r["text"].find("{"): r["text"].rfind("}") + 1])
+        except Exception as exc:  # noqa: BLE001
+            log_write("social", "error", f"punchline {artiste} – {titre} : {exc}")
+            continue
+        ligne = ligne_dans_paroles(o.get("ligne") or "", paroles)
+        if not ligne or o.get("sensible"):
+            log_write("social", "info", f"punchline {artiste} – {titre} : écartée (ligne absente des paroles ou sensible)")
+            continue
+        langue = (o.get("langue") or "fr").lower()
+        etrangere = langue != "fr"
+        phrase = M.coupe((o.get("francais") or "").strip() or ligne, 170) if etrangere else ligne
+        note = ("Traduit " + LANGUES[langue]) if etrangere and langue in LANGUES else ("Traduit" if etrangere else "")
+        photo = medias.choisit(artiste, M._photo_portrait(artiste))
+        if not photo:
+            continue
+        auteur = f"{artiste} — {titre}"
+        couverture = lambda fmt, p=phrase, a=auteur, n=note: pourtoi.citation(photo, p, a, "", fmt, note=n)  # noqa: E731
+        question = M.coupe(o.get("question") or "Elle vous parle, cette phrase ⁉️", 110)
+        credit = credit_photo(photo)
+        legende = (f"🎤 « {phrase} »\n\n" + (f"Version originale : « {ligne} » ({note.lower()})\n\n" if etrangere else "")
+                   + f"Paroles : {artiste} – {titre}\n\n{question} Dites-le en commentaire ‼️"
+                   + (f"\n\n{credit}" if credit else ""))
+        tags = "#CauriCharts #Punchline #" + "".join(ch for ch in artiste if ch.isalnum()) + " #Paroles"
+        cle = f"{artiste}|{titre}"
+        return _post("format-punchline", jour, due, f"Punchline : {artiste} – {titre}", [(_fiche(artiste, "", "", [], cle), "", None)],
+                     legende, tags, cle, couverture=couverture)
     return None
 
 
@@ -586,6 +715,8 @@ def du_jour(jour: date) -> list:
     # « Le saviez-vous ? » chaque jour à 12 h ; les jours où power ou promo occupent déjà midi, il passe à 13 h
     midi_pris = any(p and p[1].hour == 12 for p in prevus)
     prevus.append((anecdote, a_heure(13 if midi_pris else 12)))
+    if jour.isoweekday() in (1, 3):   # lundi et mercredi 18 h : la punchline
+        prevus.append((punchline, a_heure(18)))
     lignes = []
     for p in filter(None, prevus):
         fn, due = p

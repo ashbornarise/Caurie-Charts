@@ -36,14 +36,35 @@ def test_au_moins_une_info_africaine(monkeypatch):
     assert M.au_moins_un_africain(tries[:4], 4) == tries[:4]
 
 
+PAROLES = "Omo, I don't wanna lie\nI need some money for my pocket\nI no fit stay for one place\n\nCalm down, calm down"
+
+
+def test_punchline_mot_pour_mot():
+    assert F.ligne_dans_paroles("I need some money for my pocket", PAROLES) == "I need some money for my pocket"
+    # 2 vers consécutifs, apostrophe typographique tolérée
+    assert F.ligne_dans_paroles("Omo, I don’t wanna lie / I need some money for my pocket", PAROLES)
+    # ligne réécrite, vers non consécutifs, ou plus de 2 vers : refusé
+    assert F.ligne_dans_paroles("I need money in my pocket", PAROLES) is None
+    assert F.ligne_dans_paroles("Omo, I don't wanna lie / I no fit stay for one place", PAROLES) is None
+    assert F.ligne_dans_paroles("Omo, I don't wanna lie / I need some money for my pocket / I no fit stay for one place", PAROLES) is None
+
+
+def test_stars_sans_doublon():
+    assert len(M.CHERCHES) == len(set(M.CHERCHES))
+    assert {"Diamond Platnumz", "Koffi Olomide", "Werenoi"} <= set(M.STARS)
+
+
 def test_anecdote_chaque_jour_a_midi(monkeypatch):
     vus = []
-    for nom in ("power", "promo", "top10", "citation", "versus", "histoire", "qui_est", "anecdote"):
+    for nom in ("power", "promo", "top10", "citation", "versus", "histoire", "qui_est", "anecdote", "punchline"):
         fn = (lambda n: (lambda jour, due: vus.append((n, due.hour)) or None))(nom)
         fn.__name__ = nom
         monkeypatch.setattr(F, nom, fn)
     F.du_jour(date(2026, 10, 20))            # un mardi ordinaire
-    assert ("anecdote", 12) in vus and ("citation", 21) in vus
+    assert ("anecdote", 12) in vus and ("citation", 21) in vus and not any(n == "punchline" for n, _ in vus)
+    vus.clear()
+    F.du_jour(date(2026, 10, 19))            # un lundi : punchline à 18 h
+    assert ("punchline", 18) in vus and ("top10", 21) in vus
     vus.clear()
     F.du_jour(date(2026, 10, 1))             # le 1er du mois : power à midi, l'anecdote passe à 13 h
     assert ("power", 12) in vus and ("anecdote", 13) in vus

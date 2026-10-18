@@ -59,14 +59,21 @@ STARS = ["Beyoncé", "Taylor Swift", "Rihanna", "Drake", "Bad Bunny", "The Weekn
          "Kanye West", "Jay-Z", "Nicki Minaj", "Cardi B", "Sabrina Carpenter", "Doja Cat", "Post Malone", "Shakira",
          "Karol G", "SZA", "Olivia Rodrigo", "Coldplay", "BTS", "Blackpink", "Rosé", "Lisa", "Miley Cyrus", "Harry Styles",
          "Michael Jackson", "Madonna", "Céline Dion", "Stromae", "Aya Nakamura", "Ninho", "Jul", "Gims",
-         "Burna Boy", "Wizkid", "Davido", "Tems", "Rema", "Asake", "Ayra Starr", "Tyla", "Fally Ipupa", "Black Sherif"]
+         "Burna Boy", "Wizkid", "Davido", "Tems", "Rema", "Asake", "Ayra Starr", "Tyla", "Fally Ipupa", "Black Sherif",
+         # grandes stars francophones et africaines hors Afrique de l'Ouest (18/10/2026)
+         "Dadju", "Tayc", "Ferre Gola", "Innoss'B", "Koffi Olomide", "Héritier Watanabe", "Diamond Platnumz",
+         "Black Coffee", "Uncle Waffles", "Tiakola", "Werenoi", "Damso", "Niska", "SDM"]
 GOOGLE_NEWS = "https://news.google.com/rss/search?hl=fr&gl=FR&ceid=FR:fr&q="
+
+
+# Noms trop courts ou trop communs pour une recherche seule (homonymes) : la forme qu'emploie la presse musicale
+REQUETE_STAR = {"SDM": "rappeur SDM", "Black Coffee": "DJ Black Coffee"}
 
 
 def _flux_stars() -> list:
     from urllib.parse import quote
     lots = [STARS[i:i + 9] for i in range(0, len(STARS), 9)]
-    return ([{"name": "Google Actualités", "url": GOOGLE_NEWS + quote("(" + " OR ".join(f'"{n}"' for n in lot) + ") musique when:2d"), "poids": 1, "stars": True}
+    return ([{"name": "Google Actualités", "url": GOOGLE_NEWS + quote("(" + " OR ".join(f'"{REQUETE_STAR.get(n, n)}"' for n in lot) + ") musique when:2d"), "poids": 1, "stars": True}
              for lot in lots]
             + [{"name": "Google Actualités", "url": base + quote(q), "poids": 1, "afrique": True} for base, q in AFRIQUE_REQUETES])
 
@@ -827,11 +834,12 @@ def guette() -> dict | None:
 # ---------------------------------------------------------------- le chercheur : records, certifications, caps de streams
 
 # Artistes suivis de près pour leurs records (en plus de STARS) : la scène francophone et ouest-africaine qui fait des chiffres
-CHERCHES = STARS + ["Tiakola", "Damso", "SDM", "Werenoi", "Gazo", "Himra", "Didi B", "Josey", "Innoss'B", "Dadju", "Tayc",
+CHERCHES = list(dict.fromkeys(STARS + ["Tiakola", "Damso", "SDM", "Werenoi", "Gazo", "Himra", "Didi B", "Josey", "Innoss'B", "Dadju", "Tayc",
                     "Joé Dwèt Filé", "Shatta Wale", "Stonebwoy", "Sarkodie", "KiDi", "Omah Lay", "CKay", "Fireboy DML",
                     "Kizz Daniel", "Oxlade", "Seyi Vibez", "Olamide", "Victony", "Shallipopi", "Toofan", "Magic System",
-                    "Booba", "PNL", "Orelsan", "Angèle", "Soolking", "Naps", "Zola"]
+                    "Booba", "PNL", "Orelsan", "Angèle", "Soolking", "Naps", "Zola"]))   # sans doublons
 AFRICAINS = {_sans_accents(n).lower() for n in [
+    "Ferre Gola", "Koffi Olomide", "Héritier Watanabe", "Diamond Platnumz", "Black Coffee", "Uncle Waffles",
     "Burna Boy", "Wizkid", "Davido", "Tems", "Rema", "Asake", "Ayra Starr", "Tyla", "Fally Ipupa", "Black Sherif", "Didi B",
     "Josey", "Innoss'B", "Shatta Wale", "Stonebwoy", "Sarkodie", "KiDi", "Omah Lay", "CKay", "Fireboy DML", "Kizz Daniel",
     "Oxlade", "Seyi Vibez", "Olamide", "Victony", "Shallipopi", "Toofan", "Magic System", "Aya Nakamura", "Tiakola", "Dadju",
