@@ -111,12 +111,23 @@ def rediger(data: dict, client=None) -> str:
     client = client or __import__("core.services.ai", fromlist=["make"]).make()
     prompt = "Rédige en français : résumé de la semaine en 5 phrases, évolution globale, paragraphes réseaux, site, classements, contenus, technique, dépenses, puis 3 recommandations concrètes. Chiffres réels uniquement : utilise exclusivement le JSON ci-dessous, sans ajouter de nombre ni extrapoler. Si une donnée manque, dis qu'elle n'est pas disponible.\nJSON : " + json.dumps(data, ensure_ascii=False)
     try:
-        answer = client.ask("Tu es l'assistant éditorial de Cauri Charts. Respecte strictement les chiffres fournis.", prompt, max_tokens=2200)
+        answer = client.ask("Tu es l'assistant éditorial de Cauri Charts. Respecte strictement les chiffres fournis.", prompt, max_tokens=8000)   # large : les modèles qui « réfléchissent » coupaient le texte
         text = answer.get("text", "") if isinstance(answer, dict) else str(answer)
         # Le contrôle strict écarte une réponse dès qu'elle contient un nombre absent des données sources.
         numbers = _chiffres(data)
-        if text and all(n in numbers for n in re.findall(r"(?<![\w])\d+(?:[.,]\d+)?", text)):
-            return text
+        # petits nombres (1 à 10 : « 3 recommandations », « 5 phrases ») tolérés, les autres doivent venir des données
+        if text:
+            # Une phrase qui contient un chiffre absent des données est retirée (pas tout le rapport) ;
+            # les petits nombres (1 à 10 : « 3 recommandations ») sont tolérés
+            ok = lambda n: n in numbers or n.replace(",", ".") in numbers or (n.isdigit() and int(n) <= 10)  # noqa: E731
+            lignes = []
+            for ligne in text.splitlines():
+                phrases = re.split(r"(?<=[.!?])\s+", ligne)
+                gardees = [ph for ph in phrases if all(ok(n) for n in re.findall(r"(?<![\w])\d+(?:[.,]\d+)?", ph))]
+                lignes.append(" ".join(gardees))
+            propre = "\n".join(lignes).strip()
+            if len(propre) > 200:
+                return propre
     except Exception:
         pass
     s = data["semaine"]
@@ -135,12 +146,41 @@ def rediger(data: dict, client=None) -> str:
             "Recommandations : consulter les étapes en échec ; examiner les pages les plus vues ; confirmer les échéances inconnues.")
 
 
+def _markdown(texte: str) -> str:
+    """Mise en forme simple du texte de l'IA : titres, gras, listes ; les « --- » sont retirés."""
+    out, liste = [], False
+    for ligne in texte.splitlines():
+        l = ligne.strip()
+        if not l or set(l) <= {"-", "*", "_"}:
+            if liste:
+                out.append("</ul>"); liste = False
+            continue
+        h = html.escape(l)
+        h = re.sub(r"\*\*(.+?)\*\*", r"<b></b>", h)
+        if l.startswith("#"):
+            if liste:
+                out.append("</ul>"); liste = False
+            out.append(f"<h3>{h.lstrip('#').strip()}</h3>")
+        elif l[:2] in ("- ", "* ") or re.match(r"\d+\.\s", l):
+            if not liste:
+                out.append("<ul>"); liste = True
+            out.append(f"<li>{re.sub(r'^([-*]|\d+\.)\s+', '', h)}</li>")
+        else:
+            if liste:
+                out.append("</ul>"); liste = False
+            out.append(f"<p>{h}</p>")
+    if liste:
+        out.append("</ul>")
+    return "".join(out)
+
+
 def rendre(data: dict, texte: str) -> tuple[str, str]:
     s = data["semaine"]
     esc = html.escape
     rows = "".join(f"<tr><td>{esc(str(p['path']))}</td><td>{p['vues']}</td></tr>" for p in s["pages_plus_vues"])
     socials = "".join(f"<tr><td>{esc(k.title())}</td><td>{v['crees']}</td><td>{v['envoyes']}</td></tr>" for k,v in s["posts_par_reseau"].items())
-    metrics = "".join(f"<tr><td>{esc(p['titre'])}</td><td>{esc(p['reseau'])}</td><td>{p['vues']}</td><td>{p['portee']}</td><td>{p['reactions']}</td><td>{p['commentaires']}</td></tr>" for p in s["metriques_posts"])
+    top = sorted(s["metriques_posts"], key=lambda p: -(p.get("vues") or 0))[:8]   # les 8 posts les plus vus seulement
+    metrics = "".join(f"<tr><td>{esc(p['titre'])}</td><td>{esc(p['reseau'])}</td><td>{p['vues']}</td><td>{p['portee']}</td><td>{p['reactions']}</td><td>{p['commentaires']}</td></tr>" for p in top)
     types = "".join(f"<tr><td>{esc(k)}</td><td>{v}</td></tr>" for k,v in s["posts_par_type"].items())
     meilleurs = "".join(f"<li>{esc(p['titre'])} · {esc(p['reseau'])} · {p['vues']} vues</li>" for p in s["meilleurs_posts"])
     pires = "".join(f"<li>{esc(p['titre'])} · {esc(p['reseau'])} · {p['vues']} vues</li>" for p in s["pires_posts"])
@@ -148,5 +188,5 @@ def rendre(data: dict, texte: str) -> tuple[str, str]:
     agents = "".join(f"<li>{esc(a['agent'])} · {esc(a['level'])} : {esc(a['message'])}</li>" for a in s["constats_agents"])
     css = "body{font:15px Arial;color:#20304a;background:#f4faff;padding:24px}main{max-width:900px;margin:auto;background:#fff;padding:28px;border-top:6px solid #a78bfa}h1,h2{color:#5b6ee1}table{border-collapse:collapse;width:100%;margin:12px 0}td,th{border:1px solid #d9e4f2;padding:8px;text-align:left}th{background:#e9f5ff}"
     prev = data["semaine_precedente"]
-    body = f"<h1>Rapport hebdomadaire · Cauri Charts</h1><p>{s['debut']} — {s['fin']}</p><section>{'<p>'.join(esc(texte).splitlines())}</section><h2>Publications par réseau</h2><table><tr><th>Réseau</th><th>Programmées</th><th>Enregistrées</th></tr>{socials}</table><h2>Publications par type</h2><table><tr><th>Type</th><th>Créées</th></tr>{types}</table><h2>Métriques des posts</h2><table><tr><th>Publication</th><th>Réseau</th><th>Vues</th><th>Portée</th><th>Réactions</th><th>Commentaires</th></tr>{metrics}</table><h3>Meilleurs posts</h3><ul>{meilleurs}</ul><h3>Posts avec le moins de vues</h3><ul>{pires}</ul><h2>Site</h2><p>Visites : {s['visites']} · semaine précédente : {prev['visites']}</p><table><tr><th>Page</th><th>Vues</th></tr>{rows}</table><h2>Classements, contenus et technique</h2><p>Relevés : {s['releves_classements']} (précédente : {prev['releves_classements']}) · Artistes actifs : {s['artistes_actifs']} · Nouveaux artistes : {s['nouveaux_artistes']} · Classements officiels publiés : {s['classements_officiels_publies']}</p><p>Actualités publiées : {s['actualites_publiees']} · Vidéos fans reçues : {s['videos_fans']} · Nuits : {s['nuits']} · Quota YouTube utilisé : {s['quota_youtube']} unités</p><p>Étapes en échec : {esc(', '.join(s['etapes_en_echec']) or 'aucune enregistrée')}</p><ul>{agents}</ul><h2>Dépenses enregistrées cette semaine</h2><pre>{esc(json.dumps(data['depenses_semaine'], ensure_ascii=False, indent=2))}</pre><h2>Abonnements et crédits</h2><table><tr><th>Service</th><th>Montant / état</th><th>Périodicité</th><th>Prochaine échéance</th></tr>{couts}</table><h2>Échéances du mois prochain</h2><pre>{esc(json.dumps(data['echeances_mois_prochain'], ensure_ascii=False, indent=2))}</pre></main>"
+    body = f"<h1>Rapport hebdomadaire · Cauri Charts</h1><p>{s['debut']} — {s['fin']}</p><section>{_markdown(texte)}</section><h2>Publications par réseau</h2><table><tr><th>Réseau</th><th>Programmées</th><th>Enregistrées</th></tr>{socials}</table><h2>Publications par type</h2><table><tr><th>Type</th><th>Créées</th></tr>{types}</table><h2>Les 8 posts les plus vus</h2><table><tr><th>Publication</th><th>Réseau</th><th>Vues</th><th>Portée</th><th>Réactions</th><th>Commentaires</th></tr>{metrics}</table><h3>Meilleurs posts</h3><ul>{meilleurs}</ul><h3>Posts avec le moins de vues</h3><ul>{pires}</ul><h2>Site</h2><p>Visites : {s['visites']} · semaine précédente : {prev['visites']}</p><table><tr><th>Page</th><th>Vues</th></tr>{rows}</table><h2>Classements, contenus et technique</h2><p>Relevés : {s['releves_classements']} (précédente : {prev['releves_classements']}) · Artistes actifs : {s['artistes_actifs']} · Nouveaux artistes : {s['nouveaux_artistes']} · Classements officiels publiés : {s['classements_officiels_publies']}</p><p>Actualités publiées : {s['actualites_publiees']} · Vidéos fans reçues : {s['videos_fans']} · Nuits : {s['nuits']} · Quota YouTube utilisé : {s['quota_youtube']} unités</p><p>Étapes en échec : {esc(', '.join(s['etapes_en_echec']) or 'aucune enregistrée')}</p><ul>{agents}</ul><h2>Dépenses enregistrées cette semaine</h2><pre>{esc(json.dumps(data['depenses_semaine'], ensure_ascii=False, indent=2))}</pre><h2>Abonnements et crédits</h2><table><tr><th>Service</th><th>Montant / état</th><th>Périodicité</th><th>Prochaine échéance</th></tr>{couts}</table><h2>Échéances du mois prochain</h2><pre>{esc(json.dumps(data['echeances_mois_prochain'], ensure_ascii=False, indent=2))}</pre></main>"
     return f"<!doctype html><html lang='fr'><meta charset='utf-8'><style>{css}</style><main>{body}</html>", texte
