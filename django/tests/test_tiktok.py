@@ -53,7 +53,7 @@ def test_stats_protege_erreurs_http(monkeypatch):
         raise OSError("secret non journalisé")
     monkeypatch.setattr(tiktok.requests, "get", erreur)
     resultat = tiktok.stats("2026-10-01", "2026-10-07")
-    assert resultat["followers_count"] == "non disponible"
+    assert resultat["follower_count"] == "non disponible"
     assert resultat["videos"] == []
 
 
