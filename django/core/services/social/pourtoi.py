@@ -16,6 +16,7 @@ RES = Path(__file__).resolve().parents[4] / "resources"
 FORMATS = {"feed": (2160, 2700), "story": (2160, 3840), "article": (1920, 1080)}   # article : image 16:9 du site
 ACCENTS = [(255, 59, 48), (255, 122, 26), (47, 168, 255), (46, 224, 122), (155, 102, 255), (255, 214, 10)]
 BLANC = (255, 255, 255)
+VIOLET_LOGO = (92, 52, 196)   # violet de la charte, pour le logo sur fond clair
 
 
 def police(taille: int, nom: str = "Anton-Regular.ttf"):
@@ -104,6 +105,16 @@ def _titre(d: ImageDraw.ImageDraw, titre: str, accent: str | None, couleur, x: i
 def _marque(img: Image.Image, x: int, y: int, taille: int = 330) -> None:
     logo = Image.open(RES / "marque" / "logo-blanc.png").convert("RGBA")
     logo = logo.resize((taille, round(logo.height * taille / logo.width)), Image.LANCZOS)
+    alpha = logo.getchannel("A")
+    zone = img.crop((x, y, x + logo.width, y + logo.height)).convert("L")
+    clair = sum(p * n for p, n in enumerate(zone.histogram())) / max(1, zone.width * zone.height) > 170
+    # Fond clair (illustrations sur blanc) : logo violet de la charte ; sinon logo blanc. Ombre douce dans les deux cas.
+    ombre = Image.new("RGBA", logo.size, (0, 0, 0, 0))
+    ombre.putalpha(alpha.point(lambda a: a * (45 if clair else 110) // 255).filter(ImageFilter.GaussianBlur(taille // 40)))
+    img.paste(ombre, (x + taille // 110, y + taille // 80), ombre)
+    if clair:
+        logo = Image.new("RGBA", logo.size, VIOLET_LOGO + (255,))
+        logo.putalpha(alpha)
     img.paste(logo, (x, y), logo)
 
 
