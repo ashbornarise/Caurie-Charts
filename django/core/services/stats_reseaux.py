@@ -97,9 +97,26 @@ def collecter(aujourdhui: date | None = None) -> dict:
         telegram_count = _nombre(telegram.call("getChatMemberCount", {"chat_id": env.get("TELEGRAM_CHAT_ID", "")}))
     except Exception:
         telegram_count = INDISPONIBLE
+    try:
+        from core.services import tiktok
+        tiktok_stats = tiktok.stats(debut, fin)
+    except Exception:
+        tiktok_stats = {"follower_count": INDISPONIBLE, "following_count": INDISPONIBLE,
+                        "likes_count": INDISPONIBLE, "video_count": INDISPONIBLE, "videos": []}
     valeurs = {"instagram.followers_count": instagram["followers_count"], "instagram.media_count": instagram["media_count"],
                "facebook.followers_count": facebook["followers_count"], "facebook.fan_count": facebook["fan_count"],
-               "telegram.member_count": telegram_count}
+               "telegram.member_count": telegram_count,
+               "tiktok.follower_count": tiktok_stats.get("follower_count", INDISPONIBLE),
+               "tiktok.following_count": tiktok_stats.get("following_count", INDISPONIBLE),
+               "tiktok.likes_count": tiktok_stats.get("likes_count", INDISPONIBLE),
+               "tiktok.video_count": tiktok_stats.get("video_count", INDISPONIBLE)}
+    for video in tiktok_stats.get("videos", []):
+        identifiant = str(video.get("id", ""))
+        if identifiant and identifiant.isalnum():
+            valeurs[f"tiktok.video_{identifiant}_title"] = video.get("title") or "Publication"
+            for metrique in ("view_count", "like_count", "comment_count", "share_count"):
+                if metrique in video:
+                    valeurs[f"tiktok.video_{identifiant}_{metrique}"] = video[metrique]
     for reseau, bloc in (("instagram", instagram.get("insights", {})), ("facebook", facebook.get("insights", {}))):
         valeurs.update({f"{reseau}.{cle}": val for cle, val in bloc.items()})
     try:
@@ -122,11 +139,12 @@ def collecter(aujourdhui: date | None = None) -> dict:
         except (TypeError, ValueError):
             evolution[cle] = INDISPONIBLE
     objectifs = {}
-    for reseau in ("instagram", "facebook", "telegram"):
-        cle = f"{reseau}.followers_count" if reseau != "telegram" else "telegram.member_count"
+    for reseau, cle in (("instagram", "instagram.followers_count"), ("facebook", "facebook.followers_count"),
+                        ("telegram", "telegram.member_count"), ("tiktok", "tiktok.follower_count")):
         valeur = valeurs[cle]
         objectifs[reseau] = {"objectif": 10000, "abonnes": valeur,
                               "progression_pct": round(int(valeur) * 100 / 10000, 2) if valeur != INDISPONIBLE else INDISPONIBLE,
                               "date_objectif": "2026-12-31"}
     return {"periode": {"debut": debut_iso, "fin": fin_iso}, "instagram": instagram, "facebook": facebook,
-            "telegram": {"member_count": telegram_count}, "evolution_semaine": evolution, "objectifs": objectifs}
+            "telegram": {"member_count": telegram_count}, "tiktok": tiktok_stats,
+            "evolution_semaine": evolution, "objectifs": objectifs}

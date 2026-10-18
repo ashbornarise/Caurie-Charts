@@ -1,0 +1,28 @@
+name: Connexion TikTok
+
+on:
+  workflow_dispatch:
+
+jobs:
+  connecter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+      TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      APP_DEBUG: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Dépendances
+        run: pip install -r requirements.txt
+      - name: Échanger le code reçu
+        working-directory: django
+        run: python manage.py tiktok_connecte
