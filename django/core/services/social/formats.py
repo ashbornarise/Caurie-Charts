@@ -700,6 +700,70 @@ def punchline(jour: date, due: datetime, essais: int = 8) -> dict | None:
     return None
 
 
+# ---------------------------------------------------------------- événements (galas, festivals, remises de prix)
+
+_EVENEMENTS: dict = {}
+
+
+def _evenement(jour: date):
+    """L'événement ouest-africain de la semaine le plus couvert (≥ 2 médias), cherché une fois par jour et par exécution."""
+    if jour not in _EVENEMENTS:
+        from core.services.social import evenements as EV
+        try:
+            _EVENEMENTS[jour] = EV.du_jour(jour)
+        except Exception as exc:  # noqa: BLE001
+            log_write("social", "error", f"événements : {exc}")
+            _EVENEMENTS[jour] = None
+    return _EVENEMENTS[jour]
+
+
+def evenement_photos(jour: date, due: datetime) -> dict | None:
+    """« Retour en images » : couverture + 3 à 6 photos des articles, chacune créditée à son média."""
+    from core.services.social import editorial as E
+    from core.services.social import evenements as EV
+    from core.services.social import image as PI
+    e = _evenement(jour)
+    if not e or _deja("format-evenement", e["nom"][:60], 2):
+        return None
+    nom = f"{jour.isoformat()}-evenement-{datetime.now(timezone.utc):%H%M%S}"
+    r = EV.fabrique_photos(e, PI.DIR, nom)
+    if not r:
+        return None
+    fichiers = [{"file": Path(f).name, "tiktok": Path(f).name, "label": r["titre"]} for f in [r["couverture"], *r["photos"]]]
+    return E.save_post("format-evenement", jour.isoformat(), r["titre"], EV.legende(e),
+                       "#CauriCharts #Evenement #AfriqueDeLOuest #Culture", fichiers,
+                       {"cle": e["nom"][:60], "due": due.isoformat(), "kind": "format-evenement"})
+
+
+def evenement_video(jour: date, due: datetime) -> dict | None:
+    """« Les moments forts » : le passage le plus fort d'une vidéo de l'événement, sous-titré, avec son (publié tel quel)."""
+    from core import storage
+    from core.services.social import evenements as EV
+    from core.services.social import image as PI
+    from core.services.social import refrain as R
+    e = _evenement(jour)
+    if not e or _deja("format-evenement-video", e["nom"][:60], 2):
+        return None
+    PI.DIR.mkdir(parents=True, exist_ok=True)
+    nom = f"{jour.isoformat()}-evenement-video-{datetime.now(timezone.utc):%H%M%S}"
+    video = PI.DIR / f"{nom}.mp4"
+    res = EV.moment_video(e, str(video))
+    if not res:
+        return None
+    vignette = PI.DIR / f"{nom}.jpg"
+    R.vignette(str(video), str(vignette))
+    storage.publish_media_files("social", [video.name, vignette.name])
+    titre = f"Les moments forts : {e['nom']}"[:160]
+    legende = EV.legende(e) + f"\n\n{res['credit']} · {res['source']}"
+    pid = db.insert("social_posts", {"slot_date": jour.isoformat(), "theme": "format-evenement-video", "title": titre,
+                                     "caption": legende, "hashtags": "#CauriCharts #Evenement #MomentsForts",
+                                     "image_square": vignette.name, "image_story": vignette.name, "carousel": "[]",
+                                     "video": video.name, "status": "approved",
+                                     "facts": json.dumps({"kind": "format-clip", "cle": e["nom"][:60], "due": due.isoformat(),
+                                                          "source": res["source"]}, ensure_ascii=False)})
+    return db.one("SELECT * FROM social_posts WHERE id = ?", [pid])
+
+
 # ---------------------------------------------------------------- calendrier
 
 def bandeaux(jour: date, due: datetime) -> dict | None:
@@ -787,12 +851,18 @@ def du_jour(jour: date) -> list:
         prevus.append((punchline, a_heure(18)))
     if jour.isoweekday() == 4:
         prevus.append((record, a_heure(18)))
+    # Événements de la semaine (galas, festivals, remises de prix) : photos à 15 h, moments forts en vidéo à 19 h
+    prevus.append((evenement_photos, a_heure(15)))
+    prevus.append((evenement_video, a_heure(19)))
     lignes = []
     for p in filter(None, prevus):
         fn, due = p
         try:
             post = fn(jour, due)
-            lignes.append(f"{fn.__name__} : " + (post["title"] if post else "pas assez de données"))
+            if isinstance(post, dict):
+                lignes.append(f"{post['theme']} : {post['title']} → {due:%H:%M} UTC (à blanc, non enregistré)")
+            else:
+                lignes.append(f"{fn.__name__} : " + (post["title"] if post else "pas assez de données"))
         except Exception as exc:  # noqa: BLE001 — un format raté ne bloque pas les autres
             log_write("social", "error", f"format {fn.__name__} : {exc}")
             lignes.append(f"{fn.__name__} : échec ({exc})")
