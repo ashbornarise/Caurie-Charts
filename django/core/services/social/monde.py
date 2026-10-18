@@ -624,26 +624,50 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
         a = PI.save_jpeg(couverture_choc(f, kk, est_flash, "feed", dp), PI.DIR / f"{nom}-{n}.jpg")
         b = PI.save_jpeg(couverture_choc(f, kk, est_flash, "tiktok", dp), PI.DIR / f"{nom}-{n}-916.jpg")
         fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": (dp or {}).get("titre") or une_fiche["une"] or une_fiche["artiste"]})
+    # Image 16:9 de l'article du site : l'artiste détouré sur un décor généré (pourtoi.affiche), seulement avec une
+    # photo à l'identité vérifiée (photo_une : nom dans le titre + medias.choisit / notre base). Sinon, ou en cas
+    # d'échec, l'article garde la couverture du post comme avant.
+    article = None
+    if photo_une:
+        try:
+            sur = "Flash" if est_flash else None
+            article = Path(PI.save_jpeg(pourtoi.affiche(photo_une, une_fiche["titre"], une_fiche.get("accent"), "article",
+                                                        pourtoi.ACCENTS[0] if est_flash else None, surtitre=sur,
+                                                        fond=une_fiche["artiste"].split()[-1]),
+                                        PI.DIR / f"{nom}-article.jpg")).name
+            if not rendu_seul:
+                from core import storage
+                storage.publish_media_files("social", [article])
+        except Exception as exc:  # noqa: BLE001
+            log_write("monde", "warning", f"image d'article {une_fiche['artiste']} : {exc}")
+            article = None
     legende = _legende(fiches, entete)
     hashtags = "#CauriMonde #CauriCharts #ActuMusique #Musique #" + re.sub(r"\W", "", _sans_accents(une_fiche["artiste"]).title())[:30]
     faits = {"day": jour.isoformat(), "fiches": [{k: v for k, v in f.items() if k not in ("items", "mots", "noms", "date")} for f in fiches],
              "due": due.isoformat() if due else None}
     if rendu_seul:
-        return {"fichiers": fichiers, "legende": legende, "cover": cover, "fiches": fiches, "hashtags": hashtags, "faits": faits}
-    return E.save_post(theme, jour.isoformat(), kicker, legende, hashtags, fichiers, faits)
+        return {"fichiers": fichiers, "legende": legende, "cover": cover, "fiches": fiches, "hashtags": hashtags, "faits": faits,
+                "image_article": article}
+    post = E.save_post(theme, jour.isoformat(), kicker, legende, hashtags, fichiers, faits)
+    return {**post, "image_article": article} if isinstance(post, dict) else post
 
 
-def archive(fiches: list, image: str | None = None) -> None:
-    """Chaque info publiée devient aussi un article dans Actualités (le site comme un journal) et ne repassera plus."""
+def archive(fiches: list, image: str | None = None, article: str | None = None) -> None:
+    """Chaque info publiée devient aussi un article dans Actualités (le site comme un journal) et ne repassera plus.
+    article : image 16:9 générée pour le site (pourtoi.affiche) ; à défaut, la couverture du post (image)."""
     from core.views import now_utc
+    from core.services.social import medias
+    image = article or image
     for f in fiches:
+        credit = medias.CREDITS.get(_PHOTOS.get(f.get("artiste")) or "") if article else None
         guid = f"monde-{f['cle']}"
         if db.value("SELECT 1 FROM news WHERE external_guid = ?", [guid]):
             continue
         src = f["items"][0]
         slug = re.sub(r"[^a-z0-9]+", "-", _sans_accents(f["titre"]).lower()).strip("-")[:180] + "-" + f["cle"][:6]
         db.insert("news", {"title": f["titre"][:200], "slug": slug, "summary": (f["accroche"] or f["resume"])[:400],
-                           "body": f["resume"] + "\n\nSources : " + ", ".join(f["sources"]) + ".", "category": CATEGORIE_SITE[f["rubrique"]],
+                           "body": f["resume"] + "\n\nSources : " + ", ".join(f["sources"]) + "."
+                                   + (f"\n\nPhoto : {credit}" if credit else ""), "category": CATEGORIE_SITE[f["rubrique"]],
                            "country_id": None, "source_name": ", ".join(f["sources"])[:120], "source_url": src["url"][:500],
                            "image_path": ("social/" + image)[:120] if image else None, "origin": "manual", "external_guid": guid,
                            "status": "published", "published_at": now_utc()})
@@ -690,7 +714,7 @@ def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
         entete = f"🌍 Cauri Monde · {f['titre']}"
         posts.append(construit([f], jour, f"monde-{quand}-{i + 1}", kicker, entete, final, rendu_seul, due=due))
         if not rendu_seul:
-            archive([f], posts[-1].get("image_square"))
+            archive([f], posts[-1].get("image_square"), posts[-1].get("image_article"))
     return posts[0] if rendu_seul else {"title": f"{len(posts)} posts Cauri Monde ({quand})", "posts": posts}
 
 
@@ -709,7 +733,7 @@ def flash(rendu_seul: bool = False, forcer: bool = False) -> dict | None:
     post = construit([f], maintenant.date(), f"flash-{maintenant:%H%M}", kicker, entete,
                      "Info confirmée par " + " et ".join(f["sources"][:3]) + ". Suivez Cauri Charts pour ne rien manquer.", rendu_seul)
     if not rendu_seul:
-        archive([f], post.get("image_square"))
+        archive([f], post.get("image_square"), post.get("image_article"))
     return post
 
 
