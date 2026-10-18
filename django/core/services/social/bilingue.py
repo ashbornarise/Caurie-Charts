@@ -38,6 +38,12 @@ def _sans_lien(legende: str) -> str:
     return "\n".join(l for l in (legende or "").split("\n") if not l.lower().startswith("lien en bio")).strip()
 
 
+def mention_illustration(legende: str, langue: str = "fr") -> str:
+    """Ajoute le crédit d'illustration dans la langue demandée, sans le dupliquer."""
+    texte = "AI-generated illustration" if langue.lower().startswith("en") else "Illustration générée par IA"
+    return legende if texte in (legende or "") else f"{(legende or '').rstrip()}\n\n{texte}"
+
+
 def en(post: dict, budget: int) -> dict | None:
     """Version anglaise {title, caption} du post (≤ budget caractères), traduite une fois puis gardée dans ses faits."""
     try:
@@ -75,13 +81,20 @@ def legende(post: dict, lien: str | None = None, limite: int = 2200) -> str:
     lien = lien or LIEN
     tags = (post.get("hashtags") or "").strip()
     fr = f"{post['title']}\n\n{_sans_lien(post.get('caption'))}".strip()
+    try:
+        faits = json.loads(post.get("facts") or "{}") or {}
+    except (ValueError, TypeError):
+        faits = {}
+    if faits.get("illustration_ia"):
+        fr = f"{post['title']}\n\n{mention_illustration(_sans_lien(post.get('caption')))}"
     place = limite - len(lien) - len(tags) - len(ABONNE) - 42          # séparateurs, drapeau, appel à s'abonner et marge
     if len(fr) > place // 2:
         # Légende longue : chaque langue garde la moitié de la place, le français est coupé à une fin de ligne
         coupe = fr[: place // 2]
         fr = (coupe.rsplit("\n", 1)[0] if "\n" in coupe else coupe).rstrip()
     anglais = en(post, place - len(fr) - len(post["title"]) - 4)
-    texte_en = f"{DRAPEAU_EN} {anglais['title']}\n\n{anglais['caption']}" if anglais else ""
+    caption_en = mention_illustration(anglais["caption"], "en") if anglais and faits.get("illustration_ia") else (anglais or {}).get("caption", "")
+    texte_en = f"{DRAPEAU_EN} {anglais['title']}\n\n{caption_en}" if anglais else ""
     trop = len("\n\n".join(p for p in (fr, texte_en, ABONNE, lien, tags) if p)) - limite
     if texte_en and trop > 0:   # jamais les hashtags ni le lien : c'est l'anglais qui raccourcit
         texte_en = texte_en[: len(texte_en) - trop - 1].rsplit("\n", 1)[0].rstrip() + "…"

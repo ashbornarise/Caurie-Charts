@@ -38,7 +38,7 @@ def _deja(theme: str, cle: str, semaines: int = 12) -> bool:
 
 
 def _post(theme: str, jour: date, due: datetime, titre: str, pages: list, legende: str, hashtags: str, cle: str,
-          couverture=None) -> dict:
+          couverture=None, illustration_ia: bool = False) -> dict:
     """pages : [(fiche, kicker, diapo)] → images 4:5 et 9:16, post enregistré avec son heure de départ.
     couverture(fmt) : image de la 1re page dessinée à part (modèles « Pour toi »), fmt = « feed » ou « story »."""
     from core.services.social import editorial as E
@@ -56,7 +56,12 @@ def _post(theme: str, jour: date, due: datetime, titre: str, pages: list, legend
         a = PI.save_jpeg(M.couverture_choc(f, kk, False, "feed", dp), PI.DIR / f"{nom}-{n}.jpg")
         b = PI.save_jpeg(M.couverture_choc(f, kk, False, "tiktok", dp), PI.DIR / f"{nom}-{n}-916.jpg")
         fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": (dp or {}).get("titre") or f.get("une") or titre})
-    return E.save_post(theme, jour.isoformat(), titre, legende, hashtags, fichiers, {"cle": cle, "due": due.isoformat(), "kind": theme})
+    faits = {"cle": cle, "due": due.isoformat(), "kind": theme}
+    if illustration_ia:
+        from core.services.social.illustration import mention
+        legende = mention(legende)
+        faits["illustration_ia"] = True
+    return E.save_post(theme, jour.isoformat(), titre, legende, hashtags, fichiers, faits)
 
 
 def _fiche(artiste: str, une: str, titre: str, sources: list, cle: str) -> dict:
@@ -333,6 +338,11 @@ def citation(jour: date, due: datetime) -> dict | None:
     phrase = (b.get("francais") or b["citation"]).strip() if etrangere else b["citation"]
     photo = medias.choisit(b["auteur"], M._photo_portrait(b["auteur"]))
     note = "Traduit de l'anglais" if b.get("langue") == "en" else ("Traduit" if etrangere else "")
+    illustration = None
+    if not photo:
+        from core.services.social.illustration import genere
+        illustration = genere(f"citation musique {b.get('contexte') or ''}", "citation")
+        photo = illustration
     couverture = lambda fmt: pourtoi.citation(photo, phrase, b["auteur"], b.get("contexte") or "", fmt, note=note)  # noqa: E731
     legende = (f"🗣️ {b['auteur']} : « {phrase} »\n\n"
                + (f"Version originale : « {b['citation']} »\n\n" if etrangere else "")
@@ -341,7 +351,7 @@ def citation(jour: date, due: datetime) -> dict | None:
                + (f"\n\n{medias.credits([photo])}" if medias.credits([photo]) else ""))
     tags = "#CauriCharts #Citation #" + "".join(ch for ch in b["auteur"] if ch.isalnum()) + " #Musique"
     return _post("format-citation", jour, due, f"{b['auteur']} : « {phrase[:80]} »", [(_fiche(b["auteur"], "", "", [], b["citation"][:60]), "", None)],
-                 legende, tags, b["citation"][:60], couverture=couverture)
+                 legende, tags, b["citation"][:60], couverture=couverture, illustration_ia=bool(illustration))
 
 
 # ---------------------------------------------------------------- 7. les projets qui ont marqué l'histoire
@@ -397,6 +407,11 @@ def histoire(jour: date, due: datetime) -> dict | None:
         photo = libres[0]["url"] if libres else M._photo_portrait(artiste)
         if libres:
             medias.CREDITS[photo] = libres[0]["credit"]
+        illustration = None
+        if not photo:
+            from core.services.social.illustration import genere
+            illustration = genere(f"histoire musicale {projet}", "histoire")
+            photo = illustration
         couverture = lambda fmt, t=o["titre"], a=o.get("accent"): pourtoi.une(photo, t, a, fmt, surtitre="Ça a changé l'histoire")  # noqa: E731
         pages = [(_fiche(artiste, "", "", [], cle), "", None)]
         for k, f in enumerate(faits[:3]):
@@ -407,7 +422,7 @@ def histoire(jour: date, due: datetime) -> dict | None:
                    + f"\n\n{o.get('question') or ''} Dites-le en commentaire ‼️\n\nSource : Wikipédia ({lang}.wikipedia.org/wiki/{page})"
                    + (f"\n{medias.credits([photo])}" if medias.credits([photo]) else ""))
         tags = "#CauriCharts #Histoire #" + "".join(ch for ch in artiste if ch.isalnum()) + " #Afrobeats"
-        return _post("format-histoire", jour, due, f"{projet} ({artiste}) : {o['titre']}", pages, legende, tags, cle, couverture=couverture)
+        return _post("format-histoire", jour, due, f"{projet} ({artiste}) : {o['titre']}", pages, legende, tags, cle, couverture=couverture, illustration_ia=bool(illustration))
     return None
 
 
@@ -563,6 +578,11 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
         if libres:
             medias.CREDITS[photo] = libres[0]["credit"]
         question = M.coupe(o.get("question") or f"Vous le saviez sur {nom} ⁉️", 110)
+        illustration = None
+        if not photo:
+            from core.services.social.illustration import genere
+            illustration = genere(f"anecdote musicale {titre}", "anecdote")
+            photo = illustration
         couverture = lambda fmt, t=titre, a=o.get("accent"): pourtoi.une(photo, t, a, fmt, surtitre="Le saviez-vous ?")  # noqa: E731
         n = len(faits) + 2
         pages = [(_fiche(nom, "", "", [], nom), "", None)]
@@ -576,7 +596,7 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
                    + f"\n\n{question} Dites-le en commentaire ‼️\n\nSource : Wikipédia ({w['url']}), texte sous licence CC BY-SA"
                    + (f"\n{credit}" if credit else ""))
         tags = "#CauriCharts #LeSaviezVous #" + "".join(ch for ch in nom if ch.isalnum()) + " #MusiqueAfricaine"
-        return _post("format-anecdote", jour, due, f"Le saviez-vous ? {titre}", pages, legende, tags, nom, couverture=couverture)
+        return _post("format-anecdote", jour, due, f"Le saviez-vous ? {titre}", pages, legende, tags, nom, couverture=couverture, illustration_ia=bool(illustration))
     return None
 
 
@@ -821,6 +841,11 @@ def record(jour: date, due: datetime) -> dict | None:
     if not r:
         return None
     photo = M.photo(r['name'])
+    illustration = None
+    if not photo:
+        from core.services.social.illustration import genere
+        illustration = genere("record musical disque vinyle trophée", "record")
+        photo = illustration
     if not photo:
         return None
     n = int(r['clips'])
@@ -829,7 +854,7 @@ def record(jour: date, due: datetime) -> dict | None:
     couverture = lambda fmt: pourtoi.record(photo, phrase, str(n), fmt=fmt, couleur=OR)
     page = (_fiche(r['name'], phrase.upper(), phrase, ["YouTube (derniers snapshots des clips officiels)", "Cauri Charts"], cle), "Record", None)
     legende = f"🏆 {phrase}.\n\nLe record parmi les artistes suivis par Cauri Charts, recalculé depuis les derniers relevés de chaque clip officiel.\n\nSource : YouTube, snapshots de Cauri Charts."
-    return _post("format-record", jour, due, f"Record : {r['name']}", [page], legende, "#CauriCharts #Record #YouTube", cle, couverture=couverture)
+    return _post("format-record", jour, due, f"Record : {r['name']}", [page], legende, "#CauriCharts #Record #YouTube", cle, couverture=couverture, illustration_ia=bool(illustration))
 
 def du_jour(jour: date) -> list:
     """Les formats prévus aujourd'hui (appelé par la chaîne de nuit) ; chacun part à son heure via la file d'attente."""

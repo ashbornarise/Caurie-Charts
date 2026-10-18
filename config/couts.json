@@ -7,5 +7,6 @@
   {"nom":"Domaine cauricharts.com chez LWS","montant":null,"devise":null,"periodicite":"annuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"domaine"},
   {"nom":"Neon","montant":0,"devise":"EUR","periodicite":"offre gratuite","prochaine_echeance":null,"a_confirmer":false,"categorie":"service"},
   {"nom":"Buffer","montant":0,"devise":"EUR","periodicite":"offre gratuite","prochaine_echeance":null,"a_confirmer":false,"categorie":"service"},
-  {"nom":"Crédits Google Cloud d'essai","montant":262,"devise":"EUR","periodicite":"crédit d'essai","prochaine_echeance":"2027-01-10","a_confirmer":false,"categorie":"crédit"}
+  {"nom":"Crédits Google Cloud d'essai","montant":262,"devise":"EUR","periodicite":"crédit d'essai","prochaine_echeance":"2027-01-10","a_confirmer":false,"categorie":"crédit"},
+  {"nom":"Gemini 2.5 Flash Image · illustration","montant":0.039,"devise":"USD","periodicite":"par image","prochaine_echeance":null,"a_confirmer":true,"categorie":"coût variable"}
 ]
