@@ -764,7 +764,7 @@ def record(jour: date, due: datetime) -> dict | None:
     cle = str(r['id'])
     couverture = lambda fmt: pourtoi.record(photo, phrase, str(n), fmt=fmt, couleur=OR)
     page = (_fiche(r['name'], phrase.upper(), phrase, ["YouTube (derniers snapshots des clips officiels)", "Cauri Charts"], cle), "Record", None)
-    legende = f"🏆 {phrase}.\n\nComptage recalculé depuis les derniers relevés disponibles de chaque clip officiel.\n\nSource : YouTube, snapshots de Cauri Charts."
+    legende = f"🏆 {phrase}.\n\nLe record parmi les artistes suivis par Cauri Charts, recalculé depuis les derniers relevés de chaque clip officiel.\n\nSource : YouTube, snapshots de Cauri Charts."
     return _post("format-record", jour, due, f"Record : {r['name']}", [page], legende, "#CauriCharts #Record #YouTube", cle, couverture=couverture)
 
 def du_jour(jour: date) -> list:
