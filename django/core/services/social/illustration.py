@@ -19,6 +19,15 @@ STYLE = ("Glossy high-end music studio session in the style of a colors room: se
          "solid, ultra-saturated, vivid {couleur} color (bold, rich, intense, never muted or matte), strong color blocking. "
          "Bright high-key beauty lighting, luminous and polished: glowing radiant skin, smooth sleek glossy fabrics and surfaces, "
          "crisp highlights, clean soft shadows, vibrant pop colors, ultra sharp, premium fashion advertising look, 8k.")
+# Cadrages immersifs (décision du 19/10/2026) : la caméra « aspire » le regard — angle fort, profondeur, premier plan
+CAMERAS = [
+    "Dramatic low-angle hero shot with a 24mm wide lens, the subject towering over the viewer, strong perspective lines of the floor.",
+    "Close, intimate shot through a blurred foreground element (microphone or vinyl edge), shallow depth of field, viewer pulled into the scene.",
+    "High-angle top-down view looking down at the subject, graphic shadow on the colored floor, bold geometric composition.",
+    "Dutch tilt of 12 degrees, dynamic diagonal composition, motion and energy, subject breaking toward the camera.",
+    "Wide symmetrical one-point perspective of the colored room, deep vanishing point, subject centered and small, immersive space.",
+    "Over-the-shoulder point of view, the viewer standing right behind the subject, cinematic 35mm framing.",
+]
 # Des personnes, oui, mais anonymes : jamais un visage reconnaissable, jamais une célébrité (décision du 19/10/2026)
 INTERDIT = ("The person is anonymous: face NOT visible (seen from behind, silhouette, face hidden by a hat brim "
             "or shadow, or cropped below the eyes). No recognizable person, no celebrity, no text, no letters, no logos, no watermark")
@@ -57,7 +66,8 @@ def _prompt(sujet: str, famille: str) -> str:
     h = int(hashlib.sha256((sujet or famille).encode("utf-8")).hexdigest(), 16)
     scene = scenes[h % len(scenes)]
     couleur = COULEURS[(h // 7 + clock.today().toordinal()) % len(COULEURS)]   # une couleur différente d'un jour à l'autre
-    return f"{scene} {STYLE.format(couleur=couleur)} {INTERDIT}."
+    camera = CAMERAS[(h // 11 + clock.today().toordinal()) % len(CAMERAS)]
+    return f"{scene} {camera} {STYLE.format(couleur=couleur)} {INTERDIT}."
 
 
 def _path(fichier: str) -> Path:
