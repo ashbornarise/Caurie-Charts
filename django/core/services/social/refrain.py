@@ -152,8 +152,8 @@ def calque(haut: str, titre: str, artiste: str, chiffre: str, credit: str) -> Im
     return img
 
 
-def vignette(video: str, out: str, t: float = 4.0) -> str | None:
-    """Image de couverture du post vidéo (Telegram, aperçus) : une image prise dans l'extrait."""
+def vignette(video: str, out: str, t: float = 2.0) -> str | None:
+    """Image de couverture du post vidéo (Telegram, aperçus) : une image prise dans l'extrait, au milieu d'un plan (pas sur un fondu entre deux photos)."""
     try:
         subprocess.run([ffmpeg(), "-y", "-v", "error", "-ss", str(t), "-i", video, "-frames:v", "1", "-q:v", "3", out],
                        capture_output=True, timeout=120, check=True)
