@@ -38,8 +38,10 @@ def echange_code(code=None):
             "client_secret": env.get("TIKTOK_CLIENT_SECRET", ""), "code": code,
             "grant_type": "authorization_code", "redirect_uri": REDIRECT_URI}, timeout=15)
         reponse.raise_for_status()
-        data = reponse.json().get("data", {})
+        corps = reponse.json()
+        data = corps.get("data", corps)
         if not data.get("access_token") or not data.get("refresh_token"):
+            print("TikTok :", corps.get("error") or data.get("error"), corps.get("error_description") or data.get("description"))
             return False
         expiry = datetime.now(timezone.utc)
         db.run("""UPDATE tiktok_auth SET code = NULL, access_token = ?, refresh_token = ?,
@@ -66,7 +68,8 @@ def rafraichit(ligne=None):
             "client_secret": env.get("TIKTOK_CLIENT_SECRET", ""), "grant_type": "refresh_token",
             "refresh_token": ligne["refresh_token"]}, timeout=15)
         reponse.raise_for_status()
-        data = reponse.json().get("data", {})
+        corps = reponse.json()
+        data = corps.get("data", corps)
         if not data.get("access_token"):
             return None
         now = datetime.now(timezone.utc)
