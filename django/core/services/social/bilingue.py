@@ -12,6 +12,7 @@ from core.services.platforms import log_write
 
 DRAPEAU_EN = "🇬🇧"
 LIEN = "Lien en bio · Link in bio : cauricharts.com"
+ABONNE = "👉 Abonne-toi pour ne rien rater · Follow for more"
 
 SYSTEME = ("You translate French music-news social media captions into natural, punchy English for an international "
            "audience. You translate faithfully: never add facts, numbers, opinions or sources that are not in the French text.")
@@ -74,14 +75,14 @@ def legende(post: dict, lien: str | None = None, limite: int = 2200) -> str:
     lien = lien or LIEN
     tags = (post.get("hashtags") or "").strip()
     fr = f"{post['title']}\n\n{_sans_lien(post.get('caption'))}".strip()
-    place = limite - len(lien) - len(tags) - 40          # séparateurs, drapeau et marge (emojis comptés double)
+    place = limite - len(lien) - len(tags) - len(ABONNE) - 42          # séparateurs, drapeau, appel à s'abonner et marge
     if len(fr) > place // 2:
         # Légende longue : chaque langue garde la moitié de la place, le français est coupé à une fin de ligne
         coupe = fr[: place // 2]
         fr = (coupe.rsplit("\n", 1)[0] if "\n" in coupe else coupe).rstrip()
     anglais = en(post, place - len(fr) - len(post["title"]) - 4)
     texte_en = f"{DRAPEAU_EN} {anglais['title']}\n\n{anglais['caption']}" if anglais else ""
-    trop = len("\n\n".join(p for p in (fr, texte_en, lien, tags) if p)) - limite
+    trop = len("\n\n".join(p for p in (fr, texte_en, ABONNE, lien, tags) if p)) - limite
     if texte_en and trop > 0:   # jamais les hashtags ni le lien : c'est l'anglais qui raccourcit
         texte_en = texte_en[: len(texte_en) - trop - 1].rsplit("\n", 1)[0].rstrip() + "…"
-    return "\n\n".join(p for p in (fr, texte_en, lien, tags) if p)
+    return "\n\n".join(p for p in (fr, texte_en, ABONNE, lien, tags) if p)

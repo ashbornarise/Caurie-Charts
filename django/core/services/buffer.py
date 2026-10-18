@@ -177,7 +177,9 @@ def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = Fal
     # Vidéo au refrain (son du clip déjà dedans) : publiée automatiquement partout, TikTok compris (17/10/2026)
     # Règle du fondateur (17/10/2026) : jamais de notification sur Instagram (il ajoute la musique après publication) ;
     # TikTok en notification (le son ne s'ajoute pas après coup), sauf l'extrait de clip autorisé qui a déjà le sien
-    notify = service == "tiktok" and not (video_seule(post) and not video_muette(post))
+    # Vidéo maison muette (18/10/2026) : Instagram aussi en notification, pour y mettre le son avant de publier
+    notify = (video_muette(post) and service in ("instagram", "tiktok")) or (
+        service == "tiktok" and not (video_seule(post) and not video_muette(post)))
     data = {"channelId": channel["id"], "text": text(post, service), "assets": assets,
             "schedulingType": "notification" if notify else "automatic", "needsApproval": False,
             "mode": "customScheduled" if due_at else "addToQueue"}
