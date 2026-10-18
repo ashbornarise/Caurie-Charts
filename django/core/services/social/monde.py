@@ -33,6 +33,25 @@ FEEDS = [
     {"name": "HipHopDX", "url": "https://hiphopdx.com/rss/news.xml", "poids": 2},
     {"name": "Music Business Worldwide", "url": "https://www.musicbusinessworldwide.com/feed/", "poids": 2},
     {"name": "RFI Musique", "url": "https://www.rfi.fr/fr/musique/rss", "poids": 3},
+    # Actualité musicale AFRICAINE (flux testés le 18/10/2026 : tous répondent avec des articles des 3 derniers jours).
+    # « afrique » : leurs sujets passent en priorité dans la sélection ; « exclure » : titres qui ne sont pas de l'actu.
+    # Écartés au test : Pulse (flux généraux sans rubrique musique), OkayAfrica, TRACE, GhanaWeb, YEN/Legit (rubriques
+    # non filtrées), Pan African Music (dernier article de 2025), Africanews et BBC Afrique (pas de flux culture).
+    {"name": "NotJustOk", "url": "https://notjustok.com/feed/", "poids": 2, "afrique": True,
+     "exclure": r"\blyrics\b|\bchelsea\b|\bpremier league\b"},
+    {"name": "BellaNaija", "url": "https://www.bellanaija.com/category/music/feed/", "poids": 2, "afrique": True},
+    {"name": "Music In Africa", "url": "https://www.musicinafrica.net/rss", "poids": 2, "afrique": True},
+    {"name": "The Native", "url": "https://thenativemag.com/feed/", "poids": 2, "afrique": True},
+    {"name": "Graphic Showbiz", "url": "https://www.graphic.com.gh/entertainment.feed?type=rss", "poids": 2, "afrique": True},
+    {"name": "Senego", "url": "https://senego.com/rubrique/people/feed", "poids": 1, "afrique": True},
+]
+# Veille Google Actualités sur la musique africaine elle-même (genres, scènes nationales), en français et en anglais
+AFRIQUE_REQUETES = [
+    ("https://news.google.com/rss/search?hl=fr&gl=FR&ceid=FR:fr&q=",
+     '(afrobeats OR "coupé-décalé" OR "musique africaine" OR "musique ivoirienne" OR "musique togolaise" OR '
+     '"musique béninoise" OR "musique sénégalaise" OR "musique camerounaise") when:2d'),
+    ("https://news.google.com/rss/search?hl=en-NG&gl=NG&ceid=NG:en&q=",
+     '(afrobeats OR "Nigerian music" OR "Ghanaian music" OR amapiano OR "African music") when:2d'),
 ]
 # Les plus grands visages de la musique, du moment et de tous les temps (veille Google Actualités en français)
 STARS = ["Beyoncé", "Taylor Swift", "Rihanna", "Drake", "Bad Bunny", "The Weeknd", "Ed Sheeran", "Billie Eilish", "Dua Lipa",
@@ -47,8 +66,9 @@ GOOGLE_NEWS = "https://news.google.com/rss/search?hl=fr&gl=FR&ceid=FR:fr&q="
 def _flux_stars() -> list:
     from urllib.parse import quote
     lots = [STARS[i:i + 9] for i in range(0, len(STARS), 9)]
-    return [{"name": "Google Actualités", "url": GOOGLE_NEWS + quote("(" + " OR ".join(f'"{n}"' for n in lot) + ") musique when:2d"), "poids": 1, "stars": True}
-            for lot in lots]
+    return ([{"name": "Google Actualités", "url": GOOGLE_NEWS + quote("(" + " OR ".join(f'"{n}"' for n in lot) + ") musique when:2d"), "poids": 1, "stars": True}
+             for lot in lots]
+            + [{"name": "Google Actualités", "url": base + quote(q), "poids": 1, "afrique": True} for base, q in AFRIQUE_REQUETES])
 
 
 RUBRIQUES = {"monde": "L'ACTU MONDE", "records": "PROJETS & RECORDS", "sorties": "ÇA SORT"}
@@ -94,7 +114,9 @@ def collecte(heures: int = 36) -> list:
     def un(feed):
         try:
             xml = http_get(feed["url"])
-            return [{**it, "source": feed["name"], "poids": feed["poids"]} for it in parse_feed(xml or "")]
+            return [{**it, "source": feed["name"], "poids": feed["poids"], "afrique": bool(feed.get("afrique"))}
+                    for it in parse_feed(xml or "")
+                    if not (feed.get("exclure") and re.search(feed["exclure"], it.get("title") or "", re.I))]
         except Exception as exc:  # noqa: BLE001
             log_write("monde", "warning", f"{feed['name']} : {exc}")
             return []
@@ -137,6 +159,7 @@ def regroupe(items: list) -> list:
         h["sources"] = sorted({i["source"] for i in h["items"]})
         h["poids"] = sum({i["source"]: i["poids"] for i in h["items"]}.values())
         h["date"] = max(i["date"] for i in h["items"])
+        h["afrique"] = any(i.get("afrique") for i in h["items"])   # vue par un média africain
         h["cle"] = hashlib.sha1(" ".join(sorted(h["noms"] or h["mots"])[:6]).encode()).hexdigest()[:12]
     return sorted(histoires, key=lambda h: (h["poids"], h["date"]), reverse=True)
 
@@ -280,11 +303,37 @@ def fans(artiste: str) -> int:
     return _FANS[artiste]
 
 
+_NOS_ARTISTES: set | None = None
+
+
+def nos_artistes() -> set:
+    """Noms (sans accents, en minuscules) des artistes actifs suivis en base : la scène ouest-africaine."""
+    global _NOS_ARTISTES
+    if _NOS_ARTISTES is None:
+        try:
+            _NOS_ARTISTES = {_sans_accents(r["name"]).lower() for r in db.all("SELECT name FROM artists WHERE status = 'active'")
+                             if len(r["name"] or "") >= 3}
+        except Exception:  # noqa: BLE001
+            _NOS_ARTISTES = set()
+    return _NOS_ARTISTES
+
+
+def africain(f: dict) -> bool:
+    """L'info parle-t-elle d'un artiste africain (stars africaines de la liste, ou artiste suivi dans nos classements) ?"""
+    a = _sans_accents(f.get("artiste") or "").lower().strip()
+    return bool(a) and (a in AFRICAINS or a in nos_artistes())
+
+
+BONUS_AFRIQUE = 15   # léger coup de pouce : notre public est d'abord ouest-africain
+
+
 def score(f: dict) -> float:
-    """Note d'une info : son poids « choc », le nombre de médias, et surtout la notoriété de l'artiste (les plus grands visages devant)."""
+    """Note d'une info : son poids « choc », le nombre de médias, et surtout la notoriété de l'artiste (les plus grands visages devant).
+    Léger bonus aux artistes africains (et un peu moins aux infos venues d'un média africain)."""
     import math
     star = any(_sans_accents(n).lower() == _sans_accents(f.get("artiste", "")).lower() for n in STARS)
-    return f["choc"] + 12 * len(f["sources"]) + 9 * math.log10(1 + fans(f.get("artiste", ""))) + (25 if star else 0)
+    bonus = BONUS_AFRIQUE if africain(f) else (5 if f.get("afrique") else 0)
+    return f["choc"] + 12 * len(f["sources"]) + 9 * math.log10(1 + fans(f.get("artiste", ""))) + (25 if star else 0) + bonus
 
 
 def deja_publie(cle: str) -> bool:
@@ -649,12 +698,24 @@ def archive(fiches: list, image: str | None = None) -> None:
                            "status": "published", "published_at": now_utc()})
 
 
+def au_moins_un_africain(tries: list, n: int) -> list:
+    """Les n premières infos (déjà triées), dont au moins une sur un artiste africain quand il y en a une : elle prend
+    la dernière place (jamais celle de l'info du moment)."""
+    choix = tries[:n]
+    if not choix or any(africain(f) for f in choix):
+        return choix
+    afr = next((f for f in tries[n:] if africain(f)), None)
+    return choix[:-1] + [afr] if afr else choix
+
+
 def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
     """Édition de 8 h (« monde ») ou de 20 h (« records » + « sorties ») : les infos les plus reprises, jamais déjà publiées."""
     if not rendu_seul and db.value("SELECT 1 FROM social_posts WHERE slot_date = ? AND (theme = ? OR theme LIKE ?)",
                                    [jour.isoformat(), f"monde-{quand}", f"monde-{quand}-%"]):
         return None   # édition déjà faite aujourd'hui (une seule par créneau)
-    histoires = [h for h in regroupe(collecte(30 if quand == "matin" else 24)) if not deja_publie(h["cle"])][:30]
+    histoires = [h for h in regroupe(collecte(30 if quand == "matin" else 24)) if not deja_publie(h["cle"])]
+    # les 24 plus reprises, plus jusqu'à 6 vues par un média africain (sinon les grands médias mondiaux prennent toute la place)
+    histoires = histoires[:24] + [h for h in histoires[24:] if h.get("afrique")][:6]
     fiches = redige(histoires)
     if quand == "matin":
         choix = [f for f in fiches if f["rubrique"] == "monde"]
@@ -674,7 +735,7 @@ def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
         if a and a in vus_artistes:
             continue
         vus_artistes.add(a); choix.append(f)
-    choix = choix[:PAR_EDITION]
+    choix = au_moins_un_africain(choix, PAR_EDITION)
     if not choix:
         return None
     # UNE info = UN post = UN visage : celui qui aime Lady Gaga voit son post, celui qui aime Burna Boy le sien.
@@ -741,7 +802,7 @@ def marque_vu(cles: list) -> None:
 
 def confirme(h: dict) -> bool:
     """Flash : au moins un grand média de référence parmi les sources, ou trois médias différents."""
-    grands = {f["name"] for f in FEEDS}
+    grands = {f["name"] for f in FEEDS if f["poids"] >= 2}
     return len(h["sources"]) >= SOURCES_FLASH and (bool(grands & set(h["sources"])) or len(h["sources"]) >= 3)
 
 
