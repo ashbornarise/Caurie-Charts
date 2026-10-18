@@ -717,12 +717,40 @@ def du_jour(jour: date) -> list:
     prevus.append((anecdote, a_heure(13 if midi_pris else 12)))
     if jour.isoweekday() in (1, 3):   # lundi et mercredi 18 h : la punchline
         prevus.append((punchline, a_heure(18)))
+    # Veille d'événements : production à blanc dans le dossier média, aucune insertion en base.
+    try:
+        from core.services.social import evenements as EV
+        evenement = EV.du_jour(jour)
+        if evenement:
+            from core.services.social import image as PI
+            prefixe = f"{jour.isoformat()}-evenement"
+            photos = EV.fabrique_photos(evenement, PI.DIR, prefixe)
+            if photos:
+                prevus.append((lambda j, d, e=evenement, p=photos: {
+                    "title": f"Retour en images : {e['nom']}", "caption": EV.legende(e), "media": p,
+                    "theme": "format-evenement", "due": d.isoformat()
+                }, a_heure(15)))
+            def video_evenement(j, d, e=evenement):
+                PI.DIR.mkdir(parents=True, exist_ok=True)
+                chemin = PI.DIR / f"{j.isoformat()}-evenement-video.mp4"
+                res = EV.moment_video(e, str(chemin))
+                if not res:
+                    return None
+                return {"title": f"Les moments forts : {e['nom']}", "theme": "format-evenement-video",
+                        "due": d.isoformat(), "video": str(chemin), "source": res["source"],
+                        "credit": res["credit"], "caption": EV.legende(e) + f"\n\n{res['credit']} · {res['source']}"}
+            prevus.append((video_evenement, a_heure(19)))
+    except Exception as exc:  # noqa: BLE001 — les autres créneaux restent disponibles
+        log_write("social", "error", f"format événements : {exc}")
     lignes = []
     for p in filter(None, prevus):
         fn, due = p
         try:
             post = fn(jour, due)
-            lignes.append(f"{fn.__name__} : " + (post["title"] if post else "pas assez de données"))
+            if isinstance(post, dict):
+                lignes.append(f"{post['theme']} : {post['title']} → {due:%H:%M} UTC (à blanc, non enregistré)")
+            else:
+                lignes.append(f"{fn.__name__} : " + (post["title"] if post else "pas assez de données"))
         except Exception as exc:  # noqa: BLE001 — un format raté ne bloque pas les autres
             log_write("social", "error", f"format {fn.__name__} : {exc}")
             lignes.append(f"{fn.__name__} : échec ({exc})")

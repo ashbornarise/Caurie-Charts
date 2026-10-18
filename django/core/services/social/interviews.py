@@ -310,10 +310,10 @@ def morceaux(mots: list[tuple[float, str]], debut: float, fin: float, max_mots: 
     return out
 
 
-def _calque(accroche: str, artiste: str, credit: str) -> Image.Image:
+def _calque(accroche: str, artiste: str, credit: str, label: str = "MOMENT D'INTERVIEW") -> Image.Image:
     img = Image.new("RGBA", (R.W, R.H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.text((64, 120), f"CAURI CHARTS  ·  MOMENT D'INTERVIEW  ·  {artiste.upper()}", font=R._font("Poppins-Bold.ttf", 30),
+    d.text((64, 120), f"CAURI CHARTS  ·  {label}  ·  {artiste.upper()}", font=R._font("Poppins-Bold.ttf", 30),
            fill=(190, 175, 255, 255))
     texte = accroche.upper()
     for taille in (92, 84, 76, 68, 60):
@@ -342,10 +342,11 @@ def _sous_titre(texte: str) -> Image.Image:
     return img
 
 
-def monte(src: str, duree: float, accroche: str, artiste: str, credit: str, subs: list[dict], out: str, tmp: str) -> str | None:
+def monte(src: str, duree: float, accroche: str, artiste: str, credit: str, subs: list[dict], out: str, tmp: str,
+          label: str = "MOMENT D'INTERVIEW") -> str | None:
     """9:16 : fond = vidéo agrandie et floutée, vidéo au centre, accroche en haut, sous-titres en bas ; son de la parole."""
     calque = os.path.join(tmp, "calque.png")
-    _calque(accroche, artiste, credit).save(calque)
+    _calque(accroche, artiste, credit, label).save(calque)
     entrees = ["-i", src, "-loop", "1", "-t", f"{duree:.2f}", "-i", calque]
     filtre = [f"[0:v]split=2[a][b];[a]scale=270:480:force_original_aspect_ratio=increase,crop=270:480,boxblur=10:2,"
               f"eq=brightness=-0.32,scale={R.W}:{R.H}[fond];[b]scale=-2:880,crop='min(iw,{R.W})':880[clip];"
