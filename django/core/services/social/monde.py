@@ -423,7 +423,7 @@ def couverture_choc(f: dict, kicker: str, est_flash: bool, fmt: str = "feed", di
     texte_sujet = " ".join([(diapo or {}).get("titre") or "", f.get("titre", "") or "", f.get("une", "") or ""])
     nom_ok = f.get("photo_ok") or (f.get("artiste") and _sans_accents(f["artiste"]).lower() in _sans_accents(texte_sujet).lower())
     url = None if ((diapo or {}).get("fond") or not nom_ok) else photo(f["artiste"])
-    src = (diapo or {}).get("fond")
+    src = (diapo or {}).get("fond") or f.get("illustration_fond")
     if not src and not url:   # pas de photo sûre : l'objet du sujet, sinon (plus bas) une scène de concert
         src = objet(f, f.get("cle", "") + (diapo or {}).get("graine", ""))
     if not src:
@@ -669,6 +669,14 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
     from core.services.social import pourtoi
     nom_ok = _sans_accents(une_fiche["artiste"]).lower() in _sans_accents(une_fiche["titre"] + " " + une_fiche["une"]).lower()
     photo_une = photo(une_fiche["artiste"]) if nom_ok else None
+    illustration_ia = False
+    if not photo_une:
+        from core.services.social.illustration import genere
+        fond_ia = genere(f"musique {une_fiche.get('rubrique', '')}", "monde")
+        if fond_ia:
+            une_fiche = {**une_fiche, "illustration_fond": fond_ia}
+            pages[0] = (une_fiche, pages[0][1], pages[0][2])
+            illustration_ia = True
     for n, (f, kk, dp) in enumerate(pages):
         if n == 0 and photo_une:
             # Couverture « Pour toi » (17/10/2026) : visage plein cadre, titre énorme, un mot en couleur, rien d'autre
@@ -698,9 +706,14 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
             log_write("monde", "warning", f"image d'article {une_fiche['artiste']} : {exc}")
             article = None
     legende = _legende(fiches, entete)
+    if illustration_ia:
+        from core.services.social.bilingue import mention_illustration
+        legende = mention_illustration(legende)
     hashtags = "#CauriMonde #CauriCharts #ActuMusique #Musique #" + re.sub(r"\W", "", _sans_accents(une_fiche["artiste"]).title())[:30]
     faits = {"day": jour.isoformat(), "fiches": [{k: v for k, v in f.items() if k not in ("items", "mots", "noms", "date")} for f in fiches],
              "due": due.isoformat() if due else None}
+    if illustration_ia:
+        faits["illustration_ia"] = True
     if rendu_seul:
         return {"fichiers": fichiers, "legende": legende, "cover": cover, "fiches": fiches, "hashtags": hashtags, "faits": faits,
                 "image_article": article}
