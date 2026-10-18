@@ -5,6 +5,8 @@ Choix des titres (sans jamais reprendre un titre déjà passé en clip ces 21 de
   1. les N°1 du dernier classement officiel publié (« N°1 au Nigeria cette semaine », nouvelles vues de la semaine) ;
   2. le Top 20 Afrique de l'Ouest en direct (« N°3 en Afrique de l'Ouest ») ;
   3. les clips officiels sortis ces 7 derniers jours par nos artistes suivis, les plus vus d'abord (« Nouveau clip »).
+La vidéo de 17 h devient un « moment d'interview » (interviews.py : un artiste qui parle de lui, avec le son de la
+parole) quand un passage valable est trouvé ; sinon, extrait de clip ou vidéo maison comme les autres.
 Téléchargement YouTube : à lancer depuis le poste de travail (manage.py clips), YouTube bloquant souvent les serveurs."""
 import json
 from datetime import date, datetime, timedelta, timezone
@@ -91,18 +93,74 @@ def candidats() -> list[dict]:
     return uniques
 
 
+SLOT_INTERVIEW = 1   # la vidéo de 17 h devient un « moment d'interview » quand un passage valable est trouvé
+
+
+def _due(jour: date, k: int) -> datetime:
+    due = datetime(jour.year, jour.month, jour.day, HEURES[k], 0, tzinfo=timezone.utc)
+    # Lancé tard : l'heure passée devient « dans 20 min », puis une vidéo par heure
+    return max(due, datetime.now(timezone.utc).replace(second=0, microsecond=0) + timedelta(minutes=20 + 60 * k))
+
+
+def _interview(jour: date, k: int, essai: bool, pris: set) -> tuple[str, str] | None:
+    """Moment d'interview (interviews.py) pour le créneau k : (ligne de compte rendu, artiste) ou None.
+    Deux artistes essayés au plus (une recherche YouTube chacun) ; ni un artiste passé en interview ces 14 jours,
+    ni une vidéo déjà utilisée."""
+    from core.services.social import interviews as IT
+    try:
+        vids, recents = IT.deja_vus()
+    except Exception:  # noqa: BLE001
+        vids, recents = set(), set()
+    nom = f"{jour.isoformat()}-interview-{k + 1}-{datetime.now(timezone.utc):%H%M%S}"
+    video = PI.DIR / f"{nom}.mp4"
+    res = None
+    for artiste in [a for a in IT.artistes(jour) if a.lower() not in pris | recents][:2]:
+        res = IT.moment(artiste, str(video), vids)
+        if res:
+            break
+    if not res:
+        return None
+    titre = f"Moment d'interview : {res['artist']} · {res['accroche']}"
+    if essai:
+        return f"[essai] {titre} → {video.name} (interview, {res['source']})", res["artist"]
+    vignette = PI.DIR / f"{nom}.jpg"
+    R.vignette(str(video), str(vignette), 2.0)
+    due = _due(jour, k)
+    tags = "#CauriCharts #" + "".join(ch for ch in res["artist"] if ch.isalnum()) + " #Interview #Afrobeats #MusiqueAfricaine"
+    storage.publish_media_files("social", [video.name, vignette.name])
+    # Son propre son (la parole) : kind « format-clip », publication automatique comme les extraits de clips
+    db.insert("social_posts", {"slot_date": jour.isoformat(), "theme": f"format-clip-{k + 1}", "title": titre[:160],
+                               "caption": IT.legende(res), "hashtags": tags[:300], "image_square": vignette.name,
+                               "image_story": vignette.name, "carousel": "[]", "video": video.name, "status": "approved",
+                               "facts": json.dumps({"kind": "format-clip", "format": "interview", "due": due.isoformat(),
+                                                    "artiste": res["artist"], "video_id": res["video_id"], "source": res["source"],
+                                                    "debut": res["debut"], "fin": res["fin"], "accroche": res["accroche"],
+                                                    "texte": res["texte"][:1500]}, ensure_ascii=False)})
+    return f"{titre} → {due:%H:%M} (moment d'interview)", res["artist"]
+
+
 def du_jour(jour: date | None = None, n: int = 3, essai: bool = False) -> list[str]:
-    """Fabrique jusqu'à n vidéos pour la journée et les programme (file d'attente) aux heures HEURES."""
+    """Fabrique jusqu'à n vidéos pour la journée et les programme (file d'attente) aux heures HEURES.
+    Une des vidéos (créneau SLOT_INTERVIEW) est un « moment d'interview » si un passage valable est trouvé."""
     jour = jour or datetime.now(timezone.utc).date()
     PI.DIR.mkdir(parents=True, exist_ok=True)
     faits_du_jour = db.all("SELECT theme FROM social_posts WHERE slot_date = ? AND theme LIKE 'format-clip-%'", [jour.isoformat()])
     deja_faits = {r["theme"] for r in faits_du_jour}
-    lignes, k, artistes = [], 0, set()
+    lignes, k, artistes, noms, itw_tente = [], 0, set(), set(), False
     for c in candidats():
         if k >= n:
             break
+        if n >= 2 and k == SLOT_INTERVIEW and not itw_tente and f"format-clip-{k + 1}" not in deja_faits:
+            itw_tente = True
+            itw = _interview(jour, k, essai, noms)
+            if itw:
+                lignes.append(itw[0]); noms.add(itw[1].lower())
+                k += 1
+                if k >= n:
+                    break
         artiste = db.value("SELECT artist_id FROM tracks WHERE id = ?", [c["track_id"]])
-        if artiste in artistes:
+        nom_artiste = (db.value("SELECT name FROM artists WHERE id = ?", [artiste]) or "").lower()
+        if artiste in artistes or nom_artiste in noms:
             continue   # un artiste par vidéo et par jour (Asake deux fois le 17/10)
         theme = f"format-clip-{k + 1}"
         if theme in deja_faits:
@@ -110,7 +168,7 @@ def du_jour(jour: date | None = None, n: int = 3, essai: bool = False) -> list[s
             continue
         if _deja(c["track_id"]):
             continue
-        artistes.add(artiste)
+        artistes.add(artiste); noms.add(nom_artiste)
         # Extrait du clip seulement avec l'accord écrit de l'artiste ou du label (conf « social.refrain.autorises ») ;
         # sinon vidéo maison muette (photos libres), le son officiel s'ajoutant dans l'application (blocage UMG, 16/10/2026)
         autorise = _autorise(c["track_id"]) and bool(R.clip_officiel(c["track_id"]))
@@ -126,9 +184,7 @@ def du_jour(jour: date | None = None, n: int = 3, essai: bool = False) -> list[s
             continue
         vignette = PI.DIR / f"{nom}.jpg"
         R.vignette(str(video), str(vignette))
-        due = datetime(jour.year, jour.month, jour.day, HEURES[k], 0, tzinfo=timezone.utc)
-        # Lancé tard : l'heure passée devient « dans 20 min », puis une vidéo par heure
-        due = max(due, datetime.now(timezone.utc).replace(second=0, microsecond=0) + timedelta(minutes=20 + 60 * k))
+        due = _due(jour, k)
         titre = f"{c['haut']} : {res['title']} · {res['artist']}"
         legende = (f"🎬 {c['haut']} : « {res['title']} » de {res['artist']}\n\n"
                    + (f"📈 {c['chiffre']}\n\n" if c["chiffre"] else "")
