@@ -276,10 +276,23 @@ class SpotifyClient:
         return self._token
 
 
+def _youtube(http: HttpClient) -> "YouTubeClient":
+    """Clé YouTube principale ; quand son quota du jour est presque épuisé, la seconde clé (YOUTUBE_API_KEY_2, autre
+    projet Google Cloud, son propre quota de 10 000 unités) prend le relais, avec son propre compteur."""
+    quota = int(env.get("YOUTUBE_DAILY_QUOTA", "10000") or 10000)
+    principale = YouTubeClient(env.get("YOUTUBE_API_KEY", ""), http, QuotaStore(), quota)
+    seconde = env.get("YOUTUBE_API_KEY_2", "")
+    if seconde and (not principale.is_available() or principale.remaining_quota() < 1000):
+        relais = YouTubeClient(seconde, http, QuotaStore(), quota)
+        relais.API = "youtube2"
+        return relais
+    return principale
+
+
 def clients(http: HttpClient | None = None) -> dict:
     http = http or HttpClient()
     return {
-        "youtube": YouTubeClient(env.get("YOUTUBE_API_KEY", ""), http, QuotaStore(), int(env.get("YOUTUBE_DAILY_QUOTA", "10000") or 10000)),
+        "youtube": _youtube(http),
         "spotify": SpotifyClient(env.get("SPOTIFY_CLIENT_ID", ""), env.get("SPOTIFY_CLIENT_SECRET", ""), http),
         "audiomack": ManualPlatformClient("audiomack", "accès API sur demande, relevé manuel en attendant"),
         "boomplay": ManualPlatformClient("boomplay", "pas d'API publique connue, relevé manuel"),
