@@ -48,6 +48,38 @@ def send(to: str, subject: str, text: str, reply_to: str | None = None) -> bool:
         return False
 
 
+def send_html(to: str, subject: str, text: str, html: str, reply_to: str | None = None) -> bool:
+    """Envoie un message multipart texte et HTML."""
+    if not configured() or not to:
+        return False
+    sender = env.get("MAIL_FROM", "") or env.get("SMTP_USER", "")
+    msg = EmailMessage()
+    msg["From"] = formataddr((BRAND, sender))
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg["Message-ID"] = make_msgid(domain=sender.split("@")[-1])
+    if reply_to:
+        msg["Reply-To"] = reply_to
+    msg.set_content(text + "\n\n-- \n" + BRAND + " · le classement musical de l'Afrique de l'Ouest\nhttps://cauricharts.com\n")
+    msg.add_alternative(html, subtype="html")
+    host, port = env.get("SMTP_HOST", ""), int(env.get("SMTP_PORT", "465") or 465)
+    try:
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=12) as s:
+                s.login(env.get("SMTP_USER", ""), env.get("SMTP_PASSWORD", ""))
+                s.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=12) as s:
+                s.starttls(context=ssl.create_default_context())
+                s.login(env.get("SMTP_USER", ""), env.get("SMTP_PASSWORD", ""))
+                s.send_message(msg)
+        return True
+    except (OSError, smtplib.SMTPException) as exc:
+        from core.services.platforms import log_write
+        log_write("mail", "error", f"envoi HTML à {to} échoué : {exc}")
+        return False
+
+
 def notify_admin(subject: str, text: str, reply_to: str | None = None) -> bool:
     """Alerte à l'équipe (MAIL_ADMIN) ; « Répondre » écrit directement à la personne."""
     return send(env.get("MAIL_ADMIN", "") or env.get("SMTP_USER", ""), "[Cauri Charts] " + subject, text, reply_to)

@@ -1,0 +1,11 @@
+[
+  {"nom":"Vercel Pro","montant":20,"devise":"USD","periodicite":"mensuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"abonnement"},
+  {"nom":"Gemini API prépayé · Google AI Studio · niveau 1","montant":5,"devise":"EUR","periodicite":"crédit prépayé","prochaine_echeance":null,"a_confirmer":true,"categorie":"crédit"},
+  {"nom":"Groq prépayé","montant":5,"devise":"EUR","periodicite":"crédit prépayé","prochaine_echeance":null,"a_confirmer":true,"categorie":"crédit"},
+  {"nom":"Google One AI Pro · abonnement du fondateur","montant":20,"devise":"USD","periodicite":"mensuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"abonnement fondateur"},
+  {"nom":"Claude · abonnement du fondateur","montant":null,"devise":null,"periodicite":"mensuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"abonnement fondateur"},
+  {"nom":"Domaine cauricharts.com chez LWS","montant":null,"devise":null,"periodicite":"annuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"domaine"},
+  {"nom":"Neon","montant":0,"devise":"EUR","periodicite":"offre gratuite","prochaine_echeance":null,"a_confirmer":false,"categorie":"service"},
+  {"nom":"Buffer","montant":0,"devise":"EUR","periodicite":"offre gratuite","prochaine_echeance":null,"a_confirmer":false,"categorie":"service"},
+  {"nom":"Crédits Google Cloud d'essai","montant":262,"devise":"EUR","periodicite":"crédit d'essai","prochaine_echeance":"2027-01-10","a_confirmer":false,"categorie":"crédit"}
+]
