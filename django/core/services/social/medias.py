@@ -18,6 +18,11 @@ from core.services.platforms import log_write
 CREDITS: dict = {}
 MUSIQUE = re.compile(r"concert|live|stage|scene|perform|singer|chanteu|rapper|rappeur|musician|musicien|festival|show|tour|"
                      r"music|musique|gig|artist|artiste|album|award|grammy|headies|afrima|mic\b|microphone", re.I)
+# Nom d'un seul mot (« Amadeus », « Josey ») : trop d'homonymes. Il faut en plus un indice ouest-africain dans le titre
+# ou les mots-clés de la photo (« Amadeus » donnait une chanteuse européenne dans une vidéo maison, 19/10/2026)
+AFRIQUE = re.compile(r"afro|africa|afrique|nigeria|naija|lagos|abuja|ghana|accra|kumasi|togo|lome|benin|cotonou|"
+                     r"ivoire|ivory|abidjan|senegal|dakar|mali|bamako|burkina|ouaga|niger|guinea|guinee|conakry|"
+                     r"cameroun|cameroon|highlife|amapiano|coupe.?decale|mbalax|headies|afrima|afronation|felabration", re.I)
 _CACHE: dict = {}
 
 
@@ -73,7 +78,10 @@ def scenes_libres(artiste: str, n: int = 8) -> list[dict]:
             # Le nom comme mot entier, et un contexte musical : « Josey » donnait un joueur de football (Josey Jewell, 17/10)
             if not re.search(rf"\b{re.escape(nom)}\b", titre) or f"at {nom}" in titre or f"for {nom}" in titre:
                 continue
-            if not MUSIQUE.search(titre + " " + _sans_accents(" ".join(t.get("name", "") for t in (r.get("tags") or [])))):
+            contexte = titre + " " + _sans_accents(" ".join(t.get("name", "") for t in (r.get("tags") or [])))
+            if not MUSIQUE.search(contexte):
+                continue
+            if " " not in nom.strip() and not AFRIQUE.search(contexte):
                 continue
             if r.get("width") and (r["width"] < 900 or (r.get("height") or 0) < 700):   # taille parfois absente
                 continue
