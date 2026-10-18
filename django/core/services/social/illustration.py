@@ -54,6 +54,15 @@ def _banque(famille: str):
         return None
     db.run("UPDATE illustrations SET utilise_le = ? WHERE id = ?", [datetime.now(timezone.utc).replace(tzinfo=None), row["id"]])
     path = _path(row["fichier"])
+    if not path.is_file() and storage.blob_public_url():
+        # Sur GitHub Actions le disque repart vide : on recharge l'image de la banque depuis le Blob
+        try:
+            r = requests.get(f"{storage.blob_public_url()}/media/illustrations/{path.name}", timeout=30)
+            r.raise_for_status()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(r.content)
+        except Exception:  # noqa: BLE001
+            return None
     return str(path) if path.is_file() else None
 
 
@@ -89,6 +98,10 @@ def genere(sujet: str, famille: str, ratio: str = "4:5") -> str | None:
         digest = hashlib.sha256((famille + "|" + (sujet or "")).encode("utf-8")).hexdigest()
         filename = f"{digest[:20]}-{datetime.now(timezone.utc):%Y%m%d%H%M%S%f}.png"
         storage.store_media("illustrations", filename, out.getvalue(), "image/png")
+        local = _path(filename)  # store_media n'écrit pas sur disque quand le Blob est configuré ; le dessin du post en a besoin
+        local.parent.mkdir(parents=True, exist_ok=True)
+        if not local.is_file():
+            local.write_bytes(out.getvalue())
         db.insert("illustrations", {"famille": famille, "sujet_hash": digest, "fichier": filename,
                                      "cree_le": datetime.now(timezone.utc).replace(tzinfo=None),
                                      "utilise_le": datetime.now(timezone.utc).replace(tzinfo=None)})
