@@ -68,7 +68,7 @@ TIKTOK_SIZE = (1080, 1920)  # TikTok refuse les photos de plus de 2 073 600 pixe
 
 
 def tiktok_copies(files: list, base: str) -> list:
-    """Copie 1080 × 1920 de chaque visuel 9:16, créée une fois et déposée à côté de l'original (« …-tt.jpg »)."""
+    """Copie de 1080 de large de chaque visuel (4:5), créée une fois et déposée à côté de l'original (« …-tt45.jpg »)."""
     import io
     from concurrent.futures import ThreadPoolExecutor
     from PIL import Image
@@ -79,13 +79,14 @@ def tiktok_copies(files: list, base: str) -> list:
         return HttpClient(15).request("HEAD", f"{base}/media/social/{name}")["status"] == 200
 
     def one(f: str) -> str:
-        small = f.rsplit(".", 1)[0] + "-tt.jpg"
+        small = f.rsplit(".", 1)[0] + "-tt45.jpg"
         try:
             if readable(small):
                 return small
             data = http_get(f"{base}/media/social/{f}", binary=True)
             img = Image.open(io.BytesIO(data)).convert("RGB")
-            img = img.resize(TIKTOK_SIZE, Image.LANCZOS) if img.size[0] > TIKTOK_SIZE[0] else img
+            if img.size[0] > TIKTOK_SIZE[0]:   # 1080 de large, proportions gardées (4:5 -> 1080 × 1350)
+                img = img.resize((TIKTOK_SIZE[0], round(img.size[1] * TIKTOK_SIZE[0] / img.size[0])), Image.LANCZOS)
             out = io.BytesIO()
             img.save(out, "JPEG", quality=95, subsampling=0, optimize=True)  # couleurs pleines : le texte coloré reste net après la recompression de TikTok
             storage.blob_put(f"media/social/{small}", out.getvalue(), "image/jpeg")
@@ -104,7 +105,7 @@ def tiktok_copies(files: list, base: str) -> list:
 
 
 def images(post: dict, service: str) -> list:
-    """Adresses publiques des visuels : 9:16 pour TikTok, 4:5 ailleurs (couverture puis titres)."""
+    """Adresses publiques des visuels : 4:5 partout, TikTok compris (couverture puis titres)."""
     from core import storage
     base = storage.blob_public_url()
     if not base:
@@ -114,7 +115,9 @@ def images(post: dict, service: str) -> list:
     except ValueError:
         slides = []
     if service == "tiktok":
-        files = [s.get("tiktok") for s in slides if isinstance(s, dict)] or [post.get("image_story")]
+        # Format Instagram 4:5 aussi sur TikTok (décision du 19/10/2026) : en 9:16, la légende et les boutons de TikTok
+        # cachaient le texte du bas de l'image
+        files = [s["file"] if isinstance(s, dict) else s for s in slides] or [post.get("image_square")]
         files = tiktok_copies([f for f in files if f][:MAX_IMAGES["tiktok"]], base)
     else:
         files = [s["file"] if isinstance(s, dict) else s for s in slides] or [post.get("image_square")]

@@ -137,34 +137,116 @@ def _fond(photo_im, fond_ia, w, h):
     return _fond_projecteur(w, h), None
 
 
-def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None) -> Image.Image:
-    """lignes : [(texte, niveau)] avec niveau ∈ petit, moyen, grand, or (grand en doré). Ex. ChartFR :
+VARIANTES = ("projecteur", "couleur", "cote", "bas")
+# Fonds « colors room » : (fond, texte, accent) — couleurs unies et vives, accent toujours bien contrasté
+COULEURS = [((112, 48, 230), BLANC, (255, 214, 10)), ((30, 160, 245), BLANC, (12, 20, 60)), ((255, 110, 20), BLANC, (20, 10, 40)),
+            ((225, 30, 60), BLANC, (255, 214, 10)), ((0, 170, 110), BLANC, (255, 240, 120)), ((240, 50, 150), BLANC, (255, 230, 90))]
+
+
+def _graine(lignes: list) -> int:
+    import hashlib
+    return int(hashlib.sha256("|".join(t for t, _ in lignes).encode("utf-8")).hexdigest(), 16)
+
+
+def _fond_couleur(w: int, h: int, couleur) -> Image.Image:
+    """Pièce d'une seule couleur vive : mur uni, sol un peu plus sombre, coins assombris (dessiné, sans IA)."""
+    c = Image.new("RGB", (w, h), couleur)
+    sol = Image.new("L", (1, h))
+    for y in range(h):
+        sol.putpixel((0, y), int(70 * max(0, (y / h - .62) / .38)))
+    c.paste(Image.new("RGB", (w, h), tuple(int(v * .55) for v in couleur)), (0, 0), sol.resize((w, h)))
+    vig = Image.new("L", (w, h), 0); ImageDraw.Draw(vig).ellipse((-w * .3, -h * .2, w * 1.3, h * 1.15), fill=255)
+    vig = ImageChops.invert(vig.filter(ImageFilter.GaussianBlur(w // 6))).point(lambda v: int(v * .5))
+    c.paste(Image.new("RGB", (w, h), (0, 0, 0)), (0, 0), vig)
+    return c
+
+
+def _place(c: Image.Image, sujet: Image.Image, hauteur: int, x_centre: float, ombre_portee: bool, halo=None,
+           largeur_max: float = .95) -> None:
+    """Pose le sujet détouré, pieds/buste au bas de l'image, centré sur x_centre (part de la largeur)."""
+    w, h = c.size
+    k = min(hauteur / sujet.height, w * largeur_max / sujet.width)
+    s = sujet.resize((int(sujet.width * k), int(sujet.height * k)), Image.LANCZOS)
+    x, y = int(w * x_centre - s.width / 2), h - s.height
+    x = max(-int(s.width * .15), min(x, w - int(s.width * .85)))
+    if halo:
+        lueur = Image.new("RGBA", c.size, (0, 0, 0, 0))
+        ImageDraw.Draw(lueur).ellipse((x + s.width * .1, y + s.height * .05, x + s.width * .9, h), fill=halo + (80,))
+        lueur = lueur.filter(ImageFilter.GaussianBlur(w // 15)); c.paste(lueur, (0, 0), lueur)
+    if ombre_portee:
+        om = Image.new("RGBA", s.size, (0, 0, 0, 0)); om.putalpha(s.getchannel("A").point(lambda v: v * 110 // 255))
+        om = om.filter(ImageFilter.GaussianBlur(w // 70)); c.paste(om, (x + w // 40, y + w // 60), om)
+    c.paste(s, (x, y), s)
+
+
+def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str | None = None) -> Image.Image:
+    """lignes : [(texte, niveau)] avec niveau ∈ petit, moyen, grand, or (grand en couleur d'accent). Ex. ChartFR :
     [("NOUVEAU RECORD :", "petit"), ("MELODRAMA", "or"), ("devient le titre resté", "petit"), ("LE PLUS LONGTEMPS", "moyen"),
-     ("TOP 10", "grand"), ("de tous les temps", "petit")]"""
+     ("TOP 10", "grand"), ("de tous les temps", "petit")]
+    4 mises en page qui tournent selon le sujet (19/10/2026 : « toutes les photos exactement pareilles ») :
+    projecteur (fond sombre, faisceau doré), couleur (pièce d'une couleur vive), cote (texte à gauche, artiste à droite),
+    bas (artiste en grand, texte en bas)."""
     w, h = FORMATS.get(fmt, FORMATS["feed"])
     u = w / 1080
-    c, sujet = _fond(_image(photo), fond_ia, w, h)
+    g = _graine(lignes)
+    im = _image(photo)
+    sujet = detoure(im) if im is not None else None
+    # « texte en bas » et « de côté » seulement avec un plan large (visage tout en haut) : sur un portrait serré,
+    # le texte tomberait sur le visage
+    # (« cote » reste disponible à la demande mais sort de la rotation : rendu jugé trop faible le 19/10/2026)
+    permises = ("projecteur", "couleur", "bas") if sujet is not None and sujet.height / sujet.width >= 1.4 else ("projecteur", "couleur")
+    v = variante or (permises[g % len(permises)] if sujet is not None else "projecteur")
+    fond_c, texte_c, accent = COULEURS[(g // 7) % len(COULEURS)] if v in ("couleur", "cote") else (None, BLANC, OR)
+    if sujet is None:
+        c, _ = _fond(im, fond_ia, w, h)
+    elif v in ("couleur", "cote"):
+        c = _fond_couleur(w, h, fond_c)
+    else:
+        c = _fond_projecteur(w, h)
     d = ImageDraw.Draw(c)
+    echelle = .72 if v == "cote" else 1
+    largeur = (w * .46 if v == "cote" else w - 100 * u)
     tailles = {"petit": (44, "Medium"), "moyen": (66, "Bold"), "grand": (128, "Black"), "or": (150, "Black")}
-    # 1er passage : on mesure le bloc de texte (un mot trop long rétrécit, jamais coupé)
     plan, y = [], int((60 if fmt == "feed" else 240) * u)
     for texte, niveau in lignes:
         t, poids = tailles.get(niveau, tailles["moyen"])
-        t = int(t * u)
+        t = int(t * u * echelle)
         f = police("Jost.ttf", t, poids)
-        while t > 28 * u and d.textlength(texte, font=f) > w - 100 * u:
-            t -= int(4 * u) or 1; f = police("Jost.ttf", t, poids)
-        x = (w - d.textlength(texte, font=f)) / 2
-        plan.append((x, y, texte, f, niveau))
-        y = d.textbbox((x, y), texte, font=f)[3] + int((14 if niveau != "petit" else 18) * u)
-    # l'artiste commence sous le texte : jamais une ligne sur son visage
-    if sujet is not None:
-        _pose_sujet(c, sujet, min(0.60 if fmt == "feed" else 0.55, (h - y - 30 * u) / h))
-        d = ImageDraw.Draw(c)
-    for x, y0, texte, f, niveau in plan:
-        d.text((x + 3 * u, y0 + 4 * u), texte, font=f, fill=(0, 0, 0))
-        d.text((x, y0), texte, font=f, fill=OR if niveau == "or" else BLANC)
-    _logo(c, int(46 * u), h - int((120 if fmt == "feed" else 260) * u), int(74 * u))
+        while t > 24 * u and d.textlength(texte, font=f) > largeur:   # un mot trop long rétrécit, jamais coupé
+            t -= int(3 * u) or 1; f = police("Jost.ttf", t, poids)
+        plan.append([texte, f, niveau, d.textlength(texte, font=f)])
+        y = d.textbbox((0, y), texte, font=f)[3] + int((14 if niveau != "petit" else 18) * u * echelle)
+    hauteur_texte = y - int((60 if fmt == "feed" else 240) * u)
+    if v == "bas" and sujet is not None:
+        _place(c, sujet, int(h * .92), .5, False, halo=(255, 190, 90))
+        voile = Image.new("L", (1, h))
+        for yy in range(h):
+            voile.putpixel((0, yy), int(240 * max(0, (yy / h - .42) / .58) ** 1.1))
+        c.paste(Image.new("RGB", (w, h), NUIT), (0, 0), voile.resize((w, h)))
+        y0 = h - hauteur_texte - int((150 if fmt == "feed" else 330) * u)
+    elif v == "cote" and sujet is not None:
+        _place(c, sujet, int(h * .95), .73, True, largeur_max=.66)
+        y0 = int((h - hauteur_texte) * .42)
+    else:
+        if sujet is not None:
+            _place(c, sujet, int(min(.60 if fmt == "feed" else .55, (h - y - 30 * u) / h) * h), .5, v == "couleur",
+                   halo=(255, 190, 90) if v == "projecteur" else None)
+        y0 = int((60 if fmt == "feed" else 240) * u)
+    if v != "couleur" and v != "cote":
+        bas = int(h * .19); gb = Image.new("L", (1, bas))
+        for i in range(bas):
+            gb.putpixel((0, i), int(235 * (i / (bas - 1)) ** 1.6))
+        c.paste(Image.new("RGB", (w, bas), NUIT), (0, h - bas), gb.resize((w, bas)))
+    d = ImageDraw.Draw(c)
+    y = y0
+    for texte, f, niveau, lt in plan:
+        x = int(70 * u) if v == "cote" else (w - lt) / 2
+        couleur = accent if niveau == "or" else texte_c
+        if v in ("projecteur", "bas"):
+            d.text((x + 3 * u, y + 4 * u), texte, font=f, fill=(0, 0, 0))
+        d.text((x, y), texte, font=f, fill=couleur)
+        y = d.textbbox((x, y), texte, font=f)[3] + int((14 if niveau != "petit" else 18) * u * echelle)
+    _logo(c, int(46 * u), (int(50 * u) if v == "bas" else h - int((120 if fmt == "feed" else 260) * u)), int(74 * u))
     return c
 
 
