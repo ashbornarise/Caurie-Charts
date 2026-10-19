@@ -21,6 +21,7 @@ from core import db, repos
 from core.helpers import country_name
 from core.services.platforms import log_write
 from core.services.social import monde as M
+from core.services.social import couverture2026 as C26
 
 VIOLET, BLEU, ROUGE, OR, NUIT = (139, 82, 255), (20, 120, 210), (229, 33, 59), (255, 190, 40), (20, 20, 30)
 MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
@@ -46,16 +47,29 @@ def _post(theme: str, jour: date, due: datetime, titre: str, pages: list, legend
     PI.DIR.mkdir(parents=True, exist_ok=True)
     nom = f"{jour.isoformat()}-{theme}-{datetime.now(timezone.utc):%H%M%S}"
     M.STYLE_GRAINE = nom   # un même style (police, couleurs, mise en page) sur toutes les images du post
+    from core.services.social import couverture2026 as C26
     fichiers = []
+    # Style 2026 (19/10/2026) : plus de diapo de fin « À vous » (la question reste dans la légende), diapos de lecture
+    pages = [p for p in pages if p[1] != "À vous ‼️"]
     for n, (f, kk, dp) in enumerate(pages):
+        if n == 0 and not couverture:   # couverture actu par défaut : portrait officiel de l'artiste, titre surligné
+            ph = M._photo_portrait(f["artiste"]) if f.get("artiste") else None
+            eti = str(kk or (dp or {}).get("etiquette") or "CAURI CHARTS").upper()[:28]
+            accent = [f["artiste"]] if f.get("artiste") else []   # le nom entier surligné
+            couverture = lambda fmt, ph=ph, eti=eti, accent=accent: C26.actu(ph, eti, titre, accent, "", fmt)  # noqa: E731
         if n == 0 and couverture:
             a = PI.save_jpeg(couverture("feed"), PI.DIR / f"{nom}-{n}.jpg")
             b = PI.save_jpeg(couverture("story"), PI.DIR / f"{nom}-{n}-916.jpg")
             fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": titre})
             continue
-        a = PI.save_jpeg(M.couverture_choc(f, kk, False, "feed", dp), PI.DIR / f"{nom}-{n}.jpg")
-        b = PI.save_jpeg(M.couverture_choc(f, kk, False, "tiktok", dp), PI.DIR / f"{nom}-{n}-916.jpg")
-        fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": (dp or {}).get("titre") or f.get("une") or titre})
+        dp = dp or {}
+        fond = dp.get("fond") or (M._photo_portrait(f["artiste"]) if f.get("artiste") else None)
+        etiquette = str(dp.get("etiquette") or kk or "CAURI CHARTS").upper()[:28]
+        titre_d = dp.get("titre") or f.get("titre") or titre
+        pied = ("Sources : " + ", ".join(f["sources"][:3])) if f.get("sources") else ""
+        a = PI.save_jpeg(C26.texte(etiquette, titre_d, dp.get("texte") or "", pied, fond, "feed"), PI.DIR / f"{nom}-{n}.jpg")
+        b = PI.save_jpeg(C26.texte(etiquette, titre_d, dp.get("texte") or "", pied, fond, "story"), PI.DIR / f"{nom}-{n}-916.jpg")
+        fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": titre_d})
     faits = {"cle": cle, "due": due.isoformat(), "kind": theme}
     if illustration_ia:
         from core.services.social.illustration import mention
@@ -343,7 +357,7 @@ def citation(jour: date, due: datetime) -> dict | None:
         from core.services.social.illustration import genere
         illustration = genere(f"citation musique {b.get('contexte') or ''}", "citation")
         photo = illustration
-    couverture = lambda fmt: pourtoi.citation(photo, phrase, b["auteur"], b.get("contexte") or "", fmt, note=note)  # noqa: E731
+    couverture = lambda fmt: C26.citation(photo, phrase, b["auteur"], b.get("contexte") or "", fmt, note=note)  # noqa: E731
     legende = (f"🗣️ {b['auteur']} : « {phrase} »\n\n"
                + (f"Version originale : « {b['citation']} »\n\n" if etrangere else "")
                + f"{b.get('contexte') or ''}\n(Source : {b.get('source') or 'presse'})\n\n"
@@ -412,7 +426,7 @@ def histoire(jour: date, due: datetime) -> dict | None:
             from core.services.social.illustration import genere
             illustration = genere(f"histoire musicale {projet}", "histoire")
             photo = illustration
-        couverture = lambda fmt, t=o["titre"], a=o.get("accent"): pourtoi.une(photo, t, a, fmt, surtitre="Ça a changé l'histoire")  # noqa: E731
+        couverture = lambda fmt, t=o["titre"], a=o.get("accent"): C26.actu(photo, "ÇA A CHANGÉ L'HISTOIRE", t, [a] if a else [], "", fmt)  # noqa: E731
         pages = [(_fiche(artiste, "", "", [], cle), "", None)]
         for k, f in enumerate(faits[:3]):
             pages.append((_fiche(artiste, "", "", ["Wikipédia"], cle), f"{k + 2} / {len(faits[:3]) + 2}",
@@ -583,7 +597,7 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
             from core.services.social.illustration import genere
             illustration = genere(f"anecdote musicale {titre}", "anecdote")
             photo = illustration
-        couverture = lambda fmt, t=titre, a=o.get("accent"): pourtoi.une(photo, t, a, fmt, surtitre="Le saviez-vous ?")  # noqa: E731
+        couverture = lambda fmt, t=titre, a=o.get("accent"): C26.actu(photo, "LE SAVIEZ-VOUS ?", t, [a] if a else [], "", fmt)  # noqa: E731
         n = len(faits) + 2
         pages = [(_fiche(nom, "", "", [], nom), "", None)]
         for k, f in enumerate(faits):
@@ -707,7 +721,7 @@ def punchline(jour: date, due: datetime, essais: int = 8) -> dict | None:
         if not photo:
             continue
         auteur = f"{artiste} — {titre}"
-        couverture = lambda fmt, p=phrase, a=auteur, n=note: pourtoi.citation(photo, p, a, "", fmt, note=n)  # noqa: E731
+        couverture = lambda fmt, p=phrase, a=auteur, n=note: C26.citation(photo, p, a, "", fmt, note=n)  # noqa: E731
         question = M.coupe(o.get("question") or "Elle vous parle, cette phrase ⁉️", 110)
         credit = credit_photo(photo)
         legende = (f"🎤 « {phrase} »\n\n" + (f"Version originale : « {ligne} » ({note.lower()})\n\n" if etrangere else "")

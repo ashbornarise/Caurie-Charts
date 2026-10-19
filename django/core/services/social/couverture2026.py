@@ -22,6 +22,14 @@ VIOLET, CIEL, OR = (124, 58, 237), (56, 189, 248), (255, 205, 110)
 _SESSION = None
 
 
+def propre(t: str) -> str:
+    """Caractères absents de Montserrat/Jost remplacés (tiret insécable de « hip‑hop », espaces fines…)."""
+    for a, b in (("‑", "-"), ("‐", "-"), ("‒", "-"), ("­", ""), (" ", " "), (" ", " "),
+                 ("​", ""), ("⁠", "")):
+        t = (t or "").replace(a, b)
+    return t
+
+
 def police(nom: str, taille: int, poids: str | None = None) -> ImageFont.FreeTypeFont:
     f = ImageFont.truetype(str(RES / "fonts" / nom), taille)
     if poids:
@@ -335,7 +343,7 @@ def actu(photo, etiquette: str, titre: str, surligne: list | None = None, chapo:
     fc = police("Montserrat.ttf", int(32 * u), "Medium")
     fe = police("Montserrat.ttf", int(27 * u), "ExtraBold")
     # mise en page de bas en haut : chapô, titre, étiquette
-    mots, lignes, cour = titre.split(), [], ""
+    mots, lignes, cour = propre(titre).split(), [], ""
     for m in mots:
         essai = (cour + " " + m).strip()
         if d.textlength(essai, font=ft) > w - 2 * marges and cour:
@@ -382,7 +390,7 @@ def texte(etiquette: str, titre: str, corps: str, pied: str = "", photo=None, fm
     m = int(70 * u)
     fe = police("Montserrat.ttf", int(27 * u), "ExtraBold")
     ft = police("Montserrat.ttf", int(62 * u), "ExtraBold")
-    fc = police("Montserrat.ttf", int(36 * u), "Medium")
+    fc = police("Montserrat.ttf", int(42 * u), "Medium")
     fp = police("Montserrat.ttf", int(26 * u), "Medium")
 
     def lignes(t, f, largeur):
@@ -400,12 +408,15 @@ def texte(etiquette: str, titre: str, corps: str, pied: str = "", photo=None, fm
     d.rounded_rectangle((m, y, m + tw + 36 * u, y + 50 * u), radius=int(25 * u), fill=CIEL)
     d.text((m + 18 * u, y + 9 * u), etiquette, font=fe, fill=NUIT)
     y += int(90 * u)
-    for l in lignes(titre, ft, w - 2 * m):
+    for l in lignes(propre(titre), ft, w - 2 * m):
         d.text((m, y), l, font=ft, fill=BLANC); y += int(78 * u)
     d.rectangle((m, y + 18 * u, m + 120 * u, y + 26 * u), fill=couleur)
     y += int(70 * u)
-    for l in lignes(corps, fc, w - 2 * m):
-        d.text((m, y), l, font=fc, fill=(232, 232, 242)); y += int(54 * u)
+    paragraphes = [p for p in re.split(r"\n+|(?= N°\d)", propre(corps)) if p.strip()]   # listes « N°10 … N°9 … » : une ligne chacune
+    for para in paragraphes:
+        for l in lignes(para.strip(), fc, w - 2 * m):
+            d.text((m, y), l, font=fc, fill=(232, 232, 242)); y += int(60 * u)
+        y += int(14 * u)
     if pied:
         d.text((m, h - int((200 if fmt == "feed" else 380) * u)), pied, font=fp, fill=(190, 190, 210))
     _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
@@ -455,4 +466,43 @@ def classement(lignes: list, titre: str, sous_titre: str, fmt: str = "feed") -> 
     fs = police("Jost.ttf", int(30 * u), "SemiBold")
     d.text((w - m - d.textlength("cauricharts.com", font=fs), h - int((98 if fmt == "feed" else 238) * u)),
            "cauricharts.com", font=fs, fill=BLANC)
+    return c
+
+
+def citation(photo, phrase: str, auteur: str, contexte: str = "", fmt: str = "feed", note: str = "") -> Image.Image:
+    """Citation (style 2026) : la photo plein cadre assombrie, la phrase en grand entre guillemets, l'auteur en pastille."""
+    w, h = FORMATS.get(fmt, FORMATS["feed"])
+    u = w / 1080
+    im = _image(photo)
+    c = ImageOps.fit(im, (w, h), Image.LANCZOS, centering=(0.5, 0.3)) if im is not None else _fond_projecteur(w, h, (170, 120, 255))
+    c = Image.blend(c, Image.new("RGB", (w, h), NUIT), 0.35)
+    voile = Image.new("L", (1, h))
+    for y in range(h):
+        voile.putpixel((0, y), int(230 * max(0, (y / h - .30) / .70) ** 0.9))
+    c.paste(Image.new("RGB", (w, h), NUIT), (0, 0), voile.resize((w, h)))
+    d = ImageDraw.Draw(c)
+    m = int(70 * u)
+    taille = 74 if len(phrase) < 90 else 60 if len(phrase) < 150 else 50
+    f = police("Montserrat.ttf", int(taille * u), "ExtraBold")
+    mots, lignes, cour = f"« {propre(phrase)} »".split(), [], ""
+    for mot in mots:
+        essai = (cour + " " + mot).strip()
+        if d.textlength(essai, font=f) > w - 2 * m and cour:
+            lignes.append(cour); cour = mot
+        else:
+            cour = essai
+    lignes.append(cour)
+    inter = int(taille * 1.22 * u)
+    y = h - int((210 if fmt == "feed" else 400) * u) - inter * len(lignes)
+    d.text((m - 6 * u, y - int(150 * u)), "“", font=police("Montserrat.ttf", int(220 * u), "ExtraBold"), fill=VIOLET)
+    for l in lignes:
+        d.text((m, y), l, font=f, fill=BLANC); y += inter
+    fe = police("Montserrat.ttf", int(30 * u), "ExtraBold")
+    tw = d.textlength(auteur.upper(), font=fe)
+    d.rounded_rectangle((m, y + 24 * u, m + tw + 40 * u, y + 80 * u), radius=int(28 * u), fill=CIEL)
+    d.text((m + 20 * u, y + 34 * u), auteur.upper(), font=fe, fill=NUIT)
+    bas = contexte or note
+    if bas:
+        d.text((m + tw + 60 * u, y + 38 * u), bas[:60], font=police("Montserrat.ttf", int(26 * u), "Medium"), fill=(220, 220, 235))
+    _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
     return c
