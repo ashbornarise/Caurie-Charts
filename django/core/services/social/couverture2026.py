@@ -64,17 +64,54 @@ def _image(photo) -> Image.Image | None:
         return None
 
 
-def detoure(im: Image.Image) -> Image.Image | None:
-    """La personne seule (RGBA), bords de la photo d'origine fondus ; None si rembg manque ou si le sujet est trop petit."""
-    global _SESSION
+_FIN = None
+
+
+def _detourage_fin(src: Image.Image) -> Image.Image | None:
+    """Détourage BiRefNet (bien plus propre sur les cheveux et les bords, mais 1 à 3 min par photo) calculé UNE fois
+    par image puis gardé dans le Blob (media/detoures/<empreinte>.png) ; None s'il échoue (mémoire, modèle absent)."""
+    import hashlib
+    global _FIN
+    from core import storage
+    petit = src.copy(); petit.thumbnail((64, 64))
+    cle = hashlib.sha1(petit.convert("RGB").tobytes() + str(src.size).encode()).hexdigest()[:24]
+    base = storage.blob_public_url()
+    if base:
+        try:
+            r = requests.get(f"{base}/media/detoures/{cle}.png", timeout=20)
+            if r.ok:
+                return Image.open(io.BytesIO(r.content)).convert("RGBA")
+        except Exception:  # noqa: BLE001
+            pass
     try:
         from rembg import new_session, remove
-        _SESSION = _SESSION or new_session("u2net_human_seg")
-        src = im.copy(); src.thumbnail((1600, 1600))
-        cut = remove(src, session=_SESSION)
+        _FIN = _FIN or new_session("birefnet-general")
+        cut = remove(src, session=_FIN)
     except Exception as exc:  # noqa: BLE001
-        log_write("social", "warning", f"détourage : {exc}")
+        log_write("social", "warning", f"détourage fin indisponible : {str(exc)[:120]}")
         return None
+    try:
+        out = io.BytesIO(); cut.save(out, format="PNG")
+        storage.store_media("detoures", f"{cle}.png", out.getvalue(), "image/png")
+    except Exception:  # noqa: BLE001
+        pass
+    return cut
+
+
+def detoure(im: Image.Image, fin: bool = True) -> Image.Image | None:
+    """La personne seule (RGBA), bords de la photo d'origine fondus ; None si rembg manque ou si le sujet est trop petit.
+    fin : BiRefNet mis en cache (couvertures) ; sinon le modèle rapide (u2net, pour un simple recadrage)."""
+    global _SESSION
+    src = im.copy(); src.thumbnail((1600, 1600))
+    cut = _detourage_fin(src) if fin else None
+    if cut is None:
+        try:
+            from rembg import new_session, remove
+            _SESSION = _SESSION or new_session("u2net_human_seg")
+            cut = remove(src, session=_SESSION)
+        except Exception as exc:  # noqa: BLE001
+            log_write("social", "warning", f"détourage : {exc}")
+            return None
     alpha = cut.getchannel("A")
     if sum(alpha.histogram()[128:]) < 0.06 * cut.width * cut.height:
         return None
@@ -275,7 +312,7 @@ def actu(photo, etiquette: str, titre: str, surligne: list | None = None, chapo:
     if im is not None:
         # Photo ENTIÈRE en plein cadre (le décor fait partie de l'image, façon Kultur), recadrée sur la personne
         cx = 0.5
-        sujet = detoure(im) if photo is not None else None
+        sujet = detoure(im, fin=False) if photo is not None else None
         if sujet is not None:
             try:
                 from rembg import remove
