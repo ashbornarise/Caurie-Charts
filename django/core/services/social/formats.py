@@ -17,7 +17,7 @@ from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
 
-from core import db
+from core import db, repos
 from core.helpers import country_name
 from core.services.platforms import log_write
 from core.services.social import monde as M
@@ -826,35 +826,97 @@ def bandeaux(jour: date, due: datetime) -> dict | None:
     return _post("format-bandeaux", jour, due, titre, pages, legende, "#CauriCharts #AfriqueDeLOuest #YouTube #Spotify", cle, couverture=couverture)
 
 
+def _record_clip_semaine():
+    """Le clip officiel qui a pris le plus de vues en 7 jours (relevés YouTube de Cauri Charts), hors n°1 des classements
+    officiels de la semaine (déjà en couverture du mardi)."""
+    pris = {t["rows"][0]["artist_name"].lower() for t in repos.official_tops(16) if t.get("rows")}
+    for r in db.all("""WITH der AS (SELECT track_platform_id, MAX(captured_on) AS d FROM snapshots
+                                    WHERE captured_on >= CURRENT_DATE - 3 GROUP BY 1)
+                       SELECT t.title, a.name, a.id AS aid, s1.plays - s0.plays AS gain FROM der
+                       JOIN snapshots s1 ON s1.track_platform_id = der.track_platform_id AND s1.captured_on = der.d
+                       JOIN snapshots s0 ON s0.track_platform_id = der.track_platform_id AND s0.captured_on = der.d - 7
+                       JOIN track_platform_ids p ON p.id = der.track_platform_id JOIN tracks t ON t.id = p.track_id
+                       JOIN artists a ON a.id = t.artist_id
+                       WHERE p.platform = 'youtube' AND p.kind = 'clip' AND p.is_official = 1 AND a.status = 'active'
+                       ORDER BY gain DESC LIMIT 5"""):
+        if r["name"].lower() not in pris and int(r["gain"] or 0) > 0:
+            return r
+    return None
+
+
+def _record_clips_10m():
+    """L'artiste suivi qui a le plus de clips officiels au-delà de 10 millions de vues, jamais le même avant 12 semaines."""
+    for r in db.all("""SELECT a.id, a.name, COUNT(DISTINCT p.id) AS clips FROM artists a
+                       JOIN tracks t ON t.artist_id = a.id
+                       JOIN track_platform_ids p ON p.track_id = t.id
+                       JOIN snapshots s ON s.track_platform_id = p.id
+                       WHERE a.status = 'active' AND p.platform = 'youtube' AND p.kind = 'clip' AND p.is_official = 1
+                       AND s.captured_on = (SELECT MAX(s2.captured_on) FROM snapshots s2 WHERE s2.track_platform_id = p.id)
+                       AND s.plays > 10000000
+                       GROUP BY a.id, a.name ORDER BY clips DESC, a.name LIMIT 10"""):
+        if not _deja("format-record", f"10m-{r['id']}"):
+            return r
+    return None
+
+
+def _millions(n: int) -> str:
+    return (f"{n / 1e6:.1f}".replace(".", ",").replace(",0", "") + " M") if n >= 1_000_000 else f"{n:,}".replace(",", " ")
+
+
 def record(jour: date, due: datetime) -> dict | None:
-    """L'artiste ayant le plus de clips officiels dont le dernier relevé dépasse 10 millions."""
-    from core.services.social import pourtoi
-    r = db.one("""SELECT a.id, a.name, COUNT(DISTINCT p.id) AS clips FROM artists a
-                   JOIN tracks t ON t.artist_id = a.id
-                   JOIN track_platform_ids p ON p.track_id = t.id
-                   JOIN snapshots s ON s.track_platform_id = p.id
-                   WHERE a.status = 'active' AND p.platform = 'youtube' AND p.kind = 'clip' AND p.is_official = 1
-                   AND s.captured_on = (SELECT MAX(s2.captured_on) FROM snapshots s2 WHERE s2.track_platform_id = p.id)
-                   AND s.plays > 10000000
-                   GROUP BY a.id, a.name HAVING COUNT(DISTINCT p.id) > 0
-                   ORDER BY clips DESC, a.name LIMIT 1""")
+    """Record du jeudi au style 2026 (lockup façon ChartFR), une semaine sur deux : le clip le plus vu des 7 derniers
+    jours, ou l'artiste aux plus de clips au-delà de 10 millions. Toujours nos propres relevés, jamais inventé."""
+    from core.services.social import couverture2026 as C
+    from core.services.social import editorial as E
+    from core.services.social import image as PI
+    from core.services.social import plans as PL
+    semaine = jour.isocalendar()[1]
+    r, genre = (_record_clip_semaine(), "semaine") if semaine % 2 == 0 else (_record_clips_10m(), "10m")
+    if not r:
+        r, genre = (_record_clips_10m(), "10m") if genre == "semaine" else (_record_clip_semaine(), "semaine")
     if not r:
         return None
-    photo = M.photo(r['name'])
-    illustration = None
+    nom_artiste = r["name"]
+    a_id = r.get("aid") or r.get("id")
+    if genre == "semaine":
+        cle = f"semaine-{jour.isocalendar()[0]}-{semaine}"
+        vues = _millions(int(r["gain"]))
+        lignes = [("RECORD DE LA SEMAINE :", "petit"), (r["title"].split(" (")[0].upper(), "or"), (f"de {nom_artiste} est", "petit"),
+                  ("LE CLIP LE PLUS VU", "moyen"), (f"+{vues} VUES", "grand"), ("en 7 jours parmi les artistes suivis", "petit")]
+        phrase = f"« {r['title']} » de {nom_artiste} : +{vues} vues en 7 jours, le clip le plus vu de la semaine"
+        corps = (f"Sur les 7 derniers jours, « {r['title']} » a gagné {int(r['gain']):,} vues sur YouTube".replace(",", " ")
+                 + ". C'est le plus gros gain parmi tous les clips officiels des artistes suivis par Cauri Charts.")
+    else:
+        cle = f"10m-{a_id}"
+        n = int(r["clips"])
+        lignes = [("RECORD CAURI CHARTS :", "petit"), (nom_artiste.upper(), "or"), ("est l'artiste suivi qui a", "petit"),
+                  ("LE PLUS DE CLIPS", "moyen"), (f"{n} CLIPS", "grand"), ("au-delà de 10 millions de vues", "petit")]
+        phrase = f"{nom_artiste} : {n} clips officiels au-delà de 10 millions de vues"
+        corps = (f"{nom_artiste} compte {n} clips officiels au-delà de 10 millions de vues sur YouTube : le record parmi "
+                 "les artistes suivis par Cauri Charts, recalculé depuis le dernier relevé de chaque clip.")
+    if _deja("format-record", cle):
+        return None
+    photo = (PL.photo_large(a_id) if a_id else None) or M._photo_portrait(nom_artiste)
+    fond_ia = None
     if not photo:
         from core.services.social.illustration import genere
-        illustration = genere("record musical disque vinyle trophée", "record")
-        photo = illustration
-    if not photo:
-        return None
-    n = int(r['clips'])
-    phrase = f"{r['name']} : {n} clips officiels au-delà de 10 millions de vues"
-    cle = str(r['id'])
-    couverture = lambda fmt: pourtoi.record(photo, phrase, str(n), fmt=fmt, couleur=OR)
-    page = (_fiche(r['name'], phrase.upper(), phrase, ["YouTube (derniers snapshots des clips officiels)", "Cauri Charts"], cle), "Record", None)
-    legende = f"🏆 {phrase}.\n\nLe record parmi les artistes suivis par Cauri Charts, recalculé depuis les derniers relevés de chaque clip officiel.\n\nSource : YouTube, snapshots de Cauri Charts."
-    return _post("format-record", jour, due, f"Record : {r['name']}", [page], legende, "#CauriCharts #Record #YouTube", cle, couverture=couverture, illustration_ia=bool(illustration))
+        fond_ia = genere("record musical trophée", "record")
+    PI.DIR.mkdir(parents=True, exist_ok=True)
+    nom = f"{jour.isoformat()}-record-{datetime.now(timezone.utc):%H%M%S}"
+    source = "Source : YouTube, relevés quotidiens Cauri Charts"
+    for fmt, suf in (("feed", ""), ("story", "-916")):
+        PI.save_jpeg(C.lockup(photo, lignes, fmt, fond_ia=fond_ia), PI.DIR / f"{nom}-0{suf}.jpg")
+        PI.save_jpeg(C.texte("RECORD", phrase, corps, source, photo or fond_ia, fmt), PI.DIR / f"{nom}-1{suf}.jpg")
+    fichiers = [{"file": f"{nom}-0.jpg", "tiktok": f"{nom}-0-916.jpg", "label": "Record"},
+                {"file": f"{nom}-1.jpg", "tiktok": f"{nom}-1-916.jpg", "label": phrase}]
+    legende = f"🏆 {phrase}.\n\n{corps}\n\n{source}."
+    if fond_ia:
+        from core.services.social.illustration import mention
+        legende = mention(legende)
+    return E.save_post("format-record", jour.isoformat(), f"Record : {nom_artiste}", legende,
+                       "#CauriCharts #Record #YouTube #Afrobeats", fichiers,
+                       {"cle": cle, "due": due.isoformat(), "kind": "format-record", "illustration_ia": bool(fond_ia)})
+
 
 def du_jour(jour: date) -> list:
     """Les formats prévus aujourd'hui (appelé par la chaîne de nuit) ; chacun part à son heure via la file d'attente."""

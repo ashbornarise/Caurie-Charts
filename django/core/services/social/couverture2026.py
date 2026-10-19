@@ -144,21 +144,26 @@ def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None) -> Image.Image:
     w, h = FORMATS.get(fmt, FORMATS["feed"])
     u = w / 1080
     c, sujet = _fond(_image(photo), fond_ia, w, h)
-    if sujet is not None:
-        _pose_sujet(c, sujet, 0.60 if fmt == "feed" else 0.55)
     d = ImageDraw.Draw(c)
     tailles = {"petit": (44, "Medium"), "moyen": (66, "Bold"), "grand": (128, "Black"), "or": (150, "Black")}
-    y = int((60 if fmt == "feed" else 240) * u)
+    # 1er passage : on mesure le bloc de texte (un mot trop long rétrécit, jamais coupé)
+    plan, y = [], int((60 if fmt == "feed" else 240) * u)
     for texte, niveau in lignes:
         t, poids = tailles.get(niveau, tailles["moyen"])
         t = int(t * u)
         f = police("Jost.ttf", t, poids)
-        while t > 28 * u and d.textlength(texte, font=f) > w - 100 * u:   # un mot trop long rétrécit, jamais coupé
+        while t > 28 * u and d.textlength(texte, font=f) > w - 100 * u:
             t -= int(4 * u) or 1; f = police("Jost.ttf", t, poids)
         x = (w - d.textlength(texte, font=f)) / 2
-        d.text((x + 3 * u, y + 4 * u), texte, font=f, fill=(0, 0, 0))
-        d.text((x, y), texte, font=f, fill=OR if niveau == "or" else BLANC)
+        plan.append((x, y, texte, f, niveau))
         y = d.textbbox((x, y), texte, font=f)[3] + int((14 if niveau != "petit" else 18) * u)
+    # l'artiste commence sous le texte : jamais une ligne sur son visage
+    if sujet is not None:
+        _pose_sujet(c, sujet, min(0.60 if fmt == "feed" else 0.55, (h - y - 30 * u) / h))
+        d = ImageDraw.Draw(c)
+    for x, y0, texte, f, niveau in plan:
+        d.text((x + 3 * u, y0 + 4 * u), texte, font=f, fill=(0, 0, 0))
+        d.text((x, y0), texte, font=f, fill=OR if niveau == "or" else BLANC)
     _logo(c, int(46 * u), h - int((120 if fmt == "feed" else 260) * u), int(74 * u))
     return c
 
