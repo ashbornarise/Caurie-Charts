@@ -290,7 +290,7 @@ def _plus_grande(url):
     if not url:
         return url
     if "mzstatic.com" in url:
-        return re.sub(r"/\d+x\d+(bb|cc)?\.(jpg|png|webp)$", r"/3000x3000bb.", url)
+        return re.sub(r"/\d+x\d+(bb|cc)?\.(jpg|png|webp)$", r"/3000x3000bb.\2", url)
     if "dzcdn.net" in url:
         return re.sub(r"/\d+x\d+-", "/1200x1200-", url)
     return url
