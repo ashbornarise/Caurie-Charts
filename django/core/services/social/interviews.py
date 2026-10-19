@@ -311,29 +311,51 @@ def morceaux(mots: list[tuple[float, str]], debut: float, fin: float, max_mots: 
 
 
 def _calque(accroche: str, artiste: str, credit: str, label: str = "MOMENT D'INTERVIEW") -> Image.Image:
+    """Habillage 2026 (19/10/2026) : logo rond, étiquette pastille, accroche en minuscules avec le nom surligné."""
+    import re
+    from core.services.social import couverture2026 as C
     img = Image.new("RGBA", (R.W, R.H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.text((64, 120), f"CAURI CHARTS  ·  {label}  ·  {artiste.upper()}", font=R._font("Poppins-Bold.ttf", 30),
-           fill=(190, 175, 255, 255))
-    texte = accroche.upper()
-    for taille in (92, 84, 76, 68, 60):
-        police = R._font("Anton-Regular.ttf", taille)
-        ls = R._lignes(d, texte, police, R.W - 128)
-        if len(ls) * (taille + 10) <= 340:
+    C._logo(img, 60, 70, 84)
+    fe = C.police("Montserrat.ttf", 28, "ExtraBold")
+    eti = f"{label} · {artiste.upper()}"[:48]
+    tw = d.textlength(eti, font=fe)
+    d.rounded_rectangle((60, 196, 60 + tw + 36, 246), radius=25, fill=C.CIEL + (255,))
+    d.text((78, 205), eti, font=fe, fill=C.NUIT + (255,))
+    cibles = {re.sub(r"\W", "", m.lower()) for m in artiste.split()}
+    texte = C.propre(accroche)
+    for taille in (70, 64, 58, 52):
+        police = C.police("Montserrat.ttf", taille, "ExtraBold")
+        lignes, cour = [], ""
+        for mot in texte.split():
+            essai = (cour + " " + mot).strip()
+            if d.textlength(essai, font=police) > R.W - 120 and cour:
+                lignes.append(cour); cour = mot
+            else:
+                cour = essai
+        lignes.append(cour)
+        if len(lignes) * (taille + 16) <= 290:
             break
-    y = 176
-    for l in ls:
-        d.text((64, y), l, font=police, fill=(255, 255, 255, 255))
-        y += taille + 10
-    d.text((64, 1590), credit, font=R._font("Poppins-Regular.ttf", 28), fill=(255, 255, 255, 190))
+    y = 270
+    for ligne in lignes:
+        x = 60
+        for mot in ligne.split():
+            lm = d.textlength(mot, font=police)
+            if re.sub(r"\W", "", mot.lower()) in cibles:
+                d.rectangle((x - 8, y + 6, x + lm + 8, y + taille + 10), fill=C.VIOLET + (255,))
+            d.text((x, y), mot, font=police, fill=(255, 255, 255, 255))
+            x += lm + d.textlength(" ", font=police)
+        y += taille + 16
+    d.text((60, 1460), credit, font=C.police("Montserrat.ttf", 26, "Medium"), fill=(255, 255, 255, 200))
     return img
 
 
 def _sous_titre(texte: str) -> Image.Image:
     img = Image.new("RGBA", (R.W, 220), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    police = R._font("Poppins-Bold.ttf", 60)
-    ls = R._lignes(d, texte, police, R.W - 140)[:2]
+    from core.services.social import couverture2026 as C
+    police = C.police("Montserrat.ttf", 58, "ExtraBold")
+    ls = R._lignes(d, C.propre(texte), police, R.W - 140)[:2]
     y = 110 - len(ls) * 39
     for l in ls:
         w = d.textlength(l, font=police)
@@ -355,7 +377,7 @@ def monte(src: str, duree: float, accroche: str, artiste: str, credit: str, subs
         p = os.path.join(tmp, f"st{k}.png")
         _sous_titre(s["texte"]).save(p)
         entrees += ["-loop", "1", "-t", f"{duree:.2f}", "-i", p]
-        filtre.append(f"[v{k + 1}][{k + 2}:v]overlay=0:1330:enable='between(t,{s['a']:.2f},{s['b']:.2f})'[v{k + 2}]")
+        filtre.append(f"[v{k + 1}][{k + 2}:v]overlay=0:1200:enable='between(t,{s['a']:.2f},{s['b']:.2f})'[v{k + 2}]")
     n = len(subs) + 1
     filtre.append(f"[v{n}]fps=30,format=yuv420p,fade=t=in:d=0.3,fade=t=out:st={max(0, duree - 0.5):.2f}:d=0.5[v]")
     filtre.append(f"[0:a]afade=t=in:d=0.2,afade=t=out:st={max(0, duree - 0.8):.2f}:d=0.8,loudnorm=I=-14:TP=-1.5[a]")
