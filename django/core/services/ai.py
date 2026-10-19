@@ -48,6 +48,11 @@ class ClaudeClient:
         return {"text": text.strip(), "sources": list(dict.fromkeys(sources))}
 
 
+# Les modèles Gemini récents « réfléchissent » et cette réflexion compte dans maxOutputTokens : sans marge, les longues
+# réponses JSON étaient coupées net (Cauri Monde sans aucune fiche, 19/10/2026)
+RESERVE_REFLEXION = 8192
+
+
 class GeminiClient:
     """API Gemini (offre gratuite) ; modèle suivant de la liste en cas de 404/429/500/503."""
     URL = "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent"
@@ -66,7 +71,7 @@ class GeminiClient:
             raise PlatformException("GEMINI_API_KEY absente")
         body = {"systemInstruction": {"parts": [{"text": system}]},
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                "generationConfig": {"maxOutputTokens": max(max_tokens, 2048), "temperature": 0.1 if web_searches > 0 else 0.8}}
+                "generationConfig": {"maxOutputTokens": max(max_tokens, 2048) + RESERVE_REFLEXION, "temperature": 0.1 if web_searches > 0 else 0.8}}
         if web_searches > 0 and env.bool("GEMINI_GROUNDING"):
             body["tools"] = [{"google_search": {}}]
         last = "aucun modèle disponible"

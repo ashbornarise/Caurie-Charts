@@ -31,7 +31,7 @@ jobs:
       YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
       YOUTUBE_API_KEY_2: ${{ secrets.YOUTUBE_API_KEY_2 }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      AI_PROVIDER: gemini
+      AI_PROVIDER: groq   # texte : Groq gratuit d'abord, Gemini (payant) en secours — budget 5 € / mois
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

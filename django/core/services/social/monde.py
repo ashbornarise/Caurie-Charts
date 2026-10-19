@@ -18,7 +18,7 @@ import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 
-from core import db
+from core import db, env
 from core.services.platforms import log_write
 from core.services.news import http_get, parse_feed
 
@@ -49,7 +49,8 @@ FEEDS = [
 AFRIQUE_REQUETES = [
     ("https://news.google.com/rss/search?hl=fr&gl=FR&ceid=FR:fr&q=",
      '(afrobeats OR "coupé-décalé" OR "musique africaine" OR "musique ivoirienne" OR "musique togolaise" OR '
-     '"musique béninoise" OR "musique sénégalaise" OR "musique camerounaise") when:2d'),
+     '"musique béninoise" OR "musique sénégalaise" OR "musique camerounaise" OR "rap ivoirien" OR "zouglou" OR '
+     '"rap togolais" OR "mbalax") when:2d'),
     ("https://news.google.com/rss/search?hl=en-NG&gl=NG&ceid=NG:en&q=",
      '(afrobeats OR "Nigerian music" OR "Ghanaian music" OR amapiano OR "African music") when:2d'),
 ]
@@ -75,7 +76,28 @@ def _flux_stars() -> list:
     lots = [STARS[i:i + 9] for i in range(0, len(STARS), 9)]
     return ([{"name": "Google Actualités", "url": GOOGLE_NEWS + quote("(" + " OR ".join(f'"{REQUETE_STAR.get(n, n)}"' for n in lot) + ") musique when:2d"), "poids": 1, "stars": True}
              for lot in lots]
-            + [{"name": "Google Actualités", "url": base + quote(q), "poids": 1, "afrique": True} for base, q in AFRIQUE_REQUETES])
+            + [{"name": "Google Actualités", "url": base + quote(q), "poids": 1, "afrique": True} for base, q in AFRIQUE_REQUETES]
+            + _flux_nos_artistes())
+
+
+def _flux_nos_artistes() -> list:
+    """Veille Google Actualités sur les artistes de NOS classements (décision du 19/10/2026 : l'actu doit d'abord être
+    ouest-africaine). Les plus vus des 30 derniers jours, par lots ; les scènes francophones (CI, TG, SN, BJ) en français."""
+    from urllib.parse import quote
+    try:
+        lignes = db.all("""SELECT name, upper(origin_country) AS code FROM artists
+                           WHERE status = 'active' AND length(name) >= 4 AND origin_country IS NOT NULL
+                           ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 120""")
+    except Exception:  # noqa: BLE001
+        return []
+    flux = []
+    for langue, codes, base in (("fr", {"CI", "TG", "SN", "BJ", "ML", "BF", "GN", "NE", "CM"}, GOOGLE_NEWS),
+                                ("en", {"NG", "GH", "LR", "SL", "GM"}, "https://news.google.com/rss/search?hl=en-NG&gl=NG&ceid=NG:en&q=")):
+        noms = [r["name"] for r in lignes if r["code"] in codes][:24]
+        for i in range(0, len(noms), 8):
+            q = "(" + " OR ".join(f'"{n}"' for n in noms[i:i + 8]) + ") (musique OR music OR concert OR album OR clip) when:2d"
+            flux.append({"name": "Google Actualités", "url": base + quote(q), "poids": 1, "afrique": True})
+    return flux
 
 
 RUBRIQUES = {"monde": "L'ACTU MONDE", "records": "PROJETS & RECORDS", "sorties": "ÇA SORT"}
@@ -742,6 +764,69 @@ def archive(fiches: list, image: str | None = None, article: str | None = None) 
                            "status": "published", "published_at": now_utc()})
 
 
+AFRICAINS_PAR_EDITION = 3   # sur 4 (décision du 19/10/2026 : « la référence de la musique ouest-africaine »)
+
+
+def tendances_youtube() -> set:
+    """Artistes et titres des tendances musique YouTube du jour (NG, GH, CI, SN), en minuscules sans accents."""
+    global _TENDANCES
+    if _TENDANCES is None:
+        _TENDANCES = set()
+        try:
+            import requests
+            cles = [k for k in (env.get("YOUTUBE_API_KEY", ""), env.get("YOUTUBE_API_KEY_2", "")) if k]
+            for pays in ("NG", "GH", "CI", "SN"):
+                d = {}
+                for cle in cles:   # 1 unité de quota par pays ; clé de secours si la première est épuisée
+                    r = requests.get("https://www.googleapis.com/youtube/v3/videos", timeout=15, params={
+                        "part": "snippet", "chart": "mostPopular", "regionCode": pays, "videoCategoryId": "10",
+                        "maxResults": 30, "key": cle})
+                    if r.ok:
+                        d = r.json(); break
+                for it in d.get("items", []):
+                    sn = it.get("snippet", {})
+                    _TENDANCES.add(_sans_accents(sn.get("channelTitle", "")).lower().replace(" - topic", "").replace("vevo", "").strip())
+                    _TENDANCES.add(_sans_accents(sn.get("title", "")).lower())
+        except Exception as exc:  # noqa: BLE001
+            log_write("monde", "warning", f"tendances YouTube : {exc}")
+    return _TENDANCES
+
+
+_TENDANCES = None
+
+
+def buzz(f: dict) -> bool:
+    """Un vrai signal de buzz : au moins 2 médias, ou l'artiste est dans les tendances YouTube du jour, ou c'est
+    un de nos propres chiffres (records, caps de streams)."""
+    if len(f.get("sources") or []) >= 2 or f.get("rubrique") == "records" and f.get("chiffre"):
+        return True
+    a = _sans_accents(f.get("artiste") or "").lower().strip()
+    return bool(a) and any(a == t or (len(a) >= 4 and a in t) for t in tendances_youtube())
+
+
+def deja_vu_aujourdhui(artiste: str) -> bool:
+    """L'artiste a-t-il déjà eu son info dans les 20 dernières heures (édition ou flash) ? Jamais deux fois par jour."""
+    a = (artiste or "").strip()
+    if len(a) < 3:
+        return False
+    return bool(db.value("""SELECT 1 FROM news WHERE external_guid LIKE 'monde-%' AND published_at >= NOW() - INTERVAL '20 hours'
+                            AND title ILIKE ?""", [f"%{a}%"]))
+
+
+def selection(tries: list, n: int) -> list:
+    """Les n infos de l'édition : au moins AFRICAINS_PAR_EDITION africaines quand il y en a (les meilleures notes),
+    le reste aux meilleures infos tout court ; les infos avec un signal de buzz passent avant les autres."""
+    tries = sorted(tries, key=lambda f: not buzz(f))           # tri stable : la note décide à signal égal
+    afr = [f for f in tries if africain(f) or f.get("afrique")][:max(AFRICAINS_PAR_EDITION, n - 1)]
+    choix = afr[:AFRICAINS_PAR_EDITION]
+    for f in tries:
+        if len(choix) >= n:
+            break
+        if f not in choix:
+            choix.append(f)
+    return sorted(choix, key=lambda f: tries.index(f))
+
+
 def au_moins_un_africain(tries: list, n: int) -> list:
     """Les n premières infos (déjà triées), dont au moins une sur un artiste africain quand il y en a une : elle prend
     la dernière place (jamais celle de l'info du moment)."""
@@ -774,12 +859,12 @@ def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
         choix = extra + [f for f in fiches if f["rubrique"] in ("records", "sorties")] + [f for f in fiches if f["rubrique"] == "monde"]
     tries, vus_artistes = sorted(choix, key=lambda f: (not f["sensible"], score(f)), reverse=True), set()
     choix = []
-    for f in tries:   # une seule info par artiste et par édition : de la variété
+    for f in tries:   # une seule info par artiste et par édition, et jamais un artiste déjà traité dans la journée
         a = _sans_accents(f["artiste"]).lower()
-        if a and a in vus_artistes:
+        if a and (a in vus_artistes or deja_vu_aujourdhui(f["artiste"])):
             continue
         vus_artistes.add(a); choix.append(f)
-    choix = au_moins_un_africain(choix, PAR_EDITION)
+    choix = selection(choix, PAR_EDITION)
     if not choix:
         return None
     # UNE info = UN post = UN visage : celui qui aime Lady Gaga voit son post, celui qui aime Burna Boy le sien.
@@ -805,7 +890,7 @@ def flash(rendu_seul: bool = False, forcer: bool = False) -> dict | None:
     if not histoires:
         return None
     fiches = sorted(redige(histoires[:8]), key=lambda f: f["choc"], reverse=True)
-    f = next((x for x in fiches if x["choc"] >= SEUIL_FLASH or forcer), None)
+    f = next((x for x in fiches if (x["choc"] >= SEUIL_FLASH or forcer) and not deja_vu_aujourdhui(x.get("artiste"))), None)
     if not f:
         return None
     maintenant = datetime.now(timezone.utc)

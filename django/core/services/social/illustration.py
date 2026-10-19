@@ -98,7 +98,7 @@ def genere(sujet: str, famille: str, ratio: str = "4:5") -> str | None:
         if famille not in FAMILLES:
             return None
         _ensure_table()
-        plafond = max(0, int(env.get("ILLUSTRATIONS_PAR_JOUR", "5")))
+        plafond = max(0, int(env.get("ILLUSTRATIONS_PAR_JOUR", "2")))
         today = clock.today()
         count = int(db.value("SELECT COUNT(*) FROM illustrations WHERE cree_le::date = ?", [today.isoformat()]) or 0)
         if count >= plafond:
