@@ -25,7 +25,7 @@ def _vues(n: int) -> str:
 def _photo(top: dict):
     from core.services.social import plans
     a_id = db.value("SELECT id FROM artists WHERE slug = ?", [top.get("artist_slug")])
-    return (plans.photo_large(a_id) if a_id else None) or top.get("image")
+    return (plans.photo_large(a_id, detourable=True) if a_id else None) or top.get("image")
 
 
 def post(jour: date, due: datetime, essai: bool = False) -> dict | None:

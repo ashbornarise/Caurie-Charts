@@ -896,7 +896,7 @@ def record(jour: date, due: datetime) -> dict | None:
                  "les artistes suivis par Cauri Charts, recalculé depuis le dernier relevé de chaque clip.")
     if _deja("format-record", cle):
         return None
-    photo = (PL.photo_large(a_id) if a_id else None) or M._photo_portrait(nom_artiste)
+    photo = (PL.photo_large(a_id, detourable=True) if a_id else None) or M._photo_portrait(nom_artiste)
     fond_ia = None
     if not photo:
         from core.services.social.illustration import genere

@@ -127,11 +127,13 @@ def enregistre(artiste: str, chemin: str, video_id: str, seconde: int, coupe_bas
     return nom
 
 
-def photo_large(artist_id: int) -> str | None:
-    """URL publique d'un plan large validé de l'artiste (le moins récemment utilisé), ou None."""
+def photo_large(artist_id: int, detourable: bool = False) -> str | None:
+    """URL publique d'un plan large validé de l'artiste (le moins récemment utilisé), ou None.
+    detourable : seulement les plans qui se détourent proprement (plan_large) — un décor chargé (trône) reste pour le plein cadre."""
     from core import db, storage
     try:
-        r = db.one("SELECT id, fichier FROM artist_photos WHERE artist_id = ? ORDER BY utilise_le ASC NULLS FIRST, id LIMIT 1", [artist_id])
+        r = db.one("SELECT id, fichier FROM artist_photos WHERE artist_id = ?" + (" AND plan_large" if detourable else "")
+                   + " ORDER BY utilise_le ASC NULLS FIRST, id LIMIT 1", [artist_id])
     except Exception:  # noqa: BLE001 — table pas encore créée
         return None
     if not r:
