@@ -92,3 +92,49 @@ def candidats(video_id: str, dossier_sortie: str, n: int = 6) -> list[str]:
                 im.save(nom, quality=94)
             sortie.append(nom)
         return sortie
+
+
+# ---------------------------------------------------------------- photos validées (banque des couvertures)
+
+def creer_table() -> None:
+    from core import db
+    db.run("""CREATE TABLE IF NOT EXISTS artist_photos (
+        id BIGSERIAL PRIMARY KEY, artist_id BIGINT NOT NULL, fichier VARCHAR(240) NOT NULL, source VARCHAR(40) NOT NULL,
+        source_ref VARCHAR(120), credit VARCHAR(300), plan_large BOOLEAN NOT NULL DEFAULT TRUE,
+        valide_le TIMESTAMPTZ NOT NULL DEFAULT NOW(), utilise_le TIMESTAMPTZ NULL)""")
+
+
+def enregistre(artiste: str, chemin: str, video_id: str, seconde: int, coupe_bas: float = 0.0) -> str | None:
+    """Range un plan VALIDÉ par un humain : Blob media/artists/plans/, ligne dans artist_photos avec le crédit du clip.
+    coupe_bas : part de la hauteur retirée en bas (paroles incrustées dans certains clips)."""
+    import io
+    import re
+    from core import db, storage
+    a = db.one("SELECT id, slug FROM artists WHERE lower(name) = lower(?) ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 1", [artiste])
+    if not a:
+        return None
+    creer_table()
+    with Image.open(chemin) as im:
+        im = im.convert("RGB")
+        if coupe_bas:
+            im = im.crop((0, 0, im.width, int(im.height * (1 - coupe_bas))))
+        out = io.BytesIO(); im.save(out, format="JPEG", quality=94)
+    nom = f"{re.sub(r'[^a-z0-9-]', '', a['slug'])}-{video_id}-{seconde:04d}s.jpg"
+    storage.store_media("artists/plans", nom, out.getvalue(), "image/jpeg")
+    if not db.value("SELECT 1 FROM artist_photos WHERE fichier = ?", [nom]):
+        db.insert("artist_photos", {"artist_id": a["id"], "fichier": nom, "source": "clip", "source_ref": video_id,
+                                    "credit": f"Image tirée du clip officiel (youtube.com/watch?v={video_id})"})
+    return nom
+
+
+def photo_large(artist_id: int) -> str | None:
+    """URL publique d'un plan large validé de l'artiste (le moins récemment utilisé), ou None."""
+    from core import db, storage
+    try:
+        r = db.one("SELECT id, fichier FROM artist_photos WHERE artist_id = ? ORDER BY utilise_le ASC NULLS FIRST, id LIMIT 1", [artist_id])
+    except Exception:  # noqa: BLE001 — table pas encore créée
+        return None
+    if not r:
+        return None
+    db.run("UPDATE artist_photos SET utilise_le = NOW() WHERE id = ?", [r["id"]])
+    return f"{storage.blob_public_url()}/media/artists/plans/{r['fichier']}"
