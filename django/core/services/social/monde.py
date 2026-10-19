@@ -678,38 +678,46 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
     est_flash = theme.startswith("flash")
     global STYLE_GRAINE
     STYLE_GRAINE = nom
-    total = len(fiches) + 2
-    pages = [(une_fiche, kicker, None)]
-    for i, f in enumerate(fiches):
-        pages.append((f, f"{i + 2} / {total}", {"etiquette": RUBRIQUES[f["rubrique"]], "couleur": ROUGE if est_flash else (VIOLET, (20, 120, 210), (200, 70, 40))[i % 3],
-                                                 "titre": f["titre"], "texte": f["resume"], "graine": str(i),
-                                                 # une fois sur deux (et quand l'artiste n'a pas de photo), l'objet du sujet en fond
-                                                 "fond": objet(f, f["cle"]) if (i % 2 == 1 or not photo(f["artiste"])) else None}))
-    pages.append(({"artiste": "", "cle": nom, "sources": [], "une": "", "titre": ""}, f"{total} / {total}",
-                  {"etiquette": "CAURI CHARTS", "couleur": (20, 20, 30), "titre": "La référence de la musique ouest-africaine", "texte": final, "graine": "fin"}))
     fichiers = []
     from core.services.social import pourtoi
     nom_ok = _sans_accents(une_fiche["artiste"]).lower() in _sans_accents(une_fiche["titre"] + " " + une_fiche["une"]).lower()
     photo_une = photo(une_fiche["artiste"]) if nom_ok else None
     illustration_ia = False
-    if not photo_une:
+    # Couvertures 2026 (19/10/2026) : couverture « actu » (photo plein cadre, mots surlignés) + une diapo de lecture.
+    # Photo : un plan large VALIDÉ de l'artiste (banque artist_photos), sinon sa photo vérifiée, sinon l'illustration IA.
+    from core.services.social import couverture2026 as C26
+    from core.services.social import plans as PL
+    plan = None
+    if nom_ok:
+        try:
+            a_id = db.value("SELECT id FROM artists WHERE lower(name) = lower(?) ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 1",
+                            [une_fiche["artiste"]])
+            plan = PL.photo_large(a_id) if a_id else None
+        except Exception:  # noqa: BLE001
+            plan = None
+    # Jamais une miniature YouTube en couverture : elles montrent souvent des mannequins ou des figurants (19/10/2026)
+    photo_cover = plan or (_photo_portrait(une_fiche["artiste"]) if nom_ok else None)
+    if not photo_cover and not une_fiche.get("illustration_fond"):
         from core.services.social.illustration import genere
         fond_ia = genere(f"musique {une_fiche.get('rubrique', '')}", "monde")
         if fond_ia:
             une_fiche = {**une_fiche, "illustration_fond": fond_ia}
-            pages[0] = (une_fiche, pages[0][1], pages[0][2])
             illustration_ia = True
-    for n, (f, kk, dp) in enumerate(pages):
-        if n == 0 and photo_une:
-            # Couverture « Pour toi » (17/10/2026) : visage plein cadre, titre énorme, un mot en couleur, rien d'autre
-            sur, coul = ("Flash", pourtoi.ACCENTS[0]) if est_flash else (None, None)
-            a = PI.save_jpeg(pourtoi.une(photo_une, f["titre"], f.get("accent"), "feed", coul, surtitre=sur), PI.DIR / f"{nom}-{n}.jpg")
-            b = PI.save_jpeg(pourtoi.une(photo_une, f["titre"], f.get("accent"), "story", coul, surtitre=sur), PI.DIR / f"{nom}-{n}-916.jpg")
-            fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": f["titre"]})
-            continue
-        a = PI.save_jpeg(couverture_choc(f, kk, est_flash, "feed", dp), PI.DIR / f"{nom}-{n}.jpg")
-        b = PI.save_jpeg(couverture_choc(f, kk, est_flash, "tiktok", dp), PI.DIR / f"{nom}-{n}-916.jpg")
-        fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": (dp or {}).get("titre") or une_fiche["une"] or une_fiche["artiste"]})
+    etiquette = "FLASH" if est_flash else {"monde": "ACTU", "records": "RECORD", "sorties": "ÇA SORT"}.get(une_fiche["rubrique"], "ACTU")
+    sources = "Sources : " + ", ".join(une_fiche["sources"][:3]) if une_fiche.get("sources") else ""
+    surligne = [m for m in [une_fiche.get("accent")] if m]
+    a = PI.save_jpeg(C26.actu(photo_cover, etiquette, une_fiche["titre"], surligne, sources, "feed",
+                              fond_ia=une_fiche.get("illustration_fond"), couleur=ROUGE if est_flash else C26.VIOLET), PI.DIR / f"{nom}-0.jpg")
+    b = PI.save_jpeg(C26.actu(photo_cover, etiquette, une_fiche["titre"], surligne, sources, "story",
+                              fond_ia=une_fiche.get("illustration_fond"), couleur=ROUGE if est_flash else C26.VIOLET), PI.DIR / f"{nom}-0-916.jpg")
+    fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": une_fiche["titre"]})
+    for k, f in enumerate(fiches):
+        fond = photo_cover if k == 0 else None
+        a = PI.save_jpeg(C26.texte(RUBRIQUES[f["rubrique"]], f["titre"], f["resume"], sources if k == 0 else "", fond, "feed"),
+                         PI.DIR / f"{nom}-{k + 1}.jpg")
+        b = PI.save_jpeg(C26.texte(RUBRIQUES[f["rubrique"]], f["titre"], f["resume"], sources if k == 0 else "", fond, "story"),
+                         PI.DIR / f"{nom}-{k + 1}-916.jpg")
+        fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": f["titre"]})
     # Image 16:9 de l'article du site : l'artiste détouré sur un décor généré (pourtoi.affiche), seulement avec une
     # photo à l'identité vérifiée (photo_une : nom dans le titre + medias.choisit / notre base). Sinon, ou en cas
     # d'échec, l'article garde la couverture du post comme avant.

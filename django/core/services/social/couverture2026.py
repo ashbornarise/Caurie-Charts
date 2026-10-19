@@ -226,3 +226,47 @@ def actu(photo, etiquette: str, titre: str, surligne: list | None = None, chapo:
     d.text((marges + 18 * u, ye + 9 * u), etiquette, font=fe, fill=NUIT)
     _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
     return c
+
+
+def texte(etiquette: str, titre: str, corps: str, pied: str = "", photo=None, fmt: str = "feed", couleur=VIOLET) -> Image.Image:
+    """Diapositive de lecture : la photo floutée et assombrie en fond (ou le projecteur), étiquette, titre, texte, sources."""
+    w, h = FORMATS.get(fmt, FORMATS["feed"])
+    u = w / 1080
+    im = _image(photo)
+    if im is not None:
+        c = ImageOps.fit(im, (w, h), Image.LANCZOS).filter(ImageFilter.GaussianBlur(int(28 * u)))
+        c = Image.blend(c, Image.new("RGB", (w, h), NUIT), 0.72)
+    else:
+        c = _fond_projecteur(w, h, (170, 120, 255))
+    d = ImageDraw.Draw(c)
+    m = int(70 * u)
+    fe = police("Montserrat.ttf", int(27 * u), "ExtraBold")
+    ft = police("Montserrat.ttf", int(62 * u), "ExtraBold")
+    fc = police("Montserrat.ttf", int(36 * u), "Medium")
+    fp = police("Montserrat.ttf", int(26 * u), "Medium")
+
+    def lignes(t, f, largeur):
+        out, cour = [], ""
+        for mot in (t or "").split():
+            essai = (cour + " " + mot).strip()
+            if d.textlength(essai, font=f) > largeur and cour:
+                out.append(cour); cour = mot
+            else:
+                cour = essai
+        return out + ([cour] if cour else [])
+
+    y = int((200 if fmt == "feed" else 520) * u)
+    tw = d.textlength(etiquette, font=fe)
+    d.rounded_rectangle((m, y, m + tw + 36 * u, y + 50 * u), radius=int(25 * u), fill=CIEL)
+    d.text((m + 18 * u, y + 9 * u), etiquette, font=fe, fill=NUIT)
+    y += int(90 * u)
+    for l in lignes(titre, ft, w - 2 * m):
+        d.text((m, y), l, font=ft, fill=BLANC); y += int(78 * u)
+    d.rectangle((m, y + 18 * u, m + 120 * u, y + 26 * u), fill=couleur)
+    y += int(70 * u)
+    for l in lignes(corps, fc, w - 2 * m):
+        d.text((m, y), l, font=fc, fill=(232, 232, 242)); y += int(54 * u)
+    if pied:
+        d.text((m, h - int((200 if fmt == "feed" else 380) * u)), pied, font=fp, fill=(190, 190, 210))
+    _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
+    return c
