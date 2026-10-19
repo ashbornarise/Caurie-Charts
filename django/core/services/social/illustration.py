@@ -109,7 +109,7 @@ def genere(sujet: str, famille: str, ratio: str = "4:5") -> str | None:
         model = env.get("ILLUSTRATION_MODELE", "gemini-2.5-flash-image")
         response = requests.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-            params={"key": key}, timeout=90,
+            headers={"x-goog-api-key": key}, timeout=90,
             json={"contents": [{"parts": [{"text": _prompt(sujet, famille)}]}],
                   "generationConfig": {"responseModalities": ["IMAGE"], "imageConfig": {"aspectRatio": ratio}}})
         response.raise_for_status()

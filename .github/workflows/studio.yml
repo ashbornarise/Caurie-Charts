@@ -1,0 +1,35 @@
+name: Montage Cauri Studio
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Identifiant du job studio
+        required: true
+        type: string
+jobs:
+  studio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TIMEZONE: Africa/Lome
+      TZ: Africa/Lome
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      YOUTUBE_API_KEY_2: ${{ secrets.YOUTUBE_API_KEY_2 }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - uses: actions/setup-node@v4
+        with: {node-version: "20"}
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && pip install -r requirements.txt "yt-dlp[default]"
+      - working-directory: django
+        run: python manage.py studio_job --id "${{ inputs.job_id }}"

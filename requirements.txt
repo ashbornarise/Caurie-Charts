@@ -13,3 +13,4 @@ bcrypt==5.0.0
 defusedxml==0.7.1
 Unidecode==1.4.0
 fpdf2==2.8.9
+webauthn>=3.0

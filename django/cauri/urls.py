@@ -1,6 +1,7 @@
 """Routes : mêmes adresses que public/index.php (site PHP de référence)."""
 from django.urls import path, re_path
 
+from core import studio
 from core import views, views_claim, views_cron, views_show, views_widget, views_tiktok
 from core.backoffice import analytics_views, show_admin, team
 from core.backoffice import views as admin
@@ -8,7 +9,21 @@ from core.backoffice import views as admin
 P = r"(?P<period>semaine|mois|annee)"
 K = r"(?P<key>\d{4}(?:-W\d{2}|-\d{2})?)"
 
+S = r"^studio/(?P<chemin>[A-Za-z0-9_-]{8,120})"
+
 urlpatterns = [
+    re_path(S + r"$", studio.studio),
+    re_path(S + r"/manifest\.json$", studio.manifest),
+    re_path(S + r"/sw\.js$", studio.service_worker),
+    re_path(S + r"/hors-ligne$", studio.hors_ligne),
+    re_path(S + r"/passkey/inscription/options$", studio.passkey_inscription_options),
+    re_path(S + r"/passkey/inscription$", studio.passkey_inscription),
+    re_path(S + r"/passkey/connexion/options$", studio.passkey_connexion_options),
+    re_path(S + r"/passkey/connexion$", studio.passkey_connexion),
+    re_path(S + r"/fabriquer$", studio.fabriquer),
+    re_path(S + r"/historique$", studio.historique),
+    re_path(S + r"/job/(?P<ident>\d+)$", studio.job),
+    re_path(S + r"/job/(?P<ident>\d+)/envoyer$", studio.envoyer),
     path("tiktok/connecter", views_tiktok.connecter),
     path("tiktok/retour", views_tiktok.retour),
     path("", views.home),
