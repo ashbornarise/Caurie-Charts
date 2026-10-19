@@ -4,7 +4,7 @@ Les portraits officiels sont parfois petits (Deezer plafonne à 1 200 px, certai
 nos images font 2 160 px de large. Sous 1 600 px, la photo est agrandie ×4 par Real-ESRGAN (version légère, modèle ONNX, licence BSD,
 onnxruntime déjà présent pour le détourage), puis une légère retouche
 (netteté, contraste). Le visage n'est pas réinventé : Real-ESRGAN restaure les détails, il ne dessine pas une autre
-personne. Chaque résultat est gardé dans le Blob (media/ameliorees/) : calculé une seule fois par photo.
+personne. Chaque résultat est gardé dans le Blob (media/ameliorees-c/) : calculé une seule fois par photo.
 """
 import hashlib
 import io
@@ -56,6 +56,15 @@ def _retouche(im: Image.Image) -> Image.Image:
     return ImageEnhance.Contrast(im).enhance(1.04)
 
 
+def _naturel(ia: Image.Image, original: Image.Image) -> Image.Image:
+    """Réglage « C » choisi le 19/10/2026 (le réglage pur IA « se sentait modifié ») : moitié IA, moitié photo d'origine
+    agrandie normalement, une netteté douce, puis un léger grain photo qui efface l'aspect lissé."""
+    simple = original.convert("RGB").resize(ia.size, Image.LANCZOS)
+    m = Image.blend(ia, simple, 0.5).filter(ImageFilter.UnsharpMask(radius=1.2, percent=50, threshold=2))
+    grain = np.random.default_rng(7).normal(0, 6 * ia.size[0] / 2160, (ia.size[1], ia.size[0], 1))
+    return Image.fromarray(np.clip(np.asarray(m, dtype=np.float32) + grain, 0, 255).astype(np.uint8))
+
+
 def ameliore(im: Image.Image) -> Image.Image:
     """La photo, agrandie si elle est petite et légèrement retouchée ; l'originale si quoi que ce soit échoue."""
     im = im.convert("RGB")
@@ -67,7 +76,7 @@ def ameliore(im: Image.Image) -> Image.Image:
     base = storage.blob_public_url()
     if base:
         try:
-            r = requests.get(f"{base}/media/ameliorees/{cle}.jpg", timeout=20)
+            r = requests.get(f"{base}/media/ameliorees-c/{cle}.jpg", timeout=20)
             if r.ok:
                 return Image.open(io.BytesIO(r.content)).convert("RGB")
         except Exception:  # noqa: BLE001
@@ -75,13 +84,13 @@ def ameliore(im: Image.Image) -> Image.Image:
     try:
         src = im.copy()
         src.thumbnail((ENTREE_MAX, ENTREE_MAX), Image.LANCZOS)
-        grand = _retouche(_x4(src))
+        grand = _naturel(_x4(src), im)
     except Exception as exc:  # noqa: BLE001
         log_write("social", "warning", f"amélioration de photo impossible : {str(exc)[:150]}")
         return im
     try:
         out = io.BytesIO(); grand.save(out, format="JPEG", quality=93)
-        storage.store_media("ameliorees", f"{cle}.jpg", out.getvalue(), "image/jpeg")
+        storage.store_media("ameliorees-c", f"{cle}.jpg", out.getvalue(), "image/jpeg")
     except Exception:  # noqa: BLE001
         pass
     return grand
