@@ -270,3 +270,49 @@ def texte(etiquette: str, titre: str, corps: str, pied: str = "", photo=None, fm
         d.text((m, h - int((200 if fmt == "feed" else 380) * u)), pied, font=fp, fill=(190, 190, 210))
     _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
     return c
+
+
+def classement(lignes: list, titre: str, sous_titre: str, fmt: str = "feed") -> Image.Image:
+    """Liste du classement (style 2026) : dégradé violet profond, n°1 dans une pastille blanche, photos rondes.
+    lignes : [{"position", "title", "artist_name", "image"}] (8 au plus en 4:5, 10 en 9:16)."""
+    w, h = FORMATS.get(fmt, FORMATS["feed"])
+    u = w / 1080
+    c = Image.new("RGB", (w, h)); d = ImageDraw.Draw(c)
+    for y in range(h):
+        t = y / h
+        d.line((0, y, w, y), fill=tuple(int(a + (b - a) * t) for a, b in zip((70, 22, 170), (10, 8, 30))))
+    m = int(60 * u)
+    y = int((70 if fmt == "feed" else 230) * u)
+    d.text((m, y), titre, font=police("Jost.ttf", int(70 * u), "Black"), fill=BLANC)
+    y += int(96 * u)
+    d.text((m + 2, y), sous_titre, font=police("Jost.ttf", int(30 * u), "Medium"), fill=(215, 205, 255))
+    y += int(80 * u)
+    for r in lignes[:8 if fmt == "feed" else 10]:
+        premier = r["position"] == 1
+        hl = int((150 if premier else 104) * u)
+        if premier:
+            d.rounded_rectangle((m - 20 * u, y, w - m + 20 * u, y + hl), radius=hl // 2, fill=BLANC)
+        fpos = police("Jost.ttf", int((66 if premier else 52) * u), "Black")
+        d.text((m + (10 * u if premier else 0), y + hl / 2 - fpos.size * .62), str(r["position"]), font=fpos,
+               fill=VIOLET if premier else BLANC)
+        dd = int((110 if premier else 76) * u)
+        im = _image(r.get("image"))
+        if im is not None:
+            ph = ImageOps.fit(im, (dd, dd), Image.LANCZOS, centering=(0.5, 0.3))
+            masque = Image.new("L", (dd, dd)); ImageDraw.Draw(masque).ellipse((0, 0, dd - 1, dd - 1), fill=255)
+            c.paste(ph, (int(m + 110 * u), int(y + (hl - dd) / 2)), masque)
+        x = int(m + 110 * u + dd + 24 * u)
+        ft = police("Montserrat.ttf", int((42 if premier else 33) * u), "ExtraBold")
+        fa = police("Montserrat.ttf", int((28 if premier else 23) * u), "Medium")
+        titre_l = r["title"]
+        while d.textlength(titre_l, font=ft) > w - x - m and len(titre_l) > 4:
+            titre_l = titre_l.rstrip("…")[:-1].rstrip() + "…"
+        d.text((x, y + hl * (.18 if premier else .14)), titre_l, font=ft, fill=NUIT if premier else BLANC)
+        d.text((x, y + hl * (.58 if premier else .56)), r["artist_name"], font=fa,
+               fill=(90, 80, 120) if premier else (210, 200, 240))
+        y += hl + int((22 if premier else 8) * u)
+    _logo(c, int(46 * u), h - int((120 if fmt == "feed" else 260) * u), int(74 * u))
+    fs = police("Jost.ttf", int(30 * u), "SemiBold")
+    d.text((w - m - d.textlength("cauricharts.com", font=fs), h - int((98 if fmt == "feed" else 238) * u)),
+           "cauricharts.com", font=fs, fill=BLANC)
+    return c

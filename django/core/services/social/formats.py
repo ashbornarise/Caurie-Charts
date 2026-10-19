@@ -876,6 +876,9 @@ def du_jour(jour: date) -> list:
         prevus.append((punchline, a_heure(18)))
     if jour.isoweekday() == 4:
         prevus.append((record, a_heure(18)))
+    if jour.isoweekday() == 2:   # mardi 17 h : le classement officiel, s'il est déjà publié (sinon le guetteur des flashs le fera)
+        from core.services.social import officiel
+        prevus.append((officiel.post, a_heure(17)))
     # Événements de la semaine (galas, festivals, remises de prix) : photos à 15 h, moments forts en vidéo à 19 h
     prevus.append((evenement_photos, a_heure(15)))
     prevus.append((evenement_video, a_heure(19)))

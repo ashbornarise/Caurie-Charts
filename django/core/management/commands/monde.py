@@ -27,6 +27,14 @@ class Command(BaseCommand):
                 for line in M.publie_file() or ["rien à envoyer"]:
                     out(line)
                 return
+            if o["edition"] == "flash" and not o["essai"] and maintenant.isoweekday() in (2, 3) and 17 <= maintenant.hour < 23:
+                # Classement officiel : publié à la main pays par pays le mardi ; le post part dès que la semaine est publiée
+                from core.services.social import officiel
+                try:
+                    if officiel.post(maintenant.date(), maintenant + timedelta(minutes=5)):
+                        out("classement officiel : post programmé")
+                except Exception as exc:  # noqa: BLE001
+                    out(f"classement officiel : {exc}")
             if o["edition"] == "flash":
                 post = M.flash(rendu_seul=o["essai"])
                 due = maintenant + timedelta(minutes=2)
