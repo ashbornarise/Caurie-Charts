@@ -56,6 +56,15 @@ def sans_bandes(im: Image.Image) -> Image.Image:
                     int((bas - marge) * k) if bas < h - 1 else im.height))
 
 
+def _image_nette(photo) -> Image.Image | None:
+    """Comme _image, puis agrandie / retouchée si elle est petite (ameliore.py, résultat gardé dans le Blob)."""
+    im = _image(photo)
+    if im is None:
+        return None
+    from core.services.social.ameliore import ameliore
+    return ameliore(im)
+
+
 def _image(photo) -> Image.Image | None:
     if photo is None:
         return None
@@ -237,7 +246,7 @@ def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str |
     w, h = FORMATS.get(fmt, FORMATS["feed"])
     u = w / 1080
     g = _graine(lignes)
-    im = _image(photo)
+    im = _image_nette(photo)
     sujet = detoure(im) if im is not None else None
     # « texte en bas » et « de côté » seulement avec un plan large (visage tout en haut) : sur un portrait serré,
     # le texte tomberait sur le visage
@@ -316,7 +325,7 @@ def actu(photo, etiquette: str, titre: str, surligne: list | None = None, chapo:
     """Actualité : étiquette pastille, titre en minuscules aligné à gauche, mots de `surligne` sur une bande de couleur."""
     w, h = FORMATS.get(fmt, FORMATS["feed"])
     u = w / 1080
-    im = _image(photo) or _image(fond_ia)
+    im = _image_nette(photo) or _image(fond_ia)
     if im is not None:
         # Photo ENTIÈRE en plein cadre (le décor fait partie de l'image, façon Kultur), recadrée sur la personne
         cx = 0.5
@@ -473,7 +482,7 @@ def citation(photo, phrase: str, auteur: str, contexte: str = "", fmt: str = "fe
     """Citation (style 2026) : la photo plein cadre assombrie, la phrase en grand entre guillemets, l'auteur en pastille."""
     w, h = FORMATS.get(fmt, FORMATS["feed"])
     u = w / 1080
-    im = _image(photo)
+    im = _image_nette(photo)
     c = ImageOps.fit(im, (w, h), Image.LANCZOS, centering=(0.5, 0.3)) if im is not None else _fond_projecteur(w, h, (170, 120, 255))
     c = Image.blend(c, Image.new("RGB", (w, h), NUIT), 0.35)
     voile = Image.new("L", (1, h))

@@ -285,7 +285,23 @@ def photo(artiste: str):
     return _PHOTOS[artiste]
 
 
+def _plus_grande(url):
+    """La plus grande version servie par la source : Apple Music à sa taille d'origine, Deezer en 1 200 px (son maximum)."""
+    if not url:
+        return url
+    if "mzstatic.com" in url:
+        return re.sub(r"/\d+x\d+(bb|cc)?\.(jpg|png|webp)$", r"/3000x3000bb.", url)
+    if "dzcdn.net" in url:
+        return re.sub(r"/\d+x\d+-", "/1200x1200-", url)
+    return url
+
+
 def _photo_portrait(artiste: str):
+    """Photo de l'artiste (dans sa plus grande taille) : notre base, sinon Deezer par nom exact."""
+    return _plus_grande(_photo_portrait_brute(artiste))
+
+
+def _photo_portrait_brute(artiste: str):
     """Photo de l'artiste : d'abord celle de notre base (vérifiée), sinon Deezer par nom exact (homonymes possibles)."""
     try:
         nous = db.value("""SELECT COALESCE(NULLIF(image_hd_url, ''), NULLIF(image_url, '')) FROM artists

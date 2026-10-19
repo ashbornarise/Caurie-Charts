@@ -87,7 +87,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.u2net
-          key: rembg-modeles-v2   # u2net_human_seg + birefnet-general (couvertures 2026)
+          key: rembg-modeles-v3   # u2net_human_seg + birefnet-general + realesr léger (couvertures 2026)
       - name: Mémoire des tâches (chaînes suivies, découvertes)
         uses: actions/cache@v4
         with:

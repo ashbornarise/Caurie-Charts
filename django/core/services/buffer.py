@@ -79,7 +79,7 @@ def tiktok_copies(files: list, base: str) -> list:
         return HttpClient(15).request("HEAD", f"{base}/media/social/{name}")["status"] == 200
 
     def one(f: str) -> str:
-        small = f.rsplit(".", 1)[0] + "-tt45.jpg"
+        small = f.rsplit(".", 1)[0] + "-tt45n.jpg"
         try:
             if readable(small):
                 return small
@@ -87,6 +87,9 @@ def tiktok_copies(files: list, base: str) -> list:
             img = Image.open(io.BytesIO(data)).convert("RGB")
             if img.size[0] > TIKTOK_SIZE[0]:   # 1080 de large, proportions gardées (4:5 -> 1080 × 1350)
                 img = img.resize((TIKTOK_SIZE[0], round(img.size[1] * TIKTOK_SIZE[0] / img.size[0])), Image.LANCZOS)
+                # légère netteté après réduction : TikTok recompresse fort, les images sortaient « pas propres » (19/10/2026)
+                from PIL import ImageFilter
+                img = img.filter(ImageFilter.UnsharpMask(radius=1.0, percent=60, threshold=2))
             out = io.BytesIO()
             img.save(out, "JPEG", quality=95, subsampling=0, optimize=True)  # couleurs pleines : le texte coloré reste net après la recompression de TikTok
             storage.blob_put(f"media/social/{small}", out.getvalue(), "image/jpeg")
