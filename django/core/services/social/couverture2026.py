@@ -12,7 +12,7 @@ import io
 import re
 
 import requests
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps, ImageStat
 
 from core.services.platforms import log_write
 from core.services.social.pourtoi import FORMATS, RES
@@ -138,6 +138,9 @@ def _fond(photo_im, fond_ia, w, h):
 
 
 VARIANTES = ("projecteur", "couleur", "cote", "bas")
+# Couleur du faisceau et du grand titre : (lumière, accent du titre)
+LUMIERES = [((255, 190, 90), OR), ((170, 110, 255), (205, 170, 255)), ((60, 180, 255), (120, 210, 255)),
+            ((255, 80, 90), (255, 130, 130)), ((60, 220, 150), (130, 240, 190))]
 # Fonds « colors room » : (fond, texte, accent) — couleurs unies et vives, accent toujours bien contrasté
 COULEURS = [((112, 48, 230), BLANC, (255, 214, 10)), ((30, 160, 245), BLANC, (12, 20, 60)), ((255, 110, 20), BLANC, (20, 10, 40)),
             ((225, 30, 60), BLANC, (255, 214, 10)), ((0, 170, 110), BLANC, (255, 240, 120)), ((240, 50, 150), BLANC, (255, 230, 90))]
@@ -194,15 +197,27 @@ def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str |
     # « texte en bas » et « de côté » seulement avec un plan large (visage tout en haut) : sur un portrait serré,
     # le texte tomberait sur le visage
     # (« cote » reste disponible à la demande mais sort de la rotation : rendu jugé trop faible le 19/10/2026)
-    permises = ("projecteur", "couleur", "bas") if sujet is not None and sujet.height / sujet.width >= 1.4 else ("projecteur", "couleur")
+    # Fond de couleur et « texte en bas » : seulement une personne ENTIÈRE (plan large) ; un portrait serré finit net en bas
+    # de l'image, ce qui se voit sur la couleur (« les personnes sont coupées », 19/10/2026) -> projecteur, où le noir l'absorbe
+    # Fond de couleur unie retiré de la rotation (19/10/2026) : le moindre défaut de détourage s'y voit. La variété vient
+    # de la couleur du projecteur (LUMIERES) et de la mise en page (texte en haut, ou en bas pour un plan large).
+    permises = ("projecteur", "bas") if sujet is not None and sujet.height / sujet.width >= 1.4 else ("projecteur",)
     v = variante or (permises[g % len(permises)] if sujet is not None else "projecteur")
-    fond_c, texte_c, accent = COULEURS[(g // 7) % len(COULEURS)] if v in ("couleur", "cote") else (None, BLANC, OR)
+    lumiere, accent_l = LUMIERES[(g // 11) % len(LUMIERES)]
+    fond_c, texte_c, accent = (None, BLANC, accent_l)
+    if v in ("couleur", "cote"):
+        # la couleur du fond qui tranche le plus avec la tenue de l'artiste (robe violette sur fond violet, 19/10/2026),
+        # puis la graine pour varier entre les deux meilleures
+        moy = ImageStat.Stat(sujet.convert("RGB"), mask=sujet.getchannel("A").point(lambda a: 255 if a > 128 else 0)).mean
+        ecart = lambda col: sum((a - b) ** 2 for a, b in zip(col[0], moy))   # noqa: E731
+        meilleures = sorted(COULEURS, key=ecart, reverse=True)[:2]
+        fond_c, texte_c, accent = meilleures[(g // 7) % 2]
     if sujet is None:
         c, _ = _fond(im, fond_ia, w, h)
     elif v in ("couleur", "cote"):
         c = _fond_couleur(w, h, fond_c)
     else:
-        c = _fond_projecteur(w, h)
+        c = _fond_projecteur(w, h, lumiere)
     d = ImageDraw.Draw(c)
     echelle = .72 if v == "cote" else 1
     largeur = (w * .46 if v == "cote" else w - 100 * u)
@@ -218,7 +233,7 @@ def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str |
         y = d.textbbox((0, y), texte, font=f)[3] + int((14 if niveau != "petit" else 18) * u * echelle)
     hauteur_texte = y - int((60 if fmt == "feed" else 240) * u)
     if v == "bas" and sujet is not None:
-        _place(c, sujet, int(h * .92), .5, False, halo=(255, 190, 90))
+        _place(c, sujet, int(h * .92), .5, False, halo=lumiere)
         voile = Image.new("L", (1, h))
         for yy in range(h):
             voile.putpixel((0, yy), int(240 * max(0, (yy / h - .42) / .58) ** 1.1))
@@ -230,13 +245,14 @@ def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str |
     else:
         if sujet is not None:
             _place(c, sujet, int(min(.60 if fmt == "feed" else .55, (h - y - 30 * u) / h) * h), .5, v == "couleur",
-                   halo=(255, 190, 90) if v == "projecteur" else None)
+                   halo=lumiere if v == "projecteur" else None)
         y0 = int((60 if fmt == "feed" else 240) * u)
-    if v != "couleur" and v != "cote":
-        bas = int(h * .19); gb = Image.new("L", (1, bas))
-        for i in range(bas):
-            gb.putpixel((0, i), int(235 * (i / (bas - 1)) ** 1.6))
-        c.paste(Image.new("RGB", (w, bas), NUIT), (0, h - bas), gb.resize((w, bas)))
+    # Bas de l'image fondu dans le sol : noir sur les fonds sombres, couleur du sol sur les fonds de couleur
+    bas = int(h * .19); gb = Image.new("L", (1, bas))
+    for i in range(bas):
+        gb.putpixel((0, i), int(235 * (i / (bas - 1)) ** 1.6))
+    sol = tuple(int(x * .45) for x in fond_c) if v in ("couleur", "cote") else NUIT
+    c.paste(Image.new("RGB", (w, bas), sol), (0, h - bas), gb.resize((w, bas)))
     d = ImageDraw.Draw(c)
     y = y0
     for texte, f, niveau, lt in plan:
