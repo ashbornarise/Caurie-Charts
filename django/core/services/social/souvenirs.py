@@ -170,4 +170,4 @@ def marque(cle: str, jour: date, job_id: int) -> None:
     if db.value("SELECT 1 FROM studio_propositions WHERE cle = ?", [cle]):
         db.run("UPDATE studio_propositions SET job_id = ?, jour = ? WHERE cle = ?", [job_id, jour.isoformat(), cle])
     else:
-        db.insert("studio_propositions", {"cle": cle, "jour": jour.isoformat(), "job_id": job_id})
+        db.run("INSERT INTO studio_propositions (cle, jour, job_id) VALUES (%s, %s, %s)", [cle, jour.isoformat(), job_id])
