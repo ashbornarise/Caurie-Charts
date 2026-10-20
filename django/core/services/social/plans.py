@@ -14,7 +14,6 @@ import tempfile
 from PIL import Image, ImageFilter, ImageStat
 
 from core.services.platforms import log_write
-from core.services.social.refrain import ffmpeg
 
 PAS = 2.0          # une image toutes les 2 s
 ECART = 8.0        # deux plans gardés sont séparés d'au moins 8 s (variété)
@@ -59,8 +58,9 @@ def _note(im: Image.Image, session) -> float | None:
 
 
 def candidats(video_id: str, dossier_sortie: str, n: int = 6) -> list[str]:
-    """Les n meilleurs plans larges du clip, en JPEG pleine taille dans dossier_sortie."""
+    """(Le moteur des refrains, qui demande numpy, n'est chargé qu'ici : le serveur du site n'a pas numpy.) Les n meilleurs plans larges du clip, en JPEG pleine taille dans dossier_sortie."""
     from rembg import new_session
+    from core.services.social.refrain import ffmpeg
     session = new_session("u2net_human_seg")
     os.makedirs(dossier_sortie, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="cauri-plans-") as tmp:
