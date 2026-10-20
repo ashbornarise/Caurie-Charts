@@ -282,8 +282,22 @@ def historique(request, chemin):
 
 
 def envoyer(request, chemin, ident):
-    """Crée le post (légende FR + EN, crédit) et le programme partout via Buffer dans 2 minutes."""
+    """Crée le post (légende FR + EN, crédit) et le programme partout via Buffer dans 2 minutes.
+    Toute erreur revient en clair dans l'appli (au lieu d'une page « Erreur 500 ») et dans le journal."""
     _verifie(chemin)
+    try:
+        return _envoyer(request, ident)
+    except Http404:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        import traceback
+        from core.services.platforms import log_write
+        detail = "".join(traceback.format_exception_only(type(exc), exc)).strip()[:300]
+        log_write("social", "error", f"studio, envoi de la tâche {ident} : {detail}")
+        return _json({"erreur": f"envoi impossible : {detail}"}, 500)
+
+
+def _envoyer(request, ident):
     u = _utilisateur(request)
     if not u or request.method != "POST":
         return _json({"erreur": "connexion requise"}, 401)
