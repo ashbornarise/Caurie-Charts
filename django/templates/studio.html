@@ -120,6 +120,10 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 .galerie img{width:100%;height:100%;object-fit:cover;display:block}
 .galerie button.choisie{border-color:var(--violet-clair)}
 .nav button{position:relative}
+.idee{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--trait)}.idee:last-child{border-bottom:0}
+.idee .vignettes{display:flex;flex:none}.idee .vignettes img{width:46px;height:46px;border-radius:10px;object-fit:cover;margin-right:-14px;border:2px solid #0a0814}
+.idee .txt{flex:1;min-width:0;padding-left:14px}.idee b{display:block;font-size:14px;line-height:1.25}.idee small{color:var(--doux);font-size:12px}
+.idee .btn{width:auto;margin:0;padding:10px 14px;font-size:13px;flex:none}
 .badge{position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#e11d48;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;line-height:1}
 .galerie .coche{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.35);display:grid;place-items:center}
 .galerie button.choisie .coche{background:var(--violet);border-color:var(--violet)}
@@ -182,6 +186,12 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <section class="ecran vu" id="e-creer">
     <h1 class="titre">Nouvelle vidéo</h1>
     <p class="sous">Colle un lien : Cauri l'habille et l'envoie partout.</p>
+
+    <div class="carte" id="idees" style="display:none">
+      <div class="etiq">Idées du jour · souvenirs et records</div>
+      <div id="idees-liste"></div>
+      <p style="margin:10px 0 0;font-size:12px;color:var(--faible)">Vrais clips officiels et vraies vues. « Fabriquer » : le serveur coupe chaque clip au refrain et l'habille ; tu valides l'envoi ensuite.</p>
+    </div>
 
     <div class="carte">
       <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-lien"/></svg>Lien de la vidéo</div>
@@ -941,6 +951,28 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   $('#btn-sortie').onclick = async () => { await post('/deconnexion'); location.reload(); };
 
   action();
+
+
+  // ---------------- idées du jour (souvenirs et records, vrais clips officiels)
+  async function idees() {
+    let d; try { d = await get('/idees'); } catch (e) { return; }
+    const l = $('#idees-liste'); l.innerHTML = '';
+    if (!d || !(d.idees || []).length) { $('#idees').style.display = 'none'; return; }
+    $('#idees').style.display = '';
+    d.idees.forEach(x => { const r = document.createElement('div'); r.className = 'idee';
+      r.innerHTML = '<div class="vignettes"></div><div class="txt"><b></b><small></small></div><button class="btn">Fabriquer</button>';
+      x.elements.slice(0, 3).forEach(e => { const i = document.createElement('img'); i.alt = ''; i.src = e.vignette; r.querySelector('.vignettes').appendChild(i); });
+      r.querySelector('b').textContent = x.titre; r.querySelector('small').textContent = x.sous_titre + (x.mode === 'compilation' ? ' · compte à rebours de 5 extraits' : ' · extrait au refrain');
+      r.querySelector('.btn').onclick = async () => {
+        if (!confirm('Je republie ces extraits de clips officiels en connaissance de cause (je supprime le post s’il est bloqué).')) return;
+        vibre(); r.querySelector('.btn').disabled = true;
+        try { const j = await post('/idees/fabriquer', {cle: x.cle, droits: true, reseaux: $$('#creer-reseaux .puce.actif').map(b => b.dataset.r)});
+          if (j.erreur) throw new Error(j.erreur); r.remove(); suivre(j.id); }
+        catch (e) { r.querySelector('.btn').disabled = false; message('#msg-creer', e.message, false); }
+      };
+      l.appendChild(r); });
+  }
+  idees();
 
   // ---------------- brouillon : tout ce qui est saisi survit au rechargement et à la fermeture de l'appli
   const CHAMPS = ['lien', 'etiquette', 'accroche', 'artiste', 'credit', 'contexte', 'debut', 'fin', 'ph-lien', 'ph-contexte'];

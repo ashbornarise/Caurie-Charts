@@ -713,6 +713,49 @@ def banque_retirer(request, chemin, ident):
 
 
 
+# ---------------------------------------------------------------- idées du jour (souvenirs et records)
+
+def idees(request, chemin):
+    """Posts tout prêts proposés par Cauri (clips les plus vus d'une année, il y a 5 / 10 ans…) : vrais chiffres."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import souvenirs
+    return _json({"idees": souvenirs.propositions(datetime.now(timezone.utc).date())})
+
+
+def idees_fabriquer(request, chemin):
+    """Le fondateur lance une idée : travail du studio (refrain trouvé tout seul, ou compilation), case des droits cochée."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    c = _corps(request)
+    if not c.get("droits"):
+        return _json({"erreur": "coche la case des droits"}, 400)
+    from core.services.social import souvenirs
+    jour = datetime.now(timezone.utc).date()
+    idee = next((i for i in souvenirs.propositions(jour) if i["cle"] == c.get("cle")), None)
+    if not idee:
+        return _json({"erreur": "cette idée n'est plus disponible"}, 404)
+    params = {k: idee.get(k, "") for k in ("etiquette", "accroche", "artiste", "credit", "legende_fr")}
+    params.update({"valider": False, "idee": idee["cle"], "titre_idee": idee["titre"], "legende_en": "", "contexte": idee["titre"],
+                   "reseaux": [r for r in (c.get("reseaux") or []) if r in PLATEFORMES_POST] or list(PLATEFORMES_POST)})
+    if idee["mode"] == "compilation":
+        params.update({"mode": "compilation", "format": "story", "elements": idee["elements"], "segment": 6})
+    else:
+        params.update({"format": c.get("format") if c.get("format") in FORMATS else "origine", "refrain_auto": True,
+                       "duree": 20, "debut": 0, "fin": 60})
+    creer_tables()
+    job_id = db.insert("studio_jobs", {"lien": idee["elements"][0]["lien"][:1000], "params": json.dumps(params, ensure_ascii=False),
+                                       "auteur": u["id"]})
+    souvenirs.marque(idee["cle"], jour, job_id)
+    erreur = _lance(job_id)
+    if erreur:
+        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
+    return _json({"id": job_id, "erreur": erreur})
+
+
 # ---------------------------------------------------------------- brouillon (rien ne se perd au rechargement)
 
 def brouillon(request, chemin):
@@ -779,6 +822,6 @@ def photos_profils(request, chemin):
 
 
 # toutes les actions JSON du studio : erreurs lisibles
-for _nom in ("fabriquer", "brouillon", "photos_profils", "photos_tri_retirer", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
+for _nom in ("fabriquer", "idees", "idees_fabriquer", "brouillon", "photos_profils", "photos_tri_retirer", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
              "apercu_job", "valider_job", "banque", "banque_artiste", "banque_retirer", "artistes", "reglages"):
     globals()[_nom] = _erreur_lisible(globals()[_nom])
