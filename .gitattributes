@@ -1,2 +1,4 @@
 # Scripts serveur : fins de ligne Linux, quel que soit le PC
 *.sh text eol=lf
+outils/*.sh text eol=lf
+outils/*.py text eol=lf

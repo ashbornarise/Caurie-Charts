@@ -503,7 +503,8 @@ def photos_nouveau(request, chemin):
         if profils:
             # un profil ne s'ouvre pas depuis un serveur : le PC (relais_profils) relève ses posts puis lance le tri
             from core import storage
-            storage.blob_put(f"relais/profils/job-{job_id}.txt", str(job_id).encode(), "text/plain")
+            storage.blob_put(f"relais/profils/job-{job_id}.json", json.dumps({"job": job_id, "profils": profils}).encode(),
+                             "application/json")
             return _json({"id": job_id, "profil": True, "liens": len(liens), "erreur": None})
         erreur = _lance(job_id)
         if erreur:

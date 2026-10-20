@@ -2,7 +2,7 @@
 from django.urls import path, re_path
 
 from core import studio
-from core import views, views_claim, views_cron, views_show, views_widget, views_tiktok
+from core import views, views_claim, views_cron, views_relais, views_show, views_widget, views_tiktok
 from core.backoffice import analytics_views, show_admin, team
 from core.backoffice import views as admin
 
@@ -71,6 +71,7 @@ urlpatterns = [
     path("presse", views.presse),
     path("la-machine", views.machine),
     path("envoie-ta-video", views.fan_video),
+    path("api/relais/profils", views_relais.profils),
     path("cron/nuit", views_cron.nuit),
     path("cron/rattrapage", views_cron.rattrapage),
     path("cron/monde", views_cron.monde),
