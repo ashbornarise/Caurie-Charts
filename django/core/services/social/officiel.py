@@ -68,13 +68,13 @@ def post(jour: date, due: datetime, essai: bool = False) -> dict | None:
                        {"cle": semaine, "due": due.isoformat(), "kind": "format-officiel"})
 
 
-def clips_podium(country: str | None = None, periode: str | None = None) -> list[int]:
-    """Crée un job studio pour le clip de chaque artiste du podium (N°1, N°2, N°3) du classement publié.
-    Appelée juste après ChartService.publish : les clips arrivent dans le studio comme notifications.
+def clips_podium(country: str | None = None, periode: str | None = None, rang_max: int = 3) -> list[int]:
+    """Crée un job studio pour le clip de chaque artiste du podium du classement publié.
+    rang_max=1 → N°1 seulement, rang_max=3 → podium complet (défaut).
     Les clips sont YouTube → statut attente_pc, le relais du PC les fabrique dans les 5 minutes."""
     import json as _j
     from core import storage
-    tops = repos.official_tops(3)
+    tops = repos.official_tops(rang_max)
     if country and country not in ("", "wa"):
         tops = [t for t in tops if t["code"].lower() == country.lower()]
     if periode:
@@ -82,7 +82,7 @@ def clips_podium(country: str | None = None, periode: str | None = None) -> list
     jobs = []
     for t in tops:
         semaine = t["period_key"]
-        for rang, row in enumerate(t["rows"][:3], 1):
+        for rang, row in enumerate(t["rows"][:rang_max], 1):
             tid = row.get("track_id")
             if not tid:
                 continue

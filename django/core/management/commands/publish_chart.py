@@ -2,6 +2,7 @@
 
   manage.py publish_chart --week=2026-W42                 tous les pays prêts (0 signalements)
   manage.py publish_chart --week=2026-W42 --country=TG    un seul pays
+  manage.py publish_chart --week=2026-W42 --clips-only    clips N°1 de tous les pays publiés
 """
 from django.core.management.base import BaseCommand
 
@@ -16,11 +17,20 @@ class Command(BaseCommand):
     def add_arguments(self, p):
         p.add_argument("--week", required=True, help="Semaine ISO (ex. 2026-W42)")
         p.add_argument("--country", help="Code pays (TG, GH, NG…) ; si absent, tous les pays prêts")
+        p.add_argument("--clips-only", action="store_true",
+                       help="Crée uniquement les clips N°1 (pas de publication ni de post)")
 
     def handle(self, *args, **o):
         def task():
-            service = ChartService()
             week = o["week"]
+
+            if o["clips_only"]:
+                from core.services.social import officiel
+                country = o["country"].upper() if o["country"] else None
+                jobs = officiel.clips_podium(country, week, rang_max=1)
+                return [f"{len(jobs)} clip(s) N°1 créé(s) (attente PC)"]
+
+            service = ChartService()
             if o["country"]:
                 countries = [o["country"].upper()]
             else:

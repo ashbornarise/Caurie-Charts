@@ -10,6 +10,11 @@ on:
         description: "Code pays (TG, GH, NG…) ou vide = tous les pays prêts"
         required: false
         type: string
+      clips_only:
+        description: "Clips N°1 seulement (pas de publication)"
+        required: false
+        type: boolean
+        default: false
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -45,5 +50,8 @@ jobs:
           ARGS="--week=${{ inputs.week }}"
           if [ -n "${{ inputs.country }}" ]; then
             ARGS="$ARGS --country=${{ inputs.country }}"
+          fi
+          if [ "${{ inputs.clips_only }}" = "true" ]; then
+            ARGS="$ARGS --clips-only"
           fi
           python manage.py publish_chart $ARGS
