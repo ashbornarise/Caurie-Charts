@@ -357,13 +357,20 @@ def _envoyer(request, ident):
                                      "image_square": j["vignette"], "image_story": j["vignette"], "carousel": "[]",
                                      "video": j["video"], "status": "approved", "facts": json.dumps(faits, ensure_ascii=False)})
     post = db.one("SELECT * FROM social_posts WHERE id = ?", [pid])
+    from core.services import buffer
     try:
-        from core.services.pipeline import publish
-        lignes = publish(post, maintenant + timedelta(minutes=2))
+        resultat = buffer.schedule(post, maintenant + timedelta(minutes=2))
     except Exception as exc:  # noqa: BLE001
-        return _json({"erreur": f"post créé (n°{pid}) mais l'envoi a échoué : {exc}"}, 502)
+        resultat = f"échec ({exc})"
+    # Dès qu'un réseau a reçu la vidéo, elle est « envoyée » (un nouvel envoi ferait un doublon) ; les refus sont signalés
+    recus = [r["reason"].split("-")[2] for r in db.all("SELECT reason FROM audit_log WHERE reason LIKE ?", [f"post-{pid}-%"])
+             if r["reason"].count("-") >= 2]
+    if not recus:
+        db.run("DELETE FROM social_posts WHERE id = ?", [pid])   # rien n'est parti : on peut réessayer proprement
+        return _json({"erreur": f"aucun réseau n'a accepté la vidéo : {resultat}"}, 502)
     db.update("studio_jobs", {"statut": "envoye", "post_id": pid}, "id = :id", {"id": j["id"]})
-    return _json({"ok": True, "post_id": pid, "lignes": lignes})
+    refus = [m.strip() for m in str(resultat).split(",") if ":" in m and "déjà" not in m]
+    return _json({"ok": True, "post_id": pid, "recus": sorted(set(recus)), "refus": refus})
 
 
 # ---------------------------------------------------------------- aperçu d'un lien, réglages

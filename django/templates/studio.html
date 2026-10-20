@@ -444,9 +444,12 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
         legende_en: $('#r-en').value, credit: $('#r-credit').value, artiste: (etatJob.params || {}).artiste || '',
         notifier});
       vibre(); etatJob.statut = 'envoye'; resultat(etatJob);
-      message('#msg-suivi', notifier
-        ? 'Envoyée ! Facebook et Telegram dans 2 minutes ; Instagram et TikTok t’envoient une notification pour ajouter ta musique.'
-        : 'Envoyée ! Elle part dans 2 minutes sur tous les réseaux (post n°' + k.post_id + ').', true);
+      const noms = {instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok'};
+      const recus = (k.recus || []).map(r => noms[r] || r).join(', ') + ' et Telegram';
+      message('#msg-suivi', (notifier
+        ? 'Envoyée ! ' + recus + '. Instagram et TikTok t’envoient une notification pour ajouter ta musique.'
+        : 'Envoyée sur ' + recus + ' (dans 2 minutes).')
+        + ((k.refus || []).length ? ' Refusé : ' + k.refus.join(' · ') : ''), !(k.refus || []).length);
     } catch (e) { message('#msg-suivi', e.message, false); b.disabled = false; }
   }
 
