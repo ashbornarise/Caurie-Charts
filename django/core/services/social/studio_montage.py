@@ -162,7 +162,7 @@ def analyse(images: list[str], infos: dict) -> dict:
 # ---------------------------------------------------------------- montage
 
 def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str,
-           taille: tuple[int, int] | None = None) -> tuple[Image.Image, tuple[int, int, int, int], Image.Image]:
+           taille: tuple[int, int] | None = None, sans_logo: bool = False) -> tuple[Image.Image, tuple[int, int, int, int], Image.Image]:
     """(calque fixe, zone de la vidéo x, y, w, h, calque titre). Rien dans les 20 % du bas en 9:16 (interface TikTok/Reels).
     Calque fixe : logo et crédit, toute la vidéo. Calque titre : étiquette et accroche EN BAS (en haut, le titre
     cachait le visage des artistes — 20/10/2026), sur un dégradé qui monte du bas, effacé en fondu après quelques secondes.
@@ -212,7 +212,8 @@ def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str,
         img.paste(nuit, (0, 0), haut_d.resize((W, H)))
         img.paste(nuit, (0, 0), bas_d.resize((W, H)))
         titre_img.paste(nuit, (0, 0), titre_d.resize((W, H)))
-    C._logo(img, 50, haut, 76)
+    if not sans_logo:
+        C._logo(img, 50, haut, 76)
 
     y = haut_bloc
     tw = d.textlength(eti, font=fe)
@@ -286,26 +287,169 @@ def bandes(source: str, debut: float, duree: float) -> str | None:
     return f"{w}:{h}:{x}:{y}"
 
 
+def _icone_carree(taille_px: int) -> Image.Image:
+    """Icône carrée arrondie violet + monogramme CC blanc, à la taille demandée."""
+    from core.services.social.couverture2026 import VIOLET, RES
+    d = taille_px
+    r = int(d * 0.18)
+    img = Image.new("RGBA", (d, d), (0, 0, 0, 0))
+    ImageDraw.Draw(img).rounded_rectangle((0, 0, d - 1, d - 1), radius=r, fill=VIOLET + (255,))
+    lg = Image.open(RES / "marque" / "logo-blanc.png").convert("RGBA")
+    lg = lg.crop(lg.getbbox())
+    s = int(d * 0.72)
+    lg = lg.resize((s, s), Image.LANCZOS)
+    img.paste(lg, ((d - s) // 2, (d - s) // 2), lg)
+    return img
+
+
+def calque_logo(taille: tuple[int, int], fmt: str = "origine") -> tuple[Image.Image, int, int]:
+    """Icône carrée arrondie (100 px) et position finale (x, y) sur la vidéo."""
+    W, H = taille
+    portrait = H / W > 1.6
+    haut = 110 if (fmt == "story" or (fmt == "origine" and portrait)) else 50
+    return _icone_carree(100), 50, haut
+
+
+def _anime_logo(logo_icone: Image.Image, pos_finale: tuple[int, int],
+                taille: tuple[int, int], duree: float, dossier: str, fps: int = 30) -> str:
+    """Pré-rend l'animation du logo style émission TV / chaîne YouTube.
+
+    UN SEUL logo, 3 phases :
+      1. Arrive depuis la gauche de l'écran → va au centre + zoom IN (grandit)
+      2. PAUSE au centre (grand)
+      3. Repart vers le coin haut-gauche + zoom OUT (rétrécit) → se pose
+    Le dernier frame (logo au repos dans le coin) est répété par FFmpeg.
+    L'animation dure ~55 % de la vidéo (entre 3 et 7 s)."""
+    W, H = taille
+    fx, fy = pos_finale
+    d = logo_icone.size[0]
+    anim_dur = min(7.0, max(3.0, duree * 0.55))
+    n = int(anim_dur * fps) + 1
+
+    # Positions
+    cx, cy = W / 2, H * 0.42
+    fcx, fcy = fx + d / 2, fy + d / 2
+    z_max = 5.5
+
+    # Phases (en frames)
+    f1_start = int(0.02 * n)
+    f1_end = int(0.28 * n)
+    f2_end = int(0.60 * n)
+    f3_end = int(0.90 * n)
+
+    for i in range(n):
+        frame = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+
+        if i < f1_start:
+            pass
+        elif i < f1_end:
+            # Phase 1 : gauche → centre + zoom in (ease-out : vite au début, ralentit)
+            p = (i - f1_start) / max(1, f1_end - f1_start)
+            ep = 1 - (1 - p) ** 2.5
+            x_now = -d + (cx) * ep
+            y_now = cy
+            z = 1.0 + (z_max - 1.0) * ep
+            alpha = min(1.0, p * 3)
+            sz = max(1, int(d * z))
+            sc = logo_icone.resize((sz, sz), Image.LANCZOS)
+            if alpha < 1.0:
+                r, g, b, a = sc.split()
+                a = a.point(lambda px, _a=alpha: int(px * _a))
+                sc = Image.merge("RGBA", (r, g, b, a))
+            frame.paste(sc, (int(x_now - sz / 2), int(y_now - sz / 2)), sc)
+        elif i < f2_end:
+            # Phase 2 : pause au centre (grand)
+            sz = max(1, int(d * z_max))
+            sc = logo_icone.resize((sz, sz), Image.LANCZOS)
+            frame.paste(sc, (int(cx - sz / 2), int(cy - sz / 2)), sc)
+        elif i < f3_end:
+            # Phase 3 : centre → coin haut-gauche + zoom out (ease-in : lent → rapide)
+            p = (i - f2_end) / max(1, f3_end - f2_end)
+            ep = p ** 2.5
+            x_now = cx + (fcx - cx) * ep
+            y_now = cy + (fcy - cy) * ep
+            z = z_max - (z_max - 1.0) * ep
+            sz = max(1, int(d * z))
+            sc = logo_icone.resize((sz, sz), Image.LANCZOS)
+            frame.paste(sc, (int(x_now - sz / 2), int(y_now - sz / 2)), sc)
+        else:
+            # Repos dans le coin
+            frame.paste(logo_icone, (fx, fy), logo_icone)
+
+        frame.save(os.path.join(dossier, f"logo_{i:04d}.png"))
+
+    anim = os.path.join(dossier, "logo_anim.mkv")
+    subprocess.run([ffmpeg(), "-y", "-v", "error", "-framerate", str(fps),
+                    "-i", os.path.join(dossier, "logo_%04d.png"),
+                    "-c:v", "ffv1", "-pix_fmt", "yuva444p", anim],
+                   capture_output=True, timeout=180)
+    for i in range(n):
+        try:
+            os.remove(os.path.join(dossier, f"logo_{i:04d}.png"))
+        except OSError:
+            pass
+    return anim
+
+
 def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_png: str, zone,
-          taille: tuple[int, int] | None = None, titre_png: str | None = None, titre_permanent: bool = False) -> None:
+          taille: tuple[int, int] | None = None, titre_png: str | None = None, titre_permanent: bool = False,
+          logo_anim: str | None = None, logo_colorkey: bool = False) -> None:
+    """Montage final : fond flouté + clip + calque fixe + titre animé + logo animé + flash + fondus.
+    ``logo_anim`` : vidéo du logo (FFV1+alpha ou fond noir si ``logo_colorkey=True``)."""
     W, H = taille or FORMATS[fmt]
     x, y, w, h = zone
     duree = max(1.0, fin - debut)
     fin_titre = duree + 5 if titre_permanent else duree_titre(duree)
     rogne = bandes(source, debut, duree)
-    filtre = ((f"[0:v]crop={rogne},split=2[a][b];" if rogne else "[0:v]split=2[a][b];") + f"[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
+
+    # ── base : fond flouté + clip ──
+    filtre = ((f"[0:v]crop={rogne},split=2[a][b];" if rogne else "[0:v]split=2[a][b];")
+              + f"[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
               f"boxblur=28:6,eq=brightness=-0.35[fond];"
-              # clip au format cinéma très large (2,39:1) : côtés un peu resserrés (1,9:1 au plus, les visages au bord restent), sinon il reste minuscule
               + (f"[b]crop='min(iw,ih*1.9)':ih,scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];" if W < H * 1.2
                  else f"[b]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];")
-              + f"[fond][clip]overlay=(W-w)/2:{y}+({h}-h)/2[v0];[v0][1:v]overlay=0:0[v1];"
-              + (f"[2:v]format=rgba,fade=t=out:st={fin_titre:.2f}:d=0.7:alpha=1[titre];[v1][titre]overlay=0:0[v2];"
-                 if titre_png else "[v1]null[v2];")
-              + f"[v2]fps=30,format=yuv420p,fade=t=in:d=0.25,fade=t=out:st={max(0, duree - 0.4):.2f}:d=0.4[v]")
+              + f"[fond][clip]overlay=(W-w)/2:{y}+({h}-h)/2[v0];")
+
+    # ── calque fixe (crédit, dégradés — sans le logo, il est animé) ──
+    filtre += "[v0][1:v]overlay=0:0[v1];"
+    next_input = 2
+
+    # ── titre : slide-in depuis le bas + fondu sortant ──
+    if titre_png:
+        slide_in = 0.4
+        filtre += (f"[{next_input}:v]format=rgba,"
+                   f"fade=t=in:d={slide_in:.2f}:alpha=1,"
+                   f"fade=t=out:st={fin_titre:.2f}:d=0.7:alpha=1[titre_f];"
+                   f"[v1][titre_f]overlay=0:'if(lt(t,{slide_in}),{H}-(({H})*t/{slide_in}),0)':shortest=1[v2];")
+        next_input += 1
+    else:
+        filtre += "[v1]null[v2];"
+
+    # ── logo animé — eof_action=repeat garde le dernier frame ──
+    if logo_anim:
+        if logo_colorkey:
+            filtre += (f"[{next_input}:v]scale={W}:-1,colorkey=black:0.12:0.15,format=yuva444p[logo_a];"
+                       f"[v2][logo_a]overlay=0:350:eof_action=repeat:format=auto[v3];")
+        else:
+            filtre += (f"[{next_input}:v]format=yuva444p[logo_a];"
+                       f"[v2][logo_a]overlay=0:0:eof_action=repeat:format=auto[v3];")
+        next_input += 1
+    else:
+        filtre += "[v2]null[v3];"
+
+    # ── flash subtil (éclair blanc rapide au début) ──
+    flash_t = 0.25
+    filtre += (f"[v3]drawbox=x=0:y=0:w={W}:h={H}:color=white@0.15:t=fill"
+               f":enable='between(t,{flash_t},{flash_t + 0.08})'[v4];")
+
+    # ── finition : fps, couleur, fondus entrée/sortie ──
+    filtre += f"[v4]fps=30,format=yuv420p,fade=t=in:d=0.25,fade=t=out:st={max(0, duree - 0.4):.2f}:d=0.4[v]"
+
     from core.services.social.encodage import AUDIO_HQ, FIN, VIDEO_HQ
     cmd = [ffmpeg(), "-y", "-v", "error", "-ss", f"{debut:.2f}", "-t", f"{duree:.2f}", "-i", source,
            "-loop", "1", "-t", f"{duree:.2f}", "-i", calque_png,
            *(["-loop", "1", "-t", f"{duree:.2f}", "-i", titre_png] if titre_png else []),
+           *(["-i", logo_anim] if logo_anim else []),
            "-filter_complex", filtre, "-map", "[v]", "-map", "0:a?",
            "-af", f"loudnorm=I=-14:TP=-1.5,afade=t=out:st={max(0, duree - 0.5):.2f}:d=0.5",
            *VIDEO_HQ, *AUDIO_HQ, *FIN, "-shortest", sortie]
@@ -374,12 +518,14 @@ def traite(job_id: int) -> dict:
                     _maj(job_id, statut="a_valider", vignette=nom_vue, params=p)
                     return {"statut": "a_valider", "video": nom_vue}
             _maj(job_id, statut="montage", params=p)
-            img, zone, titre_img = calque(fmt, etiquette, accroche, artiste, credit, taille)
+            img, zone, titre_img = calque(fmt, etiquette, accroche, artiste, credit, taille, sans_logo=True)
             png = os.path.join(tmp, "calque.png"); img.save(png)
             png_titre = os.path.join(tmp, "titre.png"); titre_img.save(png_titre)
+            from core.services.social.couverture2026 import RES
+            logo_vid = str(RES / "marque" / "logo_anim_ai.mp4")
             nom = f"studio-{job_id}-{os.urandom(3).hex()}"
             video = os.path.join(tmp, nom + ".mp4"); vignette = os.path.join(tmp, nom + ".jpg")
-            monte(source, video, fmt, debut, fin, png, zone, taille, png_titre)
+            monte(source, video, fmt, debut, fin, png, zone, taille, png_titre, logo_anim=logo_vid, logo_colorkey=True)
             subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3", vignette],
                            capture_output=True, timeout=60)
             storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")
