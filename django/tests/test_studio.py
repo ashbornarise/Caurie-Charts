@@ -63,7 +63,7 @@ def test_fabriquer_cree_la_tache_et_lance(monkeypatch):
 
 
 def test_calque_laisse_le_bas_libre_en_9_16():
-    img, (x, y, w, h) = S.calque("story", "MOMENT VIRAL", "Asake enflamme la scène", "Asake", "@asake sur TikTok")
+    img, (x, y, w, h), titre = S.calque("story", "MOMENT VIRAL", "Asake enflamme la scène", "Asake", "@asake sur TikTok")
     assert img.size == (1080, 1920)
     assert y + h <= 1920 * 0.8          # la vidéo ne descend pas dans la zone de l'interface TikTok / Reels
 
