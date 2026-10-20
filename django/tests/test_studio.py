@@ -78,3 +78,9 @@ def test_duree_du_titre_relative_a_la_video():
     assert S.duree_titre(30) == 4.5
     assert S.duree_titre(60) == 7.0 and S.duree_titre(90) == 7.0
     assert S.duree_titre(3) == 1.5          # vidéo très courte : il reste toujours de la vidéo seule
+
+
+def test_origine_horizontale_passe_en_4_5():
+    assert S.taille_origine({"width": 1920, "height": 1080}, "x.mp4") == (1080, 1350)
+    assert S.taille_origine({"width": 720, "height": 1280}, "x.mp4") == (1080, 1920)
+    assert S.taille_origine({"width": 1080, "height": 1350}, "x.mp4") == (1080, 1350)

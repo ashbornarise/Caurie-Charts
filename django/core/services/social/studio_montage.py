@@ -23,7 +23,7 @@ FORMATS = {"origine": None, "story": (1080, 1920), "feed": (1080, 1350), "square
 
 
 def taille_origine(infos: dict, video: str) -> tuple[int, int]:
-    """1080 de large, la hauteur selon les proportions de la vidéo d'origine (paire, entre 1:1,9 et 16:9)."""
+    """1080 de large, la hauteur selon les proportions de la vidéo d'origine (paire) ; vidéo horizontale : cadre 4:5."""
     w, h = infos.get("width") or 0, infos.get("height") or 0
     if not (w and h):
         r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
@@ -33,7 +33,11 @@ def taille_origine(infos: dict, video: str) -> tuple[int, int]:
         except ValueError:
             w, h = 1080, 1920
     H = int(round(1080 * h / w / 2) * 2)
-    return 1080, max(608, min(1920, H))
+    # Vidéo horizontale (moins de 960 px de haut une fois à 1080 de large) : Facebook refuse les Reels de moins de 960 px
+    # (post 203, 20/10/2026) -> cadre 4:5, la vidéo en pleine largeur au centre, fond flouté
+    if H < 960:
+        return 1080, 1350
+    return 1080, min(1920, H)
 MAX_DUREE = 90
 
 
