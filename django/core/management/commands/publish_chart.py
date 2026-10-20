@@ -50,14 +50,13 @@ class Command(BaseCommand):
                         out(f"{code} Studio clips : {exc}")
                 else:
                     out(f"{code} : déjà publié ou pas de brouillon")
-            if publies:
-                from datetime import datetime, timedelta, timezone
-                from core.services.social import officiel as O
-                maintenant = datetime.now(timezone.utc)
-                try:
-                    post = O.post(maintenant.date(), maintenant + timedelta(minutes=5))
-                    out(f"Post officiel : {'créé' if post else 'déjà fait ou pas de données'}")
-                except Exception as exc:
-                    out(f"Post officiel : {exc}")
+            from datetime import datetime, timedelta, timezone
+            from core.services.social import officiel as O
+            maintenant = datetime.now(timezone.utc)
+            try:
+                post = O.post(maintenant.date(), maintenant + timedelta(minutes=5))
+                out(f"Post officiel : {'créé' if post else 'déjà fait ou pas de données'}")
+            except Exception as exc:
+                out(f"Post officiel : {exc}")
             return [f"{len(publies)} pays publié(s) : {', '.join(publies)}"] if publies else ["rien à publier"]
         run("publish-chart", task)
