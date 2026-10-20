@@ -624,3 +624,40 @@ def valider_job(request, chemin, ident):
     if erreur:
         db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": j["id"]})
     return _json({"ok": not erreur, "erreur": erreur})
+
+
+# ---------------------------------------------------------------- dossiers des artistes (banque de photos)
+
+def banque(request, chemin):
+    """Les artistes qui ont des photos dans la banque, avec leur nombre de photos."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    from core import storage
+    from core.services.social import plans
+    plans.creer_table(); plans.colonnes()
+    base = storage.blob_public_url()
+    lignes = db.all("""SELECT a.id, a.name, COUNT(p.id) AS n, MAX(p.fichier) AS une FROM artist_photos p JOIN artists a ON a.id = p.artist_id
+                       GROUP BY a.id, a.name ORDER BY COUNT(p.id) DESC, a.name""")
+    return _json({"dossiers": [{"id": r["id"], "nom": r["name"], "n": r["n"], "une": f"{base}/media/artists/plans/{r['une']}"} for r in lignes]})
+
+
+def banque_artiste(request, chemin, ident):
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    from core import storage
+    base = storage.blob_public_url()
+    lignes = db.all("""SELECT id, fichier, note, plan_large, score, utilise_le FROM artist_photos WHERE artist_id = ?
+                       ORDER BY COALESCE(score, 0.5) DESC, id DESC""", [int(ident)])
+    return _json({"photos": [{"id": r["id"], "url": f"{base}/media/artists/plans/{r['fichier']}", "note": r.get("note") or "",
+                              "entiere": bool(r["plan_large"]), "score": r.get("score"),
+                              "utilisee": str(r.get("utilise_le") or "")[:10]} for r in lignes]})
+
+
+def banque_retirer(request, chemin, ident):
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    db.run("DELETE FROM artist_photos WHERE id = ?", [int(ident)])
+    return _json({"ok": True})

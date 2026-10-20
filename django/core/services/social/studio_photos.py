@@ -51,7 +51,8 @@ def _gallery_dl(lien: str, dossier: str) -> tuple[list[str], dict]:
     return images, infos
 
 
-COMPTES: list = []   # compte Instagram auteur du post, relevé au passage (crédit)
+COMPTES: list = []   # compte Instagram auteur du post, relevé au passage (crédit, reconnaissance de l'artiste)
+LEGENDES: list = []  # texte du post (noms d'artistes cités)
 
 
 def _images_json(obj, out: list) -> None:
@@ -59,6 +60,8 @@ def _images_json(obj, out: list) -> None:
     if isinstance(obj, dict):
         if (obj.get("carousel_media") or obj.get("image_versions2")) and isinstance(obj.get("user") or obj.get("owner"), dict):
             COMPTES.append((obj.get("user") or obj.get("owner")).get("username") or "")
+            if isinstance(obj.get("caption"), dict) and obj["caption"].get("text"):
+                LEGENDES.append(obj["caption"]["text"])
         for m in obj.get("carousel_media") or [] if isinstance(obj.get("carousel_media"), list) else []:
             c = (m.get("image_versions2") or {}).get("candidates") or []
             if c and m.get("media_type") in (1, None):
@@ -78,7 +81,7 @@ def _instagram_navigateur(lien: str, dossier: str) -> list[str]:
     post (toutes les images du carrousel) à tout visiteur. Rien n'est connecté à un compte."""
     import asyncio
     trouvees: list = []
-    COMPTES.clear()
+    COMPTES.clear(); LEGENDES.clear()
 
     async def ouvre():
         from playwright.async_api import async_playwright
@@ -159,6 +162,13 @@ def traite(job_id: int, job: dict, p: dict, maj) -> dict:
         raise RuntimeError("aucune photo récupérée : la plateforme refuse peut-être le serveur (post privé ou connexion exigée)")
     plateforme = infos.get("plateforme") or ""
     compte = infos.get("compte") or ""
+    if not p.get("artiste_id"):
+        candidats = reconnait(compte, " ".join(LEGENDES)[:3000])
+        if candidats and candidats[0]["sur"]:
+            p.update({"artiste_id": candidats[0]["id"], "artiste_nom": candidats[0]["nom"], "artiste_auto": True})
+        else:
+            p["candidats"] = candidats[:3]
+    p["compte"] = compte
     p.update({"photos": noms, "credit": p.get("credit") or (f"@{compte} sur {plateforme.capitalize()}" if compte else plateforme)})
     maj(job_id, statut="pret", params=p)
     return {"statut": "pret", "video": f"{len(noms)} photos"}
@@ -173,7 +183,10 @@ def enregistre(job: dict, indices: list[int], artist_id: int, detourable: bool, 
     if not a:
         raise ValueError("artiste introuvable")
     plans.creer_table()
-    db.run("ALTER TABLE artist_photos ADD COLUMN IF NOT EXISTS note TEXT")   # le commentaire du fondateur sur la photo
+    plans.colonnes()
+    # l'artiste est confirmé : on retient son compte (Instagram…) pour le reconnaître seul les prochaines fois
+    if p.get("compte") and not db.value("SELECT instagram FROM artists WHERE id = ? AND COALESCE(instagram, '') <> ''", [a["id"]]):
+        db.run("UPDATE artists SET instagram = ? WHERE id = ?", [p["compte"][:120], a["id"]])
     base = storage.blob_public_url()
     gardees = []
     for i in indices:
@@ -183,10 +196,12 @@ def enregistre(job: dict, indices: list[int], artist_id: int, detourable: bool, 
         r.raise_for_status()
         nom = f"{re.sub(r'[^a-z0-9-]', '', a['slug'])}-lien-{job['id']}-{i + 1:02d}.jpg"
         storage.store_media("artists/plans", nom, r.content, "image/jpeg")
+        largeur, hauteur, score = plans.note_qualite(r.content, bool(detourable))
         if not db.value("SELECT 1 FROM artist_photos WHERE fichier = ?", [nom]):
             db.insert("artist_photos", {"artist_id": a["id"], "fichier": nom, "source": "lien", "source_ref": job["lien"][:120],
                                         "credit": (f"Photo : {p.get('credit')}" if p.get("credit") else "Photo partagée par l'artiste")[:300],
-                                        "plan_large": bool(detourable), "note": (note or "")[:600] or None})
+                                        "plan_large": bool(detourable), "note": (note or "")[:600] or None,
+                                        "largeur": largeur, "hauteur": hauteur, "score": score})
         gardees.append(nom)
     return gardees
 
@@ -277,3 +292,46 @@ def publie(job_id: int, job: dict, p: dict, maj) -> dict:
     maj(job_id, statut="envoye" if recus else "erreur", post_id=post["id"],
         erreur=None if recus else f"aucun réseau n'a accepté le carrousel : {resultat}"[:500])
     return {"statut": "envoye", "video": f"post {post['id']}"}
+
+
+
+# ---------------------------------------------------------------- reconnaissance de l'artiste
+
+def _cle(t: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]", "", t)
+
+
+SUFFIXES = ("officialaccount", "official", "officiel", "officielle", "music", "musique", "tv", "gram", "vevo", "real", "the")
+
+
+def reconnait(compte: str, legende: str = "") -> list[dict]:
+    """Artistes suivis qui correspondent au post : [{id, nom, sur}] du plus probable au moins probable.
+    sûr = compte déjà connu, ou nom du compte = nom de l'artiste ; sinon probable (nom cité dans la légende…)."""
+    artistes = db.all("SELECT id, name, instagram FROM artists WHERE status = 'active' AND length(name) >= 3")
+    c = _cle(compte)
+    for suf in SUFFIXES:            # « didibofficial » -> « didib »
+        if c.endswith(suf) and len(c) - len(suf) >= 3:
+            c = c[: -len(suf)]
+        if c.startswith(suf) and len(c) - len(suf) >= 3:
+            c = c[len(suf):]
+    resultats = {}
+    for a in artistes:
+        n = _cle(a["name"])
+        if compte and a.get("instagram") and _cle(a["instagram"]) == _cle(compte):
+            resultats[a["id"]] = (3, a["name"], True)
+        elif c and n == c:
+            resultats[a["id"]] = (2, a["name"], True)
+        elif c and len(n) >= 4 and (c.startswith(n) or n.startswith(c)) and min(len(n), len(c)) / max(len(n), len(c)) >= 0.6:
+            resultats.setdefault(a["id"], (1.5, a["name"], False))
+    texte = " " + re.sub(r"\s+", " ", (legende or "").lower()) + " "
+    for a in artistes:
+        if len(a["name"]) >= 4 and re.search(r"(?<![\w@])" + re.escape(a["name"].lower()) + r"(?!\w)", texte):
+            if a["id"] not in resultats:
+                resultats[a["id"]] = (1, a["name"], False)
+    tries = sorted(resultats.items(), key=lambda kv: -kv[1][0])
+    sur = [t for t in tries if t[1][2]]
+    if len(sur) > 1:                 # deux artistes « sûrs » : on demande
+        tries = [(i, (s_, n, False)) for i, (s_, n, _x) in tries]
+    return [{"id": i, "nom": n, "sur": s_} for i, (_sc, n, s_) in tries]

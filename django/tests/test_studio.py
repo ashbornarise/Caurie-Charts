@@ -91,3 +91,16 @@ def test_choix_des_plateformes():
     assert studio.reseaux_choisis({"reseaux": ["instagram", "tiktok", "pirate"]}) == ["instagram", "tiktok"]
     with pytest.raises(ValueError):
         studio.reseaux_choisis({"reseaux": []})
+
+
+def test_reconnaissance_de_l_artiste(monkeypatch):
+    from core.services.social import studio_photos as P
+    artistes = [{"id": 8, "name": "Didi B", "instagram": None}, {"id": 15, "name": "Burna Boy", "instagram": None},
+                {"id": 40, "name": "Ayra Starr", "instagram": "ayrastarr"}]
+    monkeypatch.setattr(P.db, "all", lambda *a, **k: artistes)
+    assert P.reconnait("didibofficial")[0] == {"id": 8, "nom": "Didi B", "sur": True}
+    assert P.reconnait("burnaboygram")[0]["id"] == 15
+    assert P.reconnait("AyraStarr")[0]["sur"] is True
+    cites = P.reconnait("skyrockfm", "Bigflo et Oli invitent Didi B sur scène")
+    assert cites and cites[0]["id"] == 8 and cites[0]["sur"] is False       # cité dans la légende : on demande
+    assert P.reconnait("inconnu123", "") == []

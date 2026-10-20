@@ -127,15 +127,41 @@ def enregistre(artiste: str, chemin: str, video_id: str, seconde: int, coupe_bas
     return nom
 
 
+def note_qualite(donnees: bytes, entiere: bool) -> tuple[int, int, float]:
+    """(largeur, hauteur, note de 0 à 1) : taille, netteté, cadrage vertical, personne entière (détourable)."""
+    import io
+    from PIL import Image, ImageFilter, ImageStat
+    with Image.open(io.BytesIO(donnees)) as im:
+        w, h = im.size
+        g = im.convert("L"); g.thumbnail((600, 600))
+        nettete = ImageStat.Stat(g.filter(ImageFilter.FIND_EDGES)).stddev[0]
+    taille = min(1.0, min(w, h) / 1600)
+    nette = min(1.0, nettete / 45)
+    verticale = 1.0 if h >= w else 0.55
+    return w, h, round(0.4 * taille + 0.3 * nette + 0.2 * verticale + (0.1 if entiere else 0), 3)
+
+
+def colonnes() -> None:
+    from core import db
+    for col in ("note TEXT", "largeur INT", "hauteur INT", "score REAL"):
+        db.run(f"ALTER TABLE artist_photos ADD COLUMN IF NOT EXISTS {col}")
+
+
 def photo_large(artist_id: int, detourable: bool = False) -> str | None:
-    """URL publique d'un plan large validé de l'artiste (le moins récemment utilisé), ou None.
-    detourable : seulement les plans qui se détourent proprement (plan_large) — un décor chargé (trône) reste pour le plein cadre."""
+    """URL publique de la MEILLEURE photo de l'artiste pour ce post : parmi celles non utilisées ces 7 derniers jours,
+    la mieux notée (taille, netteté, cadrage) ; sinon la moins récemment utilisée. detourable : seulement les photos où
+    la personne est entière (plan_large) — un décor chargé (trône) reste pour le plein cadre."""
     from core import db, storage
     try:
         r = db.one("SELECT id, fichier FROM artist_photos WHERE artist_id = ?" + (" AND plan_large" if detourable else "")
-                   + " ORDER BY utilise_le ASC NULLS FIRST, id LIMIT 1", [artist_id])
-    except Exception:  # noqa: BLE001 — table pas encore créée
-        return None
+                   + """ ORDER BY (utilise_le IS NULL OR utilise_le < NOW() - INTERVAL '7 days') DESC,
+                         COALESCE(score, 0.5) DESC, utilise_le ASC NULLS FIRST, id LIMIT 1""", [artist_id])
+    except Exception:  # noqa: BLE001 — table ou colonnes pas encore créées
+        try:
+            r = db.one("SELECT id, fichier FROM artist_photos WHERE artist_id = ?" + (" AND plan_large" if detourable else "")
+                       + " ORDER BY utilise_le ASC NULLS FIRST, id LIMIT 1", [artist_id])
+        except Exception:  # noqa: BLE001
+            return None
     if not r:
         return None
     db.run("UPDATE artist_photos SET utilise_le = NOW() WHERE id = ?", [r["id"]])

@@ -283,9 +283,14 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <section class="ecran" id="e-photos">
     <h1 class="titre">Photos d'artistes</h1>
     <p class="sous" id="ph-sous">Ajoute des photos à la banque d'un artiste : elles serviront aux prochaines couvertures.</p>
+    <button class="btn second" id="ph-voir-dossiers" style="margin:0 0 14px"><svg class="i"><use href="#i-film"/></svg>Dossiers des artistes</button>
+    <div id="ph-dossiers" style="display:none">
+      <div class="carte"><div class="etiq" id="ph-dossiers-titre">Dossiers</div><div class="liste" id="ph-dossiers-liste"></div>
+        <div class="galerie" id="ph-dossier-photos" style="display:none"></div></div>
+    </div>
     <div id="ph-form">
       <div class="carte">
-        <div class="etiq">Artiste</div>
+        <div class="etiq">Artiste <span style="text-transform:none;font-weight:600;color:var(--faible)">· facultatif, reconnu automatiquement</span></div>
         <div class="champ"><input id="ph-recherche" placeholder="Rechercher un artiste suivi…" autocomplete="off"></div>
         <div class="choix-artiste" id="ph-resultats"></div>
         <div id="ph-artiste"></div>
@@ -306,6 +311,12 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
       </div>
     </div>
     <div id="ph-grille" style="display:none">
+      <div class="carte">
+        <div class="etiq">Artiste</div>
+        <div id="ph-qui"></div>
+        <div class="champ" id="ph-qui-champ" style="margin-top:10px;display:none"><input id="ph-recherche2" placeholder="Rechercher l'artiste…" autocomplete="off"></div>
+        <div class="choix-artiste" id="ph-resultats2"></div>
+      </div>
       <div class="carte">
         <div class="etiq" id="ph-compte">Touche les photos à garder</div>
         <div class="galerie" id="ph-galerie"></div>
@@ -636,7 +647,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   async function suivrePhotos() {
     const j = await get('/job/' + ph.job);
     if (j.statut === 'erreur') { ph.etape = 'form'; vuePhotos(); message('#msg-photos', j.erreur || 'Échec', false); return; }
-    if (j.statut === 'pret' && j.photos.length) { message('#msg-photos', ''); afficheGalerie(j.photos); return; }
+    if (j.statut === 'pret' && j.photos.length) { message('#msg-photos', ''); afficheGalerie(j.photos); quiEst(j.params || {}); return; }
     setTimeout(suivrePhotos, 3000);
   }
   $('#ph-telephone').onclick = () => $('#ph-fichiers').click();
@@ -649,7 +660,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
         const blob = await reduit(fichiers[k]);
         await fetch(BASE + '/photos/' + ph.job + '/importer', {method: 'POST', headers: {'Content-Type': 'image/jpeg', 'X-CSRFToken': CSRF}, body: blob});
       }
-      const d = await get('/job/' + ph.job); message('#msg-photos', ''); afficheGalerie(d.photos);
+      const d = await get('/job/' + ph.job); message('#msg-photos', ''); afficheGalerie(d.photos); quiEst(d.params || {});
     } catch (e) { ph.etape = 'form'; vuePhotos(); message('#msg-photos', e.message, false); }
     $('#ph-fichiers').value = '';
   };
@@ -679,8 +690,63 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   }
   $('#choix-annuler').addEventListener('click', restaureFeuille);
   $('#voile').addEventListener('click', restaureFeuille);
+
+  // ---- qui est l'artiste ? (reconnu automatiquement, proposé, ou à choisir)
+  function choisitArtiste(a) {
+    ph.artiste = a; $('#ph-resultats2').innerHTML = ''; $('#ph-qui-champ').style.display = 'none';
+    $('#ph-qui').innerHTML = '<div class="artiste-choisi"><b></b><button class="lien-rouge" style="margin-left:auto">Changer</button></div>';
+    $('#ph-qui b').textContent = a.nom; $('#ph-qui button').onclick = () => { $('#ph-qui-champ').style.display = ''; $('#ph-recherche2').focus(); };
+    $('#ph-sous').textContent = 'Touche les photos à garder pour ' + a.nom + '.';
+  }
+  function quiEst(p) {
+    const box = $('#ph-qui'); box.innerHTML = ''; $('#ph-qui-champ').style.display = 'none';
+    if (p.artiste_id && (p.artiste_auto || ph.artiste)) { choisitArtiste({id: p.artiste_id, nom: p.artiste_nom}); if (p.artiste_auto)
+      box.insertAdjacentHTML('afterbegin', '<p style="margin:0 0 8px;font-size:13px;color:var(--vert)">Reconnu automatiquement</p>'); return; }
+    if (ph.artiste) { choisitArtiste(ph.artiste); return; }
+    const cands = p.candidats || [];
+    if (cands.length) {
+      box.innerHTML = '<p style="margin:0 0 8px;font-size:14px">Je pense que c’est :</p>';
+      cands.forEach(c => { const b = document.createElement('button'); b.className = 'puce'; b.style.margin = '0 6px 6px 0';
+        b.textContent = 'C’est ' + c.nom + ' ?'; b.onclick = () => { vibre(); choisitArtiste(c); }; box.appendChild(b); });
+    } else box.innerHTML = '<p style="margin:0;font-size:14px;color:var(--rouge)">Je n’ai pas reconnu l’artiste : choisis-le avant d’enregistrer.</p>';
+    $('#ph-qui-champ').style.display = '';
+  }
+  let minArt2;
+  $('#ph-recherche2').addEventListener('input', () => { clearTimeout(minArt2); minArt2 = setTimeout(async () => {
+    const q = $('#ph-recherche2').value.trim(), box = $('#ph-resultats2'); box.innerHTML = '';
+    if (q.length < 2) return;
+    const d = await get('/artistes?q=' + encodeURIComponent(q));
+    d.artistes.forEach(a => { const b = document.createElement('button'); b.innerHTML = '<img alt=""><span><b></b><br><small></small></span>';
+      if (a.photo) b.querySelector('img').src = a.photo; b.querySelector('b').textContent = a.nom; b.querySelector('small').textContent = a.pays;
+      b.onclick = () => { vibre(); $('#ph-recherche2').value = ''; choisitArtiste(a); }; box.appendChild(b); });
+  }, 300); });
+
+  // ---- dossiers des artistes
+  $('#ph-voir-dossiers').onclick = async () => {
+    const vu = $('#ph-dossiers').style.display !== 'none';
+    $('#ph-dossiers').style.display = vu ? 'none' : ''; if (vu) return;
+    $('#ph-dossier-photos').style.display = 'none'; $('#ph-dossiers-titre').textContent = 'Dossiers';
+    const d = await get('/banque'), l = $('#ph-dossiers-liste'); l.innerHTML = '';
+    if (!d.dossiers.length) { l.innerHTML = '<p style="margin:0;color:var(--doux);font-size:14px">Aucune photo pour l’instant.</p>'; return; }
+    d.dossiers.forEach(x => { const r = document.createElement('button'); r.className = 'ligne'; r.style.width = '100%'; r.style.textAlign = 'left';
+      r.innerHTML = '<img alt="" style="width:44px;height:44px;border-radius:12px;object-fit:cover"><div><b></b><br><small></small></div>';
+      r.querySelector('img').src = x.une; r.querySelector('b').textContent = x.nom; r.querySelector('small').textContent = x.n + ' photo(s)';
+      r.onclick = () => dossier(x); l.appendChild(r); });
+  };
+  async function dossier(x) {
+    $('#ph-dossiers-titre').textContent = x.nom + ' · ' + x.n + ' photo(s)'; $('#ph-dossiers-liste').innerHTML = '';
+    const d = await get('/banque/' + x.id), g = $('#ph-dossier-photos'); g.innerHTML = ''; g.style.display = '';
+    d.photos.forEach(f => { const b = document.createElement('button');
+      b.innerHTML = '<img alt=""><span class="statut" style="top:auto;bottom:6px;left:6px"></span>';
+      b.querySelector('img').src = f.url;
+      b.querySelector('.statut').textContent = (f.entiere ? 'Entière · ' : '') + 'note ' + Math.round((f.score || 0.5) * 100);
+      b.onclick = async () => { if (!confirm('Retirer cette photo de la banque de ' + x.nom + ' ?')) return;
+        await post('/banque/photo/' + f.id + '/retirer'); vibre(); b.remove(); };
+      g.appendChild(b); });
+  }
+
   async function enregistrerPhotos() {
-    if (!ph.artiste) { message('#msg-photos', 'Choisis d’abord l’artiste.', false); ph.etape = 'form'; vuePhotos(); return; }
+    if (!ph.artiste) { message('#msg-photos', 'Choisis d’abord l’artiste (carte « Artiste » en haut).', false); $('#ph-qui-champ').style.display = ''; return; }
     const indices = [...ph.choisies].sort((a, b) => a - b);
     try {
       const r = await post('/photos/' + ph.job + '/enregistrer', {indices, artiste_id: ph.artiste.id, detourable: $('#ph-entiere').classList.contains('on'),
