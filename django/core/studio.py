@@ -347,6 +347,18 @@ def historique(request, chemin):
     return _json({"jobs": [j for j in jobs if j["params"].get("type") != "photos"][:20]})   # les photos ont leur onglet
 
 
+def annuler(request, chemin, ident):
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
+    if not j or j["statut"] in ("envoye",):
+        return _json({"erreur": "impossible d'annuler"}, 400)
+    db.update("studio_jobs", {"statut": "annule"}, "id = :id", {"id": j["id"]})
+    return _json({"ok": True})
+
+
 def envoyer(request, chemin, ident):
     """Crée le post (légende FR + EN, crédit) et le programme partout via Buffer dans 2 minutes.
     Toute erreur revient en clair dans l'appli (au lieu d'une page « Erreur 500 ») et dans le journal."""

@@ -480,7 +480,8 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     else if (ecran === 'suivi' && etatJob && etatJob.statut === 'a_valider') a.innerHTML =
       `<button class="btn" id="btn-valider">${icone('ok')}Valider et fabriquer</button>`;
     else if (ecran === 'suivi' && etatJob && etatJob.statut === 'pret') a.innerHTML =
-      `<button class="btn vert" id="btn-envoyer">${icone('envoi')}Envoyer</button>`;
+      `<div style="display:grid;grid-template-columns:1fr auto;gap:10px"><button class="btn vert" id="btn-envoyer" style="margin-top:0">${icone('envoi')}Envoyer</button>` +
+      `<button class="btn second" id="btn-annuler-job" style="margin-top:0">Annuler</button></div>`;
     else if (ecran === 'suivi' && etatJob && etatJob.statut === 'envoye') a.innerHTML =
       `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn second" id="btn-nouvelle" style="margin-top:0">${icone('plus')}Nouvelle</button>` +
       `<button class="btn" id="btn-envoyer" style="margin-top:0">${icone('refaire')}Republier</button></div>`;
@@ -492,6 +493,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     const f = $('#btn-fabriquer'); if (f) f.onclick = fabriquer;
     const vv = $('#btn-valider'); if (vv) vv.onclick = validerAccroche;
     const e = $('#btn-envoyer'); if (e) e.onclick = envoyer;
+    const aj = $('#btn-annuler-job'); if (aj) aj.onclick = async () => { aj.disabled = true; await post('/job/' + jobEnCours + '/annuler', {}); jobEnCours = null; etatJob = null; montre('creer'); };
     const n = $('#btn-nouvelle'); if (n) n.onclick = () => { jobEnCours = null; etatJob = null; montre('creer'); };
   }
 
