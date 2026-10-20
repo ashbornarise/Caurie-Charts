@@ -1,0 +1,48 @@
+name: Clip studio (manuel)
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Lien YouTube du clip"
+        required: true
+        type: string
+      artiste:
+        description: "Nom de l'artiste"
+        required: true
+        type: string
+      titre:
+        description: "Titre du morceau"
+        required: true
+        type: string
+      pays:
+        description: "Code pays (TG, CI, NG…)"
+        required: true
+        type: string
+      rang:
+        description: "Position (défaut 1)"
+        required: false
+        type: string
+        default: "1"
+jobs:
+  clip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_ENV: production
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - name: Créer le job
+        working-directory: django
+        run: |
+          python manage.py studio_clip_top \
+            --url="${{ inputs.url }}" \
+            --artiste="${{ inputs.artiste }}" \
+            --titre="${{ inputs.titre }}" \
+            --pays="${{ inputs.pays }}" \
+            --rang="${{ inputs.rang }}"
