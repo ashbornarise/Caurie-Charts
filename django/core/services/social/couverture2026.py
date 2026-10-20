@@ -50,6 +50,13 @@ def sans_bandes(im: Image.Image) -> Image.Image:
     bas = next((y for y in range(h - 1, h * 2 // 3, -1) if ligne(y) > 14), h - 1)
     gauche = next((x for x in range(w // 3) if col(x) > 14), 0)
     droite = next((x for x in range(w - 1, w * 2 // 3, -1) if col(x) > 14), w - 1)
+    # Une vraie bande « cinéma » est SYMÉTRIQUE (haut et bas, ou gauche et droite). Un ciel de nuit noir en haut d'une
+    # photo n'en est pas une : on le coupait, et la tête avec (Wizkid, 20/10/2026).
+    sym = lambda a, b: a > 0 and b > 0 and abs(a - b) <= max(3, .3 * max(a, b))   # noqa: E731
+    if not sym(haut, h - 1 - bas):
+        haut, bas = 0, h - 1
+    if not sym(gauche, w - 1 - droite):
+        gauche, droite = 0, w - 1
     marge = 2   # quelques pixels de plus : le bord de la bande est souvent flou
     return im.crop((int((gauche + marge) * k) if gauche else 0, int((haut + marge) * k) if haut else 0,
                     int((droite - marge) * k) if droite < w - 1 else im.width,
@@ -138,6 +145,121 @@ def detoure(im: Image.Image, fin: bool = True) -> Image.Image | None:
         d.line((i, 0, i, cut.height), fill=v); d.line((cut.width - 1 - i, 0, cut.width - 1 - i, cut.height), fill=v)
     cut.putalpha(ImageChops.multiply(alpha, fondu))
     return cut.crop(cut.getbbox())
+
+
+def _boite_personne(im: Image.Image):
+    """(gauche, haut, droite, bas) de la personne en parts de l'image (masque rembg rapide), ou None."""
+    global _SESSION
+    try:
+        from rembg import new_session, remove
+        _SESSION = _SESSION or new_session("u2net_human_seg")
+        petit = im.copy(); petit.thumbnail((400, 400))
+        bb = remove(petit, session=_SESSION, only_mask=True).point(lambda v: 255 if v > 128 else 0).getbbox()
+        return (bb[0] / petit.width, bb[1] / petit.height, bb[2] / petit.width, bb[3] / petit.height) if bb else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _visages(im: Image.Image):
+    """Visages [(x, y, w, h)] en parts de l'image (YuNet, OpenCV), du plus grand au plus petit ; None sans OpenCV."""
+    try:
+        import cv2
+        import numpy as np
+        from core.services.social import visages as V
+        det, _rec = V._outils()
+        petit = im.convert("RGB"); petit.thumbnail((1280, 1280))
+        img = cv2.cvtColor(np.array(petit), cv2.COLOR_RGB2BGR)
+        det.setInputSize((petit.width, petit.height))
+        _n, faces = det.detect(img)
+    except Exception:  # noqa: BLE001
+        return None
+    out = [(f[0] / petit.width, f[1] / petit.height, f[2] / petit.width, f[3] / petit.height)
+           for f in (faces if faces is not None else []) if f[14] >= .6]
+    # une « tête » qui déborde du cadre est presque toujours une fausse détection (décor, tissu) : on l'ignore
+    out = [f for f in out if f[0] > -.01 and f[1] > -.01 and f[0] + f[2] < 1.01 and f[1] + f[3] < 1.01]
+    return sorted(out, key=lambda f: -f[2] * f[3])
+
+
+def photo_ok(im: Image.Image) -> bool:
+    """Garde-fou avant une couverture (Awa, 20/10/2026) : tête entière dans la photo d'origine (pas déjà coupée en
+    haut), pas de deuxième personne qui prend de la place. Sans OpenCV, on ne bloque pas."""
+    v = _visages(im)
+    if v is None:
+        return True
+    if not v:
+        return False                             # aucun visage visible : pas une couverture d'artiste
+    x, y, fw, fh = v[0]
+    # le crâne (coiffure, bandana, chapeau) touche le bord haut ; en gros plan beauté (visage > 25 % de la hauteur),
+    # des cheveux qui sortent du cadre sont un choix : il suffit que le front soit dans l'image
+    if y - (.2 if fh > .25 else .6) * fh < .01:
+        return False
+    if y + fh > .98 or x < .0 or x + fw > 1.0:   # visage coupé sur un bord
+        return False
+    # une autre personne bien visible (visage au moins 40 % aussi grand) : elle vole la photo (garde du corps…)
+    return not any(o[2] >= .4 * fw for o in v[1:])
+
+
+def cadrer(im: Image.Image, w: int, h: int):
+    """(image recadrée, hauteur du visage dans le cadre en part) : photo ENTIÈRE (décor d'origine) au format, centrée
+    sur le visage, le haut de la tête toujours dans l'image avec de l'air (« tu as coupé des photos au niveau de la
+    tête », 20/10/2026)."""
+    v = _visages(im)
+    bb = _boite_personne(im)
+    k = max(w / im.width, h / im.height)
+    sw, sh = round(im.width * k), round(im.height * k)
+    grande = im.resize((sw, sh), Image.LANCZOS)
+    if v:
+        fx, fy, fw, fh = v[0]
+        cx, haut, bas_visage = fx + fw / 2, fy - .45 * fh, fy + fh
+        if bb and fy - 1.2 * fh < bb[1] < haut:  # chapeau, coiffure : le masque monte plus haut que le front
+            haut = bb[1]
+    elif bb:
+        cx, haut, bas_visage = (bb[0] + bb[2]) / 2, bb[1], None
+    else:
+        cx, haut, bas_visage = .5, None, None
+    x = min(max(0, round(cx * sw - w / 2)), sw - w)
+    y = round((sh - h) * .25) if haut is None else min(max(0, round(haut * sh - .07 * h)), sh - h)
+    if bas_visage is not None and bas_visage * sh > y + h:   # jamais le visage coupé en bas
+        y = min(sh - h, round(bas_visage * sh - h * .9))
+    centre = None if not v else ((v[0][1] + v[0][3] / 2) * sh - y) / h
+    return grande.crop((x, y, x + w, y + h)), centre
+
+
+def cadre_personne(im: Image.Image, w: int, h: int) -> Image.Image:
+    return cadrer(im, w, h)[0]
+
+
+def decor_ia(photo, consigne: str = "") -> Image.Image | None:
+    """Décor refait par une IA d'image : la personne reste identique, le fond est recréé (style colors room) en
+    respectant l'angle de la caméra, la perspective, la profondeur de champ et la lumière de la photo."""
+    import base64
+    from core import env
+    im = _image(photo)
+    key = env.get("GEMINI_API_KEY", "")
+    if im is None or not key:
+        return None
+    src = im.convert("RGB"); src.thumbnail((1536, 1536)); buf = io.BytesIO(); src.save(buf, format="JPEG", quality=92)
+    texte = ("Edit this photo. Keep the person EXACTLY as they are: same face, identity, skin, hair, pose, clothes, "
+             "accessories and body proportions, no beautification, no change to the person. Replace only the background "
+             "with a premium editorial set in the 'colors room' style: a seamless room of one vivid, glossy, saturated "
+             "colour (sky blue, violet or warm amber) with smooth light. The new background MUST follow the original camera: "
+             "same camera angle and height, same horizon line and perspective, a real floor plane with depth and distance, "
+             "same lens and depth of field (background slightly out of focus if the original is), light direction and "
+             "colour matching the person, realistic contact shadows on the floor. Photorealistic magazine cover quality, "
+             "no text, no logo. " + (consigne or ""))
+    try:
+        r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{env.get('ILLUSTRATION_MODELE', 'gemini-2.5-flash-image')}:generateContent",
+                          headers={"x-goog-api-key": key}, timeout=120,
+                          json={"contents": [{"parts": [{"text": texte},
+                                                        {"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(buf.getvalue()).decode()}}]}],
+                                "generationConfig": {"responseModalities": ["IMAGE"]}})
+        r.raise_for_status()
+        parts = r.json()["candidates"][0]["content"]["parts"]
+        data = next(p["inlineData"]["data"] for p in parts if p.get("inlineData", {}).get("data"))
+        return Image.open(io.BytesIO(base64.b64decode(data))).convert("RGB")
+    except Exception as exc:  # noqa: BLE001
+        log_write("social", "warning", f"décor IA indisponible ({type(exc).__name__})")
+        return None
 
 
 def _fond_projecteur(w: int, h: int, teinte=(255, 190, 90)) -> Image.Image:
@@ -236,7 +358,8 @@ def _place(c: Image.Image, sujet: Image.Image, hauteur: int, x_centre: float, om
     c.paste(s, (x, y), s)
 
 
-def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str | None = None) -> Image.Image:
+def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str | None = None,
+           surligne: list | None = None) -> Image.Image:
     """lignes : [(texte, niveau)] avec niveau ∈ petit, moyen, grand, or (grand en couleur d'accent). Ex. ChartFR :
     [("NOUVEAU RECORD :", "petit"), ("MELODRAMA", "or"), ("devient le titre resté", "petit"), ("LE PLUS LONGTEMPS", "moyen"),
      ("TOP 10", "grand"), ("de tous les temps", "petit")]
@@ -247,6 +370,10 @@ def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str |
     u = w / 1080
     g = _graine(lignes)
     im = _image_nette(photo)
+    # Avec une bonne photo, on NE touche PAS à l'arrière-plan : photo entière, texte en bas (20/10/2026). Le détourage
+    # (projecteur, bas) ne sert plus que sur demande explicite (variante=...).
+    if im is not None and variante in (None, "plein"):
+        return _lockup_plein(im, lignes, fmt, surligne)
     sujet = detoure(im) if im is not None else None
     # « texte en bas » et « de côté » seulement avec un plan large (visage tout en haut) : sur un portrait serré,
     # le texte tomberait sur le visage
@@ -324,32 +451,112 @@ def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str |
     return c
 
 
+def _phrase(t: str) -> str:
+    """Capitales « années 80 » -> casse normale (HEAVEN BABY -> Heaven Baby) ; N°, sigles courts gardés."""
+    return t if not t.isupper() or len(t) <= 4 else " ".join(m if len(m) <= 3 and m.isalpha() and m in ("DJ", "MC") else m.capitalize() for m in t.split())
+
+
+def _surligne_ligne(d, x: float, y: float, texte_l: str, f, cibles: set, couleur, u: float, haut_l: int,
+                    encre=BLANC) -> None:
+    """Écrit une ligne ; les mots de `cibles` qui se suivent sont surlignés d'UN seul bloc continu."""
+    mots = texte_l.split(); esp = d.textlength(" ", font=f); pos = []
+    xx = x
+    for m in mots:
+        lm = d.textlength(m, font=f); pos.append((xx, lm, re.sub(r"\W", "", m.lower()) in cibles)); xx += lm + esp
+    k = 0
+    while k < len(pos):
+        if pos[k][2]:
+            j = k
+            while j + 1 < len(pos) and pos[j + 1][2]:
+                j += 1
+            d.rectangle((pos[k][0] - 8 * u, y + 6 * u, pos[j][0] + pos[j][1] + 8 * u, y + haut_l + 2 * u), fill=couleur)
+            k = j + 1
+        else:
+            k += 1
+    for (xx, _lm, c_), m in zip(pos, mots):
+        d.text((xx, y), m, font=f, fill=BLANC if c_ else encre)
+
+
+def _voile(c: Image.Image, y_texte0: int, y_texte1: int, en_haut: bool, plafond: int = 250) -> None:
+    """Voile sombre côté texte, plus fort si le décor derrière est chargé (rayures, rue) ; léger voile côté logo."""
+    w, h = c.size
+    zone = c.crop((0, max(0, y_texte0), w, min(h, y_texte1))).convert("L")
+    charge = ImageStat.Stat(zone.filter(ImageFilter.FIND_EDGES)).mean[0] if zone.height > 0 else 20
+    fort = int(min(plafond, 215 + charge * 1.2))
+    v = Image.new("L", (1, h))
+    for yy in range(h):
+        t = yy / h
+        if en_haut:
+            fin = min(1, (y_texte1 + 120) / h)
+            a = fort * min(1, max(0, (fin - t) / max(.01, fin - y_texte1 / h + .08))) ** 1.1
+        else:
+            debut = max(0, (y_texte0 - 260) / h)
+            a = fort * min(1, max(0, (t - debut) / max(.01, y_texte0 / h + .05 - debut))) ** 1.15
+            a = max(a, 110 * max(0, 1 - t / .13))
+        v.putpixel((0, yy), int(a))
+    c.paste(Image.new("RGB", (w, h), NUIT), (0, 0), v.resize((w, h)))
+
+
+def _lockup_plein(im: Image.Image, lignes: list, fmt: str, surligne: list | None = None) -> Image.Image:
+    """Lockup sur la photo entière (charte 2026, avis d'Awa 20/10/2026) : étiquette pastille, « N°x » en très grand,
+    titre en casse normale aligné à gauche, nom de l'artiste surligné d'un bloc ; texte en bas, ou en haut quand le
+    visage est bas dans le cadre ; voile adapté au décor."""
+    w, h = FORMATS.get(fmt, FORMATS["feed"])
+    u = w / 1080
+    c, centre = cadrer(im.convert("RGB"), w, h)
+    d = ImageDraw.Draw(c)
+    marge = int(64 * u)
+    cibles = {re.sub(r"\W", "", m.lower()) for s_ in (surligne or []) for m in s_.split()}
+    etiquette = next((t for t, n in lignes if n == "petit"), "")
+    corps = [(t, n) for t, n in lignes if not (n == "petit" and t == etiquette)]
+    styles = {"or": (int(190 * u), police("Montserrat.ttf", int(190 * u), "Black"), CIEL),
+              "grand": (int(120 * u), police("Montserrat.ttf", int(120 * u), "Black"), BLANC),
+              "moyen": (int(62 * u), police("Montserrat.ttf", int(62 * u), "ExtraBold"), BLANC),
+              "petit": (int(42 * u), police("Montserrat.ttf", int(42 * u), "SemiBold"), (232, 232, 242))}
+    plan = []
+    for t, n in corps:
+        t = _phrase(t)
+        taille, f, coul = styles.get(n, styles["moyen"])
+        while d.textlength(t, font=f) > w - 2 * marge and taille > 24 * u:
+            taille -= int(3 * u) or 1; f = police("Montserrat.ttf", taille, "Black" if n in ("or", "grand") else "ExtraBold" if n == "moyen" else "Medium")
+        bb = d.textbbox((0, 0), t, font=f)
+        plan.append((t, n, f, coul, bb[1], bb[3] - bb[1], int((18 if n == "or" else 14) * u)))
+    fe = police("Montserrat.ttf", int(28 * u), "ExtraBold")
+    h_eti = int(52 * u) + int(26 * u) if etiquette else 0
+    total = h_eti + sum(ht + esp for *_x, ht, esp in plan)
+    en_haut = centre is not None and centre > .55            # visage bas dans le cadre : le texte monte
+    y0 = int((170 if fmt == "feed" else 300) * u) if en_haut else h - int((110 if fmt == "feed" else 330) * u) - total
+    _voile(c, y0, y0 + total, en_haut, plafond=175)   # la photo doit vivre (Awa : « aplat presque noir »)
+    d = ImageDraw.Draw(c)
+    y = y0
+    if etiquette:
+        tw = d.textlength(etiquette.upper(), font=fe)
+        d.rounded_rectangle((marge, y, marge + tw + 36 * u, y + 52 * u), radius=int(26 * u), fill=CIEL)
+        d.text((marge + 18 * u, y + 10 * u), etiquette.upper(), font=fe, fill=NUIT)
+        y += h_eti
+    for t, n, f, coul, dy, ht, esp in plan:
+        if n == "or":
+            d.text((marge + 3 * u, y - dy + 5 * u), t, font=f, fill=(0, 0, 0))
+            d.text((marge, y - dy), t, font=f, fill=coul)
+        else:
+            _surligne_ligne(d, marge, y - dy, t, f, cibles, VIOLET, u, ht + dy)
+        y += ht + esp
+    _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u) if not en_haut else h - int(130 * u), int(80 * u))
+    return c
+
+
 def actu(photo, etiquette: str, titre: str, surligne: list | None = None, chapo: str = "", fmt: str = "feed",
-         fond_ia=None, couleur=VIOLET) -> Image.Image:
+         fond_ia=None, couleur=VIOLET, variante: str | None = None) -> Image.Image:
     """Actualité : étiquette pastille, titre en minuscules aligné à gauche, mots de `surligne` sur une bande de couleur."""
     w, h = FORMATS.get(fmt, FORMATS["feed"])
     u = w / 1080
     im = _image_nette(photo) or _image(fond_ia)
     if im is not None:
-        # Photo ENTIÈRE en plein cadre (le décor fait partie de l'image, façon Kultur), recadrée sur la personne
-        cx = 0.5
-        sujet = detoure(im, fin=False) if photo is not None else None
-        if sujet is not None:
-            try:
-                from rembg import remove
-                petit = im.copy(); petit.thumbnail((400, 400))
-                bb = remove(petit, session=_SESSION, only_mask=True).point(lambda v: 255 if v > 128 else 0).getbbox()
-                cx = ((bb[0] + bb[2]) / 2) / petit.width if bb else 0.5
-            except Exception:  # noqa: BLE001
-                pass
-        c = ImageOps.fit(im, (w, h), Image.LANCZOS, centering=(cx, 0.3))
+        # Photo ENTIÈRE en plein cadre (le décor fait partie de l'image, façon Kultur), recadrée sur la personne,
+        # le haut de la tête toujours dans l'image
+        c, centre = cadrer(im.convert("RGB"), w, h)
     else:
-        c = _fond_projecteur(w, h, (170, 120, 255))
-    voile = Image.new("L", (1, h))
-    for y in range(h):   # bas sombre pour le texte, léger voile en haut pour le logo
-        t = y / h
-        voile.putpixel((0, y), int(max(235 * max(0, (t - .45) / .55) ** 1.1, 120 * max(0, 1 - t / .14))))
-    c.paste(Image.new("RGB", (w, h), NUIT), (0, 0), voile.resize((w, h)))
+        c, centre = _fond_projecteur(w, h, (170, 120, 255)), None
     d = ImageDraw.Draw(c)
     marges = int(60 * u)
     ft = police("Montserrat.ttf", int(70 * u), "ExtraBold")
@@ -365,27 +572,47 @@ def actu(photo, etiquette: str, titre: str, surligne: list | None = None, chapo:
             cour = essai
     lignes.append(cour)
     inter = int(88 * u)
-    bas = h - int((130 if fmt == "feed" else 300) * u)
-    y_chapo = bas - (int(46 * u) if chapo else 0)
-    y_titre = y_chapo - inter * len(lignes) - int(10 * u)
-    cibles = {re.sub(r"\W", "", s.lower()) for s in (surligne or []) for s in s.split()}
+    hauteur_bloc = int(70 * u) + inter * len(lignes) + int(10 * u) + (int(46 * u) if chapo else 0)
+    en_haut = centre is not None and centre > .55            # visage bas dans le cadre : le texte monte
+    if en_haut:
+        y_titre = int((170 if fmt == "feed" else 300) * u) + int(70 * u)
+        y_chapo = y_titre + inter * len(lignes) + int(10 * u)
+    else:
+        bas = h - int((130 if fmt == "feed" else 300) * u)
+        y_chapo = bas - (int(46 * u) if chapo else 0)
+        y_titre = y_chapo - inter * len(lignes) - int(10 * u)
+    # variété (Awa, 20/10/2026) : un post sur deux en « carte de verre » (charte : blanc, effet verre), sinon voile sombre
+    verre = (variante or ("verre" if _graine([(titre, "")]) % 2 else "voile")) == "verre"
+    if verre:
+        bx0, by0 = marges - int(26 * u), y_titre - int(70 * u) - int(30 * u)
+        bx1, by1 = w - marges + int(26 * u), y_titre - int(70 * u) + hauteur_bloc + int(30 * u)
+        zone = c.crop((bx0, by0, bx1, by1)).filter(ImageFilter.GaussianBlur(int(26 * u)))
+        zone = Image.blend(zone, Image.new("RGB", zone.size, BLANC), .74)
+        masque = Image.new("L", zone.size, 0)
+        ImageDraw.Draw(masque).rounded_rectangle((0, 0, zone.width - 1, zone.height - 1), radius=int(34 * u), fill=255)
+        ombre = Image.new("RGBA", c.size, (0, 0, 0, 0))
+        ImageDraw.Draw(ombre).rounded_rectangle((bx0, by0 + int(10 * u), bx1, by1 + int(10 * u)), radius=int(34 * u), fill=(0, 0, 0, 90))
+        c.paste(ombre.filter(ImageFilter.GaussianBlur(int(18 * u))), (0, 0), ombre.filter(ImageFilter.GaussianBlur(int(18 * u))))
+        c.paste(zone, (bx0, by0), masque)
+        haut_v = Image.new("L", (1, h))
+        for yy in range(h):
+            haut_v.putpixel((0, yy), int(110 * max(0, 1 - yy / h / .13)))
+        c.paste(Image.new("RGB", (w, h), NUIT), (0, 0), haut_v.resize((w, h)))
+    else:
+        _voile(c, y_titre - int(70 * u), y_titre - int(70 * u) + hauteur_bloc, en_haut)
+    d = ImageDraw.Draw(c)
+    cibles = {re.sub(r"\W", "", m.lower()) for s_ in (surligne or []) for m in s_.split()}
     y = y_titre
     for ligne in lignes:
-        x = marges
-        for m in ligne.split():
-            lm = d.textlength(m, font=ft)
-            if re.sub(r"\W", "", m.lower()) in cibles:
-                d.rectangle((x - 8 * u, y + 8 * u, x + lm + 8 * u, y + inter - 6 * u), fill=couleur)
-            d.text((x, y), m, font=ft, fill=BLANC)
-            x += lm + d.textlength(" ", font=ft)
+        _surligne_ligne(d, marges, y, ligne, ft, cibles, couleur, u, inter - 14 * int(u or 1), encre=NUIT if verre else BLANC)
         y += inter
     if chapo:
-        d.text((marges, y_chapo + 8 * u), chapo, font=fc, fill=(230, 230, 240))
+        d.text((marges, y_chapo + 8 * u), chapo, font=fc, fill=(70, 70, 95) if verre else (230, 230, 240))
     tw = d.textlength(etiquette, font=fe)
     ye = y_titre - int(70 * u)
-    d.rounded_rectangle((marges, ye, marges + tw + 36 * u, ye + 50 * u), radius=int(25 * u), fill=CIEL)
-    d.text((marges + 18 * u, ye + 9 * u), etiquette, font=fe, fill=NUIT)
-    _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
+    d.rounded_rectangle((marges, ye, marges + tw + 36 * u, ye + 50 * u), radius=int(25 * u), fill=VIOLET if verre else CIEL)
+    d.text((marges + 18 * u, ye + 9 * u), etiquette, font=fe, fill=BLANC if verre else NUIT)
+    _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u) if not en_haut else h - int(130 * u), int(84 * u))
     return c
 
 

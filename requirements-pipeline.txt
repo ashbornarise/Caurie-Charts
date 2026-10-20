@@ -2,3 +2,5 @@
 # détourage pour la une de magazine (modèle isnet-general-use, téléchargé une fois puis gardé en cache)
 rembg[cpu]==2.0.85
 playwright>=1.49,<2
+# visages (garde-fou des couvertures, tri des photos du studio)
+opencv-python-headless==4.10.0.84

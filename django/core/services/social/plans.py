@@ -147,15 +147,37 @@ def colonnes() -> None:
         db.run(f"ALTER TABLE artist_photos ADD COLUMN IF NOT EXISTS {col}")
 
 
+def _premiere_valable(lignes: list):
+    """La première photo qui passe le garde-fou des couvertures (tête entière, pas de 2e personne) ; à défaut la 1re."""
+    if not lignes:
+        return None
+    try:
+        import io
+        import requests
+        from PIL import Image
+        from core import storage
+        from core.services.social import couverture2026 as C
+        base = storage.blob_public_url()
+        for r in lignes:
+            data = requests.get(f"{base}/media/artists/plans/{r['fichier']}", timeout=30).content
+            with Image.open(io.BytesIO(data)) as im:
+                if C.photo_ok(im.convert("RGB")):
+                    return r
+    except Exception:  # noqa: BLE001 — sans réseau ou sans outils : on garde l'ordre de la banque
+        pass
+    return lignes[0]
+
+
 def photo_large(artist_id: int, detourable: bool = False) -> str | None:
     """URL publique de la MEILLEURE photo de l'artiste pour ce post : parmi celles non utilisées ces 7 derniers jours,
     la mieux notée (taille, netteté, cadrage) ; sinon la moins récemment utilisée. detourable : seulement les photos où
     la personne est entière (plan_large) — un décor chargé (trône) reste pour le plein cadre."""
     from core import db, storage
     try:
-        r = db.one("SELECT id, fichier FROM artist_photos WHERE artist_id = ?" + (" AND plan_large" if detourable else "")
-                   + """ ORDER BY (utilise_le IS NULL OR utilise_le < NOW() - INTERVAL '7 days') DESC,
-                         COALESCE(score, 0.5) DESC, utilise_le ASC NULLS FIRST, id LIMIT 1""", [artist_id])
+        lignes = db.all("SELECT id, fichier FROM artist_photos WHERE artist_id = ?" + (" AND plan_large" if detourable else "")
+                        + """ ORDER BY (utilise_le IS NULL OR utilise_le < NOW() - INTERVAL '7 days') DESC,
+                              COALESCE(score, 0.5) DESC, utilise_le ASC NULLS FIRST, id LIMIT 8""", [artist_id])
+        r = _premiere_valable(lignes)
     except Exception:  # noqa: BLE001 — table ou colonnes pas encore créées
         try:
             r = db.one("SELECT id, fichier FROM artist_photos WHERE artist_id = ?" + (" AND plan_large" if detourable else "")
