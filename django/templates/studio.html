@@ -190,7 +190,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
     <div class="carte" id="idees" style="display:none">
       <div class="etiq">Idées du jour · souvenirs et records</div>
       <div id="idees-liste"></div>
-      <p style="margin:10px 0 0;font-size:12px;color:var(--faible)">Vrais clips officiels et vraies vues. « Fabriquer » : le serveur coupe chaque clip au refrain et l'habille ; tu valides l'envoi ensuite.</p>
+      <p style="margin:10px 0 0;font-size:12px;color:var(--faible)">Vrais clips officiels et vraies vues. « Fabriquer » : chaque clip devient sa propre vidéo, coupée au refrain et habillée ; tu les envoies ensuite une par une.</p>
     </div>
 
     <div class="carte">
@@ -962,12 +962,13 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     d.idees.forEach(x => { const r = document.createElement('div'); r.className = 'idee';
       r.innerHTML = '<div class="vignettes"></div><div class="txt"><b></b><small></small></div><button class="btn">Fabriquer</button>';
       x.elements.slice(0, 3).forEach(e => { const i = document.createElement('img'); i.alt = ''; i.src = e.vignette; r.querySelector('.vignettes').appendChild(i); });
-      r.querySelector('b').textContent = x.titre; r.querySelector('small').textContent = x.sous_titre + (x.mode === 'compilation' ? ' · compte à rebours de 5 extraits' : ' · extrait au refrain');
+      r.querySelector('b').textContent = x.titre; r.querySelector('small').textContent = x.sous_titre + (x.mode === 'compilation' ? ' · ' + x.elements.length + ' vidéos séparées, une par post' : ' · extrait au refrain');
       r.querySelector('.btn').onclick = async () => {
         if (!confirm('Je republie ces extraits de clips officiels en connaissance de cause (je supprime le post s’il est bloqué).')) return;
         vibre(); r.querySelector('.btn').disabled = true;
         try { const j = await post('/idees/fabriquer', {cle: x.cle, droits: true, reseaux: $$('#creer-reseaux .puce.actif').map(b => b.dataset.r)});
-          if (j.erreur) throw new Error(j.erreur); r.remove(); suivre(j.id); }
+          if (j.erreur) throw new Error(j.erreur); r.remove(); suivre(j.id);
+          if ((j.ids || []).length > 1) message('#msg-suivi', j.ids.length + ' vidéos en fabrication (une par clip) : retrouve-les dans « Mes vidéos » et envoie-les une par une.', true); }
         catch (e) { r.querySelector('.btn').disabled = false; message('#msg-creer', e.message, false); }
       };
       l.appendChild(r); });

@@ -308,8 +308,6 @@ def traite(job_id: int) -> dict:
         except Exception as exc:  # noqa: BLE001
             _maj(job_id, statut="erreur", erreur=str(exc)[:500])
             raise
-    if p.get("mode") == "compilation":
-        return traite_compilation(job_id, p)
     fmt = p.get("format") if p.get("format") in FORMATS else "origine"
     with tempfile.TemporaryDirectory(prefix=f"cauri-studio-{job_id}-") as tmp:
         try:
@@ -372,62 +370,3 @@ def traite(job_id: int) -> dict:
             _maj(job_id, statut="erreur", erreur=str(exc)[:500])
             raise
 
-
-# ---------------------------------------------------------------- compilation (idées du jour : top 5, records)
-
-def traite_compilation(job_id: int, p: dict) -> dict:
-    """Compte à rebours de clips officiels : chaque clip coupé au refrain (quelques secondes), son rang, son titre et
-    ses vues en bas pendant tout l'extrait, puis tout est assemblé (20/10/2026)."""
-    from core.services.social import refrain as RF
-    from core.services.social.encodage import AUDIO_HQ, FIN, VIDEO_HQ, copie_telegram
-    fmt = p.get("format") if p.get("format") in FORMATS and p.get("format") != "origine" else "story"
-    taille = FORMATS[fmt]
-    seg = float(p.get("segment") or 6.0)
-    with tempfile.TemporaryDirectory(prefix=f"cauri-compil-{job_id}-") as tmp:
-        try:
-            morceaux = []
-            for k, el in enumerate(p.get("elements") or []):
-                _maj(job_id, statut="telechargement", erreur=None)
-                sous = os.path.join(tmp, f"c{k}"); os.makedirs(sous, exist_ok=True)
-                source, _infos = telecharge(el["lien"], sous)
-                _maj(job_id, statut="montage")
-                debut, _fin = RF.refrain(source, duree=seg)
-                rang = f"N°{el['rang']} · " if el.get("rang") else ""
-                img, zone, titre_img = calque(fmt, p.get("etiquette") or "TOP 5", f"{rang}« {el['titre']} »",
-                                              el["artiste"], f"{el['artiste']} · {_vues_txt(el.get('vues'))} de vues · {el.get('annee', '')}".strip(" ·"),
-                                              taille)
-                png = os.path.join(tmp, f"calque{k}.png"); img.save(png)
-                png_t = os.path.join(tmp, f"titre{k}.png"); titre_img.save(png_t)
-                sortie = os.path.join(tmp, f"m{k}.mp4")
-                monte(source, sortie, fmt, debut, debut + seg, png, zone, taille, png_t, titre_permanent=True)
-                morceaux.append(sortie)
-                os.remove(source)
-            if len(morceaux) < 2:
-                raise RuntimeError("pas assez de clips récupérés pour la compilation")
-            nom = f"studio-{job_id}-{os.urandom(3).hex()}"
-            video = os.path.join(tmp, nom + ".mp4"); vignette = os.path.join(tmp, nom + ".jpg")
-            entrees = sum((["-i", m] for m in morceaux), [])
-            n = len(morceaux)
-            filtre = "".join(f"[{i}:v][{i}:a]" for i in range(n)) + f"concat=n={n}:v=1:a=1[v][a]"
-            r = subprocess.run([ffmpeg(), "-y", "-v", "error", *entrees, "-filter_complex", filtre, "-map", "[v]", "-map", "[a]",
-                                *VIDEO_HQ, *AUDIO_HQ, *FIN, video], capture_output=True, text=True, timeout=1500)
-            if r.returncode != 0:
-                raise RuntimeError("assemblage : " + (r.stderr or "")[-300:])
-            subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3", vignette],
-                           capture_output=True, timeout=60)
-            storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")
-            tg = copie_telegram(video)
-            if tg:
-                storage.store_media("social", os.path.basename(tg), open(tg, "rb").read(), "video/mp4")
-            storage.store_media("social", nom + ".jpg", open(vignette, "rb").read(), "image/jpeg")
-            p["credit"] = p.get("credit") or "Extraits des clips officiels (YouTube)"
-            _maj(job_id, statut="pret", video=nom + ".mp4", vignette=nom + ".jpg", params=p)
-            return {"statut": "pret", "video": nom + ".mp4"}
-        except Exception as exc:  # noqa: BLE001
-            _maj(job_id, statut="erreur", erreur=str(exc)[:500])
-            raise
-
-
-def _vues_txt(n) -> str:
-    from core.services.social.souvenirs import vues
-    return vues(n)

@@ -738,22 +738,34 @@ def idees_fabriquer(request, chemin):
     idee = next((i for i in souvenirs.propositions(jour) if i["cle"] == c.get("cle")), None)
     if not idee:
         return _json({"erreur": "cette idée n'est plus disponible"}, 404)
-    params = {k: idee.get(k, "") for k in ("etiquette", "accroche", "artiste", "credit", "legende_fr")}
-    params.update({"valider": False, "idee": idee["cle"], "titre_idee": idee["titre"], "legende_en": "", "contexte": idee["titre"],
-                   "reseaux": [r for r in (c.get("reseaux") or []) if r in PLATEFORMES_POST] or list(PLATEFORMES_POST)})
-    if idee["mode"] == "compilation":
-        params.update({"mode": "compilation", "format": "story", "elements": idee["elements"], "segment": 6})
-    else:
-        params.update({"format": c.get("format") if c.get("format") in FORMATS else "origine", "refrain_auto": True,
-                       "duree": 20, "debut": 0, "fin": 60})
+    reseaux = [r for r in (c.get("reseaux") or []) if r in PLATEFORMES_POST] or list(PLATEFORMES_POST)
+    fmt = c.get("format") if c.get("format") in FORMATS else "origine"
+    # un clip = une vidéo = un post (pas de compilation, 20/10/2026) : un top 5 donne 5 vidéos, du N°5 au N°1
+    from core.services.social.souvenirs import vues
+    travaux = []
+    for el in idee["elements"]:
+        if idee["mode"] == "compilation":
+            params = {"etiquette": f"{idee['etiquette']} · N°{el['rang']}", "artiste": el["artiste"],
+                      "accroche": f"N°{el['rang']} : « {el['titre']} » de {el['artiste']}",
+                      "credit": f"{vues(el['vues'])} de vues sur YouTube",
+                      "legende_fr": (f"{idee['titre']}, N°{el['rang']} : « {el['titre']} » de {el['artiste']}"
+                                     f"{' (' + el['annee'] + ')' if el.get('annee') else ''}, {vues(el['vues'])} de vues sur YouTube "
+                                     "selon nos relevés.\n\nVous l'aviez mis à quelle place ? Dites-le en commentaire.")}
+        else:
+            params = {k: idee.get(k, "") for k in ("etiquette", "accroche", "artiste", "credit", "legende_fr")}
+        params.update({"valider": False, "idee": idee["cle"], "titre_idee": idee["titre"], "legende_en": "", "contexte": idee["titre"],
+                       "reseaux": reseaux, "format": fmt, "refrain_auto": True, "duree": 20, "debut": 0, "fin": 60})
+        travaux.append((el["lien"], params))
     creer_tables()
-    job_id = db.insert("studio_jobs", {"lien": idee["elements"][0]["lien"][:1000], "params": json.dumps(params, ensure_ascii=False),
-                                       "auteur": u["id"]})
-    souvenirs.marque(idee["cle"], jour, job_id)
-    erreur = _lance(job_id)
-    if erreur:
-        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
-    return _json({"id": job_id, "erreur": erreur})
+    ids, erreur = [], None
+    for lien, params in travaux:
+        job_id = db.insert("studio_jobs", {"lien": lien[:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
+        ids.append(job_id)
+        erreur = _lance(job_id) or erreur
+        if erreur:
+            db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
+    souvenirs.marque(idee["cle"], jour, ids[0])
+    return _json({"id": ids[0], "ids": ids, "erreur": erreur})
 
 
 # ---------------------------------------------------------------- brouillon (rien ne se perd au rechargement)
