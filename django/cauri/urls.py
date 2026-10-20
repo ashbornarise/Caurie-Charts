@@ -27,6 +27,8 @@ urlpatterns = [
     re_path(S + r"/deconnexion$", studio.deconnexion),
     re_path(S + r"/verrouiller$", studio.verrouiller),
     re_path(S + r"/artistes$", studio.artistes),
+    re_path(S + r"/job/(?P<ident>\d+)/apercu$", studio.apercu_job),
+    re_path(S + r"/job/(?P<ident>\d+)/valider$", studio.valider_job),
     re_path(S + r"/photos/nouveau$", studio.photos_nouveau),
     re_path(S + r"/photos/(?P<ident>\d+)/importer$", studio.photos_importer),
     re_path(S + r"/photos/(?P<ident>\d+)/enregistrer$", studio.photos_enregistrer),

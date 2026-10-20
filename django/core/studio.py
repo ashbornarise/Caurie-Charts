@@ -277,6 +277,7 @@ def fabriquer(request, chemin):
     params = {"format": fmt, "debut": debut, "fin": fin}
     for k in ("etiquette", "accroche", "artiste", "credit", "legende_fr", "legende_en", "contexte"):
         params[k] = str(c.get(k) or "").strip()[:600]
+    params["valider"] = bool(c.get("valider", True))   # montrer l'accroche avant de fabriquer (sauf « Refaire »)
     creer_tables()
     job_id = db.insert("studio_jobs", {"lien": lien[:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
     erreur = _lance(job_id)
@@ -561,6 +562,63 @@ def photos_publier(request, chemin, ident):
     p.update({"publier_indices": indices, "notifier": bool(c.get("notifier")), "reseaux": reseaux,
               **{k: str(c.get(k) or "").strip()[:900] for k in ("etiquette", "accroche", "legende_fr", "legende_en")}})
     db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False), "statut": "attente", "erreur": None}, "id = :id", {"id": j["id"]})
+    erreur = _lance(j["id"])
+    if erreur:
+        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": j["id"]})
+    return _json({"ok": not erreur, "erreur": erreur})
+
+
+
+# ---------------------------------------------------------------- validation de l'accroche avant le montage
+
+TEXTES = ("etiquette", "accroche", "artiste", "credit", "legende_fr", "legende_en")
+
+
+def _textes(p: dict, c: dict) -> dict:
+    for k in TEXTES:
+        if k in c:
+            p[k] = str(c.get(k) or "").strip()[:900]
+    return p
+
+
+def apercu_job(request, chemin, ident):
+    """Recalcule l'aperçu (image clé + habillage) avec les textes modifiés — rapide, sur Vercel."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    import io
+    import requests
+    from PIL import Image
+    from core import storage
+    from core.services.social.studio_montage import apercu
+    j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
+    if not j:
+        raise Http404
+    p = _textes(json.loads(j["params"] or "{}"), _corps(request))
+    if not p.get("cle"):
+        return _json({"erreur": "pas d'image clé"}, 400)
+    base = storage.blob_public_url()
+    fond = Image.open(io.BytesIO(requests.get(f"{base}/media/social/{p['cle']}", timeout=30).content))
+    vue = apercu(fond, p.get("format_final") or "origine", p.get("etiquette") or "", p.get("accroche") or "", p.get("artiste") or "",
+                 p.get("credit") or "")
+    out = io.BytesIO(); vue.save(out, format="JPEG", quality=90)
+    nom = f"studio-{j['id']}-apercu-{secrets.token_hex(2)}.jpg"
+    storage.store_media("social", nom, out.getvalue(), "image/jpeg")
+    db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False), "vignette": nom}, "id = :id", {"id": j["id"]})
+    return _json({"vignette": f"{base}/media/social/{nom}"})
+
+
+def valider_job(request, chemin, ident):
+    """Textes validés : le montage démarre (GitHub)."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
+    if not j or j["statut"] != "a_valider":
+        return _json({"erreur": "rien à valider"}, 400)
+    p = _textes(json.loads(j["params"] or "{}"), _corps(request))
+    p["valide"] = True
+    db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False), "statut": "attente"}, "id = :id", {"id": j["id"]})
     erreur = _lance(j["id"])
     if erreur:
         db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": j["id"]})

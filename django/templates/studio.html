@@ -239,10 +239,23 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
       <div class="etapes">
         <div class="etape" data-e="telechargement"><span class="rond"></span>Téléchargement en HD</div>
         <div class="etape" data-e="analyse"><span class="rond"></span>Analyse et description par l'IA</div>
+        <div class="etape" data-e="a_valider"><span class="rond"></span>Ta validation de l'accroche</div>
         <div class="etape" data-e="montage"><span class="rond"></span>Habillage Cauri</div>
         <div class="etape" data-e="pret"><span class="rond"></span>Prête à envoyer</div>
       </div>
       <div class="barre"><i id="barre"></i></div>
+    </div>
+    <div id="validation" style="display:none">
+      <div class="telephone"><img id="v-apercu" alt="Aperçu" style="display:block;width:100%;border-radius:30px"></div>
+      <div class="carte texte">
+        <label style="margin-top:0">Étiquette<input id="v-etiquette"></label>
+        <label>Accroche sur la vidéo<input id="v-accroche" maxlength="90"></label>
+        <label>Artiste (surligné)<input id="v-artiste"></label>
+        <label>Crédit<input id="v-credit"></label>
+        <button class="btn second" id="v-maj" style="margin-top:14px"><svg class="i"><use href="#i-refaire"/></svg>Mettre à jour l'aperçu</button>
+        <label>Légende en français<textarea id="v-fr"></textarea></label>
+        <label>Légende en anglais<textarea id="v-en"></textarea></label>
+      </div>
     </div>
     <div id="resultat" style="display:none">
       <div class="telephone"><video id="video" controls playsinline preload="metadata"></video></div>
@@ -420,6 +433,8 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   function action() {
     const a = $('#action');
     if (ecran === 'creer') a.innerHTML = `<button class="btn" id="btn-fabriquer">${icone('magie')}Fabriquer</button>`;
+    else if (ecran === 'suivi' && etatJob && etatJob.statut === 'a_valider') a.innerHTML =
+      `<button class="btn" id="btn-valider">${icone('ok')}Valider et fabriquer</button>`;
     else if (ecran === 'suivi' && etatJob && etatJob.statut === 'pret') a.innerHTML =
       `<button class="btn vert" id="btn-envoyer">${icone('envoi')}Envoyer</button>`;
     else if (ecran === 'suivi' && etatJob && etatJob.statut === 'envoye') a.innerHTML =
@@ -431,6 +446,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     else a.innerHTML = '';
     if (ecran === 'photos') branchePhotos();
     const f = $('#btn-fabriquer'); if (f) f.onclick = fabriquer;
+    const vv = $('#btn-valider'); if (vv) vv.onclick = validerAccroche;
     const e = $('#btn-envoyer'); if (e) e.onclick = envoyer;
     const n = $('#btn-nouvelle'); if (n) n.onclick = () => { jobEnCours = null; etatJob = null; montre('creer'); };
   }
@@ -472,7 +488,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   }
 
   // ---------------- écran Suivi / résultat
-  const ORDRE = ['attente', 'telechargement', 'analyse', 'montage', 'pret'];
+  const ORDRE = ['attente', 'telechargement', 'analyse', 'a_valider', 'montage', 'pret'];
   function suivre(id) {
     jobEnCours = id; etatJob = null; $('#resultat').style.display = 'none'; $('#carte-etapes').style.display = '';
     message('#msg-suivi', ''); $('#suivi-titre').textContent = 'Fabrication…';
@@ -485,13 +501,37 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       $$('.etape').forEach(e => { const k = ORDRE.indexOf(e.dataset.e);
         e.className = 'etape' + (j.statut === 'envoye' || k < n || (j.statut === 'pret' && k === n) ? ' faite' : k === n ? ' cours' : '');
         e.querySelector('.rond').innerHTML = e.classList.contains('faite') ? icone('ok', 'width:16px;height:16px') : ''; });
-      $('#barre').style.width = ({attente: 8, telechargement: 30, analyse: 55, montage: 80, pret: 100, envoye: 100}[j.statut] || 8) + '%';
+      $('#barre').style.width = ({attente: 8, telechargement: 30, analyse: 50, a_valider: 65, montage: 82, pret: 100, envoye: 100}[j.statut] || 8) + '%';
+      $('#validation').style.display = 'none';
+      if (j.statut === 'a_valider') return validation(j);
       if (j.statut === 'erreur') { $('#suivi-titre').textContent = 'Échec'; $('#suivi-sous').textContent = '';
         message('#msg-suivi', j.erreur || 'Échec de la fabrication', false); action(); return; }
       if (j.statut === 'pret' || j.statut === 'envoye') return resultat(j);
       setTimeout(tour, 3000);
     };
     tour();
+  }
+  const champsV = () => ({etiquette: $('#v-etiquette').value, accroche: $('#v-accroche').value, artiste: $('#v-artiste').value,
+                          credit: $('#v-credit').value, legende_fr: $('#v-fr').value, legende_en: $('#v-en').value});
+  function validation(j) {
+    $('#validation').style.display = ''; $('#suivi-titre').textContent = 'Valide l’accroche';
+    $('#suivi-sous').textContent = 'Voici ce que l’IA va écrire sur la vidéo. Modifie si besoin, puis valide : le montage démarre ensuite.';
+    $('#v-apercu').src = j.vignette;
+    const p = j.params || {};
+    $('#v-etiquette').value = p.etiquette || ''; $('#v-accroche').value = p.accroche || ''; $('#v-artiste').value = p.artiste || '';
+    $('#v-credit').value = p.credit || ''; $('#v-fr').value = p.legende_fr || ''; $('#v-en').value = p.legende_en || '';
+    action();
+  }
+  $('#v-maj').onclick = async () => {
+    const b = $('#v-maj'); b.disabled = true;
+    try { const r = await post('/job/' + jobEnCours + '/apercu', champsV()); $('#v-apercu').src = r.vignette; vibre(); }
+    catch (e) { message('#msg-suivi', e.message, false); }
+    b.disabled = false;
+  };
+  async function validerAccroche() {
+    try { const r = await post('/job/' + jobEnCours + '/valider', champsV()); if (r.erreur) throw new Error(r.erreur);
+      vibre(); $('#validation').style.display = 'none'; suivre(jobEnCours); }
+    catch (e) { message('#msg-suivi', e.message, false); }
   }
   function resultat(j) {
     $('#carte-etapes').style.display = 'none'; $('#resultat').style.display = '';
@@ -667,7 +707,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   }
 
   // ---------------- écran Mes vidéos
-  const LIB = {attente: 'En file', telechargement: 'Téléchargement', analyse: 'Analyse', montage: 'Habillage', pret: 'Prête', erreur: 'Échec', envoye: 'Envoyée'};
+  const LIB = {attente: 'En file', telechargement: 'Téléchargement', analyse: 'Analyse', a_valider: 'À valider', montage: 'Habillage', pret: 'Prête', erreur: 'Échec', envoye: 'Envoyée'};
   async function grille() {
     const g = $('#grille');
     try {
@@ -724,7 +764,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   // Une vidéo en fabrication (lancée il y a moins de 30 min) : on la retrouve à l'ouverture
   get('/historique').then(d => {
     const j = (d.jobs || [])[0];
-    if (j && ['attente', 'telechargement', 'analyse', 'montage'].includes(j.statut)) suivre(j.id);
+    if (j && ['attente', 'telechargement', 'analyse', 'a_valider', 'montage'].includes(j.statut)) suivre(j.id);
   }).catch(() => {});
 }
 </script>

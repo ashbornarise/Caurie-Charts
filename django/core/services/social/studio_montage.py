@@ -6,6 +6,7 @@ Jamais de manipulation destinée à tromper la détection des droits (miroir, ac
 """
 import base64
 import glob
+import io
 import json
 import os
 import re
@@ -231,6 +232,26 @@ def duree_titre(duree: float) -> float:
     return max(1.5, min(max(2.5, min(7.0, duree * 0.15)), duree - 1.5))
 
 
+def image_cadre(source: str, t: float, fmt: str, zone, taille, sortie: str) -> str | None:
+    """Une image de la vidéo dans son cadre final (fond flouté + vidéo placée), sans habillage : base de l'aperçu."""
+    W, H = taille
+    x, y, w, h = zone
+    filtre = (f"[0:v]split=2[a][b];[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=28:6,"
+              f"eq=brightness=-0.35[fond];[b]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];"
+              f"[fond][clip]overlay=(W-w)/2:{y}+({h}-h)/2[v]")
+    r = subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", f"{t:.2f}", "-i", source, "-frames:v", "1",
+                        "-filter_complex", filtre, "-map", "[v]", "-q:v", "2", sortie], capture_output=True, timeout=120)
+    return sortie if r.returncode == 0 and os.path.isfile(sortie) else None
+
+
+def apercu(fond: Image.Image, fmt: str, etiquette: str, accroche: str, artiste: str, credit: str) -> Image.Image:
+    """L'image clé avec l'habillage complet (titre compris), telle qu'elle apparaîtra au début de la vidéo."""
+    fixe, _zone, titre = calque(fmt, etiquette, accroche, artiste, credit, fond.size)
+    im = fond.convert("RGBA")
+    im.alpha_composite(fixe); im.alpha_composite(titre)
+    return im.convert("RGB")
+
+
 def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_png: str, zone,
           taille: tuple[int, int] | None = None, titre_png: str | None = None) -> None:
     W, H = taille or FORMATS[fmt]
@@ -295,8 +316,22 @@ def traite(job_id: int) -> dict:
                       "debut": debut, "fin": fin, "suggestion": sugg, "titre_source": (infos.get("title") or "")[:200],
                       "legende_fr": p.get("legende_fr") or sugg.get("legende_fr") or "",
                       "legende_en": p.get("legende_en") or sugg.get("legende_en") or ""})
-            _maj(job_id, statut="montage", params=p)
             taille = taille_origine(infos, source) if fmt == "origine" else FORMATS[fmt]
+            if p.get("valider") and not p.get("valide"):
+                # 1er temps : on montre l'accroche sur une image de la vidéo ; le montage attend la validation (20/10/2026)
+                _f, zone_a, _t = calque(fmt, etiquette, accroche, artiste, credit, taille)
+                cle = image_cadre(source, debut + min(2.0, (fin - debut) / 2), fmt, zone_a, taille, os.path.join(tmp, "cle.jpg"))
+                if cle:
+                    nom_cle = f"studio-{job_id}-cle-{os.urandom(2).hex()}.jpg"
+                    storage.store_media("social", nom_cle, open(cle, "rb").read(), "image/jpeg")
+                    vue = apercu(Image.open(cle), fmt, etiquette, accroche, artiste, credit)
+                    out = io.BytesIO(); vue.save(out, format="JPEG", quality=90)
+                    nom_vue = f"studio-{job_id}-apercu-{os.urandom(2).hex()}.jpg"
+                    storage.store_media("social", nom_vue, out.getvalue(), "image/jpeg")
+                    p.update({"cle": nom_cle, "format_final": fmt})
+                    _maj(job_id, statut="a_valider", vignette=nom_vue, params=p)
+                    return {"statut": "a_valider", "video": nom_vue}
+            _maj(job_id, statut="montage", params=p)
             img, zone, titre_img = calque(fmt, etiquette, accroche, artiste, credit, taille)
             png = os.path.join(tmp, "calque.png"); img.save(png)
             png_titre = os.path.join(tmp, "titre.png"); titre_img.save(png_titre)
