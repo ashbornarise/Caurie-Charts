@@ -148,6 +148,48 @@ def _instagram_navigateur(lien: str, dossier: str, defilements: int = 0, maximum
     return chemins
 
 
+def _posts_du_profil(lien: str, defilements: int = 1, maximum: int = 24) -> list[str]:
+    """Liens des posts PHOTO visibles sur la grille d'un profil (sans compte). Les reels (vidéos) sont ignorés :
+    sans connexion, Instagram ne montre que les 12 derniers posts (vignettes) ; les photos complètes sont sur la page
+    de chaque post (carrousel entier)."""
+    import asyncio
+    liens: list = []
+
+    async def ouvre():
+        from playwright.async_api import async_playwright
+        async with async_playwright() as pw:
+            b = await pw.chromium.launch()
+            page = await b.new_page(locale="fr-FR", viewport={"width": 1280, "height": 900})
+
+            async def filtre(route):
+                if route.request.resource_type in ("media", "font"):
+                    await route.abort()
+                else:
+                    await route.continue_()
+            await page.route("**/*", filtre)
+            await page.goto(lien.split("?")[0], wait_until="domcontentloaded", timeout=45000)
+            await page.wait_for_timeout(4000)
+            for texte in ("Refuser les cookies optionnels", "Decline optional cookies"):
+                try:
+                    await page.get_by_text(texte).first.click(timeout=2500)
+                    break
+                except Exception:  # noqa: BLE001
+                    pass
+            for _ in range(defilements + 1):
+                for h in await page.eval_on_selector_all("a[href]", "els => els.map(e => e.getAttribute('href'))"):
+                    m = re.search(r"/p/([A-Za-z0-9_-]+)", h or "")
+                    if m:
+                        liens.append(f"https://www.instagram.com/p/{m.group(1)}/")
+                await page.mouse.wheel(0, 2500)
+                await page.wait_for_timeout(1800)
+            await b.close()
+    try:
+        asyncio.run(ouvre())
+    except Exception:  # noqa: BLE001
+        pass
+    return list(dict.fromkeys(liens))[:maximum]
+
+
 def _og_image(lien: str, dossier: str) -> list[str]:
     """Repli : l'image principale annoncée par la page (balise og:image)."""
     try:
@@ -392,13 +434,21 @@ def traite_profil(job_id: int, job: dict, p: dict, maj) -> dict:
     sa_page = bool(page_de) and (page_de == handle or (len(_cle(a["name"])) >= 3 and _cle(a["name"]) in _cle(page_de)))
     refus = {"pas_lui": 0, "pas_cite": 0, "plusieurs": 0, "petite": 0, "doublon": 0, "sans_visage": 0}
     with tempfile.TemporaryDirectory(prefix=f"cauri-profil-{job_id}-") as tmp:
-        images = _instagram_navigateur(job["lien"], tmp, defilements=8, maximum=ANALYSER) if "instagram.com" in job["lien"] else []
+        images, contextes = [], {}
+        if "instagram.com" in job["lien"]:
+            for k, post in enumerate(_posts_du_profil(job["lien"])):     # post par post, comme un lien de post
+                if len(images) >= ANALYSER:
+                    break
+                sous = os.path.join(tmp, f"post{k:02d}"); os.makedirs(sous, exist_ok=True)
+                imgs = _instagram_navigateur(post, sous, maximum=10)
+                contextes.update(PAR_CHEMIN)
+                images += imgs
         if not images:
             images, _i = _gallery_dl(job["lien"], tmp)
         maj(job_id, statut="analyse")
         candidates, vues = [], []
         for chemin in images[:ANALYSER]:
-            ctx = PAR_CHEMIN.get(chemin)
+            ctx = contextes.get(chemin)
             if not sa_page and ctx is not None and not _cite(ctx, a["name"], handle):
                 refus["pas_cite"] += 1          # page média : ce post ne parle pas de l'artiste
                 continue
