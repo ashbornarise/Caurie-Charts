@@ -34,6 +34,7 @@ urlpatterns = [
     re_path(S + r"/job/(?P<ident>\d+)/valider$", studio.valider_job),
     re_path(S + r"/photos/nouveau$", studio.photos_nouveau),
     re_path(S + r"/photos/profils$", studio.photos_profils),
+    re_path(S + r"/photos/tri/(?P<ident>\d+)/retirer$", studio.photos_tri_retirer),
     re_path(S + r"/photos/(?P<ident>\d+)/importer$", studio.photos_importer),
     re_path(S + r"/photos/(?P<ident>\d+)/enregistrer$", studio.photos_enregistrer),
     re_path(S + r"/photos/(?P<ident>\d+)/suggestions$", studio.photos_suggestions),

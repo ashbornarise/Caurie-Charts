@@ -496,7 +496,8 @@ def photos_nouveau(request, chemin):
         # tri en arrière-plan : on peut en lancer plusieurs à la suite, chacun devient un dossier « À trier »
         if not c.get("artiste_id"):
             return _json({"erreur": "choisis d'abord l'artiste : le tri en arrière-plan range ses photos dans son dossier"}, 400)
-        params.update({"mode": "profil", "artiste_id": int(c["artiste_id"]), "liens": liens})
+        params.update({"mode": "profil", "artiste_id": int(c["artiste_id"]), "liens": liens,
+                       "contexte": str(c.get("contexte") or "").strip()[:600]})
         job_id = db.insert("studio_jobs", {"lien": liens[0][:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
         erreur = _lance(job_id)
         if erreur:
@@ -705,6 +706,17 @@ def banque_retirer(request, chemin, ident):
 
 # ---------------------------------------------------------------- profil complet en arrière-plan
 
+def photos_tri_retirer(request, chemin, ident):
+    """Retire un tri de la liste « À trier » (échoué, ou dont on ne veut pas)."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    j = _job_photos(ident)
+    p = json.loads(j["params"] or "{}") if not isinstance(j["params"], dict) else j["params"]
+    p.update({"trie_le": datetime.now().isoformat(timespec="minutes"), "a_trier": False, "retire": True})
+    db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False)}, "id = :id", {"id": j["id"]})
+    return _json({"ok": True})
+
 def est_profil(lien: str) -> bool:
     """Lien d'un profil Instagram (instagram.com/compte) et pas d'un post, d'un reel ou d'une story."""
     u = urlparse(lien)
@@ -735,6 +747,6 @@ def photos_profils(request, chemin):
 
 
 # toutes les actions JSON du studio : erreurs lisibles
-for _nom in ("fabriquer", "photos_profils", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
+for _nom in ("fabriquer", "photos_profils", "photos_tri_retirer", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
              "apercu_job", "valider_job", "banque", "banque_artiste", "banque_retirer", "artistes", "reglages"):
     globals()[_nom] = _erreur_lisible(globals()[_nom])

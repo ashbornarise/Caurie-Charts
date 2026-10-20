@@ -292,10 +292,14 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
         <div class="galerie" id="ph-dossier-photos" style="display:none"></div></div>
     </div>
     <div class="carte" id="ph-atrier" style="display:none">
-      <div class="etiq">À trier · profils triés en arrière-plan</div>
+      <div class="etiq">À trier · tris en arrière-plan</div>
       <div class="liste" id="ph-atrier-liste"></div>
     </div>
     <div id="ph-form">
+      <div class="carte" id="ph-lot" style="display:none">
+        <div class="etiq">Tris prêts à lancer (en même temps)</div>
+        <div class="liste" id="ph-lot-liste"></div>
+      </div>
       <div class="carte">
         <div class="etiq">Artiste <span style="text-transform:none;font-weight:600;color:var(--faible)">· tu peux aussi le choisir après</span></div>
         <div class="champ"><input id="ph-recherche" placeholder="Rechercher un artiste suivi…" autocomplete="off"></div>
@@ -313,8 +317,9 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
         <input type="file" id="ph-fichiers" accept="image/*" multiple style="display:none">
         <div class="interrupteur" style="margin-top:14px">
           <button class="bascule on" id="ph-fond" role="switch" aria-checked="true" aria-label="En arrière-plan"></button>
-          <p><b>Trier en arrière-plan</b>Choisis l'artiste, colle ses liens, lance : tu peux enchaîner d'autres tris tout de suite. Chaque tri arrive dans « À trier » avec une pastille sur Photos.</p>
+          <p><b>Trier en arrière-plan</b>Plusieurs artistes d'un coup : choisis l'artiste, colle ses liens, « Ajouter à la liste », puis le suivant. Tout part en même temps ; chaque tri arrive dans « À trier » avec une pastille sur Photos.</p>
         </div>
+        <button class="btn second" id="ph-ajouter"><svg class="i"><use href="#i-plus"/></svg>Ajouter à la liste, préparer un autre artiste</button>
       </div>
       <div class="carte texte">
         <label style="margin-top:0">Ton commentaire / contexte<textarea id="ph-contexte" placeholder="ex. photos du concert à l'Accor Arena, pour annoncer la tournée"></textarea></label>
@@ -610,7 +615,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   let ph = {etape: 'form', job: null, artiste: null, choisies: new Set(), photos: [], publication: null};
   function actionPhotos() {
     if (ph.etape === 'form') return fond()
-      ? `<button class="btn" id="ph-recuperer">${icone('magie')}Lancer le tri</button>`
+      ? `<button class="btn" id="ph-recuperer">${icone('magie')}${aLancer().length > 1 ? 'Lancer les ' + aLancer().length + ' tris' : 'Lancer le tri'}</button>`
       : `<button class="btn" id="ph-recuperer">${icone('lien')}Récupérer les photos du lien</button>`;
     if (ph.etape === 'grille') return `<button class="btn" id="ph-enregistrer" ${ph.choisies.size ? '' : 'disabled'}>${icone('ok')}${ph.profil ? 'Valider' : 'Enregistrer'} la sélection (${ph.choisies.size})</button>`;
     if (ph.etape === 'publier') return `<button class="btn vert" id="ph-envoyer">${icone('envoi')}Envoyer</button>`;
@@ -649,10 +654,37 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     if (t) c.value = (c.value.trim() ? c.value.trim() + '\n' : '') + t; } catch (e) { $('#ph-lien').focus(); } };
   $('#ph-entiere').onclick = () => { vibre(); const b = $('#ph-entiere'), on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); };
   const fond = () => $('#ph-fond').classList.contains('on');
-  $('#ph-fond').onclick = () => { vibre(); const b = $('#ph-fond'), on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); action(); };
-  const nouveauJob = (lien, arriere) => post('/photos/nouveau', {lien, arriere_plan: !!arriere, artiste_id: ph.artiste && ph.artiste.id, artiste_nom: ph.artiste && ph.artiste.nom});
+  $('#ph-fond').onclick = () => { vibre(); const b = $('#ph-fond'), on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); vueLot(); };
+  const nouveauJob = (lien, arriere, a, contexte) => { a = a || ph.artiste;
+    return post('/photos/nouveau', {lien, arriere_plan: !!arriere, artiste_id: a && a.id, artiste_nom: a && a.nom, contexte: contexte || ''}); };
+  // ---- plusieurs artistes d'un coup : liste de tris préparés, lancés ensemble
+  let lot = [];
+  const nbLiens = t => (t.match(/https?:\/\/[^\s,;]+/g) || []).length;
+  function formulaireRempli() { return ph.artiste && nbLiens($('#ph-lien').value) ? {artiste: ph.artiste, liens: $('#ph-lien').value.trim(), contexte: $('#ph-contexte').value.trim()} : null; }
+  function aLancer() { const f = formulaireRempli(); return f ? lot.concat([f]) : lot.slice(); }
+  function videFormulaire() { $('#ph-lien').value = ''; $('#ph-contexte').value = ''; ph.artiste = null; $('#ph-artiste').innerHTML = ''; }
+  function vueLot() {
+    $('#ph-lot').style.display = lot.length ? '' : 'none';
+    $('#ph-ajouter').style.display = fond() ? '' : 'none';
+    const l = $('#ph-lot-liste'); l.innerHTML = '';
+    lot.forEach((x, i) => { const r = document.createElement('div'); r.className = 'ligne';
+      r.innerHTML = '<div style="flex:1"><b></b><br><small></small></div><button class="lien-rouge">Retirer</button>';
+      r.querySelector('b').textContent = x.artiste.nom; const n = nbLiens(x.liens);
+      r.querySelector('small').textContent = n + ' lien' + (n > 1 ? 's' : '') + (x.contexte ? ' · ' + x.contexte.slice(0, 40) : '');
+      r.querySelector('button').onclick = () => { vibre(); lot.splice(i, 1); vueLot(); };
+      l.appendChild(r); });
+    action();
+  }
+  $('#ph-ajouter').onclick = () => {
+    const f = formulaireRempli();
+    if (!f) { message('#msg-photos', ph.artiste ? 'Colle au moins un lien de post.' : 'Choisis d’abord l’artiste.', false); return; }
+    vibre(); lot.push(f); videFormulaire(); vueLot();
+    message('#msg-photos', f.artiste.nom + ' ajouté. Prépare le suivant, ou lance.', true); $('#ph-recherche').focus();
+  };
+  $('#ph-lien').addEventListener('input', action);
   async function recupererLien() {
     message('#msg-photos', '');
+    if (fond()) return lanceTris();
     const lien = $('#ph-lien').value.trim();
     if (!/https?:\/\//.test(lien)) { message('#msg-photos', 'Colle un lien, ou choisis des photos sur ton téléphone.', false); return; }
     if (fond() && !ph.artiste) { message('#msg-photos', 'Choisis d’abord l’artiste (en haut) : le tri range ses photos dans son dossier.', false); $('#ph-recherche').focus(); return; }
@@ -663,6 +695,20 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       ph.job = j.id; ph.etape = 'attente'; vuePhotos();
       message('#msg-photos', 'Récupération des photos sur le serveur (1 à 2 minutes)…', true); suivrePhotos(); }
     catch (e) { message('#msg-photos', e.message, false); }
+  }
+  async function lanceTris() {
+    const tris = aLancer();
+    if (!tris.length) { message('#msg-photos', ph.artiste ? 'Colle au moins un lien de post.' : 'Choisis l’artiste et colle ses liens.', false); return; }
+    const b = $('#ph-recuperer'); if (b) b.disabled = true;
+    const ok = [], ko = [];
+    for (const t of tris) {
+      try { const j = await nouveauJob(t.liens, true, t.artiste, t.contexte); if (j.erreur) throw new Error(j.erreur); ok.push(t.artiste.nom); }
+      catch (e) { ko.push(t.artiste.nom + ' : ' + e.message); }
+    }
+    lot = ko.length ? tris.filter(t => ko.some(k => k.startsWith(t.artiste.nom + ' :'))) : [];
+    videFormulaire(); vueLot(); profils(); vibre();
+    message('#msg-photos', (ok.length ? ok.length + ' tri' + (ok.length > 1 ? 's' : '') + ' lancé' + (ok.length > 1 ? 's' : '') + ' en même temps (' + ok.join(', ') + '). Les dossiers arrivent dans « À trier ».' : '')
+      + (ko.length ? ' Pas lancé : ' + ko.join(' · ') : ''), !ko.length);
   }
   async function suivrePhotos() {
     const j = await get('/job/' + ph.job);
@@ -771,9 +817,14 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     if (!d || !d.profils) return;
     const l = $('#ph-atrier-liste'); l.innerHTML = '';
     $('#ph-atrier').style.display = d.profils.length ? '' : 'none';
-    d.profils.forEach(x => { const r = document.createElement('button'); r.className = 'ligne'; r.style.width = '100%'; r.style.textAlign = 'left';
-      r.innerHTML = '<img alt="" style="width:44px;height:44px;border-radius:12px;object-fit:cover;background:#171030"><div><b></b><br><small></small></div>';
-      if (x.une) r.querySelector('img').src = x.une; r.querySelector('b').textContent = x.artiste + ' · ' + x.liens + ' lien' + (x.liens > 1 ? 's' : '');
+    d.profils.forEach(x => { const r = document.createElement('div'); r.className = 'ligne'; r.style.cursor = 'pointer';
+      r.innerHTML = (x.une ? '<img alt="" style="width:44px;height:44px;border-radius:12px;object-fit:cover;flex:none">'
+        : `<span class="pastille violet-p" style="width:44px;height:44px">${icone('photo')}</span>`)
+        + '<div style="flex:1;min-width:0"><b></b><br><small></small></div><button class="lien-rouge" style="flex:none">Retirer</button>';
+      if (x.une) r.querySelector('img').src = x.une;
+      r.querySelector('.lien-rouge').onclick = async ev => { ev.stopPropagation();
+        if (!confirm('Retirer ce tri de la liste ? (rien n’est ajouté à la banque)')) return;
+        await post('/photos/tri/' + x.id + '/retirer'); vibre(); profils(); }; r.querySelector('b').textContent = x.artiste + ' · ' + x.liens + ' lien' + (x.liens > 1 ? 's' : '');
       const enCours = !['pret', 'erreur'].includes(x.statut);
       r.querySelector('small').textContent = enCours ? 'Tri en cours…' : x.statut === 'erreur' ? (x.erreur || 'Échec') :
         x.n + ' photo(s) à trier · ' + x.reconnues + ' reconnue(s), déjà cochée(s)';
@@ -792,12 +843,13 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     $('#ph-entiere').classList.remove('on'); $('#ph-entiere').setAttribute('aria-checked', false);
     afficheGalerie(j.photos, pa.preselection || [], pa.reconnues || []);
     choisitArtiste({id: pa.artiste_id, nom: pa.artiste_nom});
+    $('#ph-contexte').value = pa.contexte || '';
     const rf = pa.refus || {}, ecartees = (rf.pas_lui || 0) + (rf.pas_cite || 0) + (rf.plusieurs || 0);
     message('#msg-photos', 'Cochées d’avance : celles où je l’ai reconnu. ' + (rf.pas_lui ? rf.pas_lui + ' écartée(s) car ce n’est pas lui. ' : '') +
       (rf.pas_cite ? rf.pas_cite + ' post(s) ne parlant pas de lui. ' : '') + (ecartees ? '' : '') + 'Ajuste puis valide.', true);
     window.scrollTo({top: 0});
   }
-  profils(); setInterval(profils, 60000);
+  profils(); setInterval(profils, 60000); vueLot();
 
   async function enregistrerPhotos() {
     if (!ph.artiste) { message('#msg-photos', 'Choisis d’abord l’artiste (carte « Artiste » en haut).', false); $('#ph-qui-champ').style.display = ''; return; }
