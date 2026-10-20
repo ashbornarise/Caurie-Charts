@@ -35,6 +35,8 @@ def creer_tables() -> None:
     db.run("""CREATE TABLE IF NOT EXISTS studio_passkeys (
         id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL, credential_id TEXT UNIQUE NOT NULL, public_key TEXT NOT NULL,
         sign_count BIGINT NOT NULL DEFAULT 0, nom TEXT, cree_le TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
+    db.run("""CREATE TABLE IF NOT EXISTS studio_brouillons (
+        user_id BIGINT PRIMARY KEY, donnees TEXT NOT NULL, maj TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
 
 
 def _verifie(chemin: str) -> None:
@@ -711,6 +713,28 @@ def banque_retirer(request, chemin, ident):
 
 
 
+# ---------------------------------------------------------------- brouillon (rien ne se perd au rechargement)
+
+def brouillon(request, chemin):
+    """GET : le brouillon de l'appli (champs, liste des tris, vidéo suivie…) ; POST : l'enregistre (20/10/2026)."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u:
+        return _json({"erreur": "connexion requise"}, 401)
+    creer_tables()
+    if request.method == "POST":
+        if len(request.body or b"") > 200_000:
+            return _json({"erreur": "brouillon trop gros"}, 400)
+        donnees = json.dumps(_corps(request), ensure_ascii=False)
+        if db.value("SELECT 1 FROM studio_brouillons WHERE user_id = ?", [u["id"]]):
+            db.run("UPDATE studio_brouillons SET donnees = ?, maj = NOW() WHERE user_id = ?", [donnees, u["id"]])
+        else:
+            db.insert("studio_brouillons", {"user_id": u["id"], "donnees": donnees})
+        return _json({"ok": True})
+    r = db.value("SELECT donnees FROM studio_brouillons WHERE user_id = ?", [u["id"]])
+    return _json({"brouillon": json.loads(r) if r else None})
+
+
 # ---------------------------------------------------------------- profil complet en arrière-plan
 
 def photos_tri_retirer(request, chemin, ident):
@@ -755,6 +779,6 @@ def photos_profils(request, chemin):
 
 
 # toutes les actions JSON du studio : erreurs lisibles
-for _nom in ("fabriquer", "photos_profils", "photos_tri_retirer", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
+for _nom in ("fabriquer", "brouillon", "photos_profils", "photos_tri_retirer", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
              "apercu_job", "valider_job", "banque", "banque_artiste", "banque_retirer", "artistes", "reglages"):
     globals()[_nom] = _erreur_lisible(globals()[_nom])

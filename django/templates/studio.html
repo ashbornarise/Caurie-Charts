@@ -941,6 +941,71 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   $('#btn-sortie').onclick = async () => { await post('/deconnexion'); location.reload(); };
 
   action();
+
+  // ---------------- brouillon : tout ce qui est saisi survit au rechargement et à la fermeture de l'appli
+  const CHAMPS = ['lien', 'etiquette', 'accroche', 'artiste', 'credit', 'contexte', 'debut', 'fin', 'ph-lien', 'ph-contexte'];
+  let restaure = true;   // pas de sauvegarde pendant la restauration
+  function etatAppli() {
+    const v = {};
+    CHAMPS.forEach(id => { const el = document.getElementById(id); if (el) v[id] = el.value; });
+    const on = sel => { const b = $(sel); return !!(b && b.classList.contains('on')); };
+    return {t: Date.now(), ecran, champs: v,
+      format: ($('#formats .format.actif') || {dataset: {}}).dataset.v || null,
+      duree: ($('#durees .puce.actif') || {dataset: {}}).dataset.d || null,
+      reseaux: $$('#creer-reseaux .puce.actif').map(b => b.dataset.r),
+      droits: on('#droits'), fond: on('#ph-fond'), textes: $('#textes').style.display !== 'none',
+      job: jobEnCours, phArtiste: ph.artiste, lot,
+      grille: ph.etape === 'grille' && ph.job ? {job: ph.job, choisies: [...ph.choisies], profil: !!ph.profil} : null};
+  }
+  let minuterieBrouillon;
+  function sauveBrouillon() {
+    if (restaure) return;
+    clearTimeout(minuterieBrouillon);
+    minuterieBrouillon = setTimeout(() => {
+      const e = etatAppli();
+      try { localStorage.setItem('studio-brouillon', JSON.stringify(e)); } catch (x) {}
+      post('/brouillon', e).catch(() => {});
+    }, 700);
+  }
+  document.addEventListener('input', sauveBrouillon, true);
+  document.addEventListener('click', () => setTimeout(sauveBrouillon, 50), true);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && !restaure) {
+    const e = etatAppli(); try { localStorage.setItem('studio-brouillon', JSON.stringify(e)); } catch (x) {}
+    try { navigator.sendBeacon && fetch(BASE + '/brouillon', {method: 'POST', keepalive: true,
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF}, body: JSON.stringify(e)}); } catch (x) {} } });
+  async function restaureBrouillon() {
+    let b = null;
+    try { b = JSON.parse(localStorage.getItem('studio-brouillon') || 'null'); } catch (x) {}
+    try { const d = await get('/brouillon'); if (d && d.brouillon && (!b || (d.brouillon.t || 0) > (b.t || 0))) b = d.brouillon; } catch (x) {}
+    if (!b) { restaure = false; return; }
+    Object.entries(b.champs || {}).forEach(([id, val]) => { const el = document.getElementById(id); if (el && val != null) el.value = val; });
+    if (b.format) $$('#formats .format').forEach(x => x.classList.toggle('actif', x.dataset.v === b.format));
+    if (b.duree) $$('#durees .puce').forEach(x => x.classList.toggle('actif', x.dataset.d === b.duree));
+    if (b.reseaux && b.reseaux.length) $$('#creer-reseaux .puce').forEach(x => x.classList.toggle('actif', b.reseaux.includes(x.dataset.r)));
+    const bascule = (sel, on) => { const x = $(sel); if (x) { x.classList.toggle('on', !!on); x.setAttribute('aria-checked', !!on); } };
+    bascule('#droits', b.droits); bascule('#ph-fond', b.fond !== false);
+    if (b.textes) $('#textes').style.display = '';
+    if (b.phArtiste && b.phArtiste.id) { ph.artiste = b.phArtiste;
+      $('#ph-artiste').innerHTML = '<div class="artiste-choisi"><img alt=""><b></b></div>';
+      if (b.phArtiste.photo) $('#ph-artiste img').src = b.phArtiste.photo; else $('#ph-artiste img').remove();
+      $('#ph-artiste b').textContent = b.phArtiste.nom; }
+    lot = Array.isArray(b.lot) ? b.lot : []; vueLot();
+    if (b.grille && b.grille.job) {
+      try { const j = await get('/job/' + b.grille.job), pa = j.params || {};
+        if (j.statut === 'pret' && (j.photos || []).length && !pa.trie_le) {
+          ph.job = b.grille.job; ph.profil = b.grille.profil;
+          afficheGalerie(j.photos, b.grille.choisies, pa.reconnues || []);
+          if (pa.artiste_id) choisitArtiste({id: pa.artiste_id, nom: pa.artiste_nom}); else quiEst(pa);
+          if (pa.contexte) $('#ph-contexte').value = pa.contexte;
+        } } catch (x) {}
+    }
+    if (b.job && b.ecran === 'suivi') suivre(b.job);
+    else if (b.ecran && b.ecran !== 'suivi' && b.ecran !== 'creer') montre(b.ecran);
+    else action();
+    if (b.job && b.ecran !== 'suivi') jobEnCours = b.job;
+    restaure = false;
+  }
+  restaureBrouillon();
   {% if not a_passkey %}setTimeout(() => montre('reglages'), 50);{% endif %}
   // Retour dans l'appli : plus de 5 min d'absence, on reverrouille ; sinon on reprend le suivi en cours
   let cache = Date.now();
