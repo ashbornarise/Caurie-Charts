@@ -364,6 +364,273 @@ def pepite(jour: date) -> dict | None:
             "elements": [_element(c)]}
 
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━ CATÉGORIES VIRALES (montages, compilations, moments forts) ━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def retro_annee(annee: int) -> dict | None:
+    """Rétrospective : les 10 clips qui ont marqué une année (compilation longue)."""
+    top = _un_par_artiste(_clips("EXTRACT(YEAR FROM tpi.published_at) = ?", [annee], 60), 10)
+    if len(top) < 8:
+        return None
+    top = list(reversed(top))
+    n = len(top)
+    lignes = "\n".join(f"N°{n - k} · {c['artiste']} — « {c['titre']} » ({vues(c['vues'])} de vues)" for k, c in enumerate(top))
+    return {"cle": f"retro:{annee}", "format": "retro_annee", "mode": "compilation",
+            "titre": f"Rétrospective {annee} : les {n} clips qui ont marqué l'année",
+            "sous_titre": f"{n} artistes · {n} clips",
+            "etiquette": f"RÉTROSPECTIVE · {annee}", "accroche": f"{annee} en {n} clips inoubliables",
+            "legende_fr": (f"RÉTROSPECTIVE {annee} : les {n} clips ouest-africains qui ont marqué cette année-là, "
+                           f"selon nos relevés (vues YouTube d'aujourd'hui).\n\n{lignes}\n\n"
+                           f"On a oublié un clip de {annee} ? Dites-le en commentaire !"),
+            "elements": [_element(c, n - k) for k, c in enumerate(top)]}
+
+
+def battle_pays(jour: date) -> dict | None:
+    """Battle : le N°1 de deux pays comparés — qui domine ?"""
+    idx = jour.toordinal() % (len(PAYS) - 1)
+    code_a, code_b = PAYS[idx], PAYS[(idx + 1) % len(PAYS)]
+    top_a = _un_par_artiste(_clips("c.code = ?", [code_a], 5), 1)
+    top_b = _un_par_artiste(_clips("c.code = ?", [code_b], 5), 1)
+    if not top_a or not top_b:
+        return None
+    a, b = top_a[0], top_b[0]
+    pays_a, pays_b = country_name(code_a), country_name(code_b)
+    gagnant = pays_a if (a["vues"] or 0) >= (b["vues"] or 0) else pays_b
+    return {"cle": f"battle-pays:{code_a}:{code_b}", "format": "battle_pays", "mode": "compilation",
+            "titre": f"{pays_a} vs {pays_b} : le clip le plus vu",
+            "sous_titre": f"{a['artiste']} vs {b['artiste']}",
+            "etiquette": f"{code_a} VS {code_b}", "accroche": f"{pays_a} contre {pays_b} : qui a le clip N°1 ?",
+            "legende_fr": (f"BATTLE : {pays_a.upper()} vs {pays_b.upper()} !\n\n"
+                           f"{pays_a} : « {a['titre']} » de {a['artiste']} — {vues(a['vues'])} de vues\n"
+                           f"{pays_b} : « {b['titre']} » de {b['artiste']} — {vues(b['vues'])} de vues\n\n"
+                           f"Avantage {gagnant} ! Mais le vrai juge, c'est vous.\n"
+                           f"Team {pays_a} ou Team {pays_b} ? En commentaire !"),
+            "elements": [_element(a, 1), _element(b, 2)]}
+
+
+def classique_eternel(jour: date) -> dict | None:
+    """Le clip le plus ancien qui a encore des millions de vues — un classique intemporel."""
+    clips = _clips("tpi.published_at < '2016-01-01'", [], 50)
+    grands = [c for c in clips if (c["vues"] or 0) >= 5_000_000]
+    if not grands:
+        return None
+    grands.sort(key=lambda c: c["sortie"] or "9999")
+    c = grands[jour.toordinal() % len(grands)]
+    annee = str(c["sortie"])[:4] if c.get("sortie") else "?"
+    age = jour.year - int(annee) if annee.isdigit() else "?"
+    return {"cle": f"classique:{c['track_id']}", "format": "classique_eternel", "mode": "simple",
+            "titre": f"Classique éternel : « {c['titre']} » ({annee})",
+            "sous_titre": f"{c['artiste']} · {age} ans · {vues(c['vues'])} de vues",
+            "etiquette": "CLASSIQUE ÉTERNEL", "accroche": f"{age} ans et toujours aussi fort : « {c['titre']} »",
+            "artiste": c["artiste"], "credit": f"clip officiel de {c['artiste']} (YouTube)",
+            "legende_fr": (f"Sorti en {annee}, « {c['titre']} » de {c['artiste']} a {age} ans. "
+                           f"Et pourtant : {vues(c['vues'])} de vues sur YouTube.\n\n"
+                           "Certains clips ne vieillissent jamais. Celui-là en fait partie.\n"
+                           "Vous l'écoutez encore ? Dites-le en commentaire."),
+            "elements": [_element(c)]}
+
+
+def revelation(jour: date) -> dict | None:
+    """L'artiste révélation : peu de clips mais un carton immédiat."""
+    artistes = db.all(
+        "SELECT a.id, a.name, c.code AS pays, COUNT(tpi.id) AS nb, "
+        "MAX((SELECT s.plays FROM snapshots s WHERE s.track_platform_id = tpi.id ORDER BY s.captured_on DESC LIMIT 1)) AS max_vues "
+        "FROM artists a JOIN tracks t ON t.artist_id = a.id JOIN track_platform_ids tpi ON tpi.track_id = t.id "
+        "LEFT JOIN countries c ON c.id = a.submission_country_id "
+        "WHERE tpi.platform = 'youtube' AND tpi.kind = 'clip' AND tpi.is_official = 1 AND a.status = 'active' "
+        "GROUP BY a.id, a.name, c.code HAVING COUNT(tpi.id) BETWEEN 1 AND 5 "
+        "ORDER BY max_vues DESC NULLS LAST LIMIT 30", [])
+    revelations = [a for a in artistes if (a["max_vues"] or 0) >= 10_000_000]
+    if not revelations:
+        return None
+    a = revelations[jour.toordinal() % len(revelations)]
+    clip = _clips("a.id = ?", [a["id"]], 1)
+    if not clip:
+        return None
+    c = clip[0]
+    pays = country_name(a["pays"]) if a["pays"] else ""
+    return {"cle": f"revelation:{a['id']}", "format": "revelation", "mode": "simple",
+            "titre": f"Révélation : {a['name']} — {vues(c['vues'])} de vues dès le début",
+            "sous_titre": f"{pays} · {a['nb']} clip(s) seulement",
+            "etiquette": "RÉVÉLATION", "accroche": f"{a['name']} : {a['nb']} clip(s) et déjà {vues(c['vues'])} de vues",
+            "artiste": a["name"], "credit": f"clip officiel de {a['name']} (YouTube)",
+            "legende_fr": (f"RÉVÉLATION : {a['name']}"
+                           + (f" ({pays})" if pays else "") +
+                           f" n'a que {a['nb']} clip(s) sur YouTube, mais « {c['titre']} » "
+                           f"cumule déjà {vues(c['vues'])} de vues !\n\n"
+                           "Le talent n'attend pas. Vous connaissiez cet artiste ?"),
+            "elements": [_element(c)]}
+
+
+def top_absolu(jour: date) -> dict | None:
+    """Le Top 10 absolu : les clips les plus vus de toute l'Afrique de l'Ouest."""
+    top = _un_par_artiste(_clips("1=1", [], 30), 10)
+    if len(top) < 10:
+        return None
+    top = list(reversed(top))
+    lignes = "\n".join(f"N°{10 - k} · {c['artiste']} — « {c['titre']} » ({vues(c['vues'])} de vues)" for k, c in enumerate(top))
+    total = sum(int(c["vues"] or 0) for c in top)
+    return {"cle": f"top-absolu:{jour.isocalendar()[1]}", "format": "top_absolu", "mode": "compilation",
+            "titre": "Top 10 absolu : les clips les plus vus d'Afrique de l'Ouest",
+            "sous_titre": f"{vues(total)} de vues cumulées",
+            "etiquette": "TOP 10 ABSOLU", "accroche": "Les 10 clips les plus vus de toute l'Afrique de l'Ouest",
+            "legende_fr": (f"LE TOP 10 ABSOLU : les clips officiels les plus vus d'Afrique de l'Ouest, "
+                           f"selon nos relevés. {vues(total)} de vues cumulées !\n\n{lignes}\n\n"
+                           "C'est votre top à vous aussi ? Dites-le en commentaire."),
+            "elements": [_element(c, 10 - k) for k, c in enumerate(top)]}
+
+
+def evolution_artiste(jour: date) -> dict | None:
+    """L'évolution d'un artiste : son premier clip vs son plus gros hit — avant/après."""
+    artistes = db.all(
+        "SELECT a.id, a.name, c.code AS pays "
+        "FROM artists a JOIN tracks t ON t.artist_id = a.id JOIN track_platform_ids tpi ON tpi.track_id = t.id "
+        "LEFT JOIN countries c ON c.id = a.submission_country_id "
+        "WHERE tpi.platform = 'youtube' AND tpi.kind = 'clip' AND tpi.is_official = 1 AND a.status = 'active' "
+        "AND tpi.published_at IS NOT NULL "
+        "GROUP BY a.id, a.name, c.code HAVING COUNT(tpi.id) >= 8 ORDER BY a.name", [])
+    if not artistes:
+        return None
+    a = artistes[(jour.toordinal() + 7) % len(artistes)]
+    premier = db.one(
+        "SELECT t.title AS titre, tpi.external_id AS video_id, tpi.published_at AS sortie, a.id AS artist_id, "
+        "a.name AS artiste, c.code AS pays, "
+        "(SELECT s.plays FROM snapshots s WHERE s.track_platform_id = tpi.id ORDER BY s.captured_on DESC LIMIT 1) AS vues "
+        "FROM track_platform_ids tpi JOIN tracks t ON t.id = tpi.track_id JOIN artists a ON a.id = t.artist_id "
+        "LEFT JOIN countries c ON c.id = a.submission_country_id "
+        "WHERE a.id = ? AND tpi.platform = 'youtube' AND tpi.kind = 'clip' AND tpi.is_official = 1 "
+        "AND tpi.published_at IS NOT NULL ORDER BY tpi.published_at ASC LIMIT 1", [a["id"]])
+    hit = _clips("a.id = ?", [a["id"]], 1)
+    if not premier or not hit or not premier.get("video_id"):
+        return None
+    premier["titre"] = propre_titre(premier["titre"] or "")
+    h = hit[0]
+    if premier["video_id"] == h["video_id"]:
+        return None
+    annee_debut = str(premier["sortie"])[:4] if premier.get("sortie") else "?"
+    annee_hit = str(h["sortie"])[:4] if h.get("sortie") else "?"
+    return {"cle": f"evolution:{a['id']}", "format": "evolution_artiste", "mode": "compilation",
+            "titre": f"L'évolution de {a['name']} : de {annee_debut} à {annee_hit}",
+            "sous_titre": f"Avant / Après",
+            "etiquette": "ÉVOLUTION", "accroche": f"{a['name']} : du premier clip au hit mondial",
+            "legende_fr": (f"L'ÉVOLUTION DE {a['name'].upper()} :\n\n"
+                           f"Avant ({annee_debut}) : « {premier['titre']} » — {vues(premier['vues'])} de vues\n"
+                           f"Après ({annee_hit}) : « {h['titre']} » — {vues(h['vues'])} de vues\n\n"
+                           f"Le chemin parcouru est immense. Respect.\n"
+                           "Vous préférez l'ancien ou le nouveau style ?"),
+            "elements": [_element(premier, 1), _element(h, 2)]}
+
+
+def meme_titre(jour: date) -> dict | None:
+    """Deux clips d'artistes différents avec un mot-clé commun dans le titre (Love, Money, Baby…)."""
+    mots = ["Love", "Baby", "Money", "Dance", "Fire", "King", "Queen", "Party", "Night", "Girl",
+            "Boy", "Heart", "God", "Mama", "Papa", "Street", "Life", "Beautiful", "Crazy", "One"]
+    mot = mots[jour.toordinal() % len(mots)]
+    clips = _un_par_artiste(_clips("t.title ILIKE ?", [f"%{mot}%"], 20), 10)
+    if len(clips) < 2:
+        return None
+    idx = (jour.day * 3) % (len(clips) - 1)
+    a, b = clips[idx], clips[(idx + 1) % len(clips)]
+    if a["artist_id"] == b["artist_id"]:
+        return None
+    return {"cle": f"meme-titre:{mot}:{a['track_id']}:{b['track_id']}", "format": "meme_titre", "mode": "compilation",
+            "titre": f"Même mot, deux hits : « {mot} »",
+            "sous_titre": f"{a['artiste']} vs {b['artiste']}",
+            "etiquette": f"MÊME MOT · {mot.upper()}", "accroche": f"« {mot} » : deux artistes, deux tubes",
+            "legende_fr": (f"Le mot « {mot} » a inspiré des tubes :\n\n"
+                           f"« {a['titre']} » de {a['artiste']} — {vues(a['vues'])} de vues\n"
+                           f"« {b['titre']} » de {b['artiste']} — {vues(b['vues'])} de vues\n\n"
+                           "Même mot, deux ambiances. Lequel vous préférez ?"),
+            "elements": [_element(a, 1), _element(b, 2)]}
+
+
+def roi_du_pays(jour: date) -> dict | None:
+    """Le roi/la reine du pays : l'artiste avec le plus de vues cumulées dans un pays."""
+    code = PAYS[(jour.toordinal() + 5) % len(PAYS)]
+    artistes = db.all(
+        "SELECT a.id, a.name, "
+        "SUM((SELECT s.plays FROM snapshots s WHERE s.track_platform_id = tpi.id ORDER BY s.captured_on DESC LIMIT 1)) AS total "
+        "FROM artists a JOIN tracks t ON t.artist_id = a.id JOIN track_platform_ids tpi ON tpi.track_id = t.id "
+        "LEFT JOIN countries c ON c.id = a.submission_country_id "
+        "WHERE tpi.platform = 'youtube' AND tpi.kind = 'clip' AND tpi.is_official = 1 AND a.status = 'active' "
+        "AND c.code = ? GROUP BY a.id, a.name ORDER BY total DESC NULLS LAST LIMIT 5", [code])
+    if not artistes:
+        return None
+    roi = artistes[0]
+    top = _clips("a.id = ?", [roi["id"]], 3)
+    if len(top) < 2:
+        return None
+    top = list(reversed(top))
+    n = len(top)
+    pays = country_name(code)
+    return {"cle": f"roi:{code}:{roi['id']}", "format": "roi_du_pays", "mode": "compilation",
+            "titre": f"Le roi du {pays} : {roi['name']}",
+            "sous_titre": f"{vues(roi['total'])} de vues cumulées",
+            "etiquette": f"ROI · {pays.upper()}", "accroche": f"{roi['name']} domine le {pays} avec {vues(roi['total'])} de vues",
+            "legende_fr": (f"QUI EST LE ROI DU {pays.upper()} ?\n\n"
+                           f"Avec {vues(roi['total'])} de vues cumulées sur YouTube, {roi['name']} domine.\n\n"
+                           + "\n".join(f"• « {c['titre']} » — {vues(c['vues'])} de vues" for c in reversed(top)) +
+                           "\n\nVous êtes d'accord ou il manque quelqu'un ?"),
+            "elements": [_element(c, n - k) for k, c in enumerate(top)]}
+
+
+def decennie(jour: date) -> dict | None:
+    """Les 2010s ou les 2020s : top 5 clips d'une décennie."""
+    dec = 2010 if jour.isocalendar()[1] % 2 == 0 else 2020
+    fin = dec + 9
+    label = f"{dec}s"
+    top = _un_par_artiste(_clips(
+        "EXTRACT(YEAR FROM tpi.published_at) BETWEEN ? AND ?", [dec, min(fin, jour.year)], 60), 5)
+    if len(top) < 5:
+        return None
+    top = list(reversed(top))
+    lignes = "\n".join(f"N°{5 - k} · {c['artiste']} — « {c['titre']} » ({vues(c['vues'])} de vues)" for k, c in enumerate(top))
+    return {"cle": f"decennie:{dec}", "format": "decennie", "mode": "compilation",
+            "titre": f"Le meilleur des {label} : Top 5 clips",
+            "sous_titre": " · ".join(c["artiste"] for c in reversed(top)),
+            "etiquette": f"TOP · {label.upper()}", "accroche": f"Les 5 clips qui ont défini les {label}",
+            "legende_fr": (f"LES {label.upper()} EN 5 CLIPS : les clips ouest-africains les plus vus de la décennie, "
+                           f"selon nos relevés.\n\n{lignes}\n\n"
+                           f"Les {label}, c'était mieux avant ? Ou c'est maintenant le meilleur moment ?"),
+            "elements": [_element(c, 5 - k) for k, c in enumerate(top)]}
+
+
+def moment_fort(jour: date) -> dict | None:
+    """Moment fort : le clip qui a explosé le plus vite (le plus de vues pour un clip récent — moins de 2 ans)."""
+    clips = _clips(
+        "tpi.published_at >= (?::date - INTERVAL '2 years')", [jour.isoformat()], 30)
+    if not clips:
+        return None
+    # trier par vues/jour depuis la sortie
+    for c in clips:
+        sortie = c.get("sortie")
+        if sortie and hasattr(sortie, "date"):
+            jours = max((jour - sortie.date()).days, 1)
+        elif sortie:
+            from datetime import date as d
+            try:
+                jours = max((jour - d.fromisoformat(str(sortie)[:10])).days, 1)
+            except ValueError:
+                jours = 365
+        else:
+            jours = 365
+        c["vues_par_jour"] = (c["vues"] or 0) / jours
+    clips.sort(key=lambda c: c["vues_par_jour"], reverse=True)
+    explosions = _un_par_artiste(clips, 5)
+    if not explosions:
+        return None
+    c = explosions[jour.day % len(explosions)]
+    vpj = int(c["vues_par_jour"])
+    return {"cle": f"moment-fort:{c['track_id']}", "format": "moment_fort", "mode": "simple",
+            "titre": f"Moment fort : « {c['titre']} » explose !",
+            "sous_titre": f"{c['artiste']} · {vpj:,} vues/jour".replace(",", " "),
+            "etiquette": "MOMENT FORT 🔥", "accroche": f"« {c['titre']} » de {c['artiste']} : {vpj:,} vues par jour !".replace(",", " "),
+            "artiste": c["artiste"], "credit": f"clip officiel de {c['artiste']} (YouTube)",
+            "legende_fr": (f"MOMENT FORT : « {c['titre']} » de {c['artiste']} fait {vpj:,} vues par jour en moyenne "
+                           f"depuis sa sortie ! Le clip cumule {vues(c['vues'])} de vues.\n\n"
+                           "Ce clip est partout en ce moment. Vous l'avez vu passer ?").replace(",", " "),
+            "elements": [_element(c)]}
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ PROPOSITIONS DU JOUR ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 def _ajoute(idees: list, faites: set, generateurs: list) -> None:
@@ -378,7 +645,7 @@ def _ajoute(idees: list, faites: set, generateurs: list) -> None:
 
 
 def propositions(jour: date) -> list[dict]:
-    """Les idées du jour (8 à 12), sans celles déjà fabriquées ces 60 derniers jours."""
+    """Les idées du jour (15 à 20), sans celles déjà fabriquées ces 60 derniers jours."""
     creer_table()
     faites = {r["cle"] for r in db.all("SELECT cle FROM studio_propositions WHERE jour >= ?::date - 60", [jour.isoformat()])}
     semaine = jour.isocalendar()[1]
@@ -411,7 +678,7 @@ def propositions(jour: date) -> list[dict]:
         if i and i["cle"] not in faites:
             idees.append(i); break
 
-    # ── top pays × année (tourne par jour — 10 pays × 18 années = 180 combinaisons) ──
+    # ── top pays × année ──
     for k in range(len(PAYS)):
         code = PAYS[(jord + k) % len(PAYS)]
         annee = ANNEES_LARGE[(semaine + k) % len(ANNEES_LARGE)]
@@ -419,23 +686,56 @@ def propositions(jour: date) -> list[dict]:
         if i and i["cle"] not in faites:
             idees.append(i); break
 
+    # ── rétrospective année (compilation 10 clips) ──
+    for k in range(len(ANNEES_LARGE)):
+        i = retro_annee(ANNEES_LARGE[(jord + k) % len(ANNEES_LARGE)])
+        if i and i["cle"] not in faites:
+            idees.append(i); break
+
+    # ── décennie (2010s / 2020s) ──
+    _ajoute(idees, faites, [lambda: decennie(jour)])
+
+    # ── top 10 absolu ──
+    _ajoute(idees, faites, [lambda: top_absolu(jour)])
+
     # ── artiste du jour ──
     _ajoute(idees, faites, [lambda: artiste_jour(jour)])
+
+    # ── roi du pays ──
+    _ajoute(idees, faites, [lambda: roi_du_pays(jour)])
 
     # ── cap de vues ──
     _ajoute(idees, faites, [lambda: cap_vues(jour)])
 
+    # ── moment fort (clip qui explose) ──
+    _ajoute(idees, faites, [lambda: moment_fort(jour)])
+
+    # ── révélation ──
+    _ajoute(idees, faites, [lambda: revelation(jour)])
+
     # ── premier clip ──
     _ajoute(idees, faites, [lambda: premier_clip(jour)])
+
+    # ── évolution artiste (avant/après) ──
+    _ajoute(idees, faites, [lambda: evolution_artiste(jour)])
 
     # ── ce mois dans l'histoire ──
     _ajoute(idees, faites, [lambda: ce_mois(jour)])
 
+    # ── classique éternel ──
+    _ajoute(idees, faites, [lambda: classique_eternel(jour)])
+
     # ── duel ──
     _ajoute(idees, faites, [lambda: duel(jour)])
 
+    # ── battle des pays ──
+    _ajoute(idees, faites, [lambda: battle_pays(jour)])
+
     # ── générations ──
     _ajoute(idees, faites, [lambda: generation(jour)])
+
+    # ── même titre ──
+    _ajoute(idees, faites, [lambda: meme_titre(jour)])
 
     # ── pépite cachée ──
     _ajoute(idees, faites, [lambda: pepite(jour)])
