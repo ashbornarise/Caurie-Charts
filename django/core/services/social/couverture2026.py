@@ -663,6 +663,111 @@ def texte(etiquette: str, titre: str, corps: str, pied: str = "", photo=None, fm
     return c
 
 
+def chiffres(etiquette: str, titre: str, lignes: list, photo=None, fmt: str = "feed", pied: str = "",
+             verre: bool = False) -> Image.Image:
+    """Diapositive « chiffres » (style magazine, 20/10/2026) : chaque valeur en grand, son explication en petit dessous.
+    Sombre : photo floutée et assombrie, valeurs en bleu ciel. verre : la vraie photo NETTE en plein cadre et une carte
+    de verre blanche en bas (charte : blanc, effet verre), valeurs en violet. lignes : [(valeur, explication)]."""
+    w, h = FORMATS.get(fmt, FORMATS["feed"])
+    u = w / 1080
+    if verre:
+        return _chiffres_verre(etiquette, titre, lignes, photo, fmt, w, h, u)
+    im = _image(photo)
+    if im is not None:
+        c = ImageOps.fit(im, (w, h), Image.LANCZOS).filter(ImageFilter.GaussianBlur(int(30 * u)))
+        c = Image.blend(c, Image.new("RGB", (w, h), NUIT), 0.70)
+    else:
+        c = _fond_projecteur(w, h, (170, 120, 255))
+    d = ImageDraw.Draw(c)
+    m = int(70 * u)
+    fe = police("Montserrat.ttf", int(27 * u), "ExtraBold")
+    ft = police("Montserrat.ttf", int(58 * u), "ExtraBold")
+    fd = police("Montserrat.ttf", int(32 * u), "Medium")
+    lignes = [(propre(str(v)), propre(str(e))) for v, e in lignes][:5]
+    taille_v = int((96 if len(lignes) <= 3 else 76) * u)
+    hauteur = int(88 * u) + int(96 * u) + sum(int(taille_v * 1.08) + int(42 * u) * (1 if len(e) < 46 else 2) + int(30 * u) for _v, e in lignes)
+    y = max(int((190 if fmt == "feed" else 500) * u), (h - hauteur) // 2 - int(20 * u))   # bloc centré : pas de grand vide en bas
+    tw = d.textlength(etiquette, font=fe)
+    d.rounded_rectangle((m, y, m + tw + 36 * u, y + 50 * u), radius=int(25 * u), fill=CIEL)
+    d.text((m + 18 * u, y + 9 * u), etiquette, font=fe, fill=NUIT)
+    y += int(88 * u)
+    d.text((m, y), propre(titre), font=ft, fill=BLANC)
+    y += int(96 * u)
+    for valeur, expl in lignes:
+        t = taille_v
+        fv = police("Montserrat.ttf", t, "Black")
+        while d.textlength(valeur, font=fv) > w - 2 * m and t > 30 * u:
+            t -= int(4 * u) or 1; fv = police("Montserrat.ttf", t, "Black")
+        d.text((m, y), valeur, font=fv, fill=CIEL)
+        y += int(t * 1.08)
+        mots, cour, rangs = expl.split(), "", []
+        for mot in mots:
+            essai = (cour + " " + mot).strip()
+            if d.textlength(essai, font=fd) > w - 2 * m and cour:
+                rangs.append(cour); cour = mot
+            else:
+                cour = essai
+        rangs += [cour] if cour else []
+        for r_ in rangs[:2]:
+            d.text((m, y), r_, font=fd, fill=(225, 225, 238)); y += int(42 * u)
+        y += int(30 * u)
+    if pied:
+        d.text((m, h - int((200 if fmt == "feed" else 380) * u)), pied, font=police("Montserrat.ttf", int(26 * u), "Medium"),
+               fill=(190, 190, 210))
+    _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
+    return c
+
+
+def _chiffres_verre(etiquette, titre, lignes, photo, fmt, w, h, u) -> Image.Image:
+    im = _image(photo)
+    c = cadrer(im.convert("RGB"), w, h)[0] if im is not None else _fond_projecteur(w, h, (170, 120, 255))
+    d = ImageDraw.Draw(c)
+    m = int(64 * u)
+    fe = police("Montserrat.ttf", int(26 * u), "ExtraBold")
+    ft = police("Montserrat.ttf", int(50 * u), "ExtraBold")
+    fd = police("Montserrat.ttf", int(30 * u), "Medium")
+    lignes = [(propre(str(v)), propre(str(e))) for v, e in lignes][:4]
+    tv = int(70 * u)
+    hauteur = int(50 * u) + int(28 * u) + int(66 * u) + len(lignes) * (int(tv * 1.05) + int(40 * u) + int(22 * u)) + int(24 * u)
+    bx0, bx1 = m - int(24 * u), w - m + int(24 * u)
+    by1 = h - int((70 if fmt == "feed" else 300) * u)
+    by0 = by1 - hauteur - int(40 * u)
+    zone = c.crop((bx0, by0, bx1, by1)).filter(ImageFilter.GaussianBlur(int(26 * u)))
+    zone = Image.blend(zone, Image.new("RGB", zone.size, BLANC), .80)
+    masque = Image.new("L", zone.size, 0)
+    ImageDraw.Draw(masque).rounded_rectangle((0, 0, zone.width - 1, zone.height - 1), radius=int(36 * u), fill=255)
+    ombre = Image.new("RGBA", c.size, (0, 0, 0, 0))
+    ImageDraw.Draw(ombre).rounded_rectangle((bx0, by0 + int(12 * u), bx1, by1 + int(12 * u)), radius=int(36 * u), fill=(0, 0, 0, 90))
+    ombre = ombre.filter(ImageFilter.GaussianBlur(int(18 * u)))
+    c.paste(ombre, (0, 0), ombre)
+    c.paste(zone, (bx0, by0), masque)
+    haut_v = Image.new("L", (1, h))
+    for yy in range(h):
+        haut_v.putpixel((0, yy), int(110 * max(0, 1 - yy / h / .13)))
+    c.paste(Image.new("RGB", (w, h), NUIT), (0, 0), haut_v.resize((w, h)))
+    d = ImageDraw.Draw(c)
+    y = by0 + int(34 * u)
+    tw = d.textlength(etiquette, font=fe)
+    d.rounded_rectangle((m, y, m + tw + 34 * u, y + 48 * u), radius=int(24 * u), fill=VIOLET)
+    d.text((m + 17 * u, y + 9 * u), etiquette, font=fe, fill=BLANC)
+    y += int(48 * u) + int(28 * u)
+    d.text((m, y), propre(titre), font=ft, fill=NUIT)
+    y += int(66 * u)
+    for valeur, expl in lignes:
+        t = tv; fv = police("Montserrat.ttf", t, "Black")
+        while d.textlength(valeur, font=fv) > w - 2 * m and t > 30 * u:
+            t -= int(4 * u) or 1; fv = police("Montserrat.ttf", t, "Black")
+        d.text((m, y), valeur, font=fv, fill=VIOLET)
+        y += int(tv * 1.05)
+        e = expl
+        while d.textlength(e, font=fd) > w - 2 * m and len(e) > 10:
+            e = e[:-2].rstrip() + "…"
+        d.text((m, y), e, font=fd, fill=(60, 60, 85))
+        y += int(40 * u) + int(22 * u)
+    _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
+    return c
+
+
 def classement(lignes: list, titre: str, sous_titre: str, fmt: str = "feed") -> Image.Image:
     """Liste du classement (style 2026) : dégradé violet profond, n°1 dans une pastille blanche, photos rondes.
     lignes : [{"position", "title", "artist_name", "image"}] (8 au plus en 4:5, 10 en 9:16)."""
