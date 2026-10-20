@@ -51,6 +51,71 @@ def _gallery_dl(lien: str, dossier: str) -> tuple[list[str], dict]:
     return images, infos
 
 
+COMPTES: list = []   # compte Instagram auteur du post, relevé au passage (crédit)
+
+
+def _images_json(obj, out: list) -> None:
+    """Toutes les images (plus grande taille) d'une réponse Instagram : carrousel compris, vidéos exclues."""
+    if isinstance(obj, dict):
+        if (obj.get("carousel_media") or obj.get("image_versions2")) and isinstance(obj.get("user") or obj.get("owner"), dict):
+            COMPTES.append((obj.get("user") or obj.get("owner")).get("username") or "")
+        for m in obj.get("carousel_media") or [] if isinstance(obj.get("carousel_media"), list) else []:
+            c = (m.get("image_versions2") or {}).get("candidates") or []
+            if c and m.get("media_type") in (1, None):
+                out.append(max(c, key=lambda x: x.get("width") or 0)["url"])
+        if not obj.get("carousel_media") and obj.get("media_type") == 1 and (obj.get("image_versions2") or {}).get("candidates"):
+            c = obj["image_versions2"]["candidates"]
+            out.append(max(c, key=lambda x: x.get("width") or 0)["url"])
+        for v in obj.values():
+            _images_json(v, out)
+    elif isinstance(obj, list):
+        for v in obj:
+            _images_json(v, out)
+
+
+def _instagram_navigateur(lien: str, dossier: str) -> list[str]:
+    """Post Instagram public ouvert dans un navigateur sans interface, sans compte : Instagram envoie les données du
+    post (toutes les images du carrousel) à tout visiteur. Rien n'est connecté à un compte."""
+    import asyncio
+    trouvees: list = []
+    COMPTES.clear()
+
+    async def ouvre():
+        from playwright.async_api import async_playwright
+        async with async_playwright() as pw:
+            b = await pw.chromium.launch()
+            page = await b.new_page(locale="fr-FR", viewport={"width": 1280, "height": 900})
+
+            async def reponse(r):
+                if "json" in (r.headers.get("content-type") or "") or "graphql" in r.url:
+                    try:
+                        _images_json(await r.json(), trouvees)
+                    except Exception:  # noqa: BLE001
+                        pass
+            page.on("response", reponse)
+            await page.goto(lien.split("?")[0], wait_until="networkidle", timeout=60000)
+            await page.wait_for_timeout(2500)
+            for bloc in re.findall(r'<script type="application/json"[^>]*>(.*?)</script>', await page.content(), re.S):
+                try:
+                    _images_json(json.loads(bloc), trouvees)
+                except Exception:  # noqa: BLE001
+                    pass
+            await b.close()
+    try:
+        asyncio.run(ouvre())
+    except Exception:  # noqa: BLE001
+        return []
+    chemins = []
+    for k, u in enumerate(list(dict.fromkeys(trouvees))[:MAX_PHOTOS]):
+        try:
+            r = requests.get(u, timeout=30)
+            r.raise_for_status()
+            c = os.path.join(dossier, f"ig{k:02d}.jpg"); open(c, "wb").write(r.content); chemins.append(c)
+        except Exception:  # noqa: BLE001
+            continue
+    return chemins
+
+
 def _og_image(lien: str, dossier: str) -> list[str]:
     """Repli : l'image principale annoncée par la page (balise og:image)."""
     try:
@@ -71,7 +136,15 @@ def traite(job_id: int, job: dict, p: dict, maj) -> dict:
     """Télécharge les photos du post et les propose (Blob media/artists/candidats/)."""
     maj(job_id, statut="telechargement", erreur=None)
     with tempfile.TemporaryDirectory(prefix=f"cauri-photos-{job_id}-") as tmp:
-        images, infos = _gallery_dl(job["lien"], tmp)
+        images, infos = [], {}
+        if "instagram.com" in job["lien"]:
+            images = _instagram_navigateur(job["lien"], tmp)   # carrousel complet, sans compte
+            m = re.search(r"instagram\.com/([^/?]+)/(?:p|reel)/", job["lien"])
+            compte = next((c for c in COMPTES if c), "") or (m.group(1) if m and m.group(1) not in ("p", "reel") else "")
+            infos = {"compte": compte, "plateforme": "instagram"}
+        if not images:
+            images, infos2 = _gallery_dl(job["lien"], tmp)
+            infos = infos2 or infos
         if not images:
             images = _og_image(job["lien"], tmp)
         noms = []
