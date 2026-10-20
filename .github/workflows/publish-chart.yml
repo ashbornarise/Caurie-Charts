@@ -13,7 +13,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
@@ -34,6 +34,11 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}
       - run: pip install -r requirements.txt -r requirements-pipeline.txt numpy "opencv-python-headless==4.10.0.84"
+      - name: Cache modèle rembg
+        uses: actions/cache@v4
+        with:
+          path: ~/.rembg/models
+          key: rembg-u2net-human-seg
       - name: Publier
         working-directory: django
         run: |
