@@ -257,6 +257,10 @@ def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str |
     # de la couleur du projecteur (LUMIERES) et de la mise en page (texte en haut, ou en bas pour un plan large).
     permises = ("projecteur", "bas") if sujet is not None and sujet.height / sujet.width >= 1.4 else ("projecteur",)
     v = variante or (permises[g % len(permises)] if sujet is not None else "projecteur")
+    # personne en pied (silhouette fine) : sous un texte en haut elle n'aurait que la moitié de l'image et paraîtrait
+    # minuscule (Wizkid, 20/10/2026) -> artiste en grand, texte en bas sur les jambes (jamais sur le visage)
+    if variante is None and sujet is not None and sujet.height / sujet.width >= 2.0:
+        v = "bas"
     lumiere, accent_l = LUMIERES[(g // 11) % len(LUMIERES)]
     fond_c, texte_c, accent = (None, BLANC, accent_l)
     if v in ("couleur", "cote"):
