@@ -182,11 +182,12 @@ def _posts_du_profil(lien: str, defilements: int = 1, maximum: int = 24) -> list
                         liens.append(f"https://www.instagram.com/p/{m.group(1)}/")
                 await page.mouse.wheel(0, 2500)
                 await page.wait_for_timeout(1800)
+            print(f"profil : « {await page.title()} » → {len(set(liens))} posts photo, url finale {page.url[:80]}", flush=True)
             await b.close()
     try:
         asyncio.run(ouvre())
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001
+        print("profil illisible :", str(exc)[:200], flush=True)
     return list(dict.fromkeys(liens))[:maximum]
 
 
