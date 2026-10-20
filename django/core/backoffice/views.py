@@ -249,6 +249,14 @@ def publish(request):
                 msg += " Telegram : " + telegram.send_chart("wa" if country in ("", "wa") else country)
             except Exception as exc:  # noqa: BLE001
                 msg += f" Telegram : échec ({exc})"
+            # Clips du podium (N°1, N°2, N°3) envoyés au studio pour validation
+            from core.services.social import officiel
+            try:
+                njobs = len(officiel.clips_podium(req_str(request, "country"), req_str(request, "period_key")))
+                if njobs:
+                    msg += f" Studio : {njobs} clip(s) du podium en attente (relais PC)."
+            except Exception as exc:  # noqa: BLE001
+                msg += f" Studio clips : échec ({exc})"
         return back(request, path(f"admin/classements/{run_id}"), "success", msg)
     except Exception as exc:  # noqa: BLE001
         return back(request, path(f"admin/classements/{run_id}"), "error", str(exc))

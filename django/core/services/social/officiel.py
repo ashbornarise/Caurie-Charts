@@ -66,3 +66,52 @@ def post(jour: date, due: datetime, essai: bool = False) -> dict | None:
     return E.save_post("format-officiel", jour.isoformat(), f"Classement officiel {semaine}", legende,
                        "#CauriCharts #ClassementOfficiel #Afrobeats #MusiqueAfricaine", fichiers,
                        {"cle": semaine, "due": due.isoformat(), "kind": "format-officiel"})
+
+
+def clips_podium(country: str | None = None, periode: str | None = None) -> list[int]:
+    """Crée un job studio pour le clip de chaque artiste du podium (N°1, N°2, N°3) du classement publié.
+    Appelée juste après ChartService.publish : les clips arrivent dans le studio comme notifications.
+    Les clips sont YouTube → statut attente_pc, le relais du PC les fabrique dans les 5 minutes."""
+    import json as _j
+    from core import storage
+    tops = repos.official_tops(3)
+    if country and country not in ("", "wa"):
+        tops = [t for t in tops if t["code"].lower() == country.lower()]
+    if periode:
+        tops = [t for t in tops if t["period_key"] == periode]
+    jobs = []
+    for t in tops:
+        semaine = t["period_key"]
+        for rang, row in enumerate(t["rows"][:3], 1):
+            tid = row.get("track_id")
+            if not tid:
+                continue
+            vid_id = db.value(
+                "SELECT external_id FROM track_platform_ids WHERE track_id=? AND platform='youtube' AND kind='clip' AND is_official=1 LIMIT 1",
+                [int(tid)])
+            if not vid_id:
+                continue
+            rang_txt = ["N°1", "N°2", "N°3"][rang - 1]
+            artiste = row.get("artist_name", "")
+            titre = row.get("title", "")
+            vues_txt = _vues(int(row.get("views") or 0))
+            params = _j.dumps({
+                "etiquette": f"{rang_txt} {_au(t['code']).upper()}",
+                "accroche": titre.upper(),
+                "artiste": artiste,
+                "credit": f"clip officiel de {artiste} (YouTube)",
+                "legende_fr": f"{rang_txt} {_au(t['code'])} cette semaine — {titre} de {artiste} ({vues_txt}).",
+                "legende_en": f"#{rang_txt.replace('°', '')} in {country_name(t['code'])} this week — {titre} by {artiste} ({vues_txt}).",
+                "valider": False,
+                "refrain_auto": True,
+                "duree": 20,
+                "debut": 0,
+                "fin": 60,
+                "format": "story",
+                "contexte": f"podium-{semaine}-{t['code']}-{rang}",
+            }, ensure_ascii=False)
+            job_id = db.insert("studio_jobs", {"lien": f"https://www.youtube.com/watch?v={vid_id}", "params": params, "auteur": 1})
+            db.update("studio_jobs", {"statut": "attente_pc"}, "id = :id", {"id": job_id})
+            storage.blob_put(f"relais/studio/job-{job_id}.json", _j.dumps({"job": job_id}).encode(), "application/json")
+            jobs.append(job_id)
+    return jobs
