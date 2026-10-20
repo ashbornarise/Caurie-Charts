@@ -26,7 +26,6 @@ from core.services.social.medias import _sans_accents
 
 QUOTA_MIN = 2000
 DUREE_MIN, DUREE_MAX = 25.0, 50.0
-TAILLE_MAX = 20 * 1024 * 1024
 # Stars africaines suivies même hors de notre base (en plus de nos artistes les plus suivis)
 STARS = ["Burna Boy", "Wizkid", "Davido", "Tems", "Rema", "Ayra Starr", "Asake", "Tiwa Savage", "Black Sherif", "Sarkodie",
          "Stonebwoy", "Yemi Alade", "Fally Ipupa", "Angélique Kidjo", "Didi B", "Toofan", "King Promise", "Omah Lay"]
@@ -381,21 +380,22 @@ def monte(src: str, duree: float, accroche: str, artiste: str, credit: str, subs
     n = len(subs) + 1
     filtre.append(f"[v{n}]fps=30,format=yuv420p,fade=t=in:d=0.3,fade=t=out:st={max(0, duree - 0.5):.2f}:d=0.5[v]")
     filtre.append(f"[0:a]afade=t=in:d=0.2,afade=t=out:st={max(0, duree - 0.8):.2f}:d=0.8,loudnorm=I=-14:TP=-1.5[a]")
-    for maxrate in ("4M", "2500k"):
-        cmd = [R.ffmpeg(), "-y", "-v", "error", *entrees, "-filter_complex", ";".join(filtre), "-map", "[v]", "-map", "[a]",
-               "-t", f"{duree:.2f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-maxrate", maxrate,
-               "-bufsize", "8M", "-profile:v", "high", "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-movflags", "+faststart", out]
-        try:
-            subprocess.run(cmd, capture_output=True, text=True, timeout=900, check=True)
-        except subprocess.CalledProcessError as exc:
-            log_write("social", "error", f"montage interview : {(exc.stderr or '')[-300:]}")
-            return None
-        except (OSError, subprocess.SubprocessError) as exc:
-            log_write("social", "error", f"montage interview : {str(exc)[:300]}")
-            return None
-        if os.path.isfile(out) and os.path.getsize(out) <= TAILLE_MAX:
-            return out
-    return None
+    from core.services.social.encodage import AUDIO_HQ, VIDEO_HQ, copie_telegram
+    # haute qualité pour Instagram, TikTok et Facebook ; Telegram reçoit sa copie allégée « -tg » (< 20 Mo)
+    cmd = [R.ffmpeg(), "-y", "-v", "error", *entrees, "-filter_complex", ";".join(filtre), "-map", "[v]", "-map", "[a]",
+           "-t", f"{duree:.2f}", *VIDEO_HQ, *AUDIO_HQ, "-movflags", "+faststart", out]
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, timeout=1500, check=True)
+    except subprocess.CalledProcessError as exc:
+        log_write("social", "error", f"montage interview : {(exc.stderr or '')[-300:]}")
+        return None
+    except (OSError, subprocess.SubprocessError) as exc:
+        log_write("social", "error", f"montage interview : {str(exc)[:300]}")
+        return None
+    if not os.path.isfile(out):
+        return None
+    copie_telegram(out)
+    return out
 
 
 # ---------------------------------------------------------------- ensemble

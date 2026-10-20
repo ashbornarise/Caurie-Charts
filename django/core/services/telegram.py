@@ -112,7 +112,15 @@ def send_post(post: dict, force: bool = False, http: HttpClient | None = None) -
     if post.get("video") and not slides:
         # Post vidéo (extrait de clip au refrain) : la vidéo elle-même, légende dessous
         chat = env.get("TELEGRAM_CHAT_ID")
-        call("sendVideo", {"chat_id": chat, "video": f"{base}/media/social/{post['video']}", "caption": post_caption(post),
+        # Telegram refuse les vidéos de plus de 20 Mo par lien : copie allégée « -tg » si elle existe (encodage.py)
+        video = f"{base}/media/social/{post['video']}"
+        legere = video.rsplit(".", 1)[0] + "-tg.mp4"
+        try:
+            if (http or HttpClient(15)).request("HEAD", legere)["status"] == 200:
+                video = legere
+        except Exception:  # noqa: BLE001
+            pass
+        call("sendVideo", {"chat_id": chat, "video": video, "caption": post_caption(post),
                            "parse_mode": "HTML", "supports_streaming": True}, http)
         audit.log(None, "telegram.post", "social_post", post["id"], key, {"video": post["video"]}, None)
         return f"envoyé ({key}, vidéo)"

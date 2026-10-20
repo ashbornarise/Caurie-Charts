@@ -220,18 +220,14 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
               f"[b]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];"
               f"[fond][clip]overlay=(W-w)/2:{y}+({h}-h)/2[v0];[v0][1:v]overlay=0:0,fps=30,format=yuv420p,"
               f"fade=t=in:d=0.25,fade=t=out:st={max(0, duree - 0.4):.2f}:d=0.4[v]")
-    for maxrate in ("4M", "2500k"):
-        cmd = [ffmpeg(), "-y", "-v", "error", "-ss", f"{debut:.2f}", "-t", f"{duree:.2f}", "-i", source,
-               "-loop", "1", "-t", f"{duree:.2f}", "-i", calque_png, "-filter_complex", filtre, "-map", "[v]", "-map", "0:a?",
-               "-af", f"loudnorm=I=-14:TP=-1.5,afade=t=out:st={max(0, duree - 0.5):.2f}:d=0.5",
-               "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-maxrate", maxrate, "-bufsize", "8M",
-               "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-movflags", "+faststart", "-shortest", sortie]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
-        if r.returncode != 0:
-            raise RuntimeError("montage : " + (r.stderr or "")[-300:])
-        if os.path.getsize(sortie) <= 95 * 1024 * 1024:
-            return
-    raise RuntimeError("vidéo trop lourde après compression")
+    from core.services.social.encodage import AUDIO_HQ, FIN, VIDEO_HQ
+    cmd = [ffmpeg(), "-y", "-v", "error", "-ss", f"{debut:.2f}", "-t", f"{duree:.2f}", "-i", source,
+           "-loop", "1", "-t", f"{duree:.2f}", "-i", calque_png, "-filter_complex", filtre, "-map", "[v]", "-map", "0:a?",
+           "-af", f"loudnorm=I=-14:TP=-1.5,afade=t=out:st={max(0, duree - 0.5):.2f}:d=0.5",
+           *VIDEO_HQ, *AUDIO_HQ, *FIN, "-shortest", sortie]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=1500)
+    if r.returncode != 0:
+        raise RuntimeError("montage : " + (r.stderr or "")[-300:])
 
 
 # ---------------------------------------------------------------- ensemble
@@ -274,6 +270,10 @@ def traite(job_id: int) -> dict:
             subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3", vignette],
                            capture_output=True, timeout=60)
             storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")
+            from core.services.social.encodage import copie_telegram
+            tg = copie_telegram(video)   # Telegram : copie sous 20 Mo ; Instagram, TikTok et Facebook gardent la haute qualité
+            if tg:
+                storage.store_media("social", os.path.basename(tg), open(tg, "rb").read(), "video/mp4")
             storage.store_media("social", nom + ".jpg", open(vignette, "rb").read(), "image/jpeg")
             _maj(job_id, statut="pret", video=nom + ".mp4", vignette=nom + ".jpg", params=p)
             return {"statut": "pret", "video": nom + ".mp4"}

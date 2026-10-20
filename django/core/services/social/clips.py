@@ -16,6 +16,7 @@ from core import db, storage
 from core.helpers import country_name
 from core.services.platforms import log_write
 from core.services.social import image as PI
+from core.services.social import encodage as E
 from core.services.social import refrain as R
 
 HEURES = (13, 17, 21)     # heure de Lomé (= UTC) : midi, sortie du travail, soirée
@@ -127,7 +128,7 @@ def _interview(jour: date, k: int, essai: bool, pris: set) -> tuple[str, str] | 
     R.vignette(str(video), str(vignette), 2.0)
     due = _due(jour, k)
     tags = "#CauriCharts #" + "".join(ch for ch in res["artist"] if ch.isalnum()) + " #Interview #Afrobeats #MusiqueAfricaine"
-    storage.publish_media_files("social", [video.name, vignette.name])
+    storage.publish_media_files("social", [video.name, vignette.name, E.nom_telegram(video.name)])
     # Son propre son (la parole) : kind « format-clip », publication automatique comme les extraits de clips
     db.insert("social_posts", {"slot_date": jour.isoformat(), "theme": f"format-clip-{k + 1}", "title": titre[:160],
                                "caption": IT.legende(res), "hashtags": tags[:300], "image_square": vignette.name,
@@ -194,7 +195,7 @@ def du_jour(jour: date | None = None, n: int = 3, essai: bool = False) -> list[s
             lignes.append(f"[essai] {titre} → {video.name} ({genre})")
             k += 1
             continue
-        storage.publish_media_files("social", [video.name, vignette.name])
+        storage.publish_media_files("social", [video.name, vignette.name, E.nom_telegram(video.name)])
         db.insert("social_posts", {"slot_date": jour.isoformat(), "theme": theme, "title": titre[:160], "caption": legende,
                                    "hashtags": tags[:300], "image_square": vignette.name, "image_story": vignette.name, "carousel": "[]",
                                    "video": video.name, "status": "approved",

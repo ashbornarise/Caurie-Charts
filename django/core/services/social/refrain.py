@@ -164,19 +164,23 @@ def vignette(video: str, out: str, t: float = 2.0) -> str | None:
 
 def monte(clip: str, debut: float, fin: float, calque_png: str, out: str) -> str | None:
     """Vidéo 9:16 : fond = clip agrandi et flouté, clip entier au centre, calque par-dessus ; son du clip, fondus."""
+    from core.services.social.encodage import AUDIO_HQ, VIDEO_HQ
     duree = fin - debut
     filtre = (f"[0:v]split=2[a][b];[a]scale=270:480:force_original_aspect_ratio=increase,crop=270:480,boxblur=10:2,"
               f"eq=brightness=-0.18,scale={W}:{H}[fond];[b]scale=-2:1000,crop={W}:1000[clip];[fond][clip]overlay=0:470[v0];"
               f"[v0][1:v]overlay=0:0,fps=30,format=yuv420p,fade=t=in:d=0.4,fade=t=out:st={max(0, duree - 0.6):.2f}:d=0.6[v];"
               f"[0:a]afade=t=in:d=0.5,afade=t=out:st={max(0, duree - 1.2):.2f}:d=1.2,loudnorm=I=-14:TP=-1.5[a]")
     cmd = [ffmpeg(), "-y", "-v", "error", "-ss", f"{debut:.2f}", "-t", f"{duree:.2f}", "-i", clip, "-loop", "1", "-t", f"{duree:.2f}",
-           "-i", calque_png, "-filter_complex", filtre, "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "veryfast",
-           "-crf", "23", "-maxrate", "4M", "-bufsize", "8M", "-profile:v", "high", "-c:a", "aac", "-b:a", "192k", "-ar", "44100", "-movflags", "+faststart", out]
+           "-i", calque_png, "-filter_complex", filtre, "-map", "[v]", "-map", "[a]",
+           *VIDEO_HQ, *AUDIO_HQ, "-movflags", "+faststart", out]
     try:
-        subprocess.run(cmd, capture_output=True, text=True, timeout=900, check=True)
+        subprocess.run(cmd, capture_output=True, text=True, timeout=1500, check=True)
     except (OSError, subprocess.SubprocessError) as exc:
         log_write("social", "error", f"montage du refrain : {str(exc)[:300]}")
         return None
+    if os.path.isfile(out):
+        from core.services.social.encodage import copie_telegram
+        copie_telegram(out)   # « <nom>-tg.mp4 » pour Telegram si la vidéo dépasse 19 Mo
     return out if os.path.isfile(out) else None
 
 
