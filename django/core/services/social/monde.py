@@ -937,6 +937,9 @@ def publie(post: dict, due) -> list:
         lignes.append("Buffer : " + buffer.schedule(post, due) if buffer.configured() else "Buffer non configuré")
     except Exception as exc:  # noqa: BLE001
         lignes.append(f"Buffer : échec ({exc})")
+    permis = buffer.reseaux(post)
+    if permis is not None and "telegram" not in permis:
+        return lignes + ["Telegram : non choisi pour ce post"]
     try:
         lignes.append("Telegram : " + telegram.send_post(post) if telegram.configured() else "Telegram non configuré")
     except Exception as exc:  # noqa: BLE001

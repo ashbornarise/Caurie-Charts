@@ -341,6 +341,10 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 <div class="feuille" id="feuille" role="dialog" aria-modal="true" aria-labelledby="feuille-titre">
   <span class="poignee"></span>
   <h2 id="feuille-titre">Comment l’envoyer ?</h2>
+  <div class="puces" id="feuille-reseaux" style="margin:-4px 0 14px">
+    <button class="puce actif" data-r="instagram">Instagram</button><button class="puce actif" data-r="facebook">Facebook</button>
+    <button class="puce actif" data-r="tiktok">TikTok</button><button class="puce actif" data-r="telegram">Telegram</button>
+  </div>
   <button class="choix" id="choix-auto">
     <span class="pastille vert-p"><svg class="i"><use href="#i-envoi"/></svg></span>
     <span><b>Publier partout maintenant</b><small>Instagram, Facebook, TikTok et Telegram dans 2 minutes, avec le son de la vidéo.</small></span>
@@ -418,7 +422,10 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     if (ecran === 'creer') a.innerHTML = `<button class="btn" id="btn-fabriquer">${icone('magie')}Fabriquer</button>`;
     else if (ecran === 'suivi' && etatJob && etatJob.statut === 'pret') a.innerHTML =
       `<button class="btn vert" id="btn-envoyer">${icone('envoi')}Envoyer</button>`;
-    else if (ecran === 'suivi' && etatJob && ['erreur', 'envoye'].includes(etatJob.statut)) a.innerHTML =
+    else if (ecran === 'suivi' && etatJob && etatJob.statut === 'envoye') a.innerHTML =
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn second" id="btn-nouvelle" style="margin-top:0">${icone('plus')}Nouvelle</button>` +
+      `<button class="btn" id="btn-envoyer" style="margin-top:0">${icone('refaire')}Republier</button></div>`;
+    else if (ecran === 'suivi' && etatJob && etatJob.statut === 'erreur') a.innerHTML =
       `<button class="btn second" id="btn-nouvelle">${icone('plus')}Nouvelle vidéo</button>`;
     else if (ecran === 'photos') a.innerHTML = actionPhotos();
     else a.innerHTML = '';
@@ -492,26 +499,30 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     $('#r-accroche').value = j.params.accroche || ''; $('#r-fr').value = j.params.legende_fr || '';
     $('#r-en').value = j.params.legende_en || ''; $('#r-credit').value = j.params.credit || '';
     const envoyee = j.statut === 'envoye';
-    $('#carte-textes').style.display = envoyee ? 'none' : '';
-    $('#suivi-titre').textContent = envoyee ? 'Envoyée partout' : 'Prête !';
-    $('#suivi-sous').textContent = envoyee ? 'Elle est programmée sur tous les réseaux.' : 'Vérifie les textes proposés par l’IA, puis envoie.';
+    $('#carte-textes').style.display = '';
+    $('#suivi-titre').textContent = envoyee ? 'Déjà envoyée' : 'Prête !';
+    $('#suivi-sous').textContent = envoyee ? 'Tu peux la republier, sur les plateformes de ton choix (textes modifiables).'
+                                          : 'Vérifie les textes proposés par l’IA, puis envoie.';
     action();
   }
   const feuille = (ouvrir) => { $('#voile').classList.toggle('vu', ouvrir); $('#feuille').classList.toggle('vu', ouvrir); };
+  // plateformes : toutes cochées par défaut, une touche pour retirer / remettre
+  $$('#feuille-reseaux .puce').forEach(b => b.onclick = () => { vibre(); b.classList.toggle('actif'); });
+  const reseauxChoisis = () => $$('#feuille-reseaux .puce.actif').map(b => b.dataset.r);
   $('#voile').onclick = () => feuille(false); $('#choix-annuler').onclick = () => feuille(false);
   let apresChoix = null;
   $('#choix-auto').onclick = () => { feuille(false); apresChoix && apresChoix(false); };
   $('#choix-notif').onclick = () => { feuille(false); apresChoix && apresChoix(true); };
-  function envoyer() { vibre(); apresChoix = envoyerVraiment; feuille(true); }
+  function envoyer() { vibre(); apresChoix = envoyerVraiment; $('#feuille-reseaux').style.display = ''; feuille(true); }
   async function envoyerVraiment(notifier) {
     const b = $('#btn-envoyer'); b.disabled = true;
     try {
       const k = await post('/job/' + jobEnCours + '/envoyer', {accroche: $('#r-accroche').value, legende_fr: $('#r-fr').value,
         legende_en: $('#r-en').value, credit: $('#r-credit').value, artiste: (etatJob.params || {}).artiste || '',
-        notifier});
+        notifier, reseaux: reseauxChoisis()});
       vibre(); etatJob.statut = 'envoye'; resultat(etatJob);
       const noms = {instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok'};
-      const recus = (k.recus || []).map(r => noms[r] || r).join(', ') + ' et Telegram';
+      const recus = (k.recus || []).map(r => noms[r] || r).concat(reseauxChoisis().includes('telegram') ? ['Telegram'] : []).join(', ');
       message('#msg-suivi', (notifier
         ? 'Envoyée ! ' + recus + '. Instagram et TikTok t’envoient une notification pour ajouter ta musique.'
         : 'Envoyée sur ' + recus + ' (dans 2 minutes).')
@@ -531,7 +542,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   function branchePhotos() {
     const r = $('#ph-recuperer'); if (r) r.onclick = recupererLien;
     const e = $('#ph-enregistrer'); if (e) e.onclick = enregistrerPhotos;
-    const s = $('#ph-envoyer'); if (s) s.onclick = () => { vibre(); apresChoix = publierPhotos; feuille(true); };
+    const s = $('#ph-envoyer'); if (s) s.onclick = () => { vibre(); apresChoix = publierPhotos; $('#feuille-reseaux').style.display = ''; feuille(true); };
     const n = $('#ph-nouveau'); if (n) n.onclick = () => { ph = {etape: 'form', job: null, artiste: ph.artiste, choisies: new Set(), photos: []}; message('#msg-photos', ''); vuePhotos(); };
   }
   function vuePhotos() {
@@ -626,6 +637,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       $('#choix-notif').querySelector('b').textContent = 'Non, juste les garder';
       $('#choix-notif').querySelector('small').textContent = 'Les photos restent dans la banque pour les prochaines couvertures.';
       apresChoix = async non => { restaureFeuille(); if (non) { ph.etape = 'fini'; vuePhotos(); return; } await preparePublication(indices); };
+      $('#feuille-reseaux').style.display = 'none';
       feuille(true);
     } catch (e) { message('#msg-photos', e.message, false); }
   }
@@ -640,7 +652,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   }
   async function publierPhotos(notifier) {
     try {
-      const r = await post('/photos/' + ph.job + '/publier', {indices: ph.publication, notifier, etiquette: $('#pp-etiquette').value,
+      const r = await post('/photos/' + ph.job + '/publier', {indices: ph.publication, notifier, reseaux: reseauxChoisis(), etiquette: $('#pp-etiquette').value,
         accroche: $('#pp-accroche').value, legende_fr: $('#pp-fr').value, legende_en: $('#pp-en').value});
       if (r.erreur) throw new Error(r.erreur);
       ph.etape = 'fini'; vuePhotos();

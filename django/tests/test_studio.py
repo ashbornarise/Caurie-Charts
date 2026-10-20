@@ -84,3 +84,10 @@ def test_origine_horizontale_passe_en_4_5():
     assert S.taille_origine({"width": 1920, "height": 1080}, "x.mp4") == (1080, 1350)
     assert S.taille_origine({"width": 720, "height": 1280}, "x.mp4") == (1080, 1920)
     assert S.taille_origine({"width": 1080, "height": 1350}, "x.mp4") == (1080, 1350)
+
+
+def test_choix_des_plateformes():
+    assert studio.reseaux_choisis({"reseaux": ["instagram", "facebook", "tiktok", "telegram"]}) is None   # toutes
+    assert studio.reseaux_choisis({"reseaux": ["instagram", "tiktok", "pirate"]}) == ["instagram", "tiktok"]
+    with pytest.raises(ValueError):
+        studio.reseaux_choisis({"reseaux": []})

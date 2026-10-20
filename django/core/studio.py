@@ -285,6 +285,25 @@ def fabriquer(request, chemin):
     return _json({"id": job_id, "erreur": erreur})
 
 
+PLATEFORMES_POST = ("instagram", "facebook", "tiktok", "telegram")
+
+
+def reseaux_choisis(c: dict) -> list | None:
+    """Plateformes cochées dans la fenêtre d'envoi ; None = toutes (rien de décoché)."""
+    r = [x for x in (c.get("reseaux") or []) if x in PLATEFORMES_POST]
+    if not r:
+        raise ValueError("coche au moins une plateforme")
+    return None if set(r) == set(PLATEFORMES_POST) else r
+
+
+def theme_libre(job_id: int, quand) -> str:
+    """format-studio-<n°>, puis -2, -3… pour chaque republication du même jour (un post par jour et par thème)."""
+    base = f"format-studio-{job_id}"
+    n = int(db.value("SELECT COUNT(*) FROM social_posts WHERE slot_date = ? AND (theme = ? OR theme LIKE ?)",
+                     [quand.date().isoformat(), base, base + "-%"]) or 0)
+    return base if n == 0 else f"{base}-{n + 1}"
+
+
 def _job_public(j: dict) -> dict:
     from core import storage
     base = storage.blob_public_url()
@@ -338,8 +357,6 @@ def _envoyer(request, ident):
     j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
     if not j or j["statut"] not in ("pret", "envoye") or not j.get("video"):
         return _json({"erreur": "vidéo pas prête"}, 400)
-    if j["statut"] == "envoye":
-        return _json({"erreur": "déjà envoyée"}, 400)
     p = j["params"] if isinstance(j["params"], dict) else json.loads(j["params"] or "{}")
     c = _corps(request)
     accroche = str(c.get("accroche") or p.get("accroche") or "").strip()
@@ -351,10 +368,10 @@ def _envoyer(request, ident):
     tags = "#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine"
     maintenant = datetime.now(timezone.utc)
     faits = {"kind": "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
-             "source": j["lien"], "notifier": bool(c.get("notifier"))}
+             "source": j["lien"], "notifier": bool(c.get("notifier")), "reseaux": reseaux_choisis(c)}
     if en:
         faits["en"] = {"title": accroche, "caption": en + (f"\n\n🎥 Source: {credit}" if credit else "")}
-    pid = db.insert("social_posts", {"slot_date": maintenant.date().isoformat(), "theme": f"format-studio-{j['id']}",
+    pid = db.insert("social_posts", {"slot_date": maintenant.date().isoformat(), "theme": theme_libre(j["id"], maintenant),
                                      "title": accroche[:160] or "Vidéo Cauri Studio", "caption": legende, "hashtags": tags[:300],
                                      "image_square": j["vignette"], "image_story": j["vignette"], "carousel": "[]",
                                      "video": j["video"], "status": "approved", "facts": json.dumps(faits, ensure_ascii=False)})
@@ -537,7 +554,11 @@ def photos_publier(request, chemin, ident):
     indices = [int(i) for i in c.get("indices") or []]
     if not indices:
         return _json({"erreur": "choisis au moins une photo"}, 400)
-    p.update({"publier_indices": indices, "notifier": bool(c.get("notifier")),
+    try:
+        reseaux = reseaux_choisis(c)
+    except ValueError as exc:
+        return _json({"erreur": str(exc)}, 400)
+    p.update({"publier_indices": indices, "notifier": bool(c.get("notifier")), "reseaux": reseaux,
               **{k: str(c.get(k) or "").strip()[:900] for k in ("etiquette", "accroche", "legende_fr", "legende_en")}})
     db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False), "statut": "attente", "erreur": None}, "id = :id", {"id": j["id"]})
     erreur = _lance(j["id"])

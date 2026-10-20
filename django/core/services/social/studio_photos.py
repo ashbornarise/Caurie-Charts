@@ -193,10 +193,11 @@ def publie(job_id: int, job: dict, p: dict, maj) -> dict:
     tags = "#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine"
     maintenant = datetime.now(timezone.utc)
     faits = {"kind": f"format-studio-photos", "studio_job": job_id, "due": (maintenant + timedelta(minutes=2)).isoformat(),
-             "source": job["lien"], "notifier": bool(p.get("notifier"))}
+             "source": job["lien"], "notifier": bool(p.get("notifier")), "reseaux": p.get("reseaux")}
     if p.get("legende_en"):
         faits["en"] = {"title": p.get("accroche") or "", "caption": p["legende_en"] + (f"\n\n📸 {p.get('credit')}" if p.get("credit") else "")}
-    post = E.save_post(f"format-studio-{job_id}", maintenant.date().isoformat(), (p.get("accroche") or "Photos")[:160], legende,
+    from core.studio import theme_libre
+    post = E.save_post(theme_libre(job_id, maintenant), maintenant.date().isoformat(), (p.get("accroche") or "Photos")[:160], legende,
                        tags, fichiers, faits)
     resultat = buffer.schedule(post, maintenant + timedelta(minutes=2))
     recus = [r["reason"] for r in db.all("SELECT reason FROM audit_log WHERE reason LIKE ?", [f"post-{post['id']}-%"])]

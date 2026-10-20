@@ -161,6 +161,15 @@ def video_muette(post: dict) -> bool:
         return False
 
 
+def reseaux(post: dict) -> set | None:
+    """Plateformes choisies pour ce post dans Cauri Studio (facts « reseaux »), ou None = toutes."""
+    try:
+        r = json.loads(post.get("facts") or "{}").get("reseaux")
+    except ValueError:
+        return None
+    return set(r) if r else None
+
+
 def notification_demandee(post: dict) -> bool:
     """Cauri Studio, « J'ajoute ma musique dans l'appli » : Instagram et TikTok en notification (20/10/2026)."""
     try:
@@ -255,7 +264,8 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
     elif post.get("video"):
         # La vidéo le lendemain à midi : le soir reste au carrousel du jour et au magazine du dimanche
         jobs.append(("-reel", True, due_at + timedelta(hours=18) if due_at else None))
-    chans = [ch for ch in channels(http) if ch["service"] in MAX_IMAGES]
+    permis = reseaux(post)
+    chans = [ch for ch in channels(http) if ch["service"] in MAX_IMAGES and (permis is None or ch["service"] in permis)]
 
     def todo(js):
         return [(ch, s, r, w) for ch in chans for s, r, w in js
