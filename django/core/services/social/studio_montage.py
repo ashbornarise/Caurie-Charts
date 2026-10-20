@@ -265,16 +265,40 @@ def apercu(fond: Image.Image, fmt: str, etiquette: str, accroche: str, artiste: 
     return im.convert("RGB")
 
 
+def bandes(source: str, debut: float, duree: float) -> str | None:
+    """Recadrage « w:h:x:y » qui enlève les bandes noires cinéma du clip lui-même (sinon l'image reste petite au milieu
+    du cadre, 20/10/2026) ; None s'il n'y en a pas."""
+    import re as _re
+    r = subprocess.run([ffmpeg(), "-v", "info", "-ss", f"{debut + 1:.2f}", "-t", f"{min(8.0, duree):.2f}", "-i", source,
+                        "-vf", "cropdetect=limit=24:round=2:reset=0", "-f", "null", "-"], capture_output=True, text=True, timeout=180)
+    vus = _re.findall(r"crop=(\d+):(\d+):(\d+):(\d+)", r.stderr or "")
+    if not vus:
+        return None
+    w, h, x, y = map(int, vus[-1])
+    largeur = _re.search(r"Stream.*Video.* (\d{3,5})x(\d{3,5})", r.stderr or "")
+    if not largeur:
+        return None
+    W0, H0 = int(largeur.group(1)), int(largeur.group(2))
+    if h >= H0 * .94 and w >= W0 * .94:      # pas de vraie bande
+        return None
+    if h < H0 * .4 or w < W0 * .4:           # détection douteuse (scène très sombre)
+        return None
+    return f"{w}:{h}:{x}:{y}"
+
+
 def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_png: str, zone,
           taille: tuple[int, int] | None = None, titre_png: str | None = None, titre_permanent: bool = False) -> None:
     W, H = taille or FORMATS[fmt]
     x, y, w, h = zone
     duree = max(1.0, fin - debut)
     fin_titre = duree + 5 if titre_permanent else duree_titre(duree)
-    filtre = (f"[0:v]split=2[a][b];[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
+    rogne = bandes(source, debut, duree)
+    filtre = ((f"[0:v]crop={rogne},split=2[a][b];" if rogne else "[0:v]split=2[a][b];") + f"[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
               f"boxblur=28:6,eq=brightness=-0.35[fond];"
-              f"[b]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];"
-              f"[fond][clip]overlay=(W-w)/2:{y}+({h}-h)/2[v0];[v0][1:v]overlay=0:0[v1];"
+              # clip au format cinéma très large (2,39:1) : côtés un peu resserrés (1,9:1 au plus, les visages au bord restent), sinon il reste minuscule
+              + (f"[b]crop='min(iw,ih*1.9)':ih,scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];" if W < H * 1.2
+                 else f"[b]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];")
+              + f"[fond][clip]overlay=(W-w)/2:{y}+({h}-h)/2[v0];[v0][1:v]overlay=0:0[v1];"
               + (f"[2:v]format=rgba,fade=t=out:st={fin_titre:.2f}:d=0.7:alpha=1[titre];[v1][titre]overlay=0:0[v2];"
                  if titre_png else "[v1]null[v2];")
               + f"[v2]fps=30,format=yuv420p,fade=t=in:d=0.25,fade=t=out:st={max(0, duree - 0.4):.2f}:d=0.4[v]")

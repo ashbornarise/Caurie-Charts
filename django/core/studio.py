@@ -246,9 +246,17 @@ def passkey_connexion(request, chemin):
 # ---------------------------------------------------------------- fabrication
 
 def _lance(job_id: int) -> str | None:
-    """Déclenche le montage sur GitHub Actions ; message d'erreur ou None."""
+    """Déclenche le montage sur GitHub Actions ; message d'erreur ou None. Lien YouTube : YouTube exige une connexion
+    pour les serveurs (« not a bot », 20/10/2026) -> fabriqué par le relais du PC (manage.py relais_profils)."""
     import requests
     from core.views_cron import REPO
+    j = db.one("SELECT lien FROM studio_jobs WHERE id = ?", [job_id])
+    hote = (urlparse((j or {}).get("lien") or "").hostname or "").lower()
+    if hote.endswith("youtube.com") or hote.endswith("youtu.be"):
+        from core import storage
+        db.update("studio_jobs", {"statut": "attente_pc"}, "id = :id", {"id": job_id})
+        storage.blob_put(f"relais/studio/job-{job_id}.json", json.dumps({"job": job_id}).encode(), "application/json")
+        return None
     jeton = env.get("GH_DISPATCH_TOKEN", "")
     if not jeton:
         return "GH_DISPATCH_TOKEN absent : lance « python manage.py studio_job --id %d » sur le PC" % job_id
@@ -747,7 +755,7 @@ def idees_fabriquer(request, chemin):
         if idee["mode"] == "compilation":
             params = {"etiquette": f"{idee['etiquette']} · N°{el['rang']}", "artiste": el["artiste"],
                       "accroche": f"N°{el['rang']} : « {el['titre']} » de {el['artiste']}",
-                      "credit": f"{vues(el['vues'])} de vues sur YouTube",
+                      "credit": f"clip officiel de {el['artiste']} (YouTube)",
                       "legende_fr": (f"{idee['titre']}, N°{el['rang']} : « {el['titre']} » de {el['artiste']}"
                                      f"{' (' + el['annee'] + ')' if el.get('annee') else ''}, {vues(el['vues'])} de vues sur YouTube "
                                      "selon nos relevés.\n\nVous l'aviez mis à quelle place ? Dites-le en commentaire.")}

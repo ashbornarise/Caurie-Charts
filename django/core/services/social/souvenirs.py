@@ -91,7 +91,7 @@ def il_y_a(jour: date, ans: int, seuil: int) -> dict | None:
             "sous_titre": f"Sorti le {c['sortie']:%d/%m/%Y} · {vues(c['vues'])} de vues aujourd'hui" if hasattr(c["sortie"], "strftime")
                           else f"{vues(c['vues'])} de vues aujourd'hui",
             "etiquette": f"IL Y A {ans} ANS", "accroche": f"Il y a {ans} ans, {c['artiste']} sortait « {c['titre']} »",
-            "artiste": c["artiste"], "credit": f"{vues(c['vues'])} de vues sur YouTube",
+            "artiste": c["artiste"], "credit": f"clip officiel de {c['artiste']} (YouTube)",
             "legende_fr": (f"Il y a {ans} ans, {c['artiste']} sortait « {c['titre']} ». Aujourd'hui, le clip compte "
                            f"{vues(c['vues'])} de vues sur YouTube.\n\nVous vous souvenez où vous étiez quand ce son tournait partout ? "
                            "Dites-le en commentaire."),
@@ -138,7 +138,7 @@ def clip_annee(annee: int) -> dict | None:
             "titre": f"Le clip qui a marqué {annee} : « {c['titre']} »",
             "sous_titre": f"{c['artiste']} · {vues(c['vues'])} de vues",
             "etiquette": f"LE CLIP DE {annee}", "accroche": f"En {annee}, tout le monde dansait sur « {c['titre']} »",
-            "artiste": c["artiste"], "credit": f"{vues(c['vues'])} de vues sur YouTube",
+            "artiste": c["artiste"], "credit": f"clip officiel de {c['artiste']} (YouTube)",
             "legende_fr": (f"{annee}. « {c['titre']} » de {c['artiste']} : le clip ouest-africain le plus vu sorti cette année-là "
                            f"selon nos relevés, {vues(c['vues'])} de vues aujourd'hui.\n\nCe son vous ramène où ?"),
             "elements": [_element(c)]}
