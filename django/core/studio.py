@@ -47,7 +47,18 @@ def _utilisateur(request):
     return u if u and u.get("role") in ROLES else None
 
 
-def _reponse(r):
+def _csp(nonce: str = "") -> str:
+    """Politique de sécurité propre au studio : le script de la page seulement avec son jeton (nonce), les styles de la page,
+    la police Montserrat, et les vidéos/vignettes du Blob (la politique du site bloquait tout cela, écran sans mise en forme)."""
+    script = f"script-src 'self' 'nonce-{nonce}'; " if nonce else "script-src 'self'; "
+    return ("default-src 'self'; " + script +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https:; media-src 'self' https://*.public.blob.vercel-storage.com; "
+            "connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+
+
+def _reponse(r, nonce: str = ""):
+    r["Content-Security-Policy"] = _csp(nonce)
     r["X-Robots-Tag"] = "noindex, nofollow"
     r["Cache-Control"] = "no-store"
     r["Referrer-Policy"] = "no-referrer"
@@ -81,11 +92,12 @@ def studio(request, chemin):
     u = _utilisateur(request)
     if u:
         creer_tables()
+    nonce = secrets.token_urlsafe(18)
     html = _JINJA.get_template("studio.html").render(
-        base=f"/studio/{chemin}", connecte=bool(u), nom=(u or {}).get("name") or "", csrf=get_token(request),
+        base=f"/studio/{chemin}", connecte=bool(u), nonce=nonce, nom=(u or {}).get("name") or "", csrf=get_token(request),
         formats=[("story", "9:16 · Reels / TikTok / Story"), ("feed", "4:5 · fil Instagram"), ("square", "1:1 · carré")],
         max_duree=MAX_DUREE, a_passkey=bool(u and db.value("SELECT 1 FROM studio_passkeys WHERE user_id = ?", [u["id"]])))
-    return _reponse(HttpResponse(html))
+    return _reponse(HttpResponse(html), nonce)
 
 
 def manifest(request, chemin):

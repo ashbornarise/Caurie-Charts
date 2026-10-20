@@ -268,7 +268,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 </div></nav>
 {% endif %}
 
-<script>
+<script nonce="{{ nonce }}">
 const BASE = {{ base|tojson }}, CSRF = {{ csrf|tojson }};
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
