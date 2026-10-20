@@ -446,6 +446,9 @@ def traite_profil(job_id: int, job: dict, p: dict, maj) -> dict:
                 images += imgs
         if not images:
             images, _i = _gallery_dl(job["lien"], tmp)
+        if not images:
+            raise RuntimeError("Instagram exige une connexion pour lire un profil depuis le serveur : "
+                               "colle plutôt les liens des posts photo de l'artiste")
         maj(job_id, statut="analyse")
         candidates, vues = [], []
         for chemin in images[:ANALYSER]:
