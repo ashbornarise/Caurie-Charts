@@ -320,7 +320,7 @@ def _envoyer(request, ident):
              "source": j["lien"], "notifier": bool(c.get("notifier"))}
     if en:
         faits["en"] = {"title": accroche, "caption": en + (f"\n\n🎥 Source: {credit}" if credit else "")}
-    pid = db.insert("social_posts", {"slot_date": maintenant.date().isoformat(), "theme": "format-studio",
+    pid = db.insert("social_posts", {"slot_date": maintenant.date().isoformat(), "theme": f"format-studio-{j['id']}",
                                      "title": accroche[:160] or "Vidéo Cauri Studio", "caption": legende, "hashtags": tags[:300],
                                      "image_square": j["vignette"], "image_story": j["vignette"], "carousel": "[]",
                                      "video": j["video"], "status": "approved", "facts": json.dumps(faits, ensure_ascii=False)})
