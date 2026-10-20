@@ -278,6 +278,7 @@ def fabriquer(request, chemin):
     for k in ("etiquette", "accroche", "artiste", "credit", "legende_fr", "legende_en", "contexte"):
         params[k] = str(c.get(k) or "").strip()[:600]
     params["valider"] = bool(c.get("valider", True))   # montrer l'accroche avant de fabriquer (sauf « Refaire »)
+    params["reseaux"] = [r for r in (c.get("reseaux") or []) if r in PLATEFORMES_POST] or list(PLATEFORMES_POST)   # choix dès la création
     creer_tables()
     job_id = db.insert("studio_jobs", {"lien": lien[:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
     erreur = _lance(job_id)

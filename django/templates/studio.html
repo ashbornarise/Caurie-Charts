@@ -200,6 +200,14 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
     </div>
 
     <div class="carte">
+      <div class="etiq">Plateformes</div>
+      <div class="puces" id="creer-reseaux">
+        <button class="puce actif" data-r="instagram">Instagram</button><button class="puce actif" data-r="facebook">Facebook</button>
+        <button class="puce actif" data-r="tiktok">TikTok</button><button class="puce actif" data-r="telegram">Telegram</button>
+      </div>
+    </div>
+
+    <div class="carte">
       <div class="etiq">Passage</div>
       <div class="puces" id="durees">
         <button class="puce" data-d="15">15 s</button><button class="puce" data-d="30">30 s</button>
@@ -456,6 +464,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   $$('.format').forEach(b => b.onclick = () => { vibre(); format = b.dataset.v; $$('.format').forEach(x => x.classList.toggle('actif', x === b)); });
   $$('#durees .puce').forEach(b => b.onclick = () => { vibre(); $$('#durees .puce').forEach(x => x.classList.toggle('actif', x === b));
     $('#fin').value = (parseFloat($('#debut').value) || 0) + parseFloat(b.dataset.d); });
+  $$('#creer-reseaux .puce').forEach(b => b.onclick = () => { vibre(); b.classList.toggle('actif'); });
   $('#btn-textes').onclick = () => { const t = $('#textes'), o = t.style.display === 'none'; t.style.display = o ? '' : 'none'; $('#btn-textes').classList.toggle('ouvert', o); };
   const droits = $('#droits');
   droits.onclick = () => { vibre(); const on = !droits.classList.contains('on'); droits.classList.toggle('on', on); droits.setAttribute('aria-checked', on); };
@@ -481,7 +490,8 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     const btn = $('#btn-fabriquer'); btn.disabled = true;
     try {
       const j = await post('/fabriquer', {lien: v('#lien'), format, debut: v('#debut'), fin: v('#fin'), etiquette: v('#etiquette'),
-        accroche: v('#accroche'), artiste: v('#artiste'), credit: v('#credit'), contexte: v('#contexte'), droits: true});
+        accroche: v('#accroche'), artiste: v('#artiste'), credit: v('#credit'), contexte: v('#contexte'), droits: true,
+        reseaux: $$('#creer-reseaux .puce.actif').map(b => b.dataset.r)});
       if (j.erreur) throw new Error(j.erreur);
       vibre(); suivre(j.id);
     } catch (e) { message('#msg-creer', e.message, false); btn.disabled = false; }
@@ -553,7 +563,12 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   let apresChoix = null;
   $('#choix-auto').onclick = () => { feuille(false); apresChoix && apresChoix(false); };
   $('#choix-notif').onclick = () => { feuille(false); apresChoix && apresChoix(true); };
-  function envoyer() { vibre(); apresChoix = envoyerVraiment; $('#feuille-reseaux').style.display = ''; feuille(true); }
+  function envoyer() {
+    vibre(); apresChoix = envoyerVraiment; $('#feuille-reseaux').style.display = '';
+    const choisis = (etatJob && etatJob.params && etatJob.params.reseaux) || ['instagram', 'facebook', 'tiktok', 'telegram'];
+    $$('#feuille-reseaux .puce').forEach(b => b.classList.toggle('actif', choisis.includes(b.dataset.r)));
+    feuille(true);
+  }
   async function envoyerVraiment(notifier) {
     const b = $('#btn-envoyer'); b.disabled = true;
     try {
