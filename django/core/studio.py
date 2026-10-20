@@ -275,7 +275,7 @@ def fabriquer(request, chemin):
         return _json({"erreur": f"extrait de 1 à {MAX_DUREE} secondes"}, 400)
     fmt = c.get("format") if c.get("format") in FORMATS else "origine"
     params = {"format": fmt, "debut": debut, "fin": fin}
-    for k in ("etiquette", "accroche", "artiste", "credit", "legende_fr", "legende_en"):
+    for k in ("etiquette", "accroche", "artiste", "credit", "legende_fr", "legende_en", "contexte"):
         params[k] = str(c.get(k) or "").strip()[:600]
     creer_tables()
     job_id = db.insert("studio_jobs", {"lien": lien[:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
@@ -292,7 +292,8 @@ def _job_public(j: dict) -> dict:
     return {"id": j["id"], "statut": j["statut"], "erreur": j.get("erreur"), "lien": j["lien"], "params": p,
             "video": f"{base}/media/social/{j['video']}" if j.get("video") else None,
             "vignette": f"{base}/media/social/{j['vignette']}" if j.get("vignette") else None,
-            "cree_le": str(j.get("cree_le") or "")[:16], "post_id": j.get("post_id")}
+            "cree_le": str(j.get("cree_le") or "")[:16], "post_id": j.get("post_id"),
+            "photos": [f"{base}/media/artists/candidats/{n}" for n in (p.get("photos") or [])]}
 
 
 def job(request, chemin, ident):
@@ -310,7 +311,8 @@ def historique(request, chemin):
     if not _utilisateur(request):
         return _json({"erreur": "connexion requise"}, 401)
     creer_tables()
-    return _json({"jobs": [_job_public(j) for j in db.all("SELECT * FROM studio_jobs ORDER BY id DESC LIMIT 20")]})
+    jobs = [_job_public(j) for j in db.all("SELECT * FROM studio_jobs ORDER BY id DESC LIMIT 60")]
+    return _json({"jobs": [j for j in jobs if j["params"].get("type") != "photos"][:20]})   # les photos ont leur onglet
 
 
 def envoyer(request, chemin, ident):
@@ -439,3 +441,106 @@ def deconnexion(request, chemin):
     if request.method == "POST":
         auth.logout(request)
     return _json({"ok": True})
+
+
+# ---------------------------------------------------------------- section Photos (banque des artistes)
+
+def artistes(request, chemin):
+    """Recherche d'un artiste suivi (nom), pour ranger les photos dans sa banque."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    q = (request.GET.get("q") or "").strip()
+    if len(q) < 2:
+        return _json({"artistes": []})
+    lignes = db.all("""SELECT id, name, upper(origin_country) AS pays, COALESCE(NULLIF(image_hd_url, ''), image_url) AS photo FROM artists
+                       WHERE status = 'active' AND name ILIKE ? ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 8""", [f"%{q}%"])
+    return _json({"artistes": [{"id": r["id"], "nom": r["name"], "pays": r["pays"] or "", "photo": r["photo"] or ""} for r in lignes]})
+
+
+def photos_nouveau(request, chemin):
+    """Nouvelle récupération : depuis un lien (le serveur télécharge) ou depuis le téléphone (l'appli envoie ensuite)."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    c = _corps(request)
+    lien = str(c.get("lien") or "").strip()
+    params = {"type": "photos", "photos": [], "artiste_id": c.get("artiste_id"), "artiste_nom": str(c.get("artiste_nom") or "")[:120]}
+    creer_tables()
+    if lien:
+        url = urlparse(lien)
+        if url.scheme not in ("http", "https") or not url.hostname:
+            return _json({"erreur": "lien invalide"}, 400)
+        job_id = db.insert("studio_jobs", {"lien": lien[:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
+        erreur = _lance(job_id)
+        if erreur:
+            db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
+        return _json({"id": job_id, "erreur": erreur})
+    job_id = db.insert("studio_jobs", {"lien": "téléphone", "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"],
+                                       "statut": "telechargement"})
+    return _json({"id": job_id, "erreur": None})
+
+
+def photos_importer(request, chemin, ident):
+    """Une photo envoyée depuis le téléphone (corps brut, réduite à 2 400 px par l'appli : < 4 Mo)."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_photos
+    if len(request.body) > 4_300_000:
+        return _json({"erreur": "photo trop lourde"}, 413)
+    nom = studio_photos.importe(int(ident), request.body)
+    return _json({"ok": bool(nom), "nom": nom})
+
+
+def _job_photos(ident):
+    j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
+    if not j:
+        raise Http404
+    return j
+
+
+def photos_enregistrer(request, chemin, ident):
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_photos
+    c = _corps(request)
+    try:
+        artiste = int(c.get("artiste_id") or 0)
+        gardees = studio_photos.enregistre(_job_photos(ident), [int(i) for i in c.get("indices") or []], artiste,
+                                           bool(c.get("detourable")), str(c.get("note") or "").strip())
+    except (ValueError, TypeError) as exc:
+        return _json({"erreur": str(exc) or "choisis un artiste"}, 400)
+    return _json({"ok": True, "gardees": len(gardees)})
+
+
+def photos_suggestions(request, chemin, ident):
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_photos
+    c = _corps(request)
+    return _json(studio_photos.suggestions(_job_photos(ident), [int(i) for i in c.get("indices") or []],
+                                           str(c.get("contexte") or "").strip()))
+
+
+def photos_publier(request, chemin, ident):
+    """Prépare le carrousel (fabriqué sur GitHub : détourage, netteté) puis l'envoie via Buffer."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    j = _job_photos(ident)
+    c = _corps(request)
+    p = json.loads(j["params"] or "{}")
+    indices = [int(i) for i in c.get("indices") or []]
+    if not indices:
+        return _json({"erreur": "choisis au moins une photo"}, 400)
+    p.update({"publier_indices": indices, "notifier": bool(c.get("notifier")),
+              **{k: str(c.get(k) or "").strip()[:900] for k in ("etiquette", "accroche", "legende_fr", "legende_en")}})
+    db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False), "statut": "attente", "erreur": None}, "id = :id", {"id": j["id"]})
+    erreur = _lance(j["id"])
+    if erreur:
+        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": j["id"]})
+    return _json({"ok": not erreur, "erreur": erreur})

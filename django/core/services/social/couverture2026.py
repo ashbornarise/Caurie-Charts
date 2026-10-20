@@ -515,3 +515,33 @@ def citation(photo, phrase: str, auteur: str, contexte: str = "", fmt: str = "fe
         d.text((m + tw + 60 * u, y + 38 * u), bas[:60], font=police("Montserrat.ttf", int(26 * u), "Medium"), fill=(220, 220, 235))
     _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
     return c
+
+
+def photo_simple(photo, fmt: str = "feed", credit: str = "") -> Image.Image:
+    """Photo en plein cadre (carrousel du studio) : recadrée sur la personne, petit logo en haut, crédit discret en bas."""
+    w, h = FORMATS.get(fmt, FORMATS["feed"])
+    u = w / 1080
+    im = _image_nette(photo)
+    if im is None:
+        return _fond_projecteur(w, h, (170, 120, 255))
+    cx = 0.5
+    sujet = detoure(im, fin=False)
+    if sujet is not None:
+        try:
+            from rembg import remove
+            petit = im.copy(); petit.thumbnail((400, 400))
+            bb = remove(petit, session=_SESSION, only_mask=True).point(lambda v: 255 if v > 128 else 0).getbbox()
+            cx = ((bb[0] + bb[2]) / 2) / petit.width if bb else 0.5
+        except Exception:  # noqa: BLE001
+            pass
+    c = ImageOps.fit(im, (w, h), Image.LANCZOS, centering=(cx, 0.3))
+    voile = Image.new("L", (1, h))
+    for y in range(h):
+        t = y / h
+        voile.putpixel((0, y), int(max(110 * max(0, 1 - t / .14), 150 * max(0, (t - .86) / .14))))
+    c.paste(Image.new("RGB", (w, h), NUIT), (0, 0), voile.resize((w, h)))
+    _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
+    if credit:
+        ImageDraw.Draw(c).text((int(50 * u), h - int((70 if fmt == "feed" else 330) * u)), f"Photo : {credit}"[:70],
+                               font=police("Montserrat.ttf", int(26 * u), "Medium"), fill=(230, 230, 240))
+    return c

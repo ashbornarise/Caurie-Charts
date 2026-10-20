@@ -125,7 +125,12 @@ def analyse(images: list[str], infos: dict) -> dict:
     cle = env.get("GEMINI_API_KEY", "")
     if not cle:
         return {}
-    parts = [{"text": CONSIGNE + "\n\nInformations : " + json.dumps(meta, ensure_ascii=False)}]
+    texte = CONSIGNE + "\n\nInformations : " + json.dumps(meta, ensure_ascii=False)
+    if infos.get("contexte"):
+        # commentaire du fondateur : information sûre, prioritaire, à utiliser telle quelle (sans broder au-delà)
+        texte += ("\n\nContexte donné par la rédaction de Cauri Charts (fiable, à utiliser en priorité, sans rien inventer "
+                  "au-delà) : " + str(infos["contexte"])[:600])
+    parts = [{"text": texte}]
     for p in images[:4]:
         parts.append({"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(open(p, "rb").read()).decode()}})
     corps = {"contents": [{"parts": parts}],
@@ -258,6 +263,15 @@ def traite(job_id: int) -> dict:
     if not job:
         raise RuntimeError("tâche introuvable")
     p = job["params"] if isinstance(job["params"], dict) else json.loads(job["params"] or "{}")
+    if p.get("type") == "photos":   # section Photos : récupérer les images d'un post pour la banque de l'artiste
+        from core.services.social import studio_photos
+        try:
+            if p.get("publier_indices"):
+                return studio_photos.publie(job_id, job, p, _maj)
+            return studio_photos.traite(job_id, job, p, _maj)
+        except Exception as exc:  # noqa: BLE001
+            _maj(job_id, statut="erreur", erreur=str(exc)[:500])
+            raise
     fmt = p.get("format") if p.get("format") in FORMATS else "origine"
     with tempfile.TemporaryDirectory(prefix=f"cauri-studio-{job_id}-") as tmp:
         try:
@@ -272,7 +286,7 @@ def traite(job_id: int) -> dict:
             if fin <= debut:
                 raise RuntimeError("le début est après la fin de la vidéo")
             _maj(job_id, statut="analyse")
-            sugg = analyse(images_cles(source, tmp, debut, fin), infos)
+            sugg = analyse(images_cles(source, tmp, debut, fin), {**infos, "contexte": p.get("contexte") or ""})
             credit = p.get("credit") or credit_auto(infos)
             etiquette = p.get("etiquette") or sugg.get("etiquette") or "VIDÉO"
             accroche = p.get("accroche") or sugg.get("accroche") or (infos.get("title") or "")[:70]

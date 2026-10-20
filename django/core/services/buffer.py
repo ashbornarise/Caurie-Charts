@@ -140,11 +140,16 @@ INSTAGRAM_THEMES = ("format-", "flash", "monde-matin-1", "monde-soir-1", "hebdo"
 
 
 def instagram_ok(post: dict) -> bool:
-    """Post retenu pour Instagram : thème prioritaire et moins de INSTAGRAM_PAR_JOUR posts déjà envoyés aujourd'hui."""
+    """Post retenu pour Instagram : thème prioritaire et moins de INSTAGRAM_PAR_JOUR posts déjà envoyés aujourd'hui.
+    Les posts de Cauri Studio, choisis à la main par le fondateur, passent toujours et ne comptent pas dans la limite."""
+    if str(post.get("theme") or "").startswith("format-studio"):
+        return True
     if not str(post.get("theme") or "").startswith(INSTAGRAM_THEMES):
         return False
-    deja = int(db.value("""SELECT COUNT(DISTINCT reason) FROM audit_log WHERE action = 'buffer.post' AND reason LIKE 'post-%-instagram%'
-                           AND created_at >= CURRENT_DATE""") or 0)
+    deja = int(db.value("""SELECT COUNT(DISTINCT a.reason) FROM audit_log a
+                           JOIN social_posts p ON a.reason LIKE 'post-' || p.id || '-instagram%'
+                           WHERE a.action = 'buffer.post' AND a.created_at >= CURRENT_DATE
+                           AND p.theme NOT LIKE 'format-studio%'""") or 0)
     return deja < INSTAGRAM_PAR_JOUR
 
 

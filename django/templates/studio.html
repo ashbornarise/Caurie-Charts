@@ -73,7 +73,7 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stro
 .btn.vert{background:linear-gradient(135deg,#34d399,#16a34a);box-shadow:0 12px 30px rgba(34,197,94,.35);color:#04150a}
 .btn.second{background:var(--carte-forte);box-shadow:none;border:1px solid var(--trait)}
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:rgba(14,9,28,.86);backdrop-filter:blur(18px);border-top:1px solid var(--trait);padding:8px 10px calc(var(--bas) + 8px)}
-.nav div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.nav div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
 .nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;font-size:11px;font-weight:700;color:var(--faible)}
 .nav button.actif{color:#fff}.nav button.actif svg{color:var(--violet-clair)}
 .ecran{display:none;animation:entre .28s ease}.ecran.vu{display:block}
@@ -114,6 +114,19 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 .choix b{display:block;font-size:15px;margin-bottom:3px}.choix small{color:var(--doux);font-size:13px;line-height:1.4}
 .pastille{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;flex:none}
 .vert-p{background:rgba(34,197,94,.18);color:#4ade80}.violet-p{background:rgba(124,58,237,.22);color:var(--violet-clair)}
+.galerie{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.galerie button{position:relative;aspect-ratio:4/5;border-radius:12px;overflow:hidden;background:#171030;border:2px solid transparent;padding:0}
+.galerie img{width:100%;height:100%;object-fit:cover;display:block}
+.galerie button.choisie{border-color:var(--violet-clair)}
+.galerie .coche{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.35);display:grid;place-items:center}
+.galerie button.choisie .coche{background:var(--violet);border-color:var(--violet)}
+.choix-artiste{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.choix-artiste button{display:flex;gap:10px;align-items:center;text-align:left;padding:8px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid var(--trait)}
+.choix-artiste img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1d1533}
+.artiste-choisi{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px;border-radius:14px;background:rgba(124,58,237,.15);border:1px solid rgba(167,139,250,.4)}
+.artiste-choisi img{width:40px;height:40px;border-radius:50%;object-fit:cover}
+.ou{display:flex;align-items:center;gap:10px;color:var(--faible);font-size:12px;font-weight:700;margin:14px 0}
+.ou::before,.ou::after{content:"";flex:1;height:1px;background:var(--trait)}
 /* déverrouillage */
 .verrou{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
 .verrou img{width:86px;height:86px;border-radius:26px;box-shadow:0 20px 50px rgba(124,58,237,.5)}
@@ -142,6 +155,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <symbol id="i-sortie" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
   <symbol id="i-tel" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
   <symbol id="i-poubelle" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+  <symbol id="i-photo" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
   <symbol id="i-musique" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
   <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
 </svg>
@@ -204,6 +218,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
         <label>Accroche sur la vidéo<input id="accroche" maxlength="90" placeholder="Une phrase courte qui donne envie"></label>
         <label>Artiste (surligné)<input id="artiste"></label>
         <label>Crédit de la source<input id="credit" placeholder="rempli automatiquement"></label>
+        <label>Ton commentaire / contexte pour l'IA<textarea id="contexte" placeholder="ex. extrait du concert de Lomé, annonce de la sortie de l'album"></textarea></label>
       </div>
     </div>
 
@@ -241,6 +256,53 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 
     </div>
     <div class="msg" id="msg-suivi"></div>
+  </section>
+
+  <!-- ÉCRAN PHOTOS -->
+  <section class="ecran" id="e-photos">
+    <h1 class="titre">Photos d'artistes</h1>
+    <p class="sous" id="ph-sous">Ajoute des photos à la banque d'un artiste : elles serviront aux prochaines couvertures.</p>
+    <div id="ph-form">
+      <div class="carte">
+        <div class="etiq">Artiste</div>
+        <div class="champ"><input id="ph-recherche" placeholder="Rechercher un artiste suivi…" autocomplete="off"></div>
+        <div class="choix-artiste" id="ph-resultats"></div>
+        <div id="ph-artiste"></div>
+      </div>
+      <div class="carte">
+        <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-lien"/></svg>Lien du post</div>
+        <div class="champ">
+          <input id="ph-lien" type="url" inputmode="url" placeholder="TikTok, X, Facebook, Instagram…" autocomplete="off" autocapitalize="off">
+          <button class="coller" id="ph-coller"><svg class="i" style="width:18px;height:18px"><use href="#i-presse"/></svg>Coller</button>
+        </div>
+        <div class="ou">OU</div>
+        <button class="btn second" id="ph-telephone" style="margin-top:0"><svg class="i"><use href="#i-photo"/></svg>Choisir sur mon téléphone</button>
+        <input type="file" id="ph-fichiers" accept="image/*" multiple style="display:none">
+        <p style="margin:10px 0 0;font-size:12px;color:var(--faible)">Instagram ne donne que la 1re photo sans connexion : pour un carrousel complet, enregistre les photos puis choisis-les ici.</p>
+      </div>
+      <div class="carte texte">
+        <label style="margin-top:0">Ton commentaire / contexte<textarea id="ph-contexte" placeholder="ex. photos du concert à l'Accor Arena, pour annoncer la tournée"></textarea></label>
+      </div>
+    </div>
+    <div id="ph-grille" style="display:none">
+      <div class="carte">
+        <div class="etiq" id="ph-compte">Touche les photos à garder</div>
+        <div class="galerie" id="ph-galerie"></div>
+      </div>
+      <div class="carte">
+        <div class="interrupteur">
+          <button class="bascule" id="ph-entiere" role="switch" aria-checked="false" aria-label="Personne entière"></button>
+          <p><b>La personne est entière sur ces photos</b>Elles pourront servir au détourage (classement, records). Sinon, elles servent en plein cadre.</p>
+        </div>
+      </div>
+    </div>
+    <div id="ph-publier" class="carte texte" style="display:none">
+      <label style="margin-top:0">Étiquette<input id="pp-etiquette" placeholder="ex. EN CONCERT"></label>
+      <label>Accroche<input id="pp-accroche" maxlength="90"></label>
+      <label>Légende en français<textarea id="pp-fr"></textarea></label>
+      <label>Légende en anglais<textarea id="pp-en"></textarea></label>
+    </div>
+    <div class="msg" id="msg-photos"></div>
   </section>
 
   <!-- ÉCRAN MES VIDÉOS -->
@@ -292,6 +354,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 
 <nav class="nav"><div>
   <button class="actif" data-ecran="creer"><svg class="i"><use href="#i-plus"/></svg>Créer</button>
+  <button data-ecran="photos"><svg class="i"><use href="#i-photo"/></svg>Photos</button>
   <button data-ecran="videos"><svg class="i"><use href="#i-film"/></svg>Mes vidéos</button>
   <button data-ecran="reglages"><svg class="i"><use href="#i-reglages"/></svg>Réglages</button>
 </div></nav>
@@ -357,7 +420,9 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       `<button class="btn vert" id="btn-envoyer">${icone('envoi')}Envoyer</button>`;
     else if (ecran === 'suivi' && etatJob && ['erreur', 'envoye'].includes(etatJob.statut)) a.innerHTML =
       `<button class="btn second" id="btn-nouvelle">${icone('plus')}Nouvelle vidéo</button>`;
+    else if (ecran === 'photos') a.innerHTML = actionPhotos();
     else a.innerHTML = '';
+    if (ecran === 'photos') branchePhotos();
     const f = $('#btn-fabriquer'); if (f) f.onclick = fabriquer;
     const e = $('#btn-envoyer'); if (e) e.onclick = envoyer;
     const n = $('#btn-nouvelle'); if (n) n.onclick = () => { jobEnCours = null; etatJob = null; montre('creer'); };
@@ -393,7 +458,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     const btn = $('#btn-fabriquer'); btn.disabled = true;
     try {
       const j = await post('/fabriquer', {lien: v('#lien'), format, debut: v('#debut'), fin: v('#fin'), etiquette: v('#etiquette'),
-        accroche: v('#accroche'), artiste: v('#artiste'), credit: v('#credit'), droits: true});
+        accroche: v('#accroche'), artiste: v('#artiste'), credit: v('#credit'), contexte: v('#contexte'), droits: true});
       if (j.erreur) throw new Error(j.erreur);
       vibre(); suivre(j.id);
     } catch (e) { message('#msg-creer', e.message, false); btn.disabled = false; }
@@ -434,9 +499,10 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   }
   const feuille = (ouvrir) => { $('#voile').classList.toggle('vu', ouvrir); $('#feuille').classList.toggle('vu', ouvrir); };
   $('#voile').onclick = () => feuille(false); $('#choix-annuler').onclick = () => feuille(false);
-  $('#choix-auto').onclick = () => { feuille(false); envoyerVraiment(false); };
-  $('#choix-notif').onclick = () => { feuille(false); envoyerVraiment(true); };
-  function envoyer() { vibre(); feuille(true); }
+  let apresChoix = null;
+  $('#choix-auto').onclick = () => { feuille(false); apresChoix && apresChoix(false); };
+  $('#choix-notif').onclick = () => { feuille(false); apresChoix && apresChoix(true); };
+  function envoyer() { vibre(); apresChoix = envoyerVraiment; feuille(true); }
   async function envoyerVraiment(notifier) {
     const b = $('#btn-envoyer'); b.disabled = true;
     try {
@@ -451,6 +517,141 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
         : 'Envoyée sur ' + recus + ' (dans 2 minutes).')
         + ((k.refus || []).length ? ' Refusé : ' + k.refus.join(' · ') : ''), !(k.refus || []).length);
     } catch (e) { message('#msg-suivi', e.message, false); b.disabled = false; }
+  }
+
+  // ---------------- écran Photos
+  let ph = {etape: 'form', job: null, artiste: null, choisies: new Set(), photos: [], publication: null};
+  function actionPhotos() {
+    if (ph.etape === 'form') return `<button class="btn" id="ph-recuperer">${icone('lien')}Récupérer les photos du lien</button>`;
+    if (ph.etape === 'grille') return `<button class="btn" id="ph-enregistrer" ${ph.choisies.size ? '' : 'disabled'}>${icone('ok')}Enregistrer la sélection (${ph.choisies.size})</button>`;
+    if (ph.etape === 'publier') return `<button class="btn vert" id="ph-envoyer">${icone('envoi')}Envoyer</button>`;
+    if (ph.etape === 'fini') return `<button class="btn second" id="ph-nouveau">${icone('plus')}Nouvelles photos</button>`;
+    return '';
+  }
+  function branchePhotos() {
+    const r = $('#ph-recuperer'); if (r) r.onclick = recupererLien;
+    const e = $('#ph-enregistrer'); if (e) e.onclick = enregistrerPhotos;
+    const s = $('#ph-envoyer'); if (s) s.onclick = () => { vibre(); apresChoix = publierPhotos; feuille(true); };
+    const n = $('#ph-nouveau'); if (n) n.onclick = () => { ph = {etape: 'form', job: null, artiste: ph.artiste, choisies: new Set(), photos: []}; message('#msg-photos', ''); vuePhotos(); };
+  }
+  function vuePhotos() {
+    $('#ph-form').style.display = ph.etape === 'form' ? '' : 'none';
+    $('#ph-grille').style.display = ph.etape === 'grille' ? '' : 'none';
+    $('#ph-publier').style.display = ph.etape === 'publier' ? '' : 'none';
+    $('#ph-sous').textContent = {form: 'Ajoute des photos à la banque d’un artiste : elles serviront aux prochaines couvertures.',
+      grille: 'Touche les photos à garder pour ' + (ph.artiste ? ph.artiste.nom : 'l’artiste') + '.',
+      publier: 'Vérifie les textes proposés par l’IA, puis envoie.', fini: 'C’est fait.', attente: 'Récupération en cours…'}[ph.etape] || '';
+    action();
+  }
+  let minArt;
+  $('#ph-recherche').addEventListener('input', () => { clearTimeout(minArt); minArt = setTimeout(async () => {
+    const q = $('#ph-recherche').value.trim(), box = $('#ph-resultats'); box.innerHTML = '';
+    if (q.length < 2) return;
+    const d = await get('/artistes?q=' + encodeURIComponent(q));
+    d.artistes.forEach(a => { const b = document.createElement('button');
+      b.innerHTML = '<img alt=""><span><b></b><br><small></small></span>';
+      if (a.photo) b.querySelector('img').src = a.photo; b.querySelector('b').textContent = a.nom; b.querySelector('small').textContent = a.pays;
+      b.onclick = () => { vibre(); ph.artiste = a; box.innerHTML = ''; $('#ph-recherche').value = '';
+        $('#ph-artiste').innerHTML = '<div class="artiste-choisi"><img alt=""><b></b></div>';
+        if (a.photo) $('#ph-artiste img').src = a.photo; $('#ph-artiste b').textContent = a.nom; };
+      box.appendChild(b); });
+  }, 300); });
+  $('#ph-coller').onclick = async () => { try { $('#ph-lien').value = (await navigator.clipboard.readText()).trim(); } catch (e) { $('#ph-lien').focus(); } };
+  $('#ph-entiere').onclick = () => { vibre(); const b = $('#ph-entiere'), on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); };
+  const nouveauJob = lien => post('/photos/nouveau', {lien, artiste_id: ph.artiste && ph.artiste.id, artiste_nom: ph.artiste && ph.artiste.nom});
+  async function recupererLien() {
+    message('#msg-photos', '');
+    const lien = $('#ph-lien').value.trim();
+    if (!/^https?:\/\//.test(lien)) { message('#msg-photos', 'Colle un lien, ou choisis des photos sur ton téléphone.', false); return; }
+    try { const j = await nouveauJob(lien); if (j.erreur) throw new Error(j.erreur); ph.job = j.id; ph.etape = 'attente'; vuePhotos();
+      message('#msg-photos', 'Récupération des photos sur le serveur (1 à 2 minutes)…', true); suivrePhotos(); }
+    catch (e) { message('#msg-photos', e.message, false); }
+  }
+  async function suivrePhotos() {
+    const j = await get('/job/' + ph.job);
+    if (j.statut === 'erreur') { ph.etape = 'form'; vuePhotos(); message('#msg-photos', j.erreur || 'Échec', false); return; }
+    if (j.statut === 'pret' && j.photos.length) { message('#msg-photos', ''); afficheGalerie(j.photos); return; }
+    setTimeout(suivrePhotos, 3000);
+  }
+  $('#ph-telephone').onclick = () => $('#ph-fichiers').click();
+  $('#ph-fichiers').onchange = async () => {
+    const fichiers = [...$('#ph-fichiers').files].slice(0, 20); if (!fichiers.length) return;
+    try {
+      const j = await nouveauJob(''); ph.job = j.id; ph.etape = 'attente'; vuePhotos();
+      for (let k = 0; k < fichiers.length; k++) {
+        message('#msg-photos', `Envoi des photos : ${k + 1} / ${fichiers.length}…`, true);
+        const blob = await reduit(fichiers[k]);
+        await fetch(BASE + '/photos/' + ph.job + '/importer', {method: 'POST', headers: {'Content-Type': 'image/jpeg', 'X-CSRFToken': CSRF}, body: blob});
+      }
+      const d = await get('/job/' + ph.job); message('#msg-photos', ''); afficheGalerie(d.photos);
+    } catch (e) { ph.etape = 'form'; vuePhotos(); message('#msg-photos', e.message, false); }
+    $('#ph-fichiers').value = '';
+  };
+  function reduit(fichier) {
+    return new Promise((ok, ko) => { const img = new Image(); img.onload = () => {
+      const k = Math.min(1, 2400 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); c.toBlob(b => b ? ok(b) : ko(new Error('photo illisible')), 'image/jpeg', 0.92);
+      URL.revokeObjectURL(img.src); }; img.onerror = () => ko(new Error('photo illisible')); img.src = URL.createObjectURL(fichier); });
+  }
+  function afficheGalerie(urls) {
+    ph.photos = urls; ph.choisies = new Set(); ph.etape = 'grille';
+    const g = $('#ph-galerie'); g.innerHTML = '';
+    urls.forEach((u, i) => { const b = document.createElement('button');
+      b.innerHTML = `<img alt=""><span class="coche">${icone('ok', 'width:14px;height:14px;color:#fff')}</span>`; b.querySelector('img').src = u;
+      b.onclick = () => { vibre(); ph.choisies.has(i) ? ph.choisies.delete(i) : ph.choisies.add(i); b.classList.toggle('choisie', ph.choisies.has(i));
+        $('#ph-compte').textContent = ph.choisies.size ? ph.choisies.size + ' sélectionnée(s)' : 'Touche les photos à garder'; action(); };
+      g.appendChild(b); });
+    vuePhotos();
+  }
+  function restaureFeuille() {
+    $('#feuille-titre').textContent = 'Comment l’envoyer ?';
+    $('#choix-auto').querySelector('b').textContent = 'Publier partout maintenant';
+    $('#choix-auto').querySelector('small').textContent = 'Instagram, Facebook, TikTok et Telegram dans 2 minutes.';
+    $('#choix-notif').querySelector('b').textContent = 'Notification : j’ajoute ma musique';
+    $('#choix-notif').querySelector('small').textContent = 'Instagram et TikTok t’envoient une notification : tu choisis le son dans leur bibliothèque, puis tu publies. Facebook et Telegram partent normalement.';
+  }
+  $('#choix-annuler').addEventListener('click', restaureFeuille);
+  $('#voile').addEventListener('click', restaureFeuille);
+  async function enregistrerPhotos() {
+    if (!ph.artiste) { message('#msg-photos', 'Choisis d’abord l’artiste.', false); ph.etape = 'form'; vuePhotos(); return; }
+    const indices = [...ph.choisies].sort((a, b) => a - b);
+    try {
+      const r = await post('/photos/' + ph.job + '/enregistrer', {indices, artiste_id: ph.artiste.id, detourable: $('#ph-entiere').classList.contains('on'),
+        note: $('#ph-contexte').value.trim()});
+      vibre(); message('#msg-photos', r.gardees + ' photo(s) ajoutée(s) à la banque de ' + ph.artiste.nom + '.', true);
+      $('#feuille-titre').textContent = 'Publier aussi ces photos ?';
+      $('#choix-auto').querySelector('b').textContent = 'Oui, préparer le post';
+      $('#choix-auto').querySelector('small').textContent = 'Carrousel aux couleurs Cauri, accroche et légendes proposées par l’IA.';
+      $('#choix-notif').querySelector('b').textContent = 'Non, juste les garder';
+      $('#choix-notif').querySelector('small').textContent = 'Les photos restent dans la banque pour les prochaines couvertures.';
+      apresChoix = async non => { restaureFeuille(); if (non) { ph.etape = 'fini'; vuePhotos(); return; } await preparePublication(indices); };
+      feuille(true);
+    } catch (e) { message('#msg-photos', e.message, false); }
+  }
+  async function preparePublication(indices) {
+    ph.publication = indices; ph.etape = 'publier'; vuePhotos();
+    message('#msg-photos', 'L’IA regarde les photos et rédige les textes…', true);
+    try {
+      const s = await post('/photos/' + ph.job + '/suggestions', {indices, contexte: $('#ph-contexte').value.trim()});
+      $('#pp-etiquette').value = s.etiquette || 'PHOTOS'; $('#pp-accroche').value = s.accroche || '';
+      $('#pp-fr').value = s.legende_fr || ''; $('#pp-en').value = s.legende_en || ''; message('#msg-photos', '');
+    } catch (e) { message('#msg-photos', 'Textes à écrire toi-même (IA indisponible).', false); }
+  }
+  async function publierPhotos(notifier) {
+    try {
+      const r = await post('/photos/' + ph.job + '/publier', {indices: ph.publication, notifier, etiquette: $('#pp-etiquette').value,
+        accroche: $('#pp-accroche').value, legende_fr: $('#pp-fr').value, legende_en: $('#pp-en').value});
+      if (r.erreur) throw new Error(r.erreur);
+      ph.etape = 'fini'; vuePhotos();
+      message('#msg-photos', 'Carrousel en préparation sur le serveur (1 à 3 minutes), puis envoyé ' +
+        (notifier ? '(notification sur Instagram et TikTok).' : 'partout.'), true);
+      const tour = async () => { const j = await get('/job/' + ph.job);
+        if (j.statut === 'envoye') return message('#msg-photos', 'Carrousel envoyé (post n°' + j.post_id + ').', true);
+        if (j.statut === 'erreur') return message('#msg-photos', j.erreur || 'Échec', false);
+        setTimeout(tour, 4000); };
+      tour();
+    } catch (e) { message('#msg-photos', e.message, false); }
   }
 
   // ---------------- écran Mes vidéos
