@@ -30,6 +30,10 @@ jobs:
         with: {python-version: "3.12", cache: pip}
       - uses: actions/setup-node@v4
         with: {node-version: "20"}
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && pip install -r requirements.txt numpy gallery-dl "playwright>=1.49,<2" "yt-dlp[default,curl-cffi]" && python -m playwright install --with-deps chromium
+      - uses: actions/cache@v4
+        with:
+          path: ~/.u2net
+          key: studio-modeles-v1
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && pip install -r requirements.txt -r requirements-pipeline.txt numpy gallery-dl "opencv-python-headless==4.10.0.84" "yt-dlp[default,curl-cffi]" && python -m playwright install --with-deps chromium
       - working-directory: django
         run: python manage.py studio_job --id "${{ inputs.job_id }}"

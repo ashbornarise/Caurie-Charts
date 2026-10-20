@@ -289,6 +289,8 @@ def traite(job_id: int) -> dict:
         try:
             if p.get("publier_indices"):
                 return studio_photos.publie(job_id, job, p, _maj)
+            if p.get("mode") == "profil":
+                return studio_photos.traite_profil(job_id, job, p, _maj)
             return studio_photos.traite(job_id, job, p, _maj)
         except Exception as exc:  # noqa: BLE001
             _maj(job_id, statut="erreur", erreur=str(exc)[:500])

@@ -53,15 +53,27 @@ def _gallery_dl(lien: str, dossier: str) -> tuple[list[str], dict]:
 
 COMPTES: list = []   # compte Instagram auteur du post, relevé au passage (crédit, reconnaissance de l'artiste)
 LEGENDES: list = []  # texte du post (noms d'artistes cités)
+CONTEXTES: dict = {} # url de l'image -> {compte, legende, identifies} du post d'où elle vient
+PAR_CHEMIN: dict = {}  # fichier téléchargé -> même contexte
 
 
 def _images_json(obj, out: list) -> None:
     """Toutes les images (plus grande taille) d'une réponse Instagram : carrousel compris, vidéos exclues."""
     if isinstance(obj, dict):
+        ctx, debut = None, len(out)
         if (obj.get("carousel_media") or obj.get("image_versions2")) and isinstance(obj.get("user") or obj.get("owner"), dict):
             COMPTES.append((obj.get("user") or obj.get("owner")).get("username") or "")
-            if isinstance(obj.get("caption"), dict) and obj["caption"].get("text"):
-                LEGENDES.append(obj["caption"]["text"])
+            legende = obj["caption"].get("text") or "" if isinstance(obj.get("caption"), dict) else ""
+            if legende:
+                LEGENDES.append(legende)
+            identifies = set()
+            for porteur in [obj] + (obj.get("carousel_media") if isinstance(obj.get("carousel_media"), list) else []):
+                for t in ((porteur.get("usertags") or {}).get("in") or []) if isinstance(porteur, dict) else []:
+                    identifies.add(((t.get("user") or {}).get("username") or "").lower())
+            for c in obj.get("coauthor_producers") or []:
+                if isinstance(c, dict):
+                    identifies.add((c.get("username") or "").lower())
+            ctx = {"compte": COMPTES[-1], "legende": legende, "identifies": sorted(i for i in identifies if i)}
         for m in obj.get("carousel_media") or [] if isinstance(obj.get("carousel_media"), list) else []:
             c = (m.get("image_versions2") or {}).get("candidates") or []
             if c and m.get("media_type") in (1, None):
@@ -69,6 +81,9 @@ def _images_json(obj, out: list) -> None:
         if not obj.get("carousel_media") and obj.get("media_type") == 1 and (obj.get("image_versions2") or {}).get("candidates"):
             c = obj["image_versions2"]["candidates"]
             out.append(max(c, key=lambda x: x.get("width") or 0)["url"])
+        if ctx:
+            for u in out[debut:]:
+                CONTEXTES.setdefault(u, ctx)
         for v in obj.values():
             _images_json(v, out)
     elif isinstance(obj, list):
@@ -76,18 +91,27 @@ def _images_json(obj, out: list) -> None:
             _images_json(v, out)
 
 
-def _instagram_navigateur(lien: str, dossier: str) -> list[str]:
-    """Post Instagram public ouvert dans un navigateur sans interface, sans compte : Instagram envoie les données du
-    post (toutes les images du carrousel) à tout visiteur. Rien n'est connecté à un compte."""
+def _instagram_navigateur(lien: str, dossier: str, defilements: int = 0, maximum: int = MAX_PHOTOS) -> list[str]:
+    """Post (ou profil) Instagram public ouvert dans un navigateur sans interface, sans compte : Instagram envoie les
+    données des posts (toutes les images des carrousels) à tout visiteur. Rien n'est connecté à un compte.
+    Les vidéos ne sont jamais téléchargées (elles bloquaient le chargement, 20/10/2026)."""
     import asyncio
     trouvees: list = []
-    COMPTES.clear(); LEGENDES.clear()
+    COMPTES.clear(); LEGENDES.clear(); CONTEXTES.clear(); PAR_CHEMIN.clear()
 
     async def ouvre():
         from playwright.async_api import async_playwright
         async with async_playwright() as pw:
             b = await pw.chromium.launch()
             page = await b.new_page(locale="fr-FR", viewport={"width": 1280, "height": 900})
+
+            async def filtre(route):
+                req = route.request
+                if req.resource_type in ("media", "font") or re.search(r"\.(mp4|m4a|webm)(\?|$)", req.url):
+                    await route.abort()
+                else:
+                    await route.continue_()
+            await page.route("**/*", filtre)
 
             async def reponse(r):
                 if "json" in (r.headers.get("content-type") or "") or "graphql" in r.url:
@@ -96,8 +120,11 @@ def _instagram_navigateur(lien: str, dossier: str) -> list[str]:
                     except Exception:  # noqa: BLE001
                         pass
             page.on("response", reponse)
-            await page.goto(lien.split("?")[0], wait_until="networkidle", timeout=60000)
-            await page.wait_for_timeout(2500)
+            await page.goto(lien.split("?")[0], wait_until="domcontentloaded", timeout=45000)
+            await page.wait_for_timeout(4000)
+            for _ in range(defilements):          # profil : on fait défiler pour charger plus de posts
+                await page.mouse.wheel(0, 2500)
+                await page.wait_for_timeout(1800)
             for bloc in re.findall(r'<script type="application/json"[^>]*>(.*?)</script>', await page.content(), re.S):
                 try:
                     _images_json(json.loads(bloc), trouvees)
@@ -109,11 +136,13 @@ def _instagram_navigateur(lien: str, dossier: str) -> list[str]:
     except Exception:  # noqa: BLE001
         return []
     chemins = []
-    for k, u in enumerate(list(dict.fromkeys(trouvees))[:MAX_PHOTOS]):
+    for k, u in enumerate(list(dict.fromkeys(trouvees))[:maximum]):
         try:
             r = requests.get(u, timeout=30)
             r.raise_for_status()
             c = os.path.join(dossier, f"ig{k:02d}.jpg"); open(c, "wb").write(r.content); chemins.append(c)
+            if u in CONTEXTES:
+                PAR_CHEMIN[c] = CONTEXTES[u]
         except Exception:  # noqa: BLE001
             continue
     return chemins
@@ -188,13 +217,14 @@ def enregistre(job: dict, indices: list[int], artist_id: int, detourable: bool, 
             continue
         r = requests.get(f"{base}/media/artists/candidats/{photos[i]}", timeout=30)
         r.raise_for_status()
-        nom = f"{re.sub(r'[^a-z0-9-]', '', a['slug'])}-lien-{job['id']}-{i + 1:02d}.jpg"
+        nom = f"{re.sub(r'[^a-z0-9-]', '', a['slug'])}-{'profil' if p.get('mode') == 'profil' else 'lien'}-{job['id']}-{i + 1:02d}.jpg"
         storage.store_media("artists/plans", nom, r.content, "image/jpeg")
-        largeur, hauteur, score = plans.note_qualite(r.content, bool(detourable))
+        entiere = bool(detourable) or bool((p.get("entieres") or [False] * len(photos))[i])
+        largeur, hauteur, score = plans.note_qualite(r.content, entiere)
         if not db.value("SELECT 1 FROM artist_photos WHERE fichier = ?", [nom]):
             db.insert("artist_photos", {"artist_id": a["id"], "fichier": nom, "source": "lien", "source_ref": job["lien"][:120],
                                         "credit": (f"Photo : {p.get('credit')}" if p.get("credit") else "Photo partagée par l'artiste")[:300],
-                                        "plan_large": bool(detourable), "note": (note or "")[:600] or None,
+                                        "plan_large": entiere, "note": (note or "")[:600] or None,
                                         "largeur": largeur, "hauteur": hauteur, "score": score})
         gardees.append(nom)
     return gardees
@@ -286,3 +316,142 @@ def publie(job_id: int, job: dict, p: dict, maj) -> dict:
     maj(job_id, statut="envoye" if recus else "erreur", post_id=post["id"],
         erreur=None if recus else f"aucun réseau n'a accepté le carrousel : {resultat}"[:500])
     return {"statut": "envoye", "video": f"post {post['id']}"}
+
+
+
+# ---------------------------------------------------------------- profil complet, en arrière-plan (20/10/2026)
+
+GARDER = 10          # photos cochées d'avance (reconnues) par profil
+MAX_TRI = 24         # photos proposées au tri
+ANALYSER = 40        # photos examinées au plus
+
+
+def _une_personne(im: Image.Image) -> tuple[bool, bool]:
+    """(une seule personne bien visible, personne entière) d'après le masque de détourage (rembg)."""
+    try:
+        import numpy as np
+        from rembg import new_session, remove
+        global _SESSION_P
+        try:
+            _SESSION_P
+        except NameError:
+            _SESSION_P = None
+        _SESSION_P = _SESSION_P or new_session("u2net_human_seg")
+        petit = im.copy(); petit.thumbnail((320, 320))
+        m = np.array(remove(petit, session=_SESSION_P, only_mask=True)) > 128
+    except Exception:  # noqa: BLE001
+        return True, False
+    surface = m.mean()
+    if not 0.04 <= surface <= 0.75:
+        return False, False
+    # nombre de silhouettes : colonnes occupées séparées par un vide franc
+    colonnes = m.any(axis=0)
+    blocs, dedans = 0, False
+    for c in colonnes:
+        if c and not dedans:
+            blocs += 1
+        dedans = bool(c)
+    ys = np.where(m.any(axis=1))[0]
+    entiere = len(ys) > 0 and (ys[-1] - ys[0]) / m.shape[0] >= 0.75
+    return blocs == 1, bool(entiere)
+
+
+def _empreinte(im: Image.Image) -> int:
+    g = im.convert("L").resize((8, 8))
+    px = list(g.getdata()); moy = sum(px) / 64
+    return sum(1 << k for k, v in enumerate(px) if v > moy)
+
+
+def _cle(t: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]", "", t)
+
+
+def _cite(ctx: dict, nom: str, handle: str) -> bool:
+    """Le post parle-t-il de l'artiste ? nom cité dans la légende, @compte cité ou identifié sur la photo."""
+    legende = (ctx.get("legende") or "").lower()
+    if handle and (handle in ctx.get("identifies", []) or ("@" + handle) in legende or handle == (ctx.get("compte") or "").lower()):
+        return True
+    return len(nom) >= 3 and re.search(r"(?<![\w@])" + re.escape(nom.lower()) + r"(?!\w)", legende) is not None
+
+
+def traite_profil(job_id: int, job: dict, p: dict, maj) -> dict:
+    """Profil complet : parcourt les posts visibles et range dans le dossier de l'artiste les meilleures photos OÙ
+    C'EST BIEN LUI. Page de l'artiste : tous ses posts ; page média ou de fans : seulement les posts qui le citent
+    (nom, @compte, identifié). Puis visage comparé à ses photos déjà validées (ou au visage qui revient sur ses
+    posts), une seule personne, taille, netteté, sans doublon."""
+    from core.services.social import plans, visages
+    maj(job_id, statut="telechargement", erreur=None)
+    a = db.one("SELECT id, slug, name, instagram FROM artists WHERE id = ?", [int(p.get("artiste_id") or 0)])
+    if not a:
+        raise RuntimeError("artiste introuvable : choisis-le dans la liste")
+    handle = (a.get("instagram") or "").lstrip("@").lower()
+    m = re.search(r"instagram\.com/([A-Za-z0-9._]+)", job["lien"])
+    page_de = (m.group(1).lower() if m and m.group(1) not in ("p", "reel", "explore") else "")
+    sa_page = bool(page_de) and (page_de == handle or (len(_cle(a["name"])) >= 3 and _cle(a["name"]) in _cle(page_de)))
+    refus = {"pas_lui": 0, "pas_cite": 0, "plusieurs": 0, "petite": 0, "doublon": 0, "sans_visage": 0}
+    with tempfile.TemporaryDirectory(prefix=f"cauri-profil-{job_id}-") as tmp:
+        images = _instagram_navigateur(job["lien"], tmp, defilements=8, maximum=ANALYSER) if "instagram.com" in job["lien"] else []
+        if not images:
+            images, _i = _gallery_dl(job["lien"], tmp)
+        maj(job_id, statut="analyse")
+        candidates, vues = [], []
+        for chemin in images[:ANALYSER]:
+            ctx = PAR_CHEMIN.get(chemin)
+            if not sa_page and ctx is not None and not _cite(ctx, a["name"], handle):
+                refus["pas_cite"] += 1          # page média : ce post ne parle pas de l'artiste
+                continue
+            donnees = _jpeg(chemin)
+            if not donnees:
+                refus["petite"] += 1
+                continue
+            with Image.open(io.BytesIO(donnees)) as im:
+                im = im.convert("RGB")
+                if min(im.size) < 700:
+                    refus["petite"] += 1
+                    continue
+                emp = _empreinte(im)
+                if any(bin(emp ^ e).count("1") <= 6 for e in vues):      # même photo, recadrée ou repostée
+                    refus["doublon"] += 1
+                    continue
+                vues.append(emp)
+                seule, entiere = _une_personne(im)
+            if not seule:
+                refus["plusieurs"] += 1
+                continue
+            faces = [f for f in visages.analyse(donnees) if f[1] >= 0.75]
+            if len(faces) > 1:
+                refus["plusieurs"] += 1
+                continue
+            candidates.append((donnees, entiere, faces))
+        # à quoi ressemble l'artiste : ses photos validées à la main, sinon le visage net qui revient sur ses posts
+        refs = visages.references_banque(a["id"])
+        if not refs:
+            refs = visages.visage_dominant([[f[0] for f in c[2] if f[1] >= visages.NET] for c in candidates],
+                                           minimum=3 if sa_page else 2)
+        notees, verdicts = [], {"lui": 0, "doute": 0}
+        for donnees, entiere, faces in candidates:
+            v = visages.verdict(faces, refs)
+            if v == "pas_lui":
+                refus["pas_lui"] += 1
+                continue
+            verdicts[v] += 1
+            _w, _h, score = plans.note_qualite(donnees, entiere)
+            notees.append((score + (0.15 if v == "lui" else 0), entiere, donnees, v))   # reconnu : passe devant
+    # rien n'entre seul dans la banque : on prépare la sélection, le fondateur valide dans le studio (20/10/2026)
+    if page_de and sa_page and not handle:
+        db.run("UPDATE artists SET instagram = ? WHERE id = ?", [page_de[:120], a["id"]])
+    ordre = sorted(notees, key=lambda t: -t[0])[:MAX_TRI]
+    noms, entieres, reconnues = [], [], []
+    for k, (score, entiere, donnees, v) in enumerate(ordre):
+        nom = f"studio-{job_id}-{k + 1:02d}.jpg"
+        storage.store_media("artists/candidats", nom, donnees, "image/jpeg")
+        noms.append(nom); entieres.append(bool(entiere)); reconnues.append(v)
+    p.update({"photos": noms, "entieres": entieres, "reconnues": reconnues,
+              "preselection": [k for k, v in enumerate(reconnues) if v == "lui"][:GARDER],
+              "credit": f"@{page_de} sur Instagram" if page_de else "", "compte": page_de if sa_page else "",
+              "analysees": len(images), "refus": refus, "verdicts": verdicts, "reference": bool(refs),
+              "page": page_de, "sa_page": sa_page, "artiste_nom": a["name"], "a_trier": bool(noms)})
+    maj(job_id, statut="pret", params=p, erreur=None if noms else "aucune photo où c'est bien lui sur cette page")
+    return {"statut": "pret", "video": f"{len(noms)} photos à trier"}

@@ -91,3 +91,21 @@ def test_choix_des_plateformes():
     assert studio.reseaux_choisis({"reseaux": ["instagram", "tiktok", "pirate"]}) == ["instagram", "tiktok"]
     with pytest.raises(ValueError):
         studio.reseaux_choisis({"reseaux": []})
+
+
+def test_le_lien_dit_si_c_est_un_profil_ou_un_post():
+    assert studio.est_profil("https://www.instagram.com/didib_officiel/")
+    assert studio.est_profil("https://instagram.com/rema?igsh=abc")
+    assert not studio.est_profil("https://www.instagram.com/p/DdweLD8DIaD/")
+    assert not studio.est_profil("https://www.instagram.com/reel/abc/")
+    assert not studio.est_profil("https://www.instagram.com/didib_officiel/p/DdweLD8DIaD/")
+    assert not studio.est_profil("https://www.tiktok.com/@rema")
+
+
+def test_post_qui_cite_l_artiste():
+    from core.services.social import studio_photos as P
+    assert P._cite({"legende": "Nouveau clip de Didi B ce soir", "identifies": []}, "Didi B", "")
+    assert P._cite({"legende": "Merci", "identifies": ["didib_officiel"]}, "Didi B", "didib_officiel")
+    assert P._cite({"legende": "feat @didib_officiel", "identifies": []}, "Didi B", "didib_officiel")
+    assert not P._cite({"legende": "Concert de Himra à Abidjan", "identifies": []}, "Didi B", "didib_officiel")
+    assert not P._cite({"legende": "Didi Boss en studio", "identifies": []}, "Didi B", "")

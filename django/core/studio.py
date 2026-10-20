@@ -487,6 +487,16 @@ def photos_nouveau(request, chemin):
     lien = str(c.get("lien") or "").strip()
     params = {"type": "photos", "photos": [], "artiste_id": c.get("artiste_id"), "artiste_nom": str(c.get("artiste_nom") or "")[:120]}
     creer_tables()
+    if lien and est_profil(lien):
+        # profil : tri en arrière-plan, le studio prévient quand le dossier est prêt à trier
+        if not c.get("artiste_id"):
+            return _json({"erreur": "c'est un profil : choisis d'abord l'artiste, je trie ses photos en arrière-plan"}, 400)
+        params.update({"mode": "profil", "artiste_id": int(c["artiste_id"])})
+        job_id = db.insert("studio_jobs", {"lien": lien[:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
+        erreur = _lance(job_id)
+        if erreur:
+            db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
+        return _json({"id": job_id, "profil": True, "erreur": erreur})
     if lien:
         url = urlparse(lien)
         if url.scheme not in ("http", "https") or not url.hostname:
@@ -547,10 +557,15 @@ def photos_enregistrer(request, chemin, ident):
     c = _corps(request)
     try:
         artiste = int(c.get("artiste_id") or 0)
-        gardees = studio_photos.enregistre(_job_photos(ident), [int(i) for i in c.get("indices") or []], artiste,
+        job = _job_photos(ident)
+        gardees = studio_photos.enregistre(job, [int(i) for i in c.get("indices") or []], artiste,
                                            bool(c.get("detourable")), str(c.get("note") or "").strip())
     except (ValueError, TypeError) as exc:
         return _json({"erreur": str(exc) or "choisis un artiste"}, 400)
+    p = job["params"] if isinstance(job["params"], dict) else json.loads(job["params"] or "{}")
+    if p.get("mode") == "profil":            # le dossier « à trier » est validé : il sort de la liste
+        p.update({"trie_le": datetime.now().isoformat(timespec="minutes"), "a_trier": False})
+        db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False)}, "id = :id", {"id": job["id"]})
     return _json({"ok": True, "gardees": len(gardees)})
 
 
@@ -683,7 +698,37 @@ def banque_retirer(request, chemin, ident):
 
 
 
+# ---------------------------------------------------------------- profil complet en arrière-plan
+
+def est_profil(lien: str) -> bool:
+    """Lien d'un profil Instagram (instagram.com/compte) et pas d'un post, d'un reel ou d'une story."""
+    u = urlparse(lien)
+    if (u.hostname or "").lower().removeprefix("www.").removeprefix("m.") != "instagram.com":
+        return False
+    morceaux = [m for m in u.path.split("/") if m]
+    return len(morceaux) == 1 and morceaux[0].lower() not in ("p", "reel", "reels", "tv", "stories", "explore", "accounts")
+
+
+def photos_profils(request, chemin):
+    """Les profils lancés récemment et leur état."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    out = []
+    from core import storage
+    base = storage.blob_public_url()
+    for j in db.all("SELECT * FROM studio_jobs WHERE params LIKE ? ORDER BY id DESC LIMIT 12", ['%"mode": "profil"%']):
+        p = json.loads(j["params"] or "{}")
+        if p.get("trie_le"):
+            continue                         # dossier déjà validé
+        une = f"{base}/media/artists/candidats/{p['photos'][0]}" if p.get("photos") else ""
+        out.append({"id": j["id"], "statut": j["statut"], "artiste": p.get("artiste_nom") or "", "artiste_id": p.get("artiste_id"),
+                    "n": len(p.get("photos") or []), "reconnues": len(p.get("preselection") or []), "une": une,
+                    "page": p.get("page") or "", "erreur": j.get("erreur"), "a_trier": bool(p.get("a_trier"))})
+    return _json({"profils": out, "a_trier": sum(1 for x in out if x["a_trier"] and x["statut"] == "pret")})
+
+
 # toutes les actions JSON du studio : erreurs lisibles
-for _nom in ("fabriquer", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
+for _nom in ("fabriquer", "photos_profils", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
              "apercu_job", "valider_job", "banque", "banque_artiste", "banque_retirer", "artistes", "reglages"):
     globals()[_nom] = _erreur_lisible(globals()[_nom])
