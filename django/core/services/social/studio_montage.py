@@ -164,37 +164,26 @@ def analyse(images: list[str], infos: dict) -> dict:
 def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str,
            taille: tuple[int, int] | None = None) -> tuple[Image.Image, tuple[int, int, int, int], Image.Image]:
     """(calque fixe, zone de la vidéo x, y, w, h, calque titre). Rien dans les 20 % du bas en 9:16 (interface TikTok/Reels).
-    Calque fixe : logo et crédit, toute la vidéo. Calque titre : dégradé du haut, étiquette et accroche, effacé en fondu
-    après quelques secondes pour laisser la vidéo seule (20/10/2026).
+    Calque fixe : logo et crédit, toute la vidéo. Calque titre : étiquette et accroche EN BAS (en haut, le titre
+    cachait le visage des artistes — 20/10/2026), sur un dégradé qui monte du bas, effacé en fondu après quelques secondes.
     « origine » : la vidéo remplit tout le cadre à ses proportions, l'habillage se pose par-dessus (dégradés sombres)."""
     from core.services.social import couverture2026 as C
     W, H = taille or FORMATS[fmt]
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     titre_img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    if fmt == "origine":
-        haut_d, bas_d = Image.new("L", (1, H)), Image.new("L", (1, H))
-        for yy in range(H):
-            t = yy / H
-            haut_d.putpixel((0, yy), int(215 * max(0, 1 - t / .42) ** 1.4))
-            bas_d.putpixel((0, yy), int(170 * max(0, (t - .78) / .22) ** 1.6))
-        titre_img.paste(Image.new("RGBA", (W, H), (8, 6, 16, 255)), (0, 0), haut_d.resize((W, H)))
-        img.paste(Image.new("RGBA", (W, H), (8, 6, 16, 255)), (0, 0), bas_d.resize((W, H)))
     d = ImageDraw.Draw(img)
     dt = ImageDraw.Draw(titre_img)
     portrait = H / W > 1.6
     haut = 110 if (fmt == "story" or (fmt == "origine" and portrait)) else 50
-    C._logo(img, 50, haut, 76)
+    bas_reserve = int(H * .20) if (fmt == "story" or (fmt == "origine" and portrait)) else 70
+
+    # accroche : mise en lignes d'abord, pour connaître la hauteur du bloc titre
     fe = C.police("Montserrat.ttf", 26, "ExtraBold")
     eti = (etiquette or "VIDÉO").upper()[:32]
-    tw = d.textlength(eti, font=fe)
-    y = haut + 100
-    dt.rounded_rectangle((50, y, 50 + tw + 34, y + 46), radius=23, fill=C.CIEL + (255,))
-    dt.text((67, y + 8), eti, font=fe, fill=C.NUIT + (255,))
-    y += 66
     cibles = {re.sub(r"\W", "", m.lower()) for m in (artiste or "").split()}
     texte = C.propre(accroche or "")
-    for taille in (60, 54, 48, 42):
-        f = C.police("Montserrat.ttf", taille, "ExtraBold")
+    for taille_t in (60, 54, 48, 42):
+        f = C.police("Montserrat.ttf", taille_t, "ExtraBold")
         lignes, cour = [], ""
         for mot in texte.split():
             essai = (cour + " " + mot).strip()
@@ -206,23 +195,47 @@ def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str,
             lignes.append(cour)
         if len(lignes) <= 3:
             break
+    y_credit = (H - bas_reserve - 46) if bas_reserve > 70 else H - 52
+    bas_bloc = (y_credit - 22) if credit else (H - bas_reserve - 24)
+    haut_bloc = bas_bloc - (46 + 20 + len(lignes) * (taille_t + 14) - 14)
+
+    if fmt == "origine":
+        # dégradés : léger en haut (lisibilité du logo), fort en bas pour le titre (s'efface avec lui), crédit en bas
+        haut_d, titre_d, bas_d = (Image.new("L", (1, H)) for _ in range(3))
+        debut = max(0, haut_bloc - 160) / H
+        for yy in range(H):
+            t = yy / H
+            haut_d.putpixel((0, yy), int(150 * max(0, 1 - t / .16) ** 1.5))
+            titre_d.putpixel((0, yy), int(225 * min(1, max(0, (t - debut) / max(.01, (haut_bloc / H + .06) - debut))) ** 1.2))
+            bas_d.putpixel((0, yy), int(170 * max(0, (t - .78) / .22) ** 1.6))
+        nuit = Image.new("RGBA", (W, H), (8, 6, 16, 255))
+        img.paste(nuit, (0, 0), haut_d.resize((W, H)))
+        img.paste(nuit, (0, 0), bas_d.resize((W, H)))
+        titre_img.paste(nuit, (0, 0), titre_d.resize((W, H)))
+    C._logo(img, 50, haut, 76)
+
+    y = haut_bloc
+    tw = d.textlength(eti, font=fe)
+    dt.rounded_rectangle((50, y, 50 + tw + 34, y + 46), radius=23, fill=C.CIEL + (255,))
+    dt.text((67, y + 8), eti, font=fe, fill=C.NUIT + (255,))
+    y += 66
     for ligne in lignes:
         x = 50
         for mot in ligne.split():
             lm = d.textlength(mot, font=f)
             if cibles and re.sub(r"\W", "", mot.lower()) in cibles:
-                dt.rectangle((x - 7, y + 5, x + lm + 7, y + taille + 9), fill=C.VIOLET + (255,))
+                dt.rectangle((x - 7, y + 5, x + lm + 7, y + taille_t + 9), fill=C.VIOLET + (255,))
             dt.text((x, y), mot, font=f, fill=(255, 255, 255, 255))
             x += lm + d.textlength(" ", font=f)
-        y += taille + 14
-    zone_haut = 0 if fmt == "origine" else y + 24
-    bas_reserve = int(H * .20) if (fmt == "story" or (fmt == "origine" and portrait)) else 70
-    if credit:
-        d.text((50, H - bas_reserve - 46 if bas_reserve > 70 else H - 52), f"Source : {credit}"[:70],
-               font=C.police("Montserrat.ttf", 24, "Medium"), fill=(255, 255, 255, 210))
+        y += taille_t + 14
+    if credit:   # sur les deux calques : lisible par-dessus le dégradé du titre, et après son effacement
+        for calq in (d, dt):
+            calq.text((50, y_credit), f"Source : {credit}"[:70], font=C.police("Montserrat.ttf", 24, "Medium"), fill=(255, 255, 255, 210))
     if fmt == "origine":
         return img, (0, 0, W, H), titre_img
-    zone_bas = H - bas_reserve - (60 if fmt == "story" else 0)
+    # autres formats : la vidéo entre le logo (en haut) et le titre (en bas)
+    zone_haut = haut + 100
+    zone_bas = haut_bloc - 24
     return img, (0, zone_haut, W, max(200, zone_bas - zone_haut)), titre_img
 
 
