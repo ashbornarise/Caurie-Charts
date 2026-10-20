@@ -5,6 +5,7 @@ ou passkey WebAuthn (empreinte, Face ID, code de l'appareil). Le lien collé est
 GitHub Actions (studio_montage.py) ; l'aperçu revient ici, puis « Envoyer partout » programme le post via Buffer.
 """
 import json
+import re
 import secrets
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
@@ -487,16 +488,20 @@ def photos_nouveau(request, chemin):
     lien = str(c.get("lien") or "").strip()
     params = {"type": "photos", "photos": [], "artiste_id": c.get("artiste_id"), "artiste_nom": str(c.get("artiste_nom") or "")[:120]}
     creer_tables()
-    if lien and est_profil(lien):
-        # profil : tri en arrière-plan, le studio prévient quand le dossier est prêt à trier
+    liens = list(dict.fromkeys(re.findall(r"https?://[^\s,;]+", lien)))[:30]
+    if any(est_profil(x) for x in liens):
+        return _json({"erreur": "un lien de profil ne passe pas sans compte Instagram : ouvre le profil et colle les liens "
+                                "des posts photo (plusieurs d'un coup, un par ligne)"}, 400)
+    if len(liens) > 1 or (liens and c.get("arriere_plan")):
+        # tri en arrière-plan : on peut en lancer plusieurs à la suite, chacun devient un dossier « À trier »
         if not c.get("artiste_id"):
-            return _json({"erreur": "c'est un profil : choisis d'abord l'artiste, je trie ses photos en arrière-plan"}, 400)
-        params.update({"mode": "profil", "artiste_id": int(c["artiste_id"])})
-        job_id = db.insert("studio_jobs", {"lien": lien[:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
+            return _json({"erreur": "choisis d'abord l'artiste : le tri en arrière-plan range ses photos dans son dossier"}, 400)
+        params.update({"mode": "profil", "artiste_id": int(c["artiste_id"]), "liens": liens})
+        job_id = db.insert("studio_jobs", {"lien": liens[0][:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
         erreur = _lance(job_id)
         if erreur:
             db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
-        return _json({"id": job_id, "profil": True, "erreur": erreur})
+        return _json({"id": job_id, "profil": True, "liens": len(liens), "erreur": erreur})
     if lien:
         url = urlparse(lien)
         if url.scheme not in ("http", "https") or not url.hostname:
@@ -724,7 +729,8 @@ def photos_profils(request, chemin):
         une = f"{base}/media/artists/candidats/{p['photos'][0]}" if p.get("photos") else ""
         out.append({"id": j["id"], "statut": j["statut"], "artiste": p.get("artiste_nom") or "", "artiste_id": p.get("artiste_id"),
                     "n": len(p.get("photos") or []), "reconnues": len(p.get("preselection") or []), "une": une,
-                    "page": p.get("page") or "", "erreur": j.get("erreur"), "a_trier": bool(p.get("a_trier"))})
+                    "page": p.get("page") or "", "liens": len(p.get("liens") or [1]), "erreur": j.get("erreur"),
+                    "a_trier": bool(p.get("a_trier"))})
     return _json({"profils": out, "a_trier": sum(1 for x in out if x["a_trier"] and x["statut"] == "pret")})
 
 

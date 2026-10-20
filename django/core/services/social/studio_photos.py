@@ -266,7 +266,8 @@ def enregistre(job: dict, indices: list[int], artist_id: int, detourable: bool, 
         largeur, hauteur, score = plans.note_qualite(r.content, entiere)
         if not db.value("SELECT 1 FROM artist_photos WHERE fichier = ?", [nom]):
             db.insert("artist_photos", {"artist_id": a["id"], "fichier": nom, "source": "lien", "source_ref": job["lien"][:120],
-                                        "credit": (f"Photo : {p.get('credit')}" if p.get("credit") else "Photo partagée par l'artiste")[:300],
+                                        "credit": ((lambda c: f"Photo : {c}" if c else "Photo partagée par l'artiste")(
+                                            (p.get("credits") or [None] * len(photos))[i] or p.get("credit")))[:300],
                                         "plan_large": entiere, "note": (note or "")[:600] or None,
                                         "largeur": largeur, "hauteur": hauteur, "score": score})
         gardees.append(nom)
@@ -420,42 +421,48 @@ def _cite(ctx: dict, nom: str, handle: str) -> bool:
 
 
 def traite_profil(job_id: int, job: dict, p: dict, maj) -> dict:
-    """Profil complet : parcourt les posts visibles et range dans le dossier de l'artiste les meilleures photos OÙ
-    C'EST BIEN LUI. Page de l'artiste : tous ses posts ; page média ou de fans : seulement les posts qui le citent
-    (nom, @compte, identifié). Puis visage comparé à ses photos déjà validées (ou au visage qui revient sur ses
-    posts), une seule personne, taille, netteté, sans doublon."""
+    """Tri en arrière-plan d'un ou plusieurs liens de posts pour UN artiste : prépare un dossier « À trier » avec les
+    photos où c'est bien lui. Posts de son compte : tout ; posts d'un média ou d'un fan : seulement s'ils le citent
+    (nom, @compte, identifié). Puis visage comparé à ses photos déjà validées, une seule personne, taille, netteté,
+    sans doublon. Plusieurs tris peuvent tourner en même temps (un travail GitHub chacun)."""
     from core.services.social import plans, visages
     maj(job_id, statut="telechargement", erreur=None)
     a = db.one("SELECT id, slug, name, instagram FROM artists WHERE id = ?", [int(p.get("artiste_id") or 0)])
     if not a:
         raise RuntimeError("artiste introuvable : choisis-le dans la liste")
     handle = (a.get("instagram") or "").lstrip("@").lower()
-    m = re.search(r"instagram\.com/([A-Za-z0-9._]+)", job["lien"])
-    page_de = (m.group(1).lower() if m and m.group(1) not in ("p", "reel", "explore") else "")
-    sa_page = bool(page_de) and (page_de == handle or (len(_cle(a["name"])) >= 3 and _cle(a["name"]) in _cle(page_de)))
+
+    def a_lui(compte: str) -> bool:           # le compte qui a posté est celui de l'artiste
+        c = (compte or "").lower()
+        return bool(c) and (c == handle or (len(_cle(a["name"])) >= 3 and _cle(a["name"]) in _cle(c)))
+
     refus = {"pas_lui": 0, "pas_cite": 0, "plusieurs": 0, "petite": 0, "doublon": 0, "sans_visage": 0}
-    with tempfile.TemporaryDirectory(prefix=f"cauri-profil-{job_id}-") as tmp:
-        images, contextes = [], {}
-        if "instagram.com" in job["lien"]:
-            for k, post in enumerate(_posts_du_profil(job["lien"])):     # post par post, comme un lien de post
-                if len(images) >= ANALYSER:
-                    break
-                sous = os.path.join(tmp, f"post{k:02d}"); os.makedirs(sous, exist_ok=True)
-                imgs = _instagram_navigateur(post, sous, maximum=10)
+    liens = p.get("liens") or [job["lien"]]
+    with tempfile.TemporaryDirectory(prefix=f"cauri-tri-{job_id}-") as tmp:
+        images, contextes, comptes_vus = [], {}, []
+        for k, lien in enumerate(liens):          # post par post (un profil ne passe pas sans compte)
+            if len(images) >= ANALYSER:
+                break
+            sous = os.path.join(tmp, f"post{k:02d}"); os.makedirs(sous, exist_ok=True)
+            if "instagram.com" in lien:
+                imgs = _instagram_navigateur(lien, sous, maximum=10)
                 contextes.update(PAR_CHEMIN)
-                images += imgs
+                comptes_vus += [c for c in COMPTES[:1] if c]
+            else:
+                imgs, infos = _gallery_dl(lien, sous)
+                for c in imgs:
+                    contextes[c] = {"compte": infos.get("compte") or "", "legende": "", "identifies": [], "sans_texte": True}
+            images += imgs
         if not images:
-            images, _i = _gallery_dl(job["lien"], tmp)
-        if not images:
-            raise RuntimeError("Instagram exige une connexion pour lire un profil depuis le serveur : "
-                               "colle plutôt les liens des posts photo de l'artiste")
+            raise RuntimeError("aucune photo récupérée sur ces liens (posts privés, vidéos seulement, ou connexion exigée)")
         maj(job_id, statut="analyse")
         candidates, vues = [], []
         for chemin in images[:ANALYSER]:
-            ctx = contextes.get(chemin)
-            if not sa_page and ctx is not None and not _cite(ctx, a["name"], handle):
-                refus["pas_cite"] += 1          # page média : ce post ne parle pas de l'artiste
+            ctx = contextes.get(chemin) or {}
+            if ctx and not ctx.get("sans_texte") and not a_lui(ctx.get("compte")) and not _cite(ctx, a["name"], handle):
+                refus["pas_cite"] += 1          # post d'un média ou d'un fan qui ne parle pas de l'artiste
                 continue
+            credit = f"@{ctx['compte']} sur Instagram" if ctx.get("compte") else ""
             donnees = _jpeg(chemin)
             if not donnees:
                 refus["petite"] += 1
@@ -478,34 +485,31 @@ def traite_profil(job_id: int, job: dict, p: dict, maj) -> dict:
             if len(faces) > 1:
                 refus["plusieurs"] += 1
                 continue
-            candidates.append((donnees, entiere, faces))
+            candidates.append((donnees, entiere, faces, credit))
         # à quoi ressemble l'artiste : ses photos validées à la main, sinon le visage net qui revient sur ses posts
         refs = visages.references_banque(a["id"])
         if not refs:
-            refs = visages.visage_dominant([[f[0] for f in c[2] if f[1] >= visages.NET] for c in candidates],
-                                           minimum=3 if sa_page else 2)
+            refs = visages.visage_dominant([[f[0] for f in c[2] if f[1] >= visages.NET] for c in candidates], minimum=2)
         notees, verdicts = [], {"lui": 0, "doute": 0}
-        for donnees, entiere, faces in candidates:
+        for donnees, entiere, faces, credit in candidates:
             v = visages.verdict(faces, refs)
             if v == "pas_lui":
                 refus["pas_lui"] += 1
                 continue
             verdicts[v] += 1
             _w, _h, score = plans.note_qualite(donnees, entiere)
-            notees.append((score + (0.15 if v == "lui" else 0), entiere, donnees, v))   # reconnu : passe devant
+            notees.append((score + (0.15 if v == "lui" else 0), entiere, donnees, v, credit))   # reconnu : passe devant
     # rien n'entre seul dans la banque : on prépare la sélection, le fondateur valide dans le studio (20/10/2026)
-    if page_de and sa_page and not handle:
-        db.run("UPDATE artists SET instagram = ? WHERE id = ?", [page_de[:120], a["id"]])
     ordre = sorted(notees, key=lambda t: -t[0])[:MAX_TRI]
-    noms, entieres, reconnues = [], [], []
-    for k, (score, entiere, donnees, v) in enumerate(ordre):
+    noms, entieres, reconnues, credits = [], [], [], []
+    for k, (score, entiere, donnees, v, credit) in enumerate(ordre):
         nom = f"studio-{job_id}-{k + 1:02d}.jpg"
         storage.store_media("artists/candidats", nom, donnees, "image/jpeg")
-        noms.append(nom); entieres.append(bool(entiere)); reconnues.append(v)
-    p.update({"photos": noms, "entieres": entieres, "reconnues": reconnues,
+        noms.append(nom); entieres.append(bool(entiere)); reconnues.append(v); credits.append(credit)
+    sien = next((c for c in comptes_vus if a_lui(c)), "")
+    p.update({"photos": noms, "entieres": entieres, "reconnues": reconnues, "credits": credits,
               "preselection": [k for k, v in enumerate(reconnues) if v == "lui"][:GARDER],
-              "credit": f"@{page_de} sur Instagram" if page_de else "", "compte": page_de if sa_page else "",
-              "analysees": len(images), "refus": refus, "verdicts": verdicts, "reference": bool(refs),
-              "page": page_de, "sa_page": sa_page, "artiste_nom": a["name"], "a_trier": bool(noms)})
+              "compte": sien, "analysees": len(images), "refus": refus, "verdicts": verdicts, "reference": bool(refs),
+              "artiste_nom": a["name"], "a_trier": bool(noms)})
     maj(job_id, statut="pret", params=p, erreur=None if noms else "aucune photo où c'est bien lui sur cette page")
     return {"statut": "pret", "video": f"{len(noms)} photos à trier"}

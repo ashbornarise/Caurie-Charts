@@ -36,7 +36,8 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stro
 .carte{background:var(--carte);border:1px solid var(--trait);border-radius:var(--rayon);padding:16px;margin-bottom:14px;backdrop-filter:blur(14px)}
 .etiq{font-size:12px;font-weight:700;color:var(--doux);text-transform:uppercase;letter-spacing:.6px;margin:2px 0 10px;display:flex;align-items:center;gap:8px}
 .champ{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.28);border:1px solid var(--trait);border-radius:16px;padding:4px 4px 4px 14px}
-.champ input{flex:1;background:none;border:0;outline:0;padding:12px 0;min-width:0;font-size:15px}
+.champ input,.champ textarea{flex:1;background:none;border:0;outline:0;padding:12px 0;min-width:0;font-size:15px;color:inherit;font-family:inherit}
+.champ textarea{resize:vertical;min-height:48px;line-height:1.4}
 .champ:focus-within{border-color:var(--violet-clair);box-shadow:0 0 0 4px rgba(124,58,237,.22)}
 .coller{display:flex;align-items:center;gap:6px;background:var(--violet);border-radius:12px;padding:10px 13px;font-weight:700;font-size:14px}
 .apercu-lien{display:none;gap:12px;align-items:center;margin-top:12px;padding:10px;border-radius:14px;background:rgba(0,0,0,.25)}
@@ -302,15 +303,18 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
         <div id="ph-artiste"></div>
       </div>
       <div class="carte">
-        <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-lien"/></svg>Lien d'un post ou d'un profil</div>
+        <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-lien"/></svg>Liens des posts</div>
         <div class="champ">
-          <input id="ph-lien" type="url" inputmode="url" placeholder="TikTok, X, Facebook, Instagram…" autocomplete="off" autocapitalize="off">
+          <textarea id="ph-lien" rows="2" inputmode="url" placeholder="Un ou plusieurs liens de posts (un par ligne) : Instagram, TikTok, X, Facebook…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
           <button class="coller" id="ph-coller"><svg class="i" style="width:18px;height:18px"><use href="#i-presse"/></svg>Coller</button>
         </div>
         <div class="ou">OU</div>
         <button class="btn second" id="ph-telephone" style="margin-top:0"><svg class="i"><use href="#i-photo"/></svg>Choisir sur mon téléphone</button>
         <input type="file" id="ph-fichiers" accept="image/*" multiple style="display:none">
-        <p style="margin:10px 0 0;font-size:12px;color:var(--faible)">Lien d'un <b>profil</b> Instagram (instagram.com/nom) : choisis l'artiste, je trie toutes ses photos en arrière-plan et je te préviens ici quand le dossier est prêt.</p>
+        <div class="interrupteur" style="margin-top:14px">
+          <button class="bascule on" id="ph-fond" role="switch" aria-checked="true" aria-label="En arrière-plan"></button>
+          <p><b>Trier en arrière-plan</b>Choisis l'artiste, colle ses liens, lance : tu peux enchaîner d'autres tris tout de suite. Chaque tri arrive dans « À trier » avec une pastille sur Photos.</p>
+        </div>
       </div>
       <div class="carte texte">
         <label style="margin-top:0">Ton commentaire / contexte<textarea id="ph-contexte" placeholder="ex. photos du concert à l'Accor Arena, pour annoncer la tournée"></textarea></label>
@@ -605,7 +609,9 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   // ---------------- écran Photos
   let ph = {etape: 'form', job: null, artiste: null, choisies: new Set(), photos: [], publication: null};
   function actionPhotos() {
-    if (ph.etape === 'form') return `<button class="btn" id="ph-recuperer">${icone('lien')}Récupérer les photos du lien</button>`;
+    if (ph.etape === 'form') return fond()
+      ? `<button class="btn" id="ph-recuperer">${icone('magie')}Lancer le tri</button>`
+      : `<button class="btn" id="ph-recuperer">${icone('lien')}Récupérer les photos du lien</button>`;
     if (ph.etape === 'grille') return `<button class="btn" id="ph-enregistrer" ${ph.choisies.size ? '' : 'disabled'}>${icone('ok')}${ph.profil ? 'Valider' : 'Enregistrer'} la sélection (${ph.choisies.size})</button>`;
     if (ph.etape === 'publier') return `<button class="btn vert" id="ph-envoyer">${icone('envoi')}Envoyer</button>`;
     if (ph.etape === 'fini') return `<button class="btn second" id="ph-nouveau">${icone('plus')}Nouvelles photos</button>`;
@@ -639,16 +645,21 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
         if (a.photo) $('#ph-artiste img').src = a.photo; $('#ph-artiste b').textContent = a.nom; };
       box.appendChild(b); });
   }, 300); });
-  $('#ph-coller').onclick = async () => { try { $('#ph-lien').value = (await navigator.clipboard.readText()).trim(); } catch (e) { $('#ph-lien').focus(); } };
+  $('#ph-coller').onclick = async () => { try { const t = (await navigator.clipboard.readText()).trim(), c = $('#ph-lien');
+    if (t) c.value = (c.value.trim() ? c.value.trim() + '\n' : '') + t; } catch (e) { $('#ph-lien').focus(); } };
   $('#ph-entiere').onclick = () => { vibre(); const b = $('#ph-entiere'), on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); };
-  const nouveauJob = lien => post('/photos/nouveau', {lien, artiste_id: ph.artiste && ph.artiste.id, artiste_nom: ph.artiste && ph.artiste.nom});
+  const fond = () => $('#ph-fond').classList.contains('on');
+  $('#ph-fond').onclick = () => { vibre(); const b = $('#ph-fond'), on = !b.classList.contains('on'); b.classList.toggle('on', on); b.setAttribute('aria-checked', on); action(); };
+  const nouveauJob = (lien, arriere) => post('/photos/nouveau', {lien, arriere_plan: !!arriere, artiste_id: ph.artiste && ph.artiste.id, artiste_nom: ph.artiste && ph.artiste.nom});
   async function recupererLien() {
     message('#msg-photos', '');
     const lien = $('#ph-lien').value.trim();
-    if (!/^https?:\/\//.test(lien)) { message('#msg-photos', 'Colle un lien, ou choisis des photos sur ton téléphone.', false); return; }
-    try { const j = await nouveauJob(lien); if (j.erreur) throw new Error(j.erreur);
-      if (j.profil) { $('#ph-lien').value = ''; vibre(); profils();
-        message('#msg-photos', 'C’est un profil : je trie ses photos en arrière-plan (5 à 10 minutes). Tu peux fermer l’appli : le dossier apparaîtra dans « À trier » avec une pastille rouge sur Photos.', true); return; }
+    if (!/https?:\/\//.test(lien)) { message('#msg-photos', 'Colle un lien, ou choisis des photos sur ton téléphone.', false); return; }
+    if (fond() && !ph.artiste) { message('#msg-photos', 'Choisis d’abord l’artiste (en haut) : le tri range ses photos dans son dossier.', false); $('#ph-recherche').focus(); return; }
+    try { const j = await nouveauJob(lien, fond()); if (j.erreur) throw new Error(j.erreur);
+      if (j.profil) { const nom = ph.artiste ? ph.artiste.nom : '';
+        $('#ph-lien').value = ''; $('#ph-contexte').value = ''; ph.artiste = null; $('#ph-artiste').innerHTML = ''; vibre(); profils();
+        message('#msg-photos', 'Tri lancé pour ' + nom + ' (' + j.liens + ' lien' + (j.liens > 1 ? 's' : '') + '). Tu peux lancer le suivant : le dossier arrivera dans « À trier ».', true); return; }
       ph.job = j.id; ph.etape = 'attente'; vuePhotos();
       message('#msg-photos', 'Récupération des photos sur le serveur (1 à 2 minutes)…', true); suivrePhotos(); }
     catch (e) { message('#msg-photos', e.message, false); }
@@ -762,7 +773,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     $('#ph-atrier').style.display = d.profils.length ? '' : 'none';
     d.profils.forEach(x => { const r = document.createElement('button'); r.className = 'ligne'; r.style.width = '100%'; r.style.textAlign = 'left';
       r.innerHTML = '<img alt="" style="width:44px;height:44px;border-radius:12px;object-fit:cover;background:#171030"><div><b></b><br><small></small></div>';
-      if (x.une) r.querySelector('img').src = x.une; r.querySelector('b').textContent = x.artiste + (x.page ? ' · @' + x.page : '');
+      if (x.une) r.querySelector('img').src = x.une; r.querySelector('b').textContent = x.artiste + ' · ' + x.liens + ' lien' + (x.liens > 1 ? 's' : '');
       const enCours = !['pret', 'erreur'].includes(x.statut);
       r.querySelector('small').textContent = enCours ? 'Tri en cours…' : x.statut === 'erreur' ? (x.erreur || 'Échec') :
         x.n + ' photo(s) à trier · ' + x.reconnues + ' reconnue(s), déjà cochée(s)';
