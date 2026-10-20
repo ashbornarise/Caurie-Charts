@@ -74,7 +74,7 @@ def clips_podium(country: str | None = None, periode: str | None = None, rang_ma
     Les clips sont YouTube → statut attente_pc, le relais du PC les fabrique dans les 5 minutes."""
     import json as _j
     from core import storage
-    tops = repos.official_tops(rang_max)
+    tops = repos.official_tops(rang_max, tous_pays=not periode)
     if country and country not in ("", "wa"):
         tops = [t for t in tops if t["code"].lower() == country.lower()]
     if periode:

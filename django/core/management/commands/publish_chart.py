@@ -26,9 +26,15 @@ class Command(BaseCommand):
 
             if o["clips_only"]:
                 from core.services.social import officiel
+                from core import repos
                 country = o["country"].upper() if o["country"] else None
-                jobs = officiel.clips_podium(country, week, rang_max=1)
-                return [f"{len(jobs)} clip(s) N°1 créé(s) (attente PC)"]
+                tops = repos.official_tops(1, tous_pays=True)
+                if country:
+                    tops = [t for t in tops if t["code"].lower() == country.lower()]
+                out(f"{len(tops)} pays avec classement publié : {', '.join(t['code'] for t in tops)}")
+                jobs = officiel.clips_podium(country, periode=None, rang_max=1)
+                out(f"{len(jobs)} clip(s) N°1 créé(s) (attente PC)")
+                return [f"{len(jobs)} clip(s)"]
 
             service = ChartService()
             if o["country"]:

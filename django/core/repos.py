@@ -49,8 +49,9 @@ def number_ones() -> dict:
     return {r["code"]: r for r in rows}
 
 
-def official_tops(limit: int = 5) -> list[dict]:
-    """Dernier classement officiel hebdomadaire publié de chaque pays (Top N, photo, nouvelles vues de la semaine)."""
+def official_tops(limit: int = 5, tous_pays: bool = False) -> list[dict]:
+    """Dernier classement officiel hebdomadaire publié de chaque pays (Top N, photo, nouvelles vues de la semaine).
+    tous_pays=True : retourne le dernier classement de chaque pays, même si la semaine diffère."""
     import json as _json
     runs = db.all(
         """SELECT DISTINCT ON (r.country_id) r.id, r.period_key, r.period_start, r.period_end, c.code, c.sort_order
@@ -61,8 +62,9 @@ def official_tops(limit: int = 5) -> list[dict]:
     if not runs:
         return []
     latest = max(r["period_end"] for r in runs)
+    candidats = runs if tous_pays else [r for r in runs if r["period_end"] == latest]
     out = []
-    for r in sorted((r for r in runs if r["period_end"] == latest), key=lambda r: r["sort_order"]):
+    for r in sorted(candidats, key=lambda r: r["sort_order"]):
         rows = db.all(
             """SELECT e.position, e.details, e.track_id, t.title, t.slug AS track_slug, a.name AS artist_name, a.slug AS artist_slug,
                       COALESCE(a.image_url, a.image_hd_url) AS image
