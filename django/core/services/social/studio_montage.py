@@ -458,19 +458,23 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
         raise RuntimeError("montage : " + (r.stderr or "")[-300:])
 
 
-def _concat_outro(video: str, taille: tuple[int, int], tmp: str) -> None:
-    """Ajoute l'outro (animation logo AE) à la fin de la vidéo."""
+def _concat_outro(video: str, taille: tuple[int, int], tmp: str, duree_clip: float = 0) -> None:
+    """Ajoute l'outro (animation logo AE) à la fin de la vidéo, durée proportionnelle au clip."""
     from core.services.social.couverture2026 import RES
     from core.services.social.encodage import AUDIO_HQ, FIN, VIDEO_HQ
     outro = str(RES / "marque" / "logo_outro.mp4")
     if not os.path.exists(outro):
         return
+    OUTRO_FULL = 7.7
+    outro_dur = max(2.0, min(OUTRO_FULL, duree_clip * 0.2))
+    skip = OUTRO_FULL - outro_dur
     W, H = taille
     final = os.path.join(tmp, "avec_outro.mp4")
     filtre = (f"[1:v]scale={W}:{H}:force_original_aspect_ratio=decrease,"
               f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p[outro];"
               f"[0:v][outro]concat=n=2:v=1:a=0[v]")
-    cmd = [ffmpeg(), "-y", "-v", "error", "-i", video, "-i", outro,
+    cmd = [ffmpeg(), "-y", "-v", "error", "-i", video,
+           "-ss", f"{skip:.2f}", "-i", outro,
            "-filter_complex", filtre, "-map", "[v]", "-map", "0:a?",
            *VIDEO_HQ, *AUDIO_HQ, *FIN, final]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -544,7 +548,7 @@ def traite(job_id: int) -> dict:
             nom = f"studio-{job_id}-{os.urandom(3).hex()}"
             video = os.path.join(tmp, nom + ".mp4"); vignette = os.path.join(tmp, nom + ".jpg")
             monte(source, video, fmt, debut, fin, png, zone, taille, png_titre)
-            _concat_outro(video, taille or FORMATS[fmt], tmp)
+            _concat_outro(video, taille or FORMATS[fmt], tmp, duree_clip=fin - debut)
             subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3", vignette],
                            capture_output=True, timeout=60)
             storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")
