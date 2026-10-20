@@ -306,10 +306,13 @@ const icone = (id, st) => `<svg class="i" ${st ? `style="${st}"` : ''}><use href
 async function post(url, data) {
   const r = await fetch(BASE + url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify(data || {})});
   let j = {}; try { j = await r.json(); } catch (e) {}
+  if (r.status === 401 && document.querySelector('.app') && !url.startsWith('/verrouiller')) { location.reload(); return new Promise(() => {}); }
   if (!r.ok) throw new Error(j.erreur || ('Erreur ' + r.status));
   return j;
 }
-const get = async url => (await fetch(BASE + url)).json();
+const get = async url => { const r = await fetch(BASE + url);
+  if (r.status === 401 && document.querySelector('.app')) { location.reload(); return new Promise(() => {}); }
+  return r.json(); };
 function message(sel, texte, ok) { const el = $(sel); if (!el) return; el.className = 'msg' + (texte ? ' vu ' + (ok ? 'ok' : 'err') : ''); el.textContent = texte || ''; }
 const vibre = () => navigator.vibrate && navigator.vibrate(12);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register(BASE + '/sw.js', {scope: BASE}).catch(() => {});
@@ -324,11 +327,17 @@ if (btnCo) btnCo.onclick = async () => {
     await post('/passkey/connexion', {id: c.id, rawId: b64u(c.rawId), type: c.type, response: {clientDataJSON: b64u(c.response.clientDataJSON),
       authenticatorData: b64u(c.response.authenticatorData), signature: b64u(c.response.signature),
       userHandle: c.response.userHandle ? b64u(c.response.userHandle) : null}});
+    try { sessionStorage.setItem('studio-ouvert', '1'); } catch (e) {}
     location.reload();
   } catch (e) { message('#msg-connexion', e.name === 'NotAllowedError' ? 'Annulé.' : e.message, false); }
 };
+// Écran verrouillé : déverrouillage automatique proposé dès l'ouverture
+if (btnCo) setTimeout(() => btnCo.click(), 350);
 
-if ($('.app')) {
+// Nouvelle ouverture de l'appli (ou onglet rouvert) : on reverrouille, l'empreinte est redemandée
+if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_passkey else 'false' }}) {
+  post('/verrouiller').finally(() => location.reload());
+} else if ($('.app')) {
   // ---------------- navigation par onglets
   let ecran = 'creer', jobEnCours = null;
   function montre(nom) {
@@ -489,6 +498,18 @@ if ($('.app')) {
 
   action();
   {% if not a_passkey %}setTimeout(() => montre('reglages'), 50);{% endif %}
+  // Retour dans l'appli : plus de 5 min d'absence, on reverrouille ; sinon on reprend le suivi en cours
+  let cache = Date.now();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { cache = Date.now(); return; }
+    if (Date.now() - cache > 5 * 60 * 1000) { post('/verrouiller').finally(() => location.reload()); return; }
+    if (jobEnCours && !(etatJob && ['pret', 'erreur', 'envoye'].includes(etatJob.statut))) suivre(jobEnCours);
+  });
+  // Une vidéo en fabrication (lancée il y a moins de 30 min) : on la retrouve à l'ouverture
+  get('/historique').then(d => {
+    const j = (d.jobs || [])[0];
+    if (j && ['attente', 'telechargement', 'analyse', 'montage'].includes(j.statut)) suivre(j.id);
+  }).catch(() => {});
 }
 </script>
 </body>

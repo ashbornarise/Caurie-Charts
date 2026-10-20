@@ -25,6 +25,7 @@ urlpatterns = [
     re_path(S + r"/reglages$", studio.reglages),
     re_path(S + r"/appareil/(?P<ident>\d+)/supprimer$", studio.supprimer_appareil),
     re_path(S + r"/deconnexion$", studio.deconnexion),
+    re_path(S + r"/verrouiller$", studio.verrouiller),
     re_path(S + r"/historique$", studio.historique),
     re_path(S + r"/job/(?P<ident>\d+)$", studio.job),
     re_path(S + r"/job/(?P<ident>\d+)/envoyer$", studio.envoyer),

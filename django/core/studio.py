@@ -42,9 +42,39 @@ def _verifie(chemin: str) -> None:
         raise Http404
 
 
-def _utilisateur(request):
+VERROU = 300   # secondes sans activité avant de redemander l'empreinte (et à chaque ouverture de l'appli, côté page)
+
+
+def _utilisateur(request, verrou: bool = True):
+    """L'utilisateur connecté, si le studio est déverrouillé : empreinte / Face ID validée il y a moins de VERROU secondes
+    (sauf tant qu'aucun appareil n'est enregistré, pour pouvoir en enregistrer un). Chaque appel prolonge le délai."""
+    import time
     u = auth.current_user(request)
-    return u if u and u.get("role") in ROLES else None
+    if not u or u.get("role") not in ROLES:
+        return None
+    if verrou:
+        ok = float(request.session.get("studio_ok", 0) or 0)
+        if time.time() - ok > VERROU:
+            try:
+                if db.value("SELECT 1 FROM studio_passkeys WHERE user_id = ?", [u["id"]]):
+                    return None
+            except Exception:  # noqa: BLE001 — table pas encore créée : rien à verrouiller
+                pass
+        request.session["studio_ok"] = time.time()
+    return u
+
+
+def _deverrouille(request) -> None:
+    import time
+    request.session["studio_ok"] = time.time()
+
+
+def verrouiller(request, chemin):
+    """Appelé par l'appli à chaque nouvelle ouverture : la prochaine action redemande l'empreinte."""
+    _verifie(chemin)
+    if request.method == "POST":
+        request.session["studio_ok"] = 0
+    return _json({"ok": True})
 
 
 def _csp(nonce: str = "") -> str:
@@ -163,6 +193,7 @@ def passkey_inscription(request, chemin):
                                                   expected_rp_id=rp_id, expected_origin=origine, require_user_verification=True)
     except Exception as exc:  # noqa: BLE001
         return _json({"erreur": f"empreinte refusée : {exc}"}, 400)
+    _deverrouille(request)
     db.insert("studio_passkeys", {"user_id": u["id"], "credential_id": webauthn.helpers.bytes_to_base64url(v.credential_id),
                                   "public_key": webauthn.helpers.bytes_to_base64url(v.credential_public_key),
                                   "sign_count": v.sign_count, "nom": (request.headers.get("User-Agent") or "")[:120]})
@@ -205,6 +236,7 @@ def passkey_connexion(request, chemin):
         return _json({"erreur": "compte désactivé"}, 403)
     db.update("studio_passkeys", {"sign_count": v.new_sign_count}, "id = :id", {"id": cle["id"]})
     auth._login(request, user, auth.client_ip(request))
+    _deverrouille(request)
     return _json({"ok": True})
 
 
