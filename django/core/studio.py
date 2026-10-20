@@ -489,16 +489,22 @@ def photos_nouveau(request, chemin):
     params = {"type": "photos", "photos": [], "artiste_id": c.get("artiste_id"), "artiste_nom": str(c.get("artiste_nom") or "")[:120]}
     creer_tables()
     liens = list(dict.fromkeys(re.findall(r"https?://[^\s,;]+", lien)))[:30]
-    if any(est_profil(x) for x in liens):
-        return _json({"erreur": "un lien de profil ne passe pas sans compte Instagram : ouvre le profil et colle les liens "
-                                "des posts photo (plusieurs d'un coup, un par ligne)"}, 400)
+    profils = [x for x in liens if est_profil(x)]
+    if profils and not c.get("arriere_plan"):
+        return _json({"erreur": "un lien de profil se trie en arrière-plan : active « Trier en arrière-plan »"}, 400)
     if len(liens) > 1 or (liens and c.get("arriere_plan")):
         # tri en arrière-plan : on peut en lancer plusieurs à la suite, chacun devient un dossier « À trier »
         if not c.get("artiste_id"):
             return _json({"erreur": "choisis d'abord l'artiste : le tri en arrière-plan range ses photos dans son dossier"}, 400)
-        params.update({"mode": "profil", "artiste_id": int(c["artiste_id"]), "liens": liens,
-                       "contexte": str(c.get("contexte") or "").strip()[:600]})
-        job_id = db.insert("studio_jobs", {"lien": liens[0][:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
+        params.update({"mode": "profil", "artiste_id": int(c["artiste_id"]), "liens": [x for x in liens if x not in profils],
+                       "profils": profils, "contexte": str(c.get("contexte") or "").strip()[:600]})
+        job_id = db.insert("studio_jobs", {"lien": liens[0][:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"],
+                                           "statut": "attente_pc" if profils else "attente"})
+        if profils:
+            # un profil ne s'ouvre pas depuis un serveur : le PC (relais_profils) relève ses posts puis lance le tri
+            from core import storage
+            storage.blob_put(f"relais/profils/job-{job_id}.txt", str(job_id).encode(), "text/plain")
+            return _json({"id": job_id, "profil": True, "liens": len(liens), "erreur": None})
         erreur = _lance(job_id)
         if erreur:
             db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
@@ -741,7 +747,8 @@ def photos_profils(request, chemin):
         une = f"{base}/media/artists/candidats/{p['photos'][0]}" if p.get("photos") else ""
         out.append({"id": j["id"], "statut": j["statut"], "artiste": p.get("artiste_nom") or "", "artiste_id": p.get("artiste_id"),
                     "n": len(p.get("photos") or []), "reconnues": len(p.get("preselection") or []), "une": une,
-                    "page": p.get("page") or "", "liens": len(p.get("liens") or [1]), "erreur": j.get("erreur"),
+                    "page": p.get("page") or "", "liens": len(p.get("liens") or []) + len(p.get("profils") or []) or 1,
+                    "profils": len(p.get("profils") or p.get("profils_lus") or []), "erreur": j.get("erreur"),
                     "a_trier": bool(p.get("a_trier"))})
     return _json({"profils": out, "a_trier": sum(1 for x in out if x["a_trier"] and x["statut"] == "pret")})
 

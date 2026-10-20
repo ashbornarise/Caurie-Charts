@@ -317,7 +317,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
         <input type="file" id="ph-fichiers" accept="image/*" multiple style="display:none">
         <div class="interrupteur" style="margin-top:14px">
           <button class="bascule on" id="ph-fond" role="switch" aria-checked="true" aria-label="En arrière-plan"></button>
-          <p><b>Trier en arrière-plan</b>Plusieurs artistes d'un coup : choisis l'artiste, colle ses liens, « Ajouter à la liste », puis le suivant. Tout part en même temps ; chaque tri arrive dans « À trier » avec une pastille sur Photos.</p>
+          <p><b>Trier en arrière-plan</b>Plusieurs artistes d'un coup : choisis l'artiste, colle ses liens (posts ou profil), « Ajouter à la liste », puis le suivant. Tout part en même temps ; chaque tri arrive dans « À trier » avec une pastille sur Photos.</p>
         </div>
         <button class="btn second" id="ph-ajouter"><svg class="i"><use href="#i-plus"/></svg>Ajouter à la liste, préparer un autre artiste</button>
       </div>
@@ -824,9 +824,9 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       if (x.une) r.querySelector('img').src = x.une;
       r.querySelector('.lien-rouge').onclick = async ev => { ev.stopPropagation();
         if (!confirm('Retirer ce tri de la liste ? (rien n’est ajouté à la banque)')) return;
-        await post('/photos/tri/' + x.id + '/retirer'); vibre(); profils(); }; r.querySelector('b').textContent = x.artiste + ' · ' + x.liens + ' lien' + (x.liens > 1 ? 's' : '');
+        await post('/photos/tri/' + x.id + '/retirer'); vibre(); profils(); }; r.querySelector('b').textContent = x.artiste + ' · ' + (x.profils ? 'profil' : x.liens + ' lien' + (x.liens > 1 ? 's' : ''));
       const enCours = !['pret', 'erreur'].includes(x.statut);
-      r.querySelector('small').textContent = enCours ? 'Tri en cours…' : x.statut === 'erreur' ? (x.erreur || 'Échec') :
+      r.querySelector('small').textContent = x.statut === 'attente_pc' ? 'Profil : en attente du PC (il relève les posts, 5 min max)…' : enCours ? 'Tri en cours…' : x.statut === 'erreur' ? (x.erreur || 'Échec') :
         x.n + ' photo(s) à trier · ' + x.reconnues + ' reconnue(s), déjà cochée(s)';
       if (x.statut === 'erreur') r.querySelector('small').style.color = 'var(--rouge)';
       if (x.statut === 'pret' && x.n) r.onclick = () => ouvreProfil(x);
