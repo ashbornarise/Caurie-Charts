@@ -71,3 +71,10 @@ def test_calque_laisse_le_bas_libre_en_9_16():
 def test_credit_auto():
     assert S.credit_auto({"uploader": "asakemusic", "extractor_key": "TikTok"}) == "@asakemusic sur TikTok"
     assert S.credit_auto({"channel": "Ayra Starr", "extractor_key": "Youtube"}) == "Ayra Starr sur Youtube"
+
+
+def test_duree_du_titre_relative_a_la_video():
+    assert S.duree_titre(15) == 2.5
+    assert S.duree_titre(30) == 4.5
+    assert S.duree_titre(60) == 7.0 and S.duree_titre(90) == 7.0
+    assert S.duree_titre(3) == 1.5          # vidéo très courte : il reste toujours de la vidéo seule

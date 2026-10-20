@@ -216,7 +216,10 @@ def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str,
     return img, (0, zone_haut, W, max(200, zone_bas - zone_haut)), titre_img
 
 
-TITRE_SECONDES = 4.0   # l'accroche reste 4 s, puis s'efface en 0,7 s
+def duree_titre(duree: float) -> float:
+    """Temps d'affichage de l'accroche, relatif à la vidéo : 15 % de sa durée, entre 2,5 et 7 s (puis fondu de 0,7 s),
+    et toujours au moins 1,5 s de vidéo seule à la fin."""
+    return max(1.5, min(max(2.5, min(7.0, duree * 0.15)), duree - 1.5))
 
 
 def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_png: str, zone,
@@ -224,7 +227,7 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
     W, H = taille or FORMATS[fmt]
     x, y, w, h = zone
     duree = max(1.0, fin - debut)
-    fin_titre = max(1.5, min(TITRE_SECONDES, duree - 1.5))
+    fin_titre = duree_titre(duree)
     filtre = (f"[0:v]split=2[a][b];[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
               f"boxblur=28:6,eq=brightness=-0.35[fond];"
               f"[b]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];"
