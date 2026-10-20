@@ -513,6 +513,25 @@ def photos_importer(request, chemin, ident):
     return _json({"ok": bool(nom), "nom": nom})
 
 
+def _erreur_lisible(vue):
+    """Toute erreur imprévue revient en clair dans l'appli (et dans le journal) au lieu d'une page « Erreur 500 »."""
+    import functools
+
+    @functools.wraps(vue)
+    def enveloppe(request, *args, **kwargs):
+        try:
+            return vue(request, *args, **kwargs)
+        except Http404:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            import traceback
+            from core.services.platforms import log_write
+            detail = "".join(traceback.format_exception_only(type(exc), exc)).strip()[:300]
+            log_write("social", "error", f"studio, {vue.__name__} : {detail}")
+            return _json({"erreur": f"{vue.__name__.replace('_', ' ')} impossible : {detail}"}, 500)
+    return enveloppe
+
+
 def _job_photos(ident):
     j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
     if not j:
@@ -661,3 +680,10 @@ def banque_retirer(request, chemin, ident):
         return _json({"erreur": "connexion requise"}, 401)
     db.run("DELETE FROM artist_photos WHERE id = ?", [int(ident)])
     return _json({"ok": True})
+
+
+
+# toutes les actions JSON du studio : erreurs lisibles
+for _nom in ("fabriquer", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
+             "apercu_job", "valider_job", "banque", "banque_artiste", "banque_retirer", "artistes", "reglages"):
+    globals()[_nom] = _erreur_lisible(globals()[_nom])

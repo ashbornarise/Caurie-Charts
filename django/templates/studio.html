@@ -290,7 +290,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
     </div>
     <div id="ph-form">
       <div class="carte">
-        <div class="etiq">Artiste <span style="text-transform:none;font-weight:600;color:var(--faible)">· facultatif, reconnu automatiquement</span></div>
+        <div class="etiq">Artiste <span style="text-transform:none;font-weight:600;color:var(--faible)">· tu peux aussi le choisir après</span></div>
         <div class="champ"><input id="ph-recherche" placeholder="Rechercher un artiste suivi…" autocomplete="off"></div>
         <div class="choix-artiste" id="ph-resultats"></div>
         <div id="ph-artiste"></div>
@@ -703,12 +703,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     if (p.artiste_id && (p.artiste_auto || ph.artiste)) { choisitArtiste({id: p.artiste_id, nom: p.artiste_nom}); if (p.artiste_auto)
       box.insertAdjacentHTML('afterbegin', '<p style="margin:0 0 8px;font-size:13px;color:var(--vert)">Reconnu automatiquement</p>'); return; }
     if (ph.artiste) { choisitArtiste(ph.artiste); return; }
-    const cands = p.candidats || [];
-    if (cands.length) {
-      box.innerHTML = '<p style="margin:0 0 8px;font-size:14px">Je pense que c’est :</p>';
-      cands.forEach(c => { const b = document.createElement('button'); b.className = 'puce'; b.style.margin = '0 6px 6px 0';
-        b.textContent = 'C’est ' + c.nom + ' ?'; b.onclick = () => { vibre(); choisitArtiste(c); }; box.appendChild(b); });
-    } else box.innerHTML = '<p style="margin:0;font-size:14px;color:var(--rouge)">Je n’ai pas reconnu l’artiste : choisis-le avant d’enregistrer.</p>';
+    box.innerHTML = '<p style="margin:0;font-size:14px">Tape le nom de l’artiste : s’il est dans nos artistes suivis, il apparaît. Ses photos iront dans son dossier.</p>';
     $('#ph-qui-champ').style.display = '';
   }
   let minArt2;
