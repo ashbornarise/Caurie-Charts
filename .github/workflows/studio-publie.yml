@@ -1,0 +1,38 @@
+name: Studio — publier les clips prêts
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "ID du job (vide = tous les prêts)"
+        required: false
+        type: string
+      notify:
+        description: "Notification Telegram"
+        required: false
+        type: boolean
+        default: true
+jobs:
+  publie:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_ENV: production
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+      BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - name: Publier les clips
+        working-directory: django
+        run: |
+          ARGS="--notify"
+          if [ -n "${{ inputs.job }}" ]; then
+            ARGS="$ARGS --job=${{ inputs.job }}"
+          fi
+          python manage.py studio_publie $ARGS
