@@ -56,6 +56,9 @@ def telecharge(lien: str, dossier: str) -> tuple[str, dict]:
     cmd = [sys.executable, "-m", "yt_dlp", "--js-runtimes", "node", "--no-playlist", "--no-warnings",
            "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/bv*[height<=1080]+ba/b",
            "--merge-output-format", "mp4", "--write-info-json", "-o", sortie, lien]
+    if re.search(r"tiktok\.com", lien, re.I):
+        # TikTok refuse les serveurs (« Unexpected response from webpage request ») : on se présente comme Chrome (curl_cffi)
+        cmd[3:3] = ["--impersonate", "chrome"]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
     fichiers = [f for f in glob.glob(os.path.join(dossier, "source.*")) if not f.endswith(".json")]
     if r.returncode != 0 or not fichiers:
