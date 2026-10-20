@@ -156,6 +156,14 @@ def video_muette(post: dict) -> bool:
         return False
 
 
+def notification_demandee(post: dict) -> bool:
+    """Cauri Studio, « J'ajoute ma musique dans l'appli » : Instagram et TikTok en notification (20/10/2026)."""
+    try:
+        return bool(json.loads(post.get("facts") or "{}").get("notifier"))
+    except ValueError:
+        return False
+
+
 def video_seule(post: dict) -> bool:
     """Post vidéo à part entière (extrait de clip au refrain) : la vidéo est le post, avec son propre son."""
     try:
@@ -184,7 +192,7 @@ def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = Fal
     # Règle du fondateur (17/10/2026) : jamais de notification sur Instagram (il ajoute la musique après publication) ;
     # TikTok en notification (le son ne s'ajoute pas après coup), sauf l'extrait de clip autorisé qui a déjà le sien
     # Vidéo maison muette (18/10/2026) : Instagram aussi en notification, pour y mettre le son avant de publier
-    notify = (video_muette(post) and service in ("instagram", "tiktok")) or (
+    notify = ((video_muette(post) or notification_demandee(post)) and service in ("instagram", "tiktok")) or (
         service == "tiktok" and not (video_seule(post) and not video_muette(post)))
     data = {"channelId": channel["id"], "text": text(post, service), "assets": assets,
             "schedulingType": "notification" if notify else "automatic", "needsApproval": False,

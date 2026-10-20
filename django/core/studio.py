@@ -303,7 +303,7 @@ def envoyer(request, chemin, ident):
     tags = "#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine"
     maintenant = datetime.now(timezone.utc)
     faits = {"kind": "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
-             "source": j["lien"]}
+             "source": j["lien"], "notifier": bool(c.get("notifier"))}
     if en:
         faits["en"] = {"title": accroche, "caption": en + (f"\n\n🎥 Source: {credit}" if credit else "")}
     pid = db.insert("social_posts", {"slot_date": maintenant.date().isoformat(), "theme": "format-studio",
