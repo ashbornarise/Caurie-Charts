@@ -65,10 +65,13 @@ def _corps(request) -> dict:
         return {}
 
 
-def _rp(request) -> tuple[str, str]:
+def _rp(request) -> tuple[str, str | list]:
+    """(rp_id, origines acceptées). Sur cauricharts.com, la passkey est liée au domaine principal : elle marche avec
+    et sans « www »."""
     hote = request.get_host().split(":")[0]
-    origine = f"{'https' if request.is_secure() or hote != 'localhost' else 'http'}://{request.get_host()}"
-    return hote, origine
+    if hote == "cauricharts.com" or hote.endswith(".cauricharts.com"):
+        return "cauricharts.com", ["https://cauricharts.com", "https://www.cauricharts.com"]
+    return hote, f"{'https' if request.is_secure() or hote != 'localhost' else 'http'}://{request.get_host()}"
 
 
 # ---------------------------------------------------------------- pages
