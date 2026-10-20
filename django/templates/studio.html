@@ -2,9 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#2a1460">
+<meta name="theme-color" content="#0b0716">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,224 +14,445 @@
 <link rel="icon" href="/assets/marque/studio-192.png">
 <title>Cauri Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--fond:#0a0814;--carte:#161126;--trait:#2c2346;--texte:#f4f1ff;--doux:#a99fc8;--violet:#7c3aed;--ciel:#38bdf8;--rouge:#f43f5e;--vert:#22c55e}
-*{box-sizing:border-box}
-body{margin:0;background:var(--fond);color:var(--texte);font:16px/1.45 Montserrat,system-ui,sans-serif;padding:max(16px,env(safe-area-inset-top)) 16px 40px}
-main{max-width:620px;margin:0 auto}
-header{display:flex;align-items:center;gap:12px;margin:8px 0 22px}
-header img{width:44px;height:44px;border-radius:50%}
-header h1{font-size:22px;margin:0;font-weight:800}
-header small{display:block;color:var(--doux);font-weight:500;font-size:13px}
-.carte{background:var(--carte);border:1px solid var(--trait);border-radius:18px;padding:18px;margin-bottom:16px}
-label{display:block;font-weight:700;font-size:14px;margin:14px 0 6px}
-input,select,textarea{width:100%;padding:13px 14px;background:#0f0b1c;color:var(--texte);border:1px solid var(--trait);border-radius:12px;font:inherit}
-textarea{min-height:92px;resize:vertical}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--violet);border-color:transparent}
-.ligne{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.aide{color:var(--doux);font-size:13px;margin-top:4px}
-.case{display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:14px;margin-top:16px}
-.case input{width:22px;height:22px;flex:none;margin-top:2px}
-button{width:100%;padding:15px;border:0;border-radius:14px;font:800 16px Montserrat,sans-serif;cursor:pointer;margin-top:16px;background:var(--violet);color:#fff}
-button.second{background:#241c3b;color:var(--texte)}
-button.vert{background:var(--vert);color:#06130a}
-button:disabled{opacity:.5}
-details summary{cursor:pointer;color:var(--ciel);font-weight:700;margin-top:14px}
-.etat{display:flex;align-items:center;gap:10px;font-weight:700}
-.puce{width:10px;height:10px;border-radius:50%;background:var(--ciel);animation:p 1s infinite alternate}
-@keyframes p{to{opacity:.3}}
-video{width:100%;border-radius:14px;margin-top:12px;background:#000;max-height:70vh}
-.msg{padding:12px 14px;border-radius:12px;margin-top:12px;font-size:14px}
-.msg.err{background:#3a0d18;color:#ffc1cc}.msg.ok{background:#0d2a17;color:#b6f5c9}
-.hist{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--trait)}
-.hist img{width:56px;height:56px;object-fit:cover;border-radius:10px;background:#000}
-.hist .t{flex:1;min-width:0;font-size:14px}.hist .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.badge{font-size:12px;font-weight:800;padding:4px 8px;border-radius:99px;background:#241c3b}
-.cache{display:none}
+:root{
+  --fond:#0b0716;--fond2:#120c22;--carte:rgba(255,255,255,.05);--carte-forte:rgba(255,255,255,.08);--trait:rgba(255,255,255,.09);
+  --texte:#f6f3ff;--doux:#a79ec4;--faible:#6f6790;--violet:#7c3aed;--violet-clair:#a78bfa;--ciel:#38bdf8;--vert:#22c55e;--rouge:#fb7185;
+  --rayon:20px;--haut:env(safe-area-inset-top);--bas:env(safe-area-inset-bottom)
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--fond);color:var(--texte);font:15px/1.45 Montserrat,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{background:radial-gradient(120% 60% at 50% -10%,#2a1460 0%,rgba(42,20,96,0) 60%),var(--fond);overscroll-behavior:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,textarea,select{font:inherit;color:var(--texte)}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.app{max-width:560px;margin:0 auto;min-height:100%;padding:calc(var(--haut) + 14px) 18px calc(var(--bas) + 150px)}
+.barre-haut{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.marque{display:flex;align-items:center;gap:11px}.marque img{width:38px;height:38px;border-radius:12px}
+.marque b{font-size:19px;font-weight:800;letter-spacing:-.2px}.marque span{display:block;font-size:12px;color:var(--doux);font-weight:600}
+.titre{font-size:28px;font-weight:800;letter-spacing:-.6px;margin:6px 0 4px}.sous{color:var(--doux);margin:0 0 18px}
+.carte{background:var(--carte);border:1px solid var(--trait);border-radius:var(--rayon);padding:16px;margin-bottom:14px;backdrop-filter:blur(14px)}
+.etiq{font-size:12px;font-weight:700;color:var(--doux);text-transform:uppercase;letter-spacing:.6px;margin:2px 0 10px;display:flex;align-items:center;gap:8px}
+.champ{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.28);border:1px solid var(--trait);border-radius:16px;padding:4px 4px 4px 14px}
+.champ input{flex:1;background:none;border:0;outline:0;padding:12px 0;min-width:0;font-size:15px}
+.champ:focus-within{border-color:var(--violet-clair);box-shadow:0 0 0 4px rgba(124,58,237,.22)}
+.coller{display:flex;align-items:center;gap:6px;background:var(--violet);border-radius:12px;padding:10px 13px;font-weight:700;font-size:14px}
+.apercu-lien{display:none;gap:12px;align-items:center;margin-top:12px;padding:10px;border-radius:14px;background:rgba(0,0,0,.25)}
+.apercu-lien.vu{display:flex}.apercu-lien img{width:64px;height:64px;border-radius:10px;object-fit:cover;background:#1d1533}
+.apercu-lien .vide{width:64px;height:64px;border-radius:10px;background:#1d1533;display:grid;place-items:center;color:var(--violet-clair)}
+.apercu-lien b{display:block;font-size:14px;line-height:1.3;max-height:2.6em;overflow:hidden}.apercu-lien small{color:var(--doux)}
+.plat{display:inline-block;font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;background:rgba(56,189,248,.16);color:var(--ciel);margin-bottom:4px}
+.formats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.format{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px 12px;border-radius:16px;border:1.5px solid var(--trait);background:rgba(0,0,0,.2);font-weight:700;font-size:13px}
+.format small{color:var(--doux);font-weight:600;font-size:11px}
+.format .ratio{border:2px solid currentColor;border-radius:5px;opacity:.9}
+.format.actif{border-color:var(--violet-clair);background:rgba(124,58,237,.18);color:#fff}
+.puces{display:flex;gap:8px;flex-wrap:wrap}
+.puce{padding:9px 14px;border-radius:99px;border:1.5px solid var(--trait);font-weight:700;font-size:13px;background:rgba(0,0,0,.2)}
+.puce.actif{border-color:var(--ciel);color:var(--ciel);background:rgba(56,189,248,.12)}
+.duree{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.duree label{font-size:12px;color:var(--doux);font-weight:600}
+.duree input,.texte input,.texte textarea{width:100%;margin-top:6px;padding:12px 13px;border-radius:13px;border:1px solid var(--trait);background:rgba(0,0,0,.28);outline:0}
+.duree input:focus,.texte input:focus,.texte textarea:focus{border-color:var(--violet-clair)}
+.texte label{display:block;font-size:12px;color:var(--doux);font-weight:600;margin-top:12px}
+.texte textarea{min-height:96px;resize:vertical;line-height:1.45}
+.repli{display:flex;align-items:center;justify-content:space-between;width:100%;font-weight:700}
+.repli svg{transition:transform .2s}.repli.ouvert svg{transform:rotate(180deg)}
+.interrupteur{display:flex;gap:12px;align-items:flex-start}
+.interrupteur p{margin:0;font-size:13px;color:var(--doux)}.interrupteur b{display:block;color:var(--texte);font-size:14px;margin-bottom:2px}
+.bascule{position:relative;width:52px;height:31px;flex:none;border-radius:99px;background:#2b2342;transition:.2s}
+.bascule::after{content:"";position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.bascule.on{background:var(--vert)}.bascule.on::after{left:24px}
+.action{position:fixed;left:0;right:0;bottom:calc(var(--bas) + 76px);padding:0 18px;z-index:5;pointer-events:none}
+.action div{max-width:560px;margin:0 auto;pointer-events:auto}
+.btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;border-radius:18px;font-weight:800;font-size:16px;
+  background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 12px 30px rgba(124,58,237,.45)}
+.btn:disabled{opacity:.45;box-shadow:none}
+.btn.vert{background:linear-gradient(135deg,#34d399,#16a34a);box-shadow:0 12px 30px rgba(34,197,94,.35);color:#04150a}
+.btn.second{background:var(--carte-forte);box-shadow:none;border:1px solid var(--trait)}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:rgba(14,9,28,.86);backdrop-filter:blur(18px);border-top:1px solid var(--trait);padding:8px 10px calc(var(--bas) + 8px)}
+.nav div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;font-size:11px;font-weight:700;color:var(--faible)}
+.nav button.actif{color:#fff}.nav button.actif svg{color:var(--violet-clair)}
+.ecran{display:none;animation:entre .28s ease}.ecran.vu{display:block}
+@keyframes entre{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.etapes{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.etape{display:flex;align-items:center;gap:12px;padding:12px 4px;color:var(--faible);font-weight:700}
+.etape .rond{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;border:2px solid #2d2545;flex:none}
+.etape.faite{color:var(--texte)}.etape.faite .rond{background:var(--vert);border-color:var(--vert);color:#04150a}
+.etape.cours{color:#fff}.etape.cours .rond{border-color:var(--violet-clair);border-top-color:transparent;animation:tourne .8s linear infinite}
+@keyframes tourne{to{transform:rotate(360deg)}}
+.barre{height:6px;border-radius:99px;background:#221a38;overflow:hidden;margin-top:14px}.barre i{display:block;height:100%;width:8%;background:linear-gradient(90deg,#8b5cf6,#38bdf8);transition:width .6s ease}
+.telephone{position:relative;margin:4px auto 16px;width:min(78vw,300px);border-radius:38px;padding:10px;background:#000;box-shadow:0 0 0 2px #2a2440,0 30px 60px rgba(0,0,0,.6)}
+.telephone video{display:block;width:100%;border-radius:30px;background:#000}
+.reseaux{display:flex;gap:8px;justify-content:center;margin:2px 0 14px;color:var(--doux);font-size:12px;font-weight:700}
+.reseaux span{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:99px;background:var(--carte)}
+.msg{display:none;padding:12px 14px;border-radius:14px;margin:12px 0;font-size:14px;font-weight:600}
+.msg.vu{display:block}.msg.err{background:rgba(251,113,133,.14);color:#ffc0cb}.msg.ok{background:rgba(34,197,94,.14);color:#b6f5c9}
+.grille{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.vignette{display:block;text-align:left;width:100%}
+.vignette .cadre{display:block;position:relative;border-radius:16px;overflow:hidden;background:#171030;aspect-ratio:4/5;border:1px solid var(--trait)}
+.vignette img{width:100%;height:100%;object-fit:cover;display:block}
+.vignette .bas{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;padding:8px 2px 0;font-size:13px;font-weight:700;line-height:1.3;overflow:hidden}
+.statut{position:absolute;top:8px;left:8px;font-size:10px;font-weight:800;padding:4px 8px;border-radius:99px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+.statut.pret{color:#7dd3fc}.statut.envoye{color:#86efac}.statut.erreur{color:#fda4af}.statut.cours{color:#c4b5fd}
+.vide{text-align:center;color:var(--doux);padding:40px 10px}
+.liste .ligne{display:flex;align-items:center;gap:12px;padding:13px 2px;border-top:1px solid var(--trait)}
+.liste .ligne:first-child{border-top:0}.liste .ligne div{flex:1}.liste small{color:var(--doux)}
+.lien-rouge{color:var(--rouge);font-weight:700;font-size:13px}
+code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;font-size:12px;color:#d8ccff;word-break:break-all;margin-top:8px}
+/* déverrouillage */
+.verrou{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+.verrou img{width:86px;height:86px;border-radius:26px;box-shadow:0 20px 50px rgba(124,58,237,.5)}
+.verrou h1{font-size:30px;margin:22px 0 6px;letter-spacing:-.6px}.verrou p{color:var(--doux);margin:0 0 34px;max-width:300px}
+.empreinte{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:rgba(124,58,237,.18);border:1.5px solid rgba(167,139,250,.5);color:var(--violet-clair);
+  box-shadow:0 0 0 10px rgba(124,58,237,.08);animation:pulse 2.2s ease-in-out infinite}
+.empreinte svg.i{width:46px;height:46px;stroke-width:1.5}
+@keyframes pulse{50%{box-shadow:0 0 0 18px rgba(124,58,237,.03)}}
+.verrou .aide{margin-top:30px;font-size:13px;color:var(--faible)}.verrou .aide a{color:var(--ciel)}
 </style>
 </head>
 <body>
-<main>
-<header><img src="/assets/marque/studio-192.png" alt=""><h1>Cauri Studio<small>Vidéos habillées Cauri, envoyées partout</small></h1></header>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 7.5h4M3 12h18M3 16.5h4M17 7.5h4M17 16.5h4"/></symbol>
+  <symbol id="i-reglages" viewBox="0 0 24 24"><path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.3a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.3a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.3a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.3a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-presse" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></symbol>
+  <symbol id="i-lien" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+  <symbol id="i-envoi" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></symbol>
+  <symbol id="i-magie" viewBox="0 0 24 24"><path d="m15 4-1 1M19 8l1-1M4 20 14 10M17 3v2M21 7h-2M18 11l1 1M12 6l1-1"/><path d="m14 10 2 2"/></symbol>
+  <symbol id="i-texte" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></symbol>
+  <symbol id="i-bas" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-refaire" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></symbol>
+  <symbol id="i-empreinte" viewBox="0 0 24 24"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4M14 13.12c0 2.38 0 6.38-1 8.88M17.29 21.02c.12-.6.43-2.3.5-3.02M2 12a10 10 0 0 1 18-6M2 16h.01M21.8 16c.2-2 .131-5.354 0-6M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2M8.65 22c.21-.66.45-1.32.57-2M9 6.8a6 6 0 0 1 9 5.2v2"/></symbol>
+  <symbol id="i-sortie" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-tel" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-poubelle" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+  <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+</svg>
 
 {% if not connecte %}
-<section class="carte">
-  <p>Accès privé. Utilise l'empreinte, Face ID ou le code de cet appareil.</p>
-  <button id="btn-connexion">Déverrouiller</button>
-  <div id="msg-connexion"></div>
-  <p class="aide" style="margin-top:18px">Première fois sur cet appareil ? <a href="/admin/connexion" style="color:var(--ciel)">Connexion admin</a>, puis reviens ici et enregistre ton empreinte.</p>
-</section>
+<div class="verrou">
+  <img src="/assets/marque/studio-512.png" alt="">
+  <h1>Cauri Studio</h1>
+  <p>Accès privé. Déverrouille avec l'empreinte, Face ID ou le code de cet appareil.</p>
+  <button class="empreinte" id="btn-connexion" aria-label="Déverrouiller"><svg class="i"><use href="#i-empreinte"/></svg></button>
+  <div class="msg" id="msg-connexion"></div>
+  <p class="aide">Premier passage sur cet appareil ?<br><a href="/admin/connexion">Connexion admin</a>, puis enregistre ton empreinte dans Réglages.</p>
+</div>
 {% else %}
+<div class="app">
+  <div class="barre-haut">
+    <div class="marque"><img src="/assets/marque/studio-192.png" alt=""><div><b>Cauri Studio</b><span>Bonjour {{ nom.split(' ')[0] if nom else '' }}</span></div></div>
+  </div>
 
-{% if not a_passkey %}
-<section class="carte" id="carte-passkey">
-  <b>Enregistre ton empreinte sur cet appareil</b>
-  <p class="aide">Ensuite, tu ouvriras le studio d'un simple toucher, sans mot de passe.</p>
-  <button class="second" id="btn-inscription">Enregistrer l'empreinte / Face ID</button>
-  <div id="msg-inscription"></div>
-</section>
+  <!-- ÉCRAN CRÉER -->
+  <section class="ecran vu" id="e-creer">
+    <h1 class="titre">Nouvelle vidéo</h1>
+    <p class="sous">Colle un lien : Cauri l'habille et l'envoie partout.</p>
+
+    <div class="carte">
+      <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-lien"/></svg>Lien de la vidéo</div>
+      <div class="champ">
+        <input id="lien" type="url" inputmode="url" placeholder="TikTok, Instagram, Facebook, YouTube, X…" autocomplete="off" autocapitalize="off">
+        <button class="coller" id="btn-coller"><svg class="i" style="width:18px;height:18px"><use href="#i-presse"/></svg>Coller</button>
+      </div>
+      <div class="apercu-lien" id="apercu-lien"></div>
+    </div>
+
+    <div class="carte">
+      <div class="etiq">Format</div>
+      <div class="formats" id="formats">
+        <button class="format actif" data-v="story"><span class="ratio" style="width:20px;height:34px"></span>9:16<small>Reels · TikTok</small></button>
+        <button class="format" data-v="feed"><span class="ratio" style="width:26px;height:32px"></span>4:5<small>Fil Instagram</small></button>
+        <button class="format" data-v="square"><span class="ratio" style="width:30px;height:30px"></span>1:1<small>Carré</small></button>
+      </div>
+    </div>
+
+    <div class="carte">
+      <div class="etiq">Passage</div>
+      <div class="puces" id="durees">
+        <button class="puce" data-d="15">15 s</button><button class="puce" data-d="30">30 s</button>
+        <button class="puce actif" data-d="60">60 s</button><button class="puce" data-d="90">90 s</button>
+      </div>
+      <div class="duree">
+        <label>Début (secondes)<input id="debut" type="number" min="0" step="0.5" value="0" inputmode="decimal"></label>
+        <label>Fin (secondes)<input id="fin" type="number" min="1" step="0.5" value="60" inputmode="decimal"></label>
+      </div>
+    </div>
+
+    <div class="carte texte">
+      <button class="repli" id="btn-textes"><span class="etiq" style="margin:0"><svg class="i" style="width:16px;height:16px"><use href="#i-texte"/></svg>Textes (l'IA les propose si vides)</span><svg class="i"><use href="#i-bas"/></svg></button>
+      <div id="textes" style="display:none">
+        <label>Étiquette<input id="etiquette" placeholder="ex. MOMENT VIRAL" autocapitalize="characters"></label>
+        <label>Accroche sur la vidéo<input id="accroche" maxlength="90" placeholder="Une phrase courte qui donne envie"></label>
+        <label>Artiste (surligné)<input id="artiste"></label>
+        <label>Crédit de la source<input id="credit" placeholder="rempli automatiquement"></label>
+      </div>
+    </div>
+
+    <div class="carte">
+      <div class="interrupteur">
+        <button class="bascule" id="droits" role="switch" aria-checked="false" aria-label="Je republie en connaissance de cause"></button>
+        <p><b>Je republie en connaissance de cause</b>Accord, contenu libre ou partagé par l'artiste. Si une plateforme bloque la vidéo, je la supprime.</p>
+      </div>
+    </div>
+    <div class="msg" id="msg-creer"></div>
+  </section>
+
+  <!-- ÉCRAN SUIVI -->
+  <section class="ecran" id="e-suivi">
+    <h1 class="titre" id="suivi-titre">Fabrication…</h1>
+    <p class="sous" id="suivi-sous">Tu peux fermer l'appli, la vidéo t'attendra dans « Mes vidéos ».</p>
+    <div class="carte" id="carte-etapes">
+      <div class="etapes">
+        <div class="etape" data-e="telechargement"><span class="rond"></span>Téléchargement en HD</div>
+        <div class="etape" data-e="analyse"><span class="rond"></span>Analyse et description par l'IA</div>
+        <div class="etape" data-e="montage"><span class="rond"></span>Habillage Cauri</div>
+        <div class="etape" data-e="pret"><span class="rond"></span>Prête à envoyer</div>
+      </div>
+      <div class="barre"><i id="barre"></i></div>
+    </div>
+    <div id="resultat" style="display:none">
+      <div class="telephone"><video id="video" controls playsinline preload="metadata"></video></div>
+      <div class="reseaux"><span>Instagram</span><span>Facebook</span><span>TikTok</span><span>Telegram</span></div>
+      <div class="carte texte" id="carte-textes">
+        <label>Accroche<input id="r-accroche"></label>
+        <label>Légende en français<textarea id="r-fr"></textarea></label>
+        <label>Légende en anglais<textarea id="r-en"></textarea></label>
+        <label>Crédit<input id="r-credit"></label>
+      </div>
+    </div>
+    <div class="msg" id="msg-suivi"></div>
+  </section>
+
+  <!-- ÉCRAN MES VIDÉOS -->
+  <section class="ecran" id="e-videos">
+    <h1 class="titre">Mes vidéos</h1>
+    <p class="sous">Les 20 dernières, du plus récent au plus ancien.</p>
+    <div class="grille" id="grille"></div>
+  </section>
+
+  <!-- ÉCRAN RÉGLAGES -->
+  <section class="ecran" id="e-reglages">
+    <h1 class="titre">Réglages</h1>
+    <p class="sous" id="reg-compte"></p>
+    <div class="carte">
+      <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-empreinte"/></svg>Déverrouillage</div>
+      <div class="liste" id="appareils"></div>
+      <button class="btn second" id="btn-inscription" style="margin-top:12px"><svg class="i"><use href="#i-empreinte"/></svg>Ajouter cet appareil</button>
+      <div class="msg" id="msg-inscription"></div>
+    </div>
+    <div class="carte">
+      <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-tel"/></svg>Installer l'application</div>
+      <p style="margin:0;font-size:14px;color:var(--doux)">iPhone : Safari, Partager, « Sur l'écran d'accueil ». Android : Chrome, menu ⋮, « Installer l'application ».</p>
+    </div>
+    <div class="carte">
+      <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-pc"/></svg>Instagram bloque le serveur ?</div>
+      <p style="margin:0;font-size:14px;color:var(--doux)">Lance la fabrication depuis le PC (dossier django) :</p>
+      <code>.venv\Scripts\python manage.py studio_job --id &lt;numéro&gt;</code>
+    </div>
+    <button class="btn second" id="btn-sortie"><svg class="i"><use href="#i-sortie"/></svg>Se déconnecter</button>
+  </section>
+</div>
+
+<div class="action"><div id="action"></div></div>
+
+<nav class="nav"><div>
+  <button class="actif" data-ecran="creer"><svg class="i"><use href="#i-plus"/></svg>Créer</button>
+  <button data-ecran="videos"><svg class="i"><use href="#i-film"/></svg>Mes vidéos</button>
+  <button data-ecran="reglages"><svg class="i"><use href="#i-reglages"/></svg>Réglages</button>
+</div></nav>
 {% endif %}
 
-<section class="carte" id="formulaire">
-  <label for="lien">Lien de la vidéo</label>
-  <input id="lien" type="url" inputmode="url" placeholder="TikTok, Instagram, Facebook, YouTube, X…" autocomplete="off">
-  <label for="format">Format</label>
-  <select id="format">{% for v, n in formats %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select>
-  <div class="ligne">
-    <div><label for="debut">Début (s)</label><input id="debut" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div>
-    <div><label for="fin">Fin (s)</label><input id="fin" type="number" min="1" step="0.5" value="60" inputmode="decimal"></div>
-  </div>
-  <p class="aide">{{ max_duree }} secondes au plus. Les textes vides sont proposés par l'IA après analyse de la vidéo.</p>
-  <details>
-    <summary>Textes (facultatif)</summary>
-    <label for="etiquette">Étiquette</label><input id="etiquette" placeholder="ex. MOMENT VIRAL">
-    <label for="accroche">Accroche sur la vidéo</label><input id="accroche" maxlength="90">
-    <label for="artiste">Artiste (surligné)</label><input id="artiste">
-    <label for="credit">Crédit de la source</label><input id="credit" placeholder="rempli automatiquement">
-  </details>
-  <label class="case"><input type="checkbox" id="droits"> <span>Je republie cette vidéo en connaissance de cause (accord, contenu libre ou partagé par l'artiste). Si une plateforme la bloque, je la supprime.</span></label>
-  <button id="btn-fabriquer">Fabriquer</button>
-  <div id="msg-fabriquer"></div>
-</section>
-
-<section class="carte cache" id="suivi">
-  <div class="etat"><span class="puce" id="puce"></span><span id="etat">En attente…</span></div>
-  <div id="apercu"></div>
-  <div id="edition" class="cache">
-    <label for="e-accroche">Accroche</label><input id="e-accroche">
-    <label for="e-fr">Légende (français)</label><textarea id="e-fr"></textarea>
-    <label for="e-en">Légende (anglais)</label><textarea id="e-en"></textarea>
-    <label for="e-credit">Crédit</label><input id="e-credit">
-    <button class="vert" id="btn-envoyer">Envoyer partout</button>
-    <button class="second" id="btn-refaire">Refaire avec ces textes</button>
-  </div>
-  <div id="msg-suivi"></div>
-</section>
-
-<section class="carte">
-  <b>Dernières vidéos</b>
-  <div id="historique"><p class="aide">Chargement…</p></div>
-</section>
-{% endif %}
-</main>
 <script>
 const BASE = {{ base|tojson }}, CSRF = {{ csrf|tojson }};
-const $ = s => document.querySelector(s);
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const deb64u = s => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+const icone = (id, st) => `<svg class="i" ${st ? `style="${st}"` : ''}><use href="#i-${id}"/></svg>`;
 async function post(url, data) {
   const r = await fetch(BASE + url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify(data || {})});
   let j = {}; try { j = await r.json(); } catch (e) {}
-  if (!r.ok) throw new Error(j.erreur || ('erreur ' + r.status));
+  if (!r.ok) throw new Error(j.erreur || ('Erreur ' + r.status));
   return j;
 }
-function message(id, texte, ok) { const el = $(id); if (el) el.innerHTML = texte ? `<div class="msg ${ok ? 'ok' : 'err'}"></div>` : ''; if (el && texte) el.firstChild.textContent = texte; }
-const ETATS = {attente:'En file d’attente…', telechargement:'Téléchargement de la vidéo…', analyse:'Analyse de la vidéo (description automatique)…',
-  montage:'Habillage Cauri en cours…', pret:'Prête : vérifie et envoie', erreur:'Échec', envoye:'Envoyée partout'};
-
+const get = async url => (await fetch(BASE + url)).json();
+function message(sel, texte, ok) { const el = $(sel); if (!el) return; el.className = 'msg' + (texte ? ' vu ' + (ok ? 'ok' : 'err') : ''); el.textContent = texte || ''; }
+const vibre = () => navigator.vibrate && navigator.vibrate(12);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register(BASE + '/sw.js', {scope: BASE}).catch(() => {});
 
+// ---------------- déverrouillage par empreinte
 const btnCo = $('#btn-connexion');
 if (btnCo) btnCo.onclick = async () => {
   try {
     const o = await post('/passkey/connexion/options');
-    o.challenge = deb64u(o.challenge);
-    (o.allowCredentials || []).forEach(c => c.id = deb64u(c.id));
-    const cred = await navigator.credentials.get({publicKey: o});
-    await post('/passkey/connexion', {id: cred.id, rawId: b64u(cred.rawId), type: cred.type,
-      response: {clientDataJSON: b64u(cred.response.clientDataJSON), authenticatorData: b64u(cred.response.authenticatorData),
-                 signature: b64u(cred.response.signature), userHandle: cred.response.userHandle ? b64u(cred.response.userHandle) : null}});
+    o.challenge = deb64u(o.challenge); (o.allowCredentials || []).forEach(c => c.id = deb64u(c.id));
+    const c = await navigator.credentials.get({publicKey: o});
+    await post('/passkey/connexion', {id: c.id, rawId: b64u(c.rawId), type: c.type, response: {clientDataJSON: b64u(c.response.clientDataJSON),
+      authenticatorData: b64u(c.response.authenticatorData), signature: b64u(c.response.signature),
+      userHandle: c.response.userHandle ? b64u(c.response.userHandle) : null}});
     location.reload();
-  } catch (e) { message('#msg-connexion', e.message || 'Échec', false); }
+  } catch (e) { message('#msg-connexion', e.name === 'NotAllowedError' ? 'Annulé.' : e.message, false); }
 };
 
-const btnIns = $('#btn-inscription');
-if (btnIns) btnIns.onclick = async () => {
-  try {
-    const o = await post('/passkey/inscription/options');
-    o.challenge = deb64u(o.challenge); o.user.id = deb64u(o.user.id);
-    (o.excludeCredentials || []).forEach(c => c.id = deb64u(c.id));
-    const cred = await navigator.credentials.create({publicKey: o});
-    await post('/passkey/inscription', {id: cred.id, rawId: b64u(cred.rawId), type: cred.type,
-      response: {clientDataJSON: b64u(cred.response.clientDataJSON), attestationObject: b64u(cred.response.attestationObject),
-                 transports: cred.response.getTransports ? cred.response.getTransports() : []}});
-    $('#carte-passkey').innerHTML = '<b>Empreinte enregistrée.</b> La prochaine fois, un toucher suffit.';
-  } catch (e) { message('#msg-inscription', e.message || 'Échec', false); }
-};
+if ($('.app')) {
+  // ---------------- navigation par onglets
+  let ecran = 'creer', jobEnCours = null;
+  function montre(nom) {
+    ecran = nom; $$('.ecran').forEach(e => e.classList.toggle('vu', e.id === 'e-' + nom));
+    $$('.nav button').forEach(b => b.classList.toggle('actif', b.dataset.ecran === (nom === 'suivi' ? 'creer' : nom)));
+    window.scrollTo({top: 0}); action();
+    if (nom === 'videos') grille(); if (nom === 'reglages') reglages();
+  }
+  $$('.nav button').forEach(b => b.onclick = () => { vibre(); montre(b.dataset.ecran === 'creer' && jobEnCours ? 'suivi' : b.dataset.ecran); });
 
-let enCours = null;
-function champs(prefixe) {
-  const v = id => ($(id) || {}).value || '';
-  return {lien: v('#lien'), format: v('#format'), debut: v('#debut'), fin: v('#fin'), etiquette: v('#etiquette'),
-          accroche: v(prefixe ? '#e-accroche' : '#accroche'), artiste: v('#artiste'), credit: v(prefixe ? '#e-credit' : '#credit'),
-          legende_fr: prefixe ? v('#e-fr') : '', legende_en: prefixe ? v('#e-en') : '', droits: $('#droits') && $('#droits').checked};
-}
-async function fabriquer(donnees) {
-  message('#msg-fabriquer', ''); message('#msg-suivi', '');
-  try {
-    const j = await post('/fabriquer', donnees);
-    if (j.erreur) { message('#msg-fabriquer', j.erreur, false); return; }
-    suivre(j.id);
-  } catch (e) { message('#msg-fabriquer', e.message, false); }
-}
-const btnFab = $('#btn-fabriquer');
-if (btnFab) btnFab.onclick = () => fabriquer(champs(false));
+  // bouton d'action fixe, selon l'écran
+  let etatJob = null;
+  function action() {
+    const a = $('#action');
+    if (ecran === 'creer') a.innerHTML = `<button class="btn" id="btn-fabriquer">${icone('magie')}Fabriquer</button>`;
+    else if (ecran === 'suivi' && etatJob && etatJob.statut === 'pret') a.innerHTML =
+      `<button class="btn vert" id="btn-envoyer">${icone('envoi')}Envoyer partout</button>`;
+    else if (ecran === 'suivi' && etatJob && ['erreur', 'envoye'].includes(etatJob.statut)) a.innerHTML =
+      `<button class="btn second" id="btn-nouvelle">${icone('plus')}Nouvelle vidéo</button>`;
+    else a.innerHTML = '';
+    const f = $('#btn-fabriquer'); if (f) f.onclick = fabriquer;
+    const e = $('#btn-envoyer'); if (e) e.onclick = envoyer;
+    const n = $('#btn-nouvelle'); if (n) n.onclick = () => { jobEnCours = null; etatJob = null; montre('creer'); };
+  }
 
-function suivre(id) {
-  enCours = id; $('#suivi').classList.remove('cache'); $('#edition').classList.add('cache'); $('#apercu').innerHTML = '';
-  $('#suivi').scrollIntoView({behavior:'smooth'});
-  const tour = async () => {
-    if (enCours !== id) return;
-    const r = await fetch(BASE + '/job/' + id); const j = await r.json();
-    $('#etat').textContent = ETATS[j.statut] || j.statut;
-    $('#puce').style.display = ['pret','erreur','envoye'].includes(j.statut) ? 'none' : '';
-    if (j.statut === 'erreur') { message('#msg-suivi', j.erreur || 'Échec', false); return chargerHistorique(); }
-    if (j.statut === 'pret' || j.statut === 'envoye') {
-      $('#apercu').innerHTML = `<video controls playsinline preload="metadata"></video>`;
-      $('#apercu video').src = j.video; if (j.vignette) $('#apercu video').poster = j.vignette;
-      if (j.statut === 'pret') {
-        $('#edition').classList.remove('cache');
-        $('#e-accroche').value = j.params.accroche || ''; $('#e-fr').value = j.params.legende_fr || '';
-        $('#e-en').value = j.params.legende_en || ''; $('#e-credit').value = j.params.credit || '';
-        $('#btn-envoyer').onclick = async () => {
-          $('#btn-envoyer').disabled = true;
-          try { const k = await post('/job/' + id + '/envoyer', {accroche: $('#e-accroche').value, legende_fr: $('#e-fr').value,
-                  legende_en: $('#e-en').value, credit: $('#e-credit').value, artiste: j.params.artiste || ''});
-                message('#msg-suivi', 'Envoyée ! Elle part dans 2 minutes sur tous les réseaux (post n°' + k.post_id + ').', true);
-                $('#edition').classList.add('cache'); $('#etat').textContent = ETATS.envoye; chargerHistorique();
-          } catch (e) { message('#msg-suivi', e.message, false); $('#btn-envoyer').disabled = false; }
-        };
-        $('#btn-refaire').onclick = () => fabriquer({lien: j.lien, format: j.params.format, debut: j.params.debut, fin: j.params.fin,
-          etiquette: j.params.etiquette, accroche: $('#e-accroche').value, artiste: j.params.artiste, credit: $('#e-credit').value,
-          legende_fr: $('#e-fr').value, legende_en: $('#e-en').value, droits: true});
-      }
-      return chargerHistorique();
-    }
-    setTimeout(tour, 4000);
+  // ---------------- écran Créer
+  let format = 'story';
+  $$('.format').forEach(b => b.onclick = () => { vibre(); format = b.dataset.v; $$('.format').forEach(x => x.classList.toggle('actif', x === b)); });
+  $$('#durees .puce').forEach(b => b.onclick = () => { vibre(); $$('#durees .puce').forEach(x => x.classList.toggle('actif', x === b));
+    $('#fin').value = (parseFloat($('#debut').value) || 0) + parseFloat(b.dataset.d); });
+  $('#btn-textes').onclick = () => { const t = $('#textes'), o = t.style.display === 'none'; t.style.display = o ? '' : 'none'; $('#btn-textes').classList.toggle('ouvert', o); };
+  const droits = $('#droits');
+  droits.onclick = () => { vibre(); const on = !droits.classList.contains('on'); droits.classList.toggle('on', on); droits.setAttribute('aria-checked', on); };
+  $('#btn-coller').onclick = async () => { try { $('#lien').value = (await navigator.clipboard.readText()).trim(); apercu(); } catch (e) { $('#lien').focus(); } };
+  let minuteur;
+  $('#lien').addEventListener('input', () => { clearTimeout(minuteur); minuteur = setTimeout(apercu, 450); });
+  async function apercu() {
+    const box = $('#apercu-lien'), lien = $('#lien').value.trim();
+    if (!/^https?:\/\//.test(lien)) { box.classList.remove('vu'); return; }
+    try {
+      const d = await post('/apercu-lien', {lien});
+      box.innerHTML = (d.miniature ? '<img alt="">' : `<span class="vide">${icone('film')}</span>`) + '<div><span class="plat"></span><b></b><small></small></div>';
+      if (d.miniature) box.querySelector('img').src = d.miniature;
+      box.querySelector('.plat').textContent = d.plateforme; box.querySelector('b').textContent = d.titre || 'Vidéo détectée';
+      box.querySelector('small').textContent = d.auteur ? '@' + d.auteur.replace(/^@/, '') : 'Aperçu complet après téléchargement';
+      box.classList.add('vu');
+    } catch (e) { box.classList.remove('vu'); }
+  }
+  async function fabriquer() {
+    message('#msg-creer', '');
+    const v = id => $(id).value.trim();
+    if (!droits.classList.contains('on')) { message('#msg-creer', 'Active l’interrupteur des droits pour continuer.', false); return; }
+    const btn = $('#btn-fabriquer'); btn.disabled = true;
+    try {
+      const j = await post('/fabriquer', {lien: v('#lien'), format, debut: v('#debut'), fin: v('#fin'), etiquette: v('#etiquette'),
+        accroche: v('#accroche'), artiste: v('#artiste'), credit: v('#credit'), droits: true});
+      if (j.erreur) throw new Error(j.erreur);
+      vibre(); suivre(j.id);
+    } catch (e) { message('#msg-creer', e.message, false); btn.disabled = false; }
+  }
+
+  // ---------------- écran Suivi / résultat
+  const ORDRE = ['attente', 'telechargement', 'analyse', 'montage', 'pret'];
+  function suivre(id) {
+    jobEnCours = id; etatJob = null; $('#resultat').style.display = 'none'; $('#carte-etapes').style.display = '';
+    message('#msg-suivi', ''); $('#suivi-titre').textContent = 'Fabrication…';
+    $('#suivi-sous').textContent = 'Tu peux fermer l’appli : la vidéo t’attendra dans « Mes vidéos ».';
+    montre('suivi');
+    const tour = async () => {
+      if (jobEnCours !== id) return;
+      const j = await get('/job/' + id); etatJob = j;
+      const n = ORDRE.indexOf(j.statut);
+      $$('.etape').forEach(e => { const k = ORDRE.indexOf(e.dataset.e);
+        e.className = 'etape' + (j.statut === 'envoye' || k < n || (j.statut === 'pret' && k === n) ? ' faite' : k === n ? ' cours' : '');
+        e.querySelector('.rond').innerHTML = e.classList.contains('faite') ? icone('ok', 'width:16px;height:16px') : ''; });
+      $('#barre').style.width = ({attente: 8, telechargement: 30, analyse: 55, montage: 80, pret: 100, envoye: 100}[j.statut] || 8) + '%';
+      if (j.statut === 'erreur') { $('#suivi-titre').textContent = 'Échec'; $('#suivi-sous').textContent = '';
+        message('#msg-suivi', j.erreur || 'Échec de la fabrication', false); action(); return; }
+      if (j.statut === 'pret' || j.statut === 'envoye') return resultat(j);
+      setTimeout(tour, 3000);
+    };
+    tour();
+  }
+  function resultat(j) {
+    $('#carte-etapes').style.display = 'none'; $('#resultat').style.display = '';
+    $('#video').src = j.video; if (j.vignette) $('#video').poster = j.vignette;
+    $('#r-accroche').value = j.params.accroche || ''; $('#r-fr').value = j.params.legende_fr || '';
+    $('#r-en').value = j.params.legende_en || ''; $('#r-credit').value = j.params.credit || '';
+    const envoyee = j.statut === 'envoye';
+    $('#carte-textes').style.display = envoyee ? 'none' : '';
+    $('#suivi-titre').textContent = envoyee ? 'Envoyée partout' : 'Prête !';
+    $('#suivi-sous').textContent = envoyee ? 'Elle est programmée sur tous les réseaux.' : 'Vérifie les textes proposés par l’IA, puis envoie.';
+    action();
+  }
+  async function envoyer() {
+    const b = $('#btn-envoyer'); b.disabled = true;
+    try {
+      const k = await post('/job/' + jobEnCours + '/envoyer', {accroche: $('#r-accroche').value, legende_fr: $('#r-fr').value,
+        legende_en: $('#r-en').value, credit: $('#r-credit').value, artiste: (etatJob.params || {}).artiste || ''});
+      vibre(); etatJob.statut = 'envoye'; resultat(etatJob);
+      message('#msg-suivi', 'Envoyée ! Elle part dans 2 minutes sur tous les réseaux (post n°' + k.post_id + ').', true);
+    } catch (e) { message('#msg-suivi', e.message, false); b.disabled = false; }
+  }
+
+  // ---------------- écran Mes vidéos
+  const LIB = {attente: 'En file', telechargement: 'Téléchargement', analyse: 'Analyse', montage: 'Habillage', pret: 'Prête', erreur: 'Échec', envoye: 'Envoyée'};
+  async function grille() {
+    const g = $('#grille');
+    try {
+      const d = await get('/historique'); g.innerHTML = '';
+      if (!d.jobs.length) { g.innerHTML = `<div class="vide" style="grid-column:1/-1">${icone('film', 'width:40px;height:40px')}<p>Aucune vidéo pour l’instant.</p></div>`; return; }
+      d.jobs.forEach(j => {
+        const el = document.createElement('button'); el.className = 'vignette';
+        const cls = ['pret', 'envoye', 'erreur'].includes(j.statut) ? j.statut : 'cours';
+        el.innerHTML = `<span class="cadre">${j.vignette ? '<img alt="">' : ''}<span class="statut ${cls}"></span></span><span class="bas"></span>`;
+        if (j.vignette) el.querySelector('img').src = j.vignette;
+        el.querySelector('.statut').textContent = LIB[j.statut] || j.statut;
+        el.querySelector('.bas').textContent = j.params.accroche || j.lien.replace(/^https?:\/\/(www\.)?/, '').slice(0, 40);
+        el.onclick = () => suivre(j.id);
+        g.appendChild(el);
+      });
+    } catch (e) { g.innerHTML = '<div class="vide">Impossible de charger.</div>'; }
+  }
+
+  // ---------------- écran Réglages
+  async function reglages() {
+    try {
+      const d = await get('/reglages');
+      $('#reg-compte').textContent = d.nom + ' · ' + d.email;
+      const l = $('#appareils'); l.innerHTML = '';
+      if (!d.appareils.length) l.innerHTML = '<p style="margin:0;color:var(--doux);font-size:14px">Aucun appareil : ajoute celui-ci pour déverrouiller d’un toucher.</p>';
+      d.appareils.forEach(a => { const r = document.createElement('div'); r.className = 'ligne';
+        r.innerHTML = `${icone('tel')}<div><b></b><br><small></small></div><button class="lien-rouge">Retirer</button>`;
+        r.querySelector('b').textContent = a.nom; r.querySelector('small').textContent = 'ajouté le ' + a.cree_le;
+        r.querySelector('button').onclick = async () => { await post('/appareil/' + a.id + '/supprimer'); reglages(); };
+        l.appendChild(r); });
+    } catch (e) {}
+  }
+  $('#btn-inscription').onclick = async () => {
+    try {
+      const o = await post('/passkey/inscription/options');
+      o.challenge = deb64u(o.challenge); o.user.id = deb64u(o.user.id); (o.excludeCredentials || []).forEach(c => c.id = deb64u(c.id));
+      const c = await navigator.credentials.create({publicKey: o});
+      await post('/passkey/inscription', {id: c.id, rawId: b64u(c.rawId), type: c.type, response: {clientDataJSON: b64u(c.response.clientDataJSON),
+        attestationObject: b64u(c.response.attestationObject), transports: c.response.getTransports ? c.response.getTransports() : []}});
+      vibre(); message('#msg-inscription', 'Appareil ajouté. La prochaine fois, un toucher suffit.', true); reglages();
+    } catch (e) { message('#msg-inscription', e.name === 'NotAllowedError' ? 'Annulé.' : e.message, false); }
   };
-  tour();
-}
+  $('#btn-sortie').onclick = async () => { await post('/deconnexion'); location.reload(); };
 
-async function chargerHistorique() {
-  const box = $('#historique'); if (!box) return;
-  try {
-    const r = await fetch(BASE + '/historique'); const d = await r.json();
-    box.innerHTML = '';
-    if (!d.jobs.length) { box.innerHTML = '<p class="aide">Aucune vidéo pour l’instant.</p>'; return; }
-    d.jobs.forEach(j => {
-      const el = document.createElement('div'); el.className = 'hist';
-      el.innerHTML = '<img alt=""><div class="t"><b></b><span class="aide"></span></div><span class="badge"></span>';
-      if (j.vignette) el.querySelector('img').src = j.vignette;
-      el.querySelector('b').textContent = j.params.accroche || j.lien;
-      el.querySelector('.aide').textContent = j.cree_le;
-      el.querySelector('.badge').textContent = (ETATS[j.statut] || j.statut).replace(/…$/, '');
-      el.onclick = () => suivre(j.id);
-      box.appendChild(el);
-    });
-  } catch (e) {}
+  action();
+  {% if not a_passkey %}setTimeout(() => montre('reglages'), 50);{% endif %}
 }
-chargerHistorique();
 </script>
 </body>
 </html>

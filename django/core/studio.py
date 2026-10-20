@@ -303,3 +303,71 @@ def envoyer(request, chemin, ident):
         return _json({"erreur": f"post créé (n°{pid}) mais l'envoi a échoué : {exc}"}, 502)
     db.update("studio_jobs", {"statut": "envoye", "post_id": pid}, "id = :id", {"id": j["id"]})
     return _json({"ok": True, "post_id": pid, "lignes": lignes})
+
+
+# ---------------------------------------------------------------- aperçu d'un lien, réglages
+
+OEMBED = {"youtube.com": "https://www.youtube.com/oembed", "youtu.be": "https://www.youtube.com/oembed",
+          "tiktok.com": "https://www.tiktok.com/oembed", "vimeo.com": "https://vimeo.com/api/oembed.json"}
+PLATEFORMES = {"tiktok.com": "TikTok", "instagram.com": "Instagram", "facebook.com": "Facebook", "fb.watch": "Facebook",
+               "youtube.com": "YouTube", "youtu.be": "YouTube", "x.com": "X", "twitter.com": "X", "vimeo.com": "Vimeo",
+               "snapchat.com": "Snapchat", "threads.net": "Threads"}
+
+
+def apercu_lien(request, chemin):
+    """Carte d'aperçu dès qu'un lien est collé : plateforme, titre, compte, miniature (oEmbed quand la plateforme l'offre)."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    import requests
+    lien = str(_corps(request).get("lien") or "").strip()
+    hote = (urlparse(lien).hostname or "").lower().removeprefix("www.").removeprefix("m.").removeprefix("vm.")
+    if not hote:
+        return _json({"erreur": "lien invalide"}, 400)
+    base = next((d for d in PLATEFORMES if hote == d or hote.endswith("." + d)), None)
+    infos = {"plateforme": PLATEFORMES.get(base, hote), "titre": "", "auteur": "", "miniature": ""}
+    service = OEMBED.get(base or "")
+    if service:
+        try:
+            r = requests.get(service, params={"url": lien, "format": "json"}, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+            if r.ok:
+                d = r.json()
+                infos.update({"titre": (d.get("title") or "")[:160], "auteur": (d.get("author_name") or "")[:80],
+                              "miniature": d.get("thumbnail_url") or ""})
+        except Exception:  # noqa: BLE001
+            pass
+    return _json(infos)
+
+
+def reglages(request, chemin):
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u:
+        return _json({"erreur": "connexion requise"}, 401)
+    creer_tables()
+    cles = db.all("SELECT id, nom, cree_le FROM studio_passkeys WHERE user_id = ? ORDER BY id DESC", [u["id"]])
+    return _json({"nom": u.get("name") or u["email"], "email": u["email"],
+                  "appareils": [{"id": c["id"], "nom": _appareil(c.get("nom") or ""), "cree_le": str(c["cree_le"])[:10]} for c in cles]})
+
+
+def _appareil(ua: str) -> str:
+    for motif, nom in (("iPhone", "iPhone"), ("iPad", "iPad"), ("Android", "Android"), ("Macintosh", "Mac"), ("Windows", "PC Windows")):
+        if motif in ua:
+            return nom
+    return "Appareil"
+
+
+def supprimer_appareil(request, chemin, ident):
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    db.run("DELETE FROM studio_passkeys WHERE id = ? AND user_id = ?", [int(ident), u["id"]])
+    return _json({"ok": True})
+
+
+def deconnexion(request, chemin):
+    _verifie(chemin)
+    if request.method == "POST":
+        auth.logout(request)
+    return _json({"ok": True})
