@@ -19,7 +19,21 @@ from PIL import Image, ImageDraw
 from core import db, env, storage
 from core.services.platforms import log_write
 
-FORMATS = {"story": (1080, 1920), "feed": (1080, 1350), "square": (1080, 1080)}
+FORMATS = {"origine": None, "story": (1080, 1920), "feed": (1080, 1350), "square": (1080, 1080)}
+
+
+def taille_origine(infos: dict, video: str) -> tuple[int, int]:
+    """1080 de large, la hauteur selon les proportions de la vidéo d'origine (paire, entre 1:1,9 et 16:9)."""
+    w, h = infos.get("width") or 0, infos.get("height") or 0
+    if not (w and h):
+        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+                            "-of", "csv=p=0", video], capture_output=True, text=True, timeout=30)
+        try:
+            w, h = (int(x) for x in r.stdout.strip().split(",")[:2])
+        except ValueError:
+            w, h = 1080, 1920
+    H = int(round(1080 * h / w / 2) * 2)
+    return 1080, max(608, min(1920, H))
 MAX_DUREE = 90
 
 
@@ -134,13 +148,22 @@ def analyse(images: list[str], infos: dict) -> dict:
 
 # ---------------------------------------------------------------- montage
 
-def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str) -> tuple[Image.Image, tuple[int, int, int, int]]:
-    """(calque transparent, zone de la vidéo x, y, w, h). Rien dans les 20 % du bas en 9:16 (interface TikTok/Reels)."""
+def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str,
+           taille: tuple[int, int] | None = None) -> tuple[Image.Image, tuple[int, int, int, int]]:
+    """(calque transparent, zone de la vidéo x, y, w, h). Rien dans les 20 % du bas en 9:16 (interface TikTok/Reels).
+    « origine » : la vidéo remplit tout le cadre à ses proportions, l'habillage se pose par-dessus (dégradés sombres)."""
     from core.services.social import couverture2026 as C
-    W, H = FORMATS[fmt]
+    W, H = taille or FORMATS[fmt]
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    if fmt == "origine":
+        degrade = Image.new("L", (1, H))
+        for yy in range(H):
+            t = yy / H
+            degrade.putpixel((0, yy), int(max(215 * max(0, 1 - t / .42) ** 1.4, 170 * max(0, (t - .78) / .22) ** 1.6)))
+        img.paste(Image.new("RGBA", (W, H), (8, 6, 16, 255)), (0, 0), degrade.resize((W, H)))
     d = ImageDraw.Draw(img)
-    haut = 50 if fmt != "story" else 110
+    portrait = H / W > 1.6
+    haut = 110 if (fmt == "story" or (fmt == "origine" and portrait)) else 50
     C._logo(img, 50, haut, 76)
     fe = C.police("Montserrat.ttf", 26, "ExtraBold")
     eti = (etiquette or "VIDÉO").upper()[:32]
@@ -173,17 +196,20 @@ def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str) -
             d.text((x, y), mot, font=f, fill=(255, 255, 255, 255))
             x += lm + d.textlength(" ", font=f)
         y += taille + 14
-    zone_haut = y + 24
-    bas_reserve = int(H * .20) if fmt == "story" else 70
+    zone_haut = 0 if fmt == "origine" else y + 24
+    bas_reserve = int(H * .20) if (fmt == "story" or (fmt == "origine" and portrait)) else 70
     if credit:
-        d.text((50, H - bas_reserve - 46 if fmt == "story" else H - 52), f"Source : {credit}"[:70],
+        d.text((50, H - bas_reserve - 46 if bas_reserve > 70 else H - 52), f"Source : {credit}"[:70],
                font=C.police("Montserrat.ttf", 24, "Medium"), fill=(255, 255, 255, 210))
+    if fmt == "origine":
+        return img, (0, 0, W, H)
     zone_bas = H - bas_reserve - (60 if fmt == "story" else 0)
     return img, (0, zone_haut, W, max(200, zone_bas - zone_haut))
 
 
-def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_png: str, zone) -> None:
-    W, H = FORMATS[fmt]
+def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_png: str, zone,
+          taille: tuple[int, int] | None = None) -> None:
+    W, H = taille or FORMATS[fmt]
     x, y, w, h = zone
     duree = max(1.0, fin - debut)
     filtre = (f"[0:v]split=2[a][b];[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
@@ -212,7 +238,7 @@ def traite(job_id: int) -> dict:
     if not job:
         raise RuntimeError("tâche introuvable")
     p = job["params"] if isinstance(job["params"], dict) else json.loads(job["params"] or "{}")
-    fmt = p.get("format") if p.get("format") in FORMATS else "story"
+    fmt = p.get("format") if p.get("format") in FORMATS else "origine"
     with tempfile.TemporaryDirectory(prefix=f"cauri-studio-{job_id}-") as tmp:
         try:
             _maj(job_id, statut="telechargement", erreur=None)
@@ -236,11 +262,12 @@ def traite(job_id: int) -> dict:
                       "legende_fr": p.get("legende_fr") or sugg.get("legende_fr") or "",
                       "legende_en": p.get("legende_en") or sugg.get("legende_en") or ""})
             _maj(job_id, statut="montage", params=p)
-            img, zone = calque(fmt, etiquette, accroche, artiste, credit)
+            taille = taille_origine(infos, source) if fmt == "origine" else FORMATS[fmt]
+            img, zone = calque(fmt, etiquette, accroche, artiste, credit, taille)
             png = os.path.join(tmp, "calque.png"); img.save(png)
             nom = f"studio-{job_id}-{os.urandom(3).hex()}"
             video = os.path.join(tmp, nom + ".mp4"); vignette = os.path.join(tmp, nom + ".jpg")
-            monte(source, video, fmt, debut, fin, png, zone)
+            monte(source, video, fmt, debut, fin, png, zone, taille)
             subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3", vignette],
                            capture_output=True, timeout=60)
             storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")

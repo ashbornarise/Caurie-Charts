@@ -44,7 +44,7 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stro
 .apercu-lien .vide{width:64px;height:64px;border-radius:10px;background:#1d1533;display:grid;place-items:center;color:var(--violet-clair)}
 .apercu-lien b{display:block;font-size:14px;line-height:1.3;max-height:2.6em;overflow:hidden}.apercu-lien small{color:var(--doux)}
 .plat{display:inline-block;font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px;background:rgba(56,189,248,.16);color:var(--ciel);margin-bottom:4px}
-.formats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.formats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .format{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px 12px;border-radius:16px;border:1.5px solid var(--trait);background:rgba(0,0,0,.2);font-weight:700;font-size:13px}
 .format small{color:var(--doux);font-weight:600;font-size:11px}
 .format .ratio{border:2px solid currentColor;border-radius:5px;opacity:.9}
@@ -103,6 +103,17 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stro
 .liste .ligne:first-child{border-top:0}.liste .ligne div{flex:1}.liste small{color:var(--doux)}
 .lien-rouge{color:var(--rouge);font-weight:700;font-size:13px}
 code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;font-size:12px;color:#d8ccff;word-break:break-all;margin-top:8px}
+.voile{position:fixed;inset:0;background:rgba(5,3,12,.6);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:.25s;z-index:20}
+.voile.vu{opacity:1;pointer-events:auto}
+.feuille{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;background:#171030;border:1px solid var(--trait);border-bottom:0;
+  border-radius:26px 26px 0 0;padding:10px 18px calc(var(--bas) + 18px);transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.feuille.vu{transform:none}
+.poignee{display:block;width:42px;height:5px;border-radius:99px;background:#3a3157;margin:2px auto 14px}
+.feuille h2{font-size:19px;margin:0 0 14px;font-weight:800}
+.choix{display:flex;gap:14px;align-items:flex-start;text-align:left;width:100%;padding:14px;border-radius:18px;background:var(--carte);border:1px solid var(--trait);margin-bottom:10px}
+.choix b{display:block;font-size:15px;margin-bottom:3px}.choix small{color:var(--doux);font-size:13px;line-height:1.4}
+.pastille{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;flex:none}
+.vert-p{background:rgba(34,197,94,.18);color:#4ade80}.violet-p{background:rgba(124,58,237,.22);color:var(--violet-clair)}
 /* déverrouillage */
 .verrou{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
 .verrou img{width:86px;height:86px;border-radius:26px;box-shadow:0 20px 50px rgba(124,58,237,.5)}
@@ -131,6 +142,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <symbol id="i-sortie" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
   <symbol id="i-tel" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
   <symbol id="i-poubelle" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
+  <symbol id="i-musique" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
   <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
 </svg>
 
@@ -166,7 +178,8 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
     <div class="carte">
       <div class="etiq">Format</div>
       <div class="formats" id="formats">
-        <button class="format actif" data-v="story"><span class="ratio" style="width:20px;height:34px"></span>9:16<small>Reels · TikTok</small></button>
+        <button class="format actif" data-v="origine"><span class="ratio" style="width:26px;height:30px;border-style:dashed"></span>Origine<small>Plein cadre</small></button>
+        <button class="format" data-v="story"><span class="ratio" style="width:20px;height:34px"></span>9:16<small>Reels · TikTok</small></button>
         <button class="format" data-v="feed"><span class="ratio" style="width:26px;height:32px"></span>4:5<small>Fil Instagram</small></button>
         <button class="format" data-v="square"><span class="ratio" style="width:30px;height:30px"></span>1:1<small>Carré</small></button>
       </div>
@@ -225,12 +238,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
         <label>Légende en anglais<textarea id="r-en"></textarea></label>
         <label>Crédit<input id="r-credit"></label>
       </div>
-      <div class="carte" id="carte-mode">
-        <div class="interrupteur">
-          <button class="bascule" id="notifier" role="switch" aria-checked="false" aria-label="J'ajoute ma musique dans l'appli"></button>
-          <p><b>J'ajoute ma musique dans l'appli</b>Instagram et TikTok t'envoient une notification : tu choisis le son dans leur bibliothèque, puis tu publies. Facebook et Telegram partent normalement.</p>
-        </div>
-      </div>
+
     </div>
     <div class="msg" id="msg-suivi"></div>
   </section>
@@ -266,6 +274,21 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 </div>
 
 <div class="action"><div id="action"></div></div>
+
+<div class="voile" id="voile"></div>
+<div class="feuille" id="feuille" role="dialog" aria-modal="true" aria-labelledby="feuille-titre">
+  <span class="poignee"></span>
+  <h2 id="feuille-titre">Comment l’envoyer ?</h2>
+  <button class="choix" id="choix-auto">
+    <span class="pastille vert-p"><svg class="i"><use href="#i-envoi"/></svg></span>
+    <span><b>Publier partout maintenant</b><small>Instagram, Facebook, TikTok et Telegram dans 2 minutes, avec le son de la vidéo.</small></span>
+  </button>
+  <button class="choix" id="choix-notif">
+    <span class="pastille violet-p"><svg class="i"><use href="#i-musique"/></svg></span>
+    <span><b>Notification : j’ajoute ma musique</b><small>Instagram et TikTok t’envoient une notification : tu choisis le son dans leur bibliothèque, puis tu publies. Facebook et Telegram partent normalement.</small></span>
+  </button>
+  <button class="btn second" id="choix-annuler" style="margin-top:6px">Annuler</button>
+</div>
 
 <nav class="nav"><div>
   <button class="actif" data-ecran="creer"><svg class="i"><use href="#i-plus"/></svg>Créer</button>
@@ -322,7 +345,7 @@ if ($('.app')) {
     const a = $('#action');
     if (ecran === 'creer') a.innerHTML = `<button class="btn" id="btn-fabriquer">${icone('magie')}Fabriquer</button>`;
     else if (ecran === 'suivi' && etatJob && etatJob.statut === 'pret') a.innerHTML =
-      `<button class="btn vert" id="btn-envoyer">${icone('envoi')}Envoyer partout</button>`;
+      `<button class="btn vert" id="btn-envoyer">${icone('envoi')}Envoyer</button>`;
     else if (ecran === 'suivi' && etatJob && ['erreur', 'envoye'].includes(etatJob.statut)) a.innerHTML =
       `<button class="btn second" id="btn-nouvelle">${icone('plus')}Nouvelle vidéo</button>`;
     else a.innerHTML = '';
@@ -332,7 +355,7 @@ if ($('.app')) {
   }
 
   // ---------------- écran Créer
-  let format = 'story';
+  let format = 'origine';
   $$('.format').forEach(b => b.onclick = () => { vibre(); format = b.dataset.v; $$('.format').forEach(x => x.classList.toggle('actif', x === b)); });
   $$('#durees .puce').forEach(b => b.onclick = () => { vibre(); $$('#durees .puce').forEach(x => x.classList.toggle('actif', x === b));
     $('#fin').value = (parseFloat($('#debut').value) || 0) + parseFloat(b.dataset.d); });
@@ -395,19 +418,24 @@ if ($('.app')) {
     $('#r-accroche').value = j.params.accroche || ''; $('#r-fr').value = j.params.legende_fr || '';
     $('#r-en').value = j.params.legende_en || ''; $('#r-credit').value = j.params.credit || '';
     const envoyee = j.statut === 'envoye';
-    $('#carte-textes').style.display = envoyee ? 'none' : ''; $('#carte-mode').style.display = envoyee ? 'none' : '';
+    $('#carte-textes').style.display = envoyee ? 'none' : '';
     $('#suivi-titre').textContent = envoyee ? 'Envoyée partout' : 'Prête !';
     $('#suivi-sous').textContent = envoyee ? 'Elle est programmée sur tous les réseaux.' : 'Vérifie les textes proposés par l’IA, puis envoie.';
     action();
   }
-  async function envoyer() {
+  const feuille = (ouvrir) => { $('#voile').classList.toggle('vu', ouvrir); $('#feuille').classList.toggle('vu', ouvrir); };
+  $('#voile').onclick = () => feuille(false); $('#choix-annuler').onclick = () => feuille(false);
+  $('#choix-auto').onclick = () => { feuille(false); envoyerVraiment(false); };
+  $('#choix-notif').onclick = () => { feuille(false); envoyerVraiment(true); };
+  function envoyer() { vibre(); feuille(true); }
+  async function envoyerVraiment(notifier) {
     const b = $('#btn-envoyer'); b.disabled = true;
     try {
       const k = await post('/job/' + jobEnCours + '/envoyer', {accroche: $('#r-accroche').value, legende_fr: $('#r-fr').value,
         legende_en: $('#r-en').value, credit: $('#r-credit').value, artiste: (etatJob.params || {}).artiste || '',
-        notifier: $('#notifier').classList.contains('on')});
+        notifier});
       vibre(); etatJob.statut = 'envoye'; resultat(etatJob);
-      message('#msg-suivi', $('#notifier').classList.contains('on')
+      message('#msg-suivi', notifier
         ? 'Envoyée ! Facebook et Telegram dans 2 minutes ; Instagram et TikTok t’envoient une notification pour ajouter ta musique.'
         : 'Envoyée ! Elle part dans 2 minutes sur tous les réseaux (post n°' + k.post_id + ').', true);
     } catch (e) { message('#msg-suivi', e.message, false); b.disabled = false; }
@@ -457,8 +485,6 @@ if ($('.app')) {
       vibre(); message('#msg-inscription', 'Appareil ajouté. La prochaine fois, un toucher suffit.', true); reglages();
     } catch (e) { message('#msg-inscription', e.name === 'NotAllowedError' ? 'Annulé.' : e.message, false); }
   };
-  const notif = $('#notifier');
-  notif.onclick = () => { vibre(); const on = !notif.classList.contains('on'); notif.classList.toggle('on', on); notif.setAttribute('aria-checked', on); };
   $('#btn-sortie').onclick = async () => { await post('/deconnexion'); location.reload(); };
 
   action();

@@ -241,7 +241,7 @@ def fabriquer(request, chemin):
         return _json({"erreur": "début et fin en secondes"}, 400)
     if debut < 0 or fin <= debut or fin - debut > MAX_DUREE:
         return _json({"erreur": f"extrait de 1 à {MAX_DUREE} secondes"}, 400)
-    fmt = c.get("format") if c.get("format") in FORMATS else "story"
+    fmt = c.get("format") if c.get("format") in FORMATS else "origine"
     params = {"format": fmt, "debut": debut, "fin": fin}
     for k in ("etiquette", "accroche", "artiste", "credit", "legende_fr", "legende_en"):
         params[k] = str(c.get(k) or "").strip()[:600]
