@@ -141,6 +141,18 @@ class GroqClient:
         raise PlatformException(f"{self.NAME} : " + last)
 
 
+class DeepSeekClient(GroqClient):
+    """API DeepSeek (format OpenAI) : classification rapide des artistes."""
+    NAME = "DeepSeek"
+    TRY_NEXT_ON_ANY_ERROR = False
+    URL = "https://api.deepseek.com/chat/completions"
+
+    def __init__(self, http: HttpClient, api_key: str | None = None, model: str | None = None):
+        self.http = http
+        self.api_key = api_key if api_key is not None else env.get("DEEPSEEK_API_KEY", "")
+        self.models = list(dict.fromkeys(m for m in [model or "deepseek-chat", "deepseek-reasoner"] if m))
+
+
 class OpenRouterClient(GroqClient):
     """OpenRouter, modèles gratuits uniquement (identifiants en « :free ») : 3e secours, même format qu'OpenAI.
     La clé est réglée sur une limite de dépense de 0 $ : un modèle payant serait refusé."""

@@ -1,0 +1,30 @@
+name: Classification rapide artistes (DeepSeek + Google)
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Nombre max d'artistes à traiter"
+        default: "300"
+      batch_size:
+        description: "Taille des lots"
+        default: "15"
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_GROUNDING: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - name: Classifier
+        working-directory: django
+        run: python manage.py batch_classify --limit=${{ inputs.limit }} --batch-size=${{ inputs.batch_size }}
