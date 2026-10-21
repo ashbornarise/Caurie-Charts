@@ -775,6 +775,16 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
     return {**post, "image_article": article} if isinstance(post, dict) else post
 
 
+def _artiste_a_photo(artiste: str) -> bool:
+    """Vérifie que l'artiste a au moins une vraie photo (portrait ou plan) dans la base."""
+    if not artiste:
+        return False
+    return bool(db.value("""SELECT 1 FROM artists
+                            WHERE LOWER(name) = LOWER(?) AND status = 'active'
+                              AND COALESCE(NULLIF(image_url, ''), NULLIF(image_hd_url, '')) IS NOT NULL
+                            LIMIT 1""", [artiste]))
+
+
 def archive(fiches: list, image: str | None = None, article: str | None = None) -> None:
     """Chaque info publiée devient aussi un article dans Actualités (le site comme un journal) et ne repassera plus.
     article : image 16:9 générée pour le site (pourtoi.affiche) ; à défaut, la couverture du post (image)."""
@@ -788,12 +798,16 @@ def archive(fiches: list, image: str | None = None, article: str | None = None) 
             continue
         src = f["items"][0]
         slug = re.sub(r"[^a-z0-9]+", "-", _sans_accents(f["titre"]).lower()).strip("-")[:180] + "-" + f["cle"][:6]
+        a_photo = _artiste_a_photo(f.get("artiste"))
+        statut = "published" if a_photo or not f.get("artiste") else "draft"
+        if statut == "draft":
+            log_write("monde", "warning", f"actu « {f['titre'][:60]} » en brouillon : pas de photo pour {f.get('artiste')}")
         db.insert("news", {"title": f["titre"][:200], "slug": slug, "summary": (f["accroche"] or f["resume"])[:400],
                            "body": f["resume"] + "\n\nSources : " + ", ".join(f["sources"]) + "."
                                    + (f"\n\nPhoto : {credit}" if credit else ""), "category": CATEGORIE_SITE[f["rubrique"]],
                            "country_id": None, "source_name": ", ".join(f["sources"])[:120], "source_url": src["url"][:500],
                            "image_path": ("social/" + image)[:120] if image else None, "origin": "manual", "external_guid": guid,
-                           "status": "published", "published_at": now_utc()})
+                           "status": statut, "published_at": now_utc()})
 
 
 AFRICAINS_PAR_EDITION = 3   # sur 4 (décision du 19/10/2026 : « la référence de la musique ouest-africaine »)
