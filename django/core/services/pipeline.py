@@ -17,7 +17,7 @@ from core.services import ai, live_chart
 from core.services.chart_service import ChartService
 from core.services.charts import Period
 from core.services.imports.channel_sync import YouTubeChannelSync
-from core.services.imports.classifier import ArtistClassifier
+from core.services.imports.classifier import ArtistClassifier, auto_confirm_by_observations
 from core.services.imports.discovery import ArtistDiscovery
 from core.services.imports.matching import ArtistEnricher, DeezerTrackMatcher
 from core.services.imports.service import COMPUTED, ImportService
@@ -175,6 +175,11 @@ class DailyPipeline:
             p = ArtistEnricher(http).run(150)
             return [f"{p['checked']} vérifiés, {p['found']} trouvés sur Deezer"]
         self._step("10c. Profils (photo, fans)", profiles, 120)
+
+        def auto_confirm():
+            r = auto_confirm_by_observations()
+            return [f"{r['confirmed']} artistes auto-confirmés sur {r['candidates']} candidats ({r['skipped']} écartés)"]
+        self._step("10c. Auto-confirmation artistes fréquents", auto_confirm, 60)
 
         def classify():
             c = ArtistClassifier(HttpClient(20), ai.make()).run(120)

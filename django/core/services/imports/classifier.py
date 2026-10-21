@@ -296,3 +296,52 @@ class ArtistClassifier:
                 out.append({"lang": lang, "title": s["title"], "snippet": html.unescape(plain).strip(),
                             "url": f"https://{lang}.wikipedia.org/wiki/" + _enc(s["title"].replace(" ", "_"))})
         return out[:4]
+
+
+def auto_confirm_by_observations(min_obs: int = 30, min_weeks: int = 2, min_ratio: float = 0.7) -> dict:
+    """Confirme automatiquement les artistes pending qui apparaissent régulièrement dans les classements d'un pays.
+
+    Critères : au moins min_obs observations au total, sur au moins min_weeks semaines distinctes,
+    et au moins min_ratio (70 %) des observations dans un seul pays.
+    """
+    candidates = db.all("""
+        SELECT a.id, a.name,
+               o.country_id, c.code,
+               COUNT(*) AS obs,
+               COUNT(DISTINCT date_trunc('week', o.observed_on)) AS weeks
+        FROM artists a
+        JOIN tracks t ON t.artist_id = a.id
+        JOIN chart_observations o ON o.track_id = t.id
+        JOIN countries c ON c.id = o.country_id AND c.is_active = 1
+        WHERE a.status = 'pending'
+        GROUP BY a.id, a.name, o.country_id, c.code
+        HAVING COUNT(*) >= ? AND COUNT(DISTINCT date_trunc('week', o.observed_on)) >= ?
+        ORDER BY COUNT(*) DESC
+    """, [min_obs, min_weeks])
+    confirmed, skipped = 0, 0
+    seen = set()
+    for row in candidates:
+        aid = int(row["id"])
+        if aid in seen:
+            continue
+        seen.add(aid)
+        total_obs = int(db.value(
+            "SELECT COUNT(*) FROM chart_observations o JOIN tracks t ON t.id = o.track_id WHERE t.artist_id = ?", [aid]))
+        ratio = int(row["obs"]) / max(1, total_obs)
+        if ratio < min_ratio:
+            skipped += 1
+            continue
+        db.update("artists", {
+            "status": "active",
+            "submission_country_id": int(row["country_id"]),
+            "base_country": row["code"],
+            "origin_confidence": round(min(0.85, ratio), 2),
+            "origin_source": "chart_observations",
+            "origin_note": f"Auto-confirmé : {row['obs']} obs sur {row['weeks']} semaines dans {row['code']} "
+                           f"({ratio:.0%} du total)",
+            "origin_checked_at": now_utc(),
+        }, "id = :id", {"id": aid})
+        audit.log(None, "artist.auto_confirm", "artist", aid,
+                  f"{row['obs']} obs, {row['weeks']} semaines, {row['code']} ({ratio:.0%})", {})
+        confirmed += 1
+    return {"confirmed": confirmed, "skipped": skipped, "candidates": len(seen)}
