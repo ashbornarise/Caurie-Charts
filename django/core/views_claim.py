@@ -58,7 +58,7 @@ def claim(request, slug: str):
                       f"Lien avec l’artiste : {ROLES[old['role']]}",
                       f"Téléphone / WhatsApp : {old['phone'] or '-'}", "", "Preuves (comptes officiels) :", old["proof"], "",
                       "Demande :", old["message"] or "-"])
-    db.insert("contact_messages", {"type": "claim", "name": old["name"], "email": old["email"],
+    db.insert("contact_messages", {"type": "contestation", "name": old["name"], "email": old["email"],
                                    "subject": f"Revendication : {artist['name']}"[:200], "message": body, "ip_hash": h})
     from core import mail
     mail.notify_admin(f"Revendication : {artist['name']}", f"De : {old['name']} <{old['email']}>\n\n{body}", old["email"])

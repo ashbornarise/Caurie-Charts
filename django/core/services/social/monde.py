@@ -710,6 +710,7 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
     from core.services.social import couverture2026 as C26
     from core.services.social import plans as PL
     plan = None
+    a_id = None
     if nom_ok:
         try:
             a_id = db.value("SELECT id FROM artists WHERE lower(name) = lower(?) ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 1",
@@ -717,8 +718,9 @@ def construit(fiches: list, jour: date, theme: str, kicker: str, entete: str, fi
             plan = PL.photo_large(a_id) if a_id else None
         except Exception:  # noqa: BLE001
             plan = None
-    # Jamais une miniature YouTube en couverture : elles montrent souvent des mannequins ou des figurants (19/10/2026)
     photo_cover = plan or (_photo_portrait(une_fiche["artiste"]) if nom_ok else None)
+    if not photo_cover and a_id:
+        log_write("monde", "warning", f"pas de photo pour {une_fiche['artiste']} (id={a_id}) — actu avec illustration IA")
     if not photo_cover and not une_fiche.get("illustration_fond"):
         from core.services.social.illustration import genere
         fond_ia = genere(f"musique {une_fiche.get('rubrique', '')}", "monde")
