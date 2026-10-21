@@ -44,12 +44,12 @@ RETRY_WAITS = (2, 5, 15)
 _sleep = time.sleep
 
 
-def _blob_put(pathname: str, data: bytes, content_type: str) -> str:
+def _blob_put(pathname: str, data: bytes, content_type: str, max_age: int | None = None) -> str:
     for attempt in range(len(RETRY_WAITS) + 1):
         try:
             r = requests.put(f"https://blob.vercel-storage.com/{pathname}", data=data, timeout=30, headers={
                 "authorization": f"Bearer {_blob_token()}", "x-api-version": "7", "x-content-type": content_type,
-                "x-add-random-suffix": "0"})
+                "x-add-random-suffix": "0", **({"x-cache-control-max-age": str(max_age)} if max_age else {})})
             if r.status_code not in (429, 500, 502, 503, 504):
                 r.raise_for_status()
                 return r.json()["url"]
@@ -65,9 +65,27 @@ def blob_token() -> str:
     return _blob_token()
 
 
-def blob_put(pathname: str, data: bytes, content_type: str) -> str:
-    """Dépose un fichier dans le Blob ; retourne son adresse publique."""
-    return _blob_put(pathname, data, content_type)
+def blob_put(pathname: str, data: bytes, content_type: str, max_age: int | None = None) -> str:
+    """Dépose un fichier dans le Blob ; retourne son adresse publique. max_age : durée de cache du CDN (≥ 60 s)
+    pour un fichier réécrit souvent (sinon le CDN peut servir l'ancienne version longtemps)."""
+    return _blob_put(pathname, data, content_type, max_age)
+
+
+# État du guet Cauri Monde (monde.etat_guet) : lu toutes les 10 min à la place de la base, pour qu'elle dorme.
+# Toute écriture sur social_posts le déclare périmé (db.run / insert / update) : le guet suivant relit la base.
+GUET = "monde/guet.json"
+_guet_invalide_a = 0.0
+
+
+def invalide_guet() -> None:
+    global _guet_invalide_a
+    if not _blob_token() or time.monotonic() - _guet_invalide_a < 30:
+        return
+    _guet_invalide_a = time.monotonic()
+    try:
+        _blob_put(GUET, b'{"perime": true}', "application/json", 60)
+    except Exception:  # noqa: BLE001 — au pire, l'état est relu au bout de 3 h
+        pass
 
 
 def blob_list(prefix: str) -> list:

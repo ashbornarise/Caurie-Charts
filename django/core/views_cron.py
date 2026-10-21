@@ -58,9 +58,10 @@ def monde(request):
         return _reply("q = matin, soir ou flash", 400)
     if q == "flash":
         from core.services.social import monde as M
-        if M.en_attente():   # un post Cauri Monde est arrivé à son heure : GitHub l'envoie (Buffer, Telegram)
+        etat = M.etat_guet()   # fichier du Blob : la base dort (relue seulement s'il est périmé ou vieux de 3 h)
+        if M.file_due(etat):   # un post Cauri Monde est arrivé à son heure : GitHub l'envoie (Buffer, Telegram)
             _lance("file")
-        fiche = M.guette()
+        fiche = M.guette_leger(etat)
         if not fiche:
             return _reply("rien de choc pour l'instant")
     code = _lance(q)

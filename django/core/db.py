@@ -39,11 +39,20 @@ def _rows(cursor):
     return [{k: _clean(v) for k, v in zip(cols, row)} for row in cursor.fetchall()]
 
 
+def _posts_changes(sql: str) -> None:
+    """Une écriture sur social_posts déclare périmé l'état du guet Cauri Monde (après validation de la transaction)."""
+    if "social_posts" in sql and sql.lstrip()[:6].upper() in ("INSERT", "UPDATE", "DELETE"):
+        from core import storage
+        transaction.on_commit(storage.invalide_guet)
+
+
 def run(sql: str, params=None) -> int:
     sql, params = _prepare(sql, params)
     with connection.cursor() as c:
         c.execute(sql, params)
-        return c.rowcount
+        n = c.rowcount
+    _posts_changes(sql)
+    return n
 
 
 def all(sql: str, params=None) -> list[dict]:  # noqa: A001
@@ -71,7 +80,9 @@ def insert(table: str, data: dict) -> int:
     sql = f"INSERT INTO {table} ({', '.join(cols)}) VALUES ({', '.join(['%s'] * len(cols))}) RETURNING id"
     with connection.cursor() as c:
         c.execute(sql, [data[k] for k in cols])
-        return c.fetchone()[0]
+        new_id = c.fetchone()[0]
+    _posts_changes(sql)
+    return new_id
 
 
 def update(table: str, data: dict, where: str, where_params: dict | None = None) -> int:
@@ -81,7 +92,9 @@ def update(table: str, data: dict, where: str, where_params: dict | None = None)
     params.update(where_params or {})
     with connection.cursor() as c:
         c.execute(f"UPDATE {table} SET {sets} WHERE {where_sql}", params)
-        return c.rowcount
+        n = c.rowcount
+    _posts_changes(f"UPDATE {table}")
+    return n
 
 
 @contextmanager

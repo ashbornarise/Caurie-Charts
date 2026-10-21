@@ -71,25 +71,31 @@ GOOGLE_NEWS = "https://news.google.com/rss/search?hl=fr&gl=FR&ceid=FR:fr&q="
 REQUETE_STAR = {"SDM": "rappeur SDM", "Black Coffee": "DJ Black Coffee"}
 
 
-def _flux_stars() -> list:
+def _flux_stars(artistes: list | None = None) -> list:
     from urllib.parse import quote
     lots = [STARS[i:i + 9] for i in range(0, len(STARS), 9)]
     return ([{"name": "Google Actualités", "url": GOOGLE_NEWS + quote("(" + " OR ".join(f'"{REQUETE_STAR.get(n, n)}"' for n in lot) + ") musique when:2d"), "poids": 1, "stars": True}
              for lot in lots]
             + [{"name": "Google Actualités", "url": base + quote(q), "poids": 1, "afrique": True} for base, q in AFRIQUE_REQUETES]
-            + _flux_nos_artistes())
+            + _flux_nos_artistes(artistes))
 
 
-def _flux_nos_artistes() -> list:
+def _artistes_veilles() -> list:
+    return db.all("""SELECT name, upper(origin_country) AS code FROM artists
+                     WHERE status = 'active' AND length(name) >= 4 AND origin_country IS NOT NULL
+                     ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 120""")
+
+
+def _flux_nos_artistes(lignes: list | None = None) -> list:
     """Veille Google Actualités sur les artistes de NOS classements (décision du 19/10/2026 : l'actu doit d'abord être
-    ouest-africaine). Les plus vus des 30 derniers jours, par lots ; les scènes francophones (CI, TG, SN, BJ) en français."""
+    ouest-africaine). Les plus vus des 30 derniers jours, par lots ; les scènes francophones (CI, TG, SN, BJ) en français.
+    lignes : liste déjà connue (état du guet sur le Blob), pour ne pas réveiller la base."""
     from urllib.parse import quote
-    try:
-        lignes = db.all("""SELECT name, upper(origin_country) AS code FROM artists
-                           WHERE status = 'active' AND length(name) >= 4 AND origin_country IS NOT NULL
-                           ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 120""")
-    except Exception:  # noqa: BLE001
-        return []
+    if lignes is None:
+        try:
+            lignes = _artistes_veilles()
+        except Exception:  # noqa: BLE001
+            return []
     flux = []
     for langue, codes, base in (("fr", {"CI", "TG", "SN", "BJ", "ML", "BF", "GN", "NE", "CM"}, GOOGLE_NEWS),
                                 ("en", {"NG", "GH", "LR", "SL", "GM"}, "https://news.google.com/rss/search?hl=en-NG&gl=NG&ceid=NG:en&q=")):
@@ -136,7 +142,7 @@ def _noms(titre: str) -> set:
 
 # ---------------------------------------------------------------- collecte et regroupement
 
-def collecte(heures: int = 36) -> list:
+def collecte(heures: int = 36, artistes: list | None = None) -> list:
     """Articles des dernières `heures`, tous médias confondus (en parallèle, un flux en panne ne bloque rien)."""
     limite = datetime.now(timezone.utc) - timedelta(hours=heures)
 
@@ -150,7 +156,7 @@ def collecte(heures: int = 36) -> list:
             log_write("monde", "warning", f"{feed['name']} : {exc}")
             return []
     with ThreadPoolExecutor(8) as ex:
-        items = [it for lot in ex.map(un, FEEDS + _flux_stars()) for it in lot]
+        items = [it for lot in ex.map(un, FEEDS + _flux_stars(artistes)) for it in lot]
     # Google Actualités : le vrai média est en fin de titre (« … - Le Parisien »)
     for it in items:
         if it["source"] == "Google Actualités" and " - " in it["title"]:
@@ -1048,7 +1054,7 @@ def _volume(m: float) -> str:
     return f"{m:,.0f}".replace(",", " ") + " millions"
 
 
-def caps_streams(jours_annonce: int = 3) -> list:
+def caps_streams(jours_annonce: int = 3, connues: set | None = None) -> list:
     """Caps ronds franchis aujourd'hui (ou dans ≤ jours_annonce jours) sur Spotify, calculés sur les vrais compteurs :
     tous les 10 milliards au-delà de 10 Md, chaque milliard en dessous ; artistes africains : tous les 500 millions."""
     out = []
@@ -1069,7 +1075,7 @@ def caps_streams(jours_annonce: int = 3) -> list:
                 continue
             etat = "bientot"
         cle = hashlib.sha1(f"kworb-{nom}-{cible:.0f}-{etat}".encode()).hexdigest()[:12]
-        if deja_publie(cle):
+        if (cle in connues) if connues is not None else deja_publie(cle):   # connues : état du guet (base endormie)
             continue
         n_jours = max(1, round((cible - total) / jour))
         if etat == "franchi":
@@ -1112,4 +1118,80 @@ def publie_file() -> list:
         post = db.one("SELECT * FROM social_posts WHERE id = ?", [pid])
         marque_vu([f"pub-{pid}"])   # avant l'envoi : jamais deux fois, même si un canal échoue
         lignes += [f"{post['title']} ({post['theme']})"] + publie(post, datetime.now(timezone.utc) + timedelta(minutes=2))
+    etat_guet(force=True)   # le prochain post à envoyer a changé
     return lignes
+
+
+# ---------------------------------------------------------------- état du guet sur le Blob : la base peut dormir
+# Le guet flash tourne toutes les 10 min. Il interrogeait la base à chaque fois, et Neon (veille après 5 min sans
+# requête) ne s'endormait jamais : ~6 CU-h par jour facturés (21/10/2026). Il lit maintenant un petit fichier du Blob
+# (prochain post à envoyer, infos déjà vues ou publiées, artistes veillés) ; la base n'est réveillée que pour une
+# vraie nouveauté, un post arrivé à son heure, ou toutes les 3 h. Toute écriture sur social_posts déclare le fichier
+# périmé (db._posts_changes) : un post du Studio part donc toujours à l'heure.
+GUET_AGE_MAX = timedelta(hours=3)
+
+
+def _etat_base() -> dict:
+    dues = []
+    for r in db.all("""SELECT p.facts FROM social_posts p
+                       WHERE (p.theme LIKE 'monde-%' OR p.theme LIKE 'format-%') AND p.slot_date >= CURRENT_DATE - 1
+                         AND p.status = 'approved' AND NOT EXISTS (SELECT 1 FROM monde_vus v WHERE v.cle = 'pub-' || p.id)"""):
+        try:
+            due = json.loads(r["facts"]).get("due")
+            if due:
+                dues.append(datetime.fromisoformat(due))
+        except (ValueError, TypeError, AttributeError):
+            continue
+    prochain = min(dues).isoformat() if dues else None
+    cles = [r["cle"] for r in db.all("""SELECT cle FROM monde_vus WHERE vu_at >= NOW() - INTERVAL '30 days'
+                                        UNION SELECT substr(external_guid, 7) FROM news
+                                        WHERE external_guid LIKE 'monde-%' AND created_at >= NOW() - INTERVAL '30 days'""")]
+    return {"maj": datetime.now(timezone.utc).isoformat(), "prochain": prochain, "cles": cles,
+            "artistes": [{"name": r["name"], "code": r["code"]} for r in _artistes_veilles()]}
+
+
+def etat_guet(force: bool = False) -> dict:
+    """L'état lu sur le Blob ; relu dans la base s'il est absent, périmé, vieux de plus de 3 h, ou si force."""
+    import requests
+    from core import storage
+    base = storage.blob_public_url()
+    if not force and base:
+        try:
+            r = requests.get(f"{base}/{storage.GUET}", params={"t": int(datetime.now().timestamp()) // 60}, timeout=10)
+            etat = r.json() if r.status_code == 200 else {}
+            if not etat.get("perime") and datetime.now(timezone.utc) - datetime.fromisoformat(etat["maj"]) < GUET_AGE_MAX:
+                return etat
+        except (requests.RequestException, ValueError, KeyError, TypeError):
+            pass
+    etat = _etat_base()
+    if base:
+        try:
+            storage.blob_put(storage.GUET, json.dumps(etat, ensure_ascii=False).encode(), "application/json", max_age=60)
+        except Exception as exc:  # noqa: BLE001
+            log_write("monde", "warning", f"état du guet non enregistré : {exc}")
+    return etat
+
+
+def file_due(etat: dict) -> bool:
+    """Un post est-il arrivé à son heure (d'après l'état du guet, sans la base) ?"""
+    try:
+        return bool(etat.get("prochain")) and datetime.fromisoformat(etat["prochain"]) <= datetime.now(timezone.utc)
+    except (ValueError, TypeError):
+        return True   # date illisible : la file vérifiera dans la base
+
+
+def guette_leger(etat: dict) -> dict | None:
+    """guette() sans la base : les flux et Kworb sont lus, comparés aux infos connues de l'état ; la base (vérification
+    complète, rédaction, marque « vu ») n'est réveillée que s'il reste une info confirmée jamais jugée."""
+    connues = set(etat.get("cles") or [])
+    neuves = [h for h in regroupe(collecte(3, etat.get("artistes"))) if confirme(h) and h["cle"] not in connues]
+    try:
+        chauds = [f for f in caps_streams(0, connues) if f["choc"] >= 85]
+    except Exception as exc:  # noqa: BLE001
+        log_write("monde", "warning", f"caps : {exc}")
+        chauds = []
+    if not neuves and not chauds:
+        return None
+    fiche = guette()
+    etat_guet(force=True)   # les infos jugées sont maintenant connues
+    return fiche
