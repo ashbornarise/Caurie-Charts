@@ -271,7 +271,36 @@ def enregistre(job: dict, indices: list[int], artist_id: int, detourable: bool, 
                                         "plan_large": entiere, "note": (note or "")[:600] or None,
                                         "largeur": largeur, "hauteur": hauteur, "score": score})
         gardees.append(nom)
+    if gardees:
+        _maj_profil(a, gardees, base)
     return gardees
+
+
+def _maj_profil(a: dict, fichiers: list[str], base: str) -> None:
+    """Met à jour photo_candidates et image_url pour que le profil du site reflète les photos du studio."""
+    from core.services.imports.photos import best
+    row = db.one("SELECT image_locked, photo_candidates FROM artists WHERE id = ?", [a["id"]]) or {}
+    try:
+        cands = json.loads(row.get("photo_candidates") or "[]")
+    except ValueError:
+        cands = []
+    for nom in fichiers:
+        url = f"{base}/media/artists/plans/{nom}"
+        if not any(c.get("url") == url for c in cands):
+            from PIL import Image as PILImage
+            try:
+                r = requests.get(url, timeout=15)
+                side = min(PILImage.open(io.BytesIO(r.content)).size)
+            except Exception:  # noqa: BLE001
+                side = 1000
+            cands.insert(0, {"source": "lien", "url": url, "site": url, "side": side,
+                             "credit": "Photo ajoutée via Cauri Studio"})
+    data: dict = {"photo_candidates": json.dumps(cands, ensure_ascii=False)}
+    pick = best(cands)
+    if pick and not row.get("image_locked"):
+        data.update({"image_url": pick["site"], "image_hd_url": pick["url"], "image_source": pick["source"],
+                     "image_credit": pick.get("credit")})
+    db.update("artists", data, "id = :id", {"id": a["id"]})
 
 
 # ---------------------------------------------------------------- envoi depuis le téléphone

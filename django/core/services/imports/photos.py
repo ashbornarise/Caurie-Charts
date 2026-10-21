@@ -23,7 +23,7 @@ from core.services.imports import normalizer as N
 UA = {"User-Agent": "CauriCharts/1.0 (https://cauricharts.com ; contact@cauricharts.com)"}
 SIZE = re.compile(r"/[0-9]+x[0-9]+[a-z]*(-[0-9]+)?\.(jpg|jpeg|png|webp)$")
 # Préférence à taille égale : une photo officielle de studio vaut mieux qu'une photo de concert
-WEIGHT = {"presse": 3.0, "admin": 3.0, "apple": 1.0, "commons": 0.85, "youtube": 0.8, "deezer": 0.7}
+WEIGHT = {"presse": 3.0, "admin": 3.0, "lien": 2.0, "apple": 1.0, "commons": 0.85, "youtube": 0.8, "deezer": 0.7}
 
 
 def sized(url: str, px: int) -> str:
