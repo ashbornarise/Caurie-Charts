@@ -72,7 +72,7 @@ def apercu(request, kind: str, key: str):
     from core.services import og
     data = og.for_page(kind, key)
     resp = HttpResponse(data, content_type="image/jpeg")
-    resp["Cache-Control"] = "public, max-age=3600, s-maxage=86400"  # recalculé au plus une fois par jour
+    resp["Cache-Control"] = "public, max-age=600, s-maxage=3600, stale-while-revalidate=3600"
     return resp
 
 

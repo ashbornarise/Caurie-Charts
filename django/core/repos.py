@@ -64,14 +64,14 @@ def official_tops(limit: int = 5, tous_pays: bool = False) -> list[dict]:
     latest = max(r["period_end"] for r in runs)
     candidats = runs if tous_pays else [r for r in runs if r["period_end"] == latest]
     out = []
-    for r in sorted(candidats, key=lambda r: r["sort_order"]):
+    for r in candidats:
         rows = db.all(
             """SELECT e.position, e.details, e.track_id, t.title, t.slug AS track_slug, a.name AS artist_name, a.slug AS artist_slug,
                       COALESCE(a.image_url, a.image_hd_url) AS image
                FROM chart_entries e JOIN tracks t ON t.id = e.track_id JOIN artists a ON a.id = COALESCE(e.artist_id, t.artist_id)
                WHERE e.chart_run_id = ? ORDER BY e.position LIMIT ?""", [r["id"], limit])
+        total_views = 0
         for e in rows:
-            # « Blaqbonez- Ikebe 3000 » : le nom de l'artiste répété en tête du titre est retiré
             pre = (e["artist_name"] or "") + "-"
             if e["title"] and e["title"].lower().replace(" -", "-").startswith(pre.lower()):
                 e["title"] = e["title"][len(pre):].lstrip(" -")
@@ -79,8 +79,10 @@ def official_tops(limit: int = 5, tous_pays: bool = False) -> list[dict]:
                 e["views"] = int(sum(v.get("delta", 0) for k, v in (_json.loads(e.pop("details") or "{}")).items() if k == "youtube"))
             except (ValueError, AttributeError):
                 e["views"] = 0
+            total_views += e["views"]
         if rows:
-            out.append({**r, "rows": rows})
+            out.append({**r, "rows": rows, "total_views": total_views})
+    out.sort(key=lambda x: x["total_views"], reverse=True)
     return out
 
 
