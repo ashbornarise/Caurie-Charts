@@ -5,6 +5,7 @@ Les visuels sont donnés par leur adresse publique (Vercel Blob) : Buffer les t�
 Chaque post n'est programmé qu'une fois par compte (journal d'audit) ; il reste annulable dans Buffer jusqu'à l'heure prévue.
 """
 import json
+import re
 import time as time_mod
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -61,7 +62,8 @@ def text(post: dict, service: str) -> str:
     if "localhost" in link or "127.0.0.1" in link:
         link = "https://www.cauricharts.com/"  # un post programmé depuis un poste de travail garde le vrai lien du site
     # Français puis anglais (🇬🇧), dans la limite des légendes Instagram et TikTok (2 200 caractères)
-    return bilingue.legende(post, link)
+    texte = bilingue.legende(post, link)
+    return hashtags_pays(texte)[:2200] if service == "tiktok" else texte
 
 
 TIKTOK_SIZE = (1080, 1920)  # TikTok refuse les photos de plus de 2 073 600 pixels : nos visuels 4K sont réduits
@@ -151,6 +153,60 @@ def instagram_ok(post: dict) -> bool:
                            WHERE a.action = 'buffer.post' AND a.created_at >= CURRENT_DATE
                            AND p.theme NOT LIKE 'format-studio%'""") or 0)
     return deja < INSTAGRAM_PAR_JOUR
+
+
+# TikTok (23/10/2026) : 72 % de l'audience en France, attirée par les sujets mondiaux (Céline Dion, Kendrick…), et deux
+# vidéos du Studio exclues du fil « Pour toi » (contenu repris d'un autre compte). TikTok devient le réseau de l'Afrique :
+# sujets africains seulement, jamais une vidéo reprise, 3 par jour au plus, aux heures de pointe ouest-africaines.
+TIKTOK_PAR_JOUR = 3
+TIKTOK_HEURES = ((12, 14), (18, 22))   # GMT
+REPRISE = re.compile(r"source\s*:\s*@\S+\s+sur\s+(tiktok|instagram)", re.I)
+PAYS_HASHTAGS = [(re.compile(p, re.I), h) for p, h in (
+    (r"b[ée]nin", "#Benin #229"), (r"\btogo", "#Togo #228"), (r"c[ôo]te d.ivoire|abidjan|ivoirien", "#CoteDIvoire #225"),
+    (r"nig[ée]ria|naija|lagos", "#Naija #Nigeria"), (r"ghana|accra", "#Ghana #233"), (r"s[ée]n[ée]gal|dakar", "#Senegal #221"),
+    (r"\bmali\b|bamako", "#Mali #223"), (r"burkina", "#BurkinaFaso #226"), (r"guin[ée]e", "#Guinee #224"),
+    (r"\bniger\b|niamey", "#Niger #227"), (r"cameroun", "#Cameroun #237"))]
+
+
+def tiktok_refus(post: dict) -> str | None:
+    """Raison de ne pas envoyer ce post sur TikTok, ou None."""
+    theme = str(post.get("theme") or "")
+    if REPRISE.search(post.get("caption") or ""):
+        return "tiktok : vidéo reprise d'un autre compte (non recommandée par TikTok)"
+    if theme.startswith(("monde", "flash", "ecoutes_monde")):
+        try:
+            fiches = json.loads(post.get("facts") or "{}").get("fiches") or []
+        except ValueError:
+            fiches = []
+        from core.services.social.monde import africain
+        if not fiches or not africain(fiches[0]):
+            return "tiktok : sujet mondial (TikTok réservé à l'Afrique)"
+    deja = int(db.value("""SELECT COUNT(DISTINCT substring(reason from 'post-(\\d+)-')) FROM audit_log
+                           WHERE action = 'buffer.post' AND reason LIKE 'post-%-tiktok%' AND created_at >= CURRENT_DATE""") or 0)
+    if deja >= TIKTOK_PAR_JOUR:
+        return f"tiktok : {TIKTOK_PAR_JOUR} posts par jour au plus"
+    return None
+
+
+def heure_tiktok(when: datetime | None) -> datetime | None:
+    """Ramène l'heure de publication TikTok dans le prochain créneau de pointe africain (12-14 h ou 18-22 h GMT)."""
+    if when is None:
+        return None
+    w = when.astimezone(timezone.utc)
+    if any(a <= w.hour < b for a, b in TIKTOK_HEURES):
+        return when
+    for jour in (0, 1):
+        for a, _ in TIKTOK_HEURES:
+            c = (w + timedelta(days=jour)).replace(hour=a, minute=0, second=0, microsecond=0)
+            if c > w:
+                return c
+    return when
+
+
+def hashtags_pays(texte: str) -> str:
+    """Hashtags des pays cités dans la légende (signal local pour TikTok)."""
+    tags = [h for rx, h in PAYS_HASHTAGS if rx.search(texte) and h.split()[0].lower() not in texte.lower()]
+    return (texte + "\n" + " ".join(tags)) if tags else texte
 
 
 def video_muette(post: dict) -> bool:
@@ -284,6 +340,9 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
         if ch["service"] == "instagram" and not instagram_ok(post):
             done.append("instagram : réservé aux meilleurs posts du jour")
             continue
+        if ch["service"] == "tiktok" and (refus := tiktok_refus(post)):
+            done.append(refus)
+            continue
         for suffix, reel, when in jobs:
             if reel and ch["service"] not in NOTIFY_REELS and (not video_seule(post) or video_muette(post)):
                 continue  # Facebook : le reel publié sur Instagram y est repartagé automatiquement, avec son son
@@ -293,7 +352,8 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
                 done.append(f"{label} déjà programmé")
                 continue
             try:
-                r = call(CREATE, {"input": payload(post, ch, when, reel)}, http)["createPost"]
+                quand = heure_tiktok(when) if ch["service"] == "tiktok" else when
+                r = call(CREATE, {"input": payload(post, ch, quand, reel)}, http)["createPost"]
             except PlatformException as exc:
                 done.append(f"{label} : {exc}")
                 continue
