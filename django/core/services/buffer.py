@@ -136,9 +136,25 @@ def video_url(post: dict) -> str | None:
 
 
 INSTAGRAM_PAR_JOUR = 4
+FACEBOOK_PAR_JOUR = 4
 # Ce qui mérite Instagram (moins de posts, mieux faits — analyse du 17/10/2026) : vidéos du jour et formats,
 # classements officiels, flashs, la première actu de chaque édition Cauri Monde, le magazine de la semaine
 INSTAGRAM_THEMES = ("format-", "flash", "monde-matin-1", "monde-soir-1", "hebdo")
+
+
+def facebook_ok(post: dict) -> bool:
+    """Facebook (23/10/2026) : 75 posts la semaine 43 pour une portée médiane de 0. Même règle qu'Instagram :
+    thèmes prioritaires, FACEBOOK_PAR_JOUR posts par jour au plus ; les posts de Cauri Studio passent toujours."""
+    theme = str(post.get("theme") or "")
+    if theme.startswith("format-studio"):
+        return True
+    if not theme.startswith(INSTAGRAM_THEMES):
+        return False
+    deja = int(db.value("""SELECT COUNT(DISTINCT a.reason) FROM audit_log a
+                           JOIN social_posts p ON a.reason LIKE 'post-' || p.id || '-facebook%'
+                           WHERE a.action = 'buffer.post' AND a.created_at >= CURRENT_DATE
+                           AND p.theme NOT LIKE 'format-studio%'""") or 0)
+    return deja < FACEBOOK_PAR_JOUR
 
 
 def instagram_ok(post: dict) -> bool:
@@ -339,6 +355,9 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
     for ch in chans:
         if ch["service"] == "instagram" and not instagram_ok(post):
             done.append("instagram : réservé aux meilleurs posts du jour")
+            continue
+        if ch["service"] == "facebook" and not facebook_ok(post):
+            done.append("facebook : réservé aux meilleurs posts du jour")
             continue
         if ch["service"] == "tiktok" and (refus := tiktok_refus(post)):
             done.append(refus)

@@ -182,9 +182,9 @@ class DailyPipeline:
         self._step("10c. Auto-confirmation artistes fréquents", auto_confirm, 60)
 
         def classify():
-            c = ArtistClassifier(HttpClient(20), ai.make()).run(120)
+            c = ArtistClassifier(HttpClient(20), ai.make()).run(250)   # 23/10/2026 : 36 à 60 nouveaux noms par jour
             return [f"{c['active']} confirmés, {c['out_of_scope']} hors périmètre, {c['pending']} à vérifier (IA : {c['ai_calls']})"]
-        self._step("10d. Pays des artistes", classify, 180)
+        self._step("10d. Pays des artistes", classify, 420)   # MusicBrainz et Wikidata gratuits : plus de temps, même budget IA
 
         def deezer():
             r = DeezerTrackMatcher(http).run()

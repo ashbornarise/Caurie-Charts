@@ -143,12 +143,13 @@ def test_buffer_ne_publie_jamais_un_carrousel_sur_un_seul_reseau(buffer_ready):
 
 
 def test_instagram_reserve_aux_meilleurs_posts(buffer_ready):
-    """Rubrique ordinaire : Facebook et TikTok seulement ; Instagram garde ses 4 places du jour pour les meilleurs posts."""
+    """Rubrique ordinaire : TikTok seulement ; Instagram et Facebook gardent leurs 4 places du jour pour les meilleurs posts."""
     http = buffer_http(limit=10, used=0)
     afrique = json.dumps({"fiches": [{"artiste": "Burna Boy"}]})   # TikTok : sujets africains seulement (23/10/2026)
     result = buffer.schedule({**POST, "theme": "monde-matin-3", "video": None, "facts": afrique}, DUE, http=http)
-    assert sorted(c["channelId"] for c in http.created) == ["facebook", "tiktok"]
+    assert sorted(c["channelId"] for c in http.created) == ["tiktok"]
     assert "instagram : réservé aux meilleurs posts du jour" in result
+    assert "facebook : réservé aux meilleurs posts du jour" in result
 
 
 def test_compte_rendu_buffer():
