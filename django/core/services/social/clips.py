@@ -71,7 +71,7 @@ def _autorise(track_id: int) -> bool:
 # 24/10/2026 : cibles prioritaires et artistes qui font le buzz (liste du fondateur, à tenir à jour). Leurs marchés sont
 # plus petits : un clip récent leur suffit avec CLIP_VUES_BUZZ vues.
 PAYS_CIBLES = ("TG", "CI", "BJ", "NG", "GH")
-BUZZ = ("Conni Gangster", "Mic Flammez", "Shatta Wale", "Sethlo", "Didi B", "Axel Merryl", "Himra")
+BUZZ = ("Conii Gangster", "Mic Flammez", "Shatta Wale", "Sethlo", "Didi B", "Axel Merryl", "Himra")
 CLIP_VUES_BUZZ = 20_000
 
 
