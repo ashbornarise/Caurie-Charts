@@ -68,15 +68,67 @@ def _autorise(track_id: int) -> bool:
     return r.get("pays") not in (None, "NG") and int(r.get("youtube_subscribers") or 0) < plafond
 
 
+# 24/10/2026 : cibles prioritaires et artistes qui font le buzz (liste du fondateur, à tenir à jour). Leurs marchés sont
+# plus petits : un clip récent leur suffit avec CLIP_VUES_BUZZ vues.
+PAYS_CIBLES = ("TG", "CI", "BJ", "NG", "GH")
+BUZZ = ("Conni Gangster", "Mic Flammez", "Shatta Wale", "Sethlo", "Didi B", "Axel Merryl", "Himra")
+CLIP_VUES_BUZZ = 20_000
+
+
+def _au(code: str) -> str:
+    """« au Togo », « en Côte d'Ivoire »."""
+    return ("en " if code in ("CI", "GN", "GM", "MR", "SL", "GW") else "au ") + country_name(code)
+
+
+def _buzz() -> list[dict]:
+    """Clips récents des artistes qui font le buzz, les plus vus d'abord."""
+    noms = [n.lower() for n in BUZZ]
+    rows = db.all(f"""SELECT tpi.track_id, a.name, (SELECT s.plays FROM snapshots s WHERE s.track_platform_id = tpi.id
+                              ORDER BY s.captured_on DESC LIMIT 1) AS vues
+                      FROM track_platform_ids tpi JOIN tracks t ON t.id = tpi.track_id JOIN artists a ON a.id = t.artist_id
+                      WHERE tpi.platform = 'youtube' AND tpi.kind = 'clip' AND tpi.is_official = 1
+                        AND lower(a.name) IN ({", ".join(["?"] * len(noms))}) AND tpi.published_at >= CURRENT_DATE - ?
+                      ORDER BY vues DESC NULLS LAST LIMIT 10""", [*noms, CLIP_AGE_MAX])
+    joli = {n.lower(): n for n in BUZZ}
+    return [{"track_id": int(r["track_id"]), "haut": f"{joli.get(r['name'].lower(), r['name'])} fait le buzz", "buzz": True,
+             "chiffre": f"{_vues(r['vues'])} vues sur YouTube" if r.get("vues") else ""} for r in rows]
+
+
+def _tendances() -> list[dict]:
+    """Suivre le flux : titres en tendance ces 3 derniers jours (YouTube, Shazam) dans les pays cibles."""
+    rows = db.all(f"""SELECT o.track_id, c.code, MIN(o.position) AS pos FROM chart_observations o JOIN countries c ON c.id = o.country_id
+                      JOIN tracks t ON t.id = o.track_id JOIN artists a ON a.id = t.artist_id
+                      WHERE o.observed_on >= CURRENT_DATE - 3 AND o.source IN ('youtube_trending', 'shazam') AND a.status = 'active'
+                        AND c.code IN ({", ".join(["?"] * len(PAYS_CIBLES))})
+                      GROUP BY o.track_id, c.code ORDER BY MIN(o.position) LIMIT 15""", list(PAYS_CIBLES))
+    return [{"track_id": int(r["track_id"]), "haut": f"En tendance {_au(r['code'])}", "petit": r["code"] in ("TG", "BJ"),
+             "chiffre": f"N°{r['pos']} des tendances"} for r in rows]
+
+
 def candidats() -> list[dict]:
-    """Titres possibles, du plus fort au plus faible : {track_id, haut, chiffre}."""
+    """Titres possibles, du plus fort au plus faible : {track_id, haut, chiffre}.
+    Ordre (24/10/2026) : artistes du buzz, N°1 des pays cibles, tendances des pays cibles, puis le reste."""
     out = []
     from core import repos
-    for c in repos.official_tops(1):
+    try:
+        out += _buzz()
+    except Exception as exc:  # noqa: BLE001
+        log_write("social", "warning", f"clips : buzz indisponible ({exc})")
+    tops = sorted(repos.official_tops(1), key=lambda c: c["code"] not in PAYS_CIBLES)
+    for c in tops[:sum(1 for t in tops if t["code"] in PAYS_CIBLES)]:
+        e = c["rows"][0]
+        if e.get("track_id"):
+            out.append({"track_id": int(e["track_id"]), "haut": f"N°1 {_au(c['code'])} cette semaine", "petit": c["code"] in ("TG", "BJ"),
+                        "chiffre": f"+{_vues(e['views'])} vues en 7 jours" if e.get("views") else ""})
+    try:
+        out += _tendances()
+    except Exception as exc:  # noqa: BLE001
+        log_write("social", "warning", f"clips : tendances indisponibles ({exc})")
+    for c in tops:
         e = c["rows"][0]
         tid = e.get("track_id")
         if tid:
-            out.append({"track_id": int(tid), "haut": f"N°1 au {country_name(c['code'])} cette semaine",
+            out.append({"track_id": int(tid), "haut": f"N°1 {_au(c['code'])} cette semaine",
                         "chiffre": f"+{_vues(e['views'])} vues en 7 jours" if e.get("views") else ""})
     try:
         from core.services import live_chart
@@ -94,18 +146,18 @@ def candidats() -> list[dict]:
                     "chiffre": f"{_vues(r['vues'])} vues en quelques jours" if r.get("vues") else ""})
     vus, uniques = set(), []
     for c in out:
-        if c["track_id"] not in vus and recent_et_vu(c["track_id"]):
+        if c["track_id"] not in vus and recent_et_vu(c["track_id"], CLIP_VUES_BUZZ if c.get("buzz") or c.get("petit") else CLIP_VUES_MIN):
             vus.add(c["track_id"]); uniques.append(c)
     return uniques
 
 
-def recent_et_vu(track_id: int) -> bool:
+def recent_et_vu(track_id: int, vues_min: int = CLIP_VUES_MIN) -> bool:
     """Clip officiel sorti depuis moins de CLIP_AGE_MAX jours, avec au moins CLIP_VUES_MIN vues (dernier relevé)."""
     return bool(db.value("""SELECT 1 FROM track_platform_ids tpi
                             WHERE tpi.track_id = ? AND tpi.platform = 'youtube' AND tpi.kind = 'clip' AND tpi.is_official = 1
                               AND tpi.published_at >= CURRENT_DATE - ?
                               AND (SELECT s.plays FROM snapshots s WHERE s.track_platform_id = tpi.id
-                                   ORDER BY s.captured_on DESC LIMIT 1) >= ? LIMIT 1""", [track_id, CLIP_AGE_MAX, CLIP_VUES_MIN]))
+                                   ORDER BY s.captured_on DESC LIMIT 1) >= ? LIMIT 1""", [track_id, CLIP_AGE_MAX, vues_min]))
 
 
 SLOT_INTERVIEW = 1   # la vidéo de 17 h devient un « moment d'interview » quand un passage valable est trouvé
@@ -129,7 +181,8 @@ def _interview(jour: date, k: int, essai: bool, pris: set) -> tuple[str, str] | 
     nom = f"{jour.isoformat()}-interview-{k + 1}-{datetime.now(timezone.utc):%H%M%S}"
     video = PI.DIR / f"{nom}.mp4"
     res = None
-    for artiste in [a for a in IT.artistes(jour) if a.lower() not in pris | recents][:2]:
+    candidats_itw = list(dict.fromkeys([*BUZZ, *IT.artistes(jour)]))   # artistes du buzz d'abord (24/10/2026)
+    for artiste in [a for a in candidats_itw if a.lower() not in pris | recents][:2]:
         res = IT.moment(artiste, str(video), vids)
         if res:
             break
@@ -159,7 +212,12 @@ def du_jour(jour: date | None = None, n: int = 1, essai: bool = False, force: bo
     Une des vidéos (créneau SLOT_INTERVIEW) est un « moment d'interview » si un passage valable est trouvé."""
     jour = jour or datetime.now(timezone.utc).date()
     if jour.isoweekday() not in JOURS_CLIPS and not essai and not force:
-        return ["pas de clip aujourd'hui (clips le lundi, le mercredi et le vendredi)"]
+        # Les autres jours : un moment d'interview à 19 h (l'artiste qui parle, avec le vrai son), décision du 24/10/2026
+        if db.value("SELECT 1 FROM social_posts WHERE slot_date = ? AND theme LIKE 'format-clip-%' LIMIT 1", [jour.isoformat()]):
+            return ["vidéo du jour déjà faite"]
+        PI.DIR.mkdir(parents=True, exist_ok=True)
+        itw = _interview(jour, 0, essai, set())
+        return [itw[0]] if itw else ["pas de clip aujourd'hui (lundi, mercredi, vendredi) ; aucune interview valable trouvée"]
     PI.DIR.mkdir(parents=True, exist_ok=True)
     faits_du_jour = db.all("SELECT theme FROM social_posts WHERE slot_date = ? AND theme LIKE 'format-clip-%'", [jour.isoformat()])
     deja_faits = {r["theme"] for r in faits_du_jour}

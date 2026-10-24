@@ -189,6 +189,8 @@ def tiktok_refus(post: dict) -> str | None:
     theme = str(post.get("theme") or "")
     if REPRISE.search(post.get("caption") or ""):
         return "tiktok : vidéo reprise d'un autre compte (non recommandée par TikTok)"
+    if theme.startswith("format-studio"):
+        return None   # posts choisis à la main dans le Studio (actu chaude…) : jamais bloqués (24/10/2026)
     if theme.startswith(("monde", "flash", "ecoutes_monde")):
         try:
             fiches = json.loads(post.get("facts") or "{}").get("fiches") or []

@@ -401,7 +401,8 @@ def histoire(jour: date, due: datetime) -> dict | None:
         if len(texte) < 300:
             continue
         consigne = ("Voici le résumé Wikipédia d'un projet musical. Rends un objet JSON :\n"
-                    '{"titre": "6 à 9 mots, en français, qui disent pourquoi ce projet a marqué l\'histoire", "accent": "le mot ou '
+                    '{"titre": "6 à 9 mots, en français : un titre CHOC qui arrête le défilement (révélation, contraste, chiffre fort, '
+                    'tension) et dit pourquoi ce projet a marqué l\'histoire ; percutant mais vrai, rien d\'absent du texte", "accent": "le mot ou '
                     'chiffre à mettre en couleur, recopié du titre", "faits": ["3 faits marquants en français, un par phrase de '
                     '20 mots max, chacun présent dans le texte (chiffres recopiés exactement)"], "question": "une question au public '
                     'terminée par ⁉️"}\nN\'ajoute rien qui ne soit pas dans le texte.\n\n' + texte)
@@ -556,7 +557,8 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
         consigne = (
             f"Voici la page Wikipédia de l'artiste {nom}. Trouve l'ANECDOTE la plus étonnante qu'elle raconte, sous un de "
             f"ces angles (ou un angle du même genre) : {', '.join(ANGLES)}.\nRends un objet JSON :\n"
-            '{"angle": "l\'angle choisi", "titre": "6 à 9 mots en français, qui donnent envie de lire (ex. « Le vrai nom '
+            '{"angle": "l\'angle choisi", "titre": "6 à 9 mots en français : un titre CHOC qui arrête le défilement (révélation, '
+            'contraste, « personne ne savait », chiffre fort), percutant mais vrai (ex. « Le vrai nom '
             'derrière WIZKID va vous surprendre »), sans chiffre absent du texte", "accent": "LE mot ou chiffre du titre à mettre '
             'en couleur, recopié tel quel", "faits": ["2 ou 3 faits en français, 25 mots max chacun, qui racontent '
             'l\'anecdote dans l\'ordre ; chaque fait est présent dans le texte, chiffres et dates recopiés EXACTEMENT, en chiffres"], '
