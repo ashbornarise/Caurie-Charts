@@ -48,7 +48,7 @@ class Command(BaseCommand):
                 artiste = str(p.get("artiste") or "").strip()
 
                 legende = fr + (f"\n\n🎥 Source : {credit}" if credit else "")
-                tags = "#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine"
+                tags = str(p.get("hashtags") or "").strip() or ("#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine")
 
                 faits = {
                     "kind": "format-clip",

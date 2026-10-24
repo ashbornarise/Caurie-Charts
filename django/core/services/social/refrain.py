@@ -313,7 +313,50 @@ def maison(track_id: int, haut: str, chiffre: str, out: str, par_photo: float = 
     return {"file": out, "title": t["title"], "artist": t["artist"], "credits": " · ".join(dict.fromkeys(credits))}
 
 
-COUVERTURE_S = 1.2   # la couverture Cauri ouvre la vidéo (et lui sert de vignette sur TikTok et Instagram)
+def vrai_clip(artiste: str, titre: str, exclure: str = "", n: int = 3) -> list[str]:
+    """Le clip officiel sur YouTube (recherche, 101 unités de quota) : ni audio, ni paroles, ni visualiseur, ni live ;
+    le titre et l'artiste doivent figurer dans le titre de la vidéo. Les plus vus d'abord."""
+    import re as _re
+    from core.services.platforms import clients
+    yt = clients()["youtube"]
+    if not yt.is_available():
+        return []
+    base = _re.sub(r"\s*[\(\[].*?[\)\]]", "", titre).strip().lower()
+    d = yt._get("search", {"part": "snippet", "type": "video", "maxResults": 10, "q": f"{artiste} {base} clip officiel"}, 100)
+    ids = []
+    for it in d.get("items", []):
+        vid, t = it.get("id", {}).get("videoId"), (it.get("snippet", {}).get("title") or "").lower()
+        if (vid and vid != exclure and base[:12] in t and artiste.lower().split()[0] in t
+                and not _re.search(r"audio|lyric|parole|visuali[sz]er|live|cover|karaok|instrumental", t)):
+            ids.append(vid)
+    if not ids:
+        return []
+    det = yt._get("videos", {"part": "statistics", "id": ",".join(ids)}, 1)
+    vues = {i["id"]: int((i.get("statistics") or {}).get("viewCount") or 0) for i in det.get("items", [])}
+    return sorted(ids, key=lambda v: -vues.get(v, 0))[:n]
+
+
+def image_fixe(src: str, debut: float, fin: float, tmp: str) -> bool:
+    """Vidéo « clip » qui n'est qu'une pochette immobile (audio officiel, visualiseur) : refusée (24/10/2026, Sethlo
+    et First King passés en image fixe). 6 images du passage comparées : presque aucune différence = image fixe."""
+    import numpy as np
+    vues = []
+    for i in range(6):
+        f = os.path.join(tmp, f"mvt{i}.png")
+        t = debut + (fin - debut) * (i + .5) / 6
+        try:
+            subprocess.run([ffmpeg(), "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", src, "-frames:v", "1", "-vf", "scale=160:-2,format=gray", f],
+                           check=True, timeout=60)
+            vues.append(np.asarray(Image.open(f), dtype=np.float32))
+        except Exception:  # noqa: BLE001
+            continue
+    if len(vues) < 3:
+        return False   # vérification impossible : on ne bloque pas
+    ecarts = [float(np.abs(a - b).mean()) for a, b in zip(vues, vues[1:]) if a.shape == b.shape]
+    return bool(ecarts) and max(ecarts) < 3.0
+
+
+COUVERTURE_S = 1.2  # la couverture Cauri ouvre la vidéo (et lui sert de vignette sur TikTok et Instagram)
 
 
 def couverture(video: str, haut: str, titre: str, artiste: str, tmp: str, source: str, instant: float) -> bool:
@@ -325,7 +368,7 @@ def couverture(video: str, haut: str, titre: str, artiste: str, tmp: str, source
         img = os.path.join(tmp, "image.jpg")
         subprocess.run([ffmpeg(), "-y", "-v", "error", "-ss", f"{instant:.2f}", "-i", source, "-frames:v", "1", img], check=True, timeout=120)
         cov = os.path.join(tmp, "couverture.png")
-        C26.actu(img, haut, f"{titre} · {artiste}", fmt="story").convert("RGB").resize((W, H)).save(cov)
+        C26.actu(img, haut, f"{titre} · {artiste}" if artiste else titre, fmt="story").convert("RGB").resize((W, H)).save(cov)
         sortie = os.path.join(tmp, "avec-couverture.mp4")
         subprocess.run([ffmpeg(), "-y", "-v", "error", "-i", video, "-loop", "1", "-t", f"{COUVERTURE_S}", "-i", cov,
                         "-filter_complex", f"[0:v][1:v]overlay=0:0:enable='lt(t,{COUVERTURE_S})',format=yuv420p[v]",
@@ -348,6 +391,20 @@ def extrait(track_id: int, haut: str, chiffre: str, out: str, duree: float = 60.
         if not src:
             return None
         debut, fin = refrain(src, duree)
+        if image_fixe(src, debut, fin, tmp):
+            # la vidéo enregistrée n'est qu'une pochette : le vrai clip officiel est cherché sur YouTube
+            log_write("social", "warning", f"clip {c['external_id']} : image fixe (pochette) — recherche du vrai clip")
+            src = None
+            for vid in vrai_clip(c["artist"], c["title"], exclure=c["external_id"]):
+                s2 = telecharge(vid, tmp)
+                if not s2:
+                    continue
+                d2, f2 = refrain(s2, duree)
+                if not image_fixe(s2, d2, f2, tmp):
+                    src, debut, fin, c = s2, d2, f2, {**c, "external_id": vid}
+                    break
+            if not src:
+                return None
         png = os.path.join(tmp, "calque.png")
         calque(haut, c["title"], c["artist"], chiffre, "Extrait du clip officiel · YouTube").save(png)
         if not monte(src, debut, fin, png, out):
