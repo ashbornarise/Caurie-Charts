@@ -19,7 +19,12 @@ from core.services.social import image as PI
 from core.services.social import encodage as E
 from core.services.social import refrain as R
 
-HEURES = (13, 17, 21)     # heure de Lomé (= UTC) : midi, sortie du travail, soirée
+HEURES = (19, 13, 21)     # heure de Lomé (= UTC) ; un seul clip par jour de publication : 19 h (pointe africaine)
+# Décision du 24/10/2026 : 3 clips par semaine (lundi, mercredi, vendredi), seulement des clips récents qui ont déjà
+# leur public — moins de CLIP_AGE_MAX jours et au moins CLIP_VUES_MIN vues sur YouTube.
+JOURS_CLIPS = (1, 3, 5)
+CLIP_AGE_MAX = 60
+CLIP_VUES_MIN = 100_000
 
 
 def _vues(n: float) -> str:
@@ -89,9 +94,18 @@ def candidats() -> list[dict]:
                     "chiffre": f"{_vues(r['vues'])} vues en quelques jours" if r.get("vues") else ""})
     vus, uniques = set(), []
     for c in out:
-        if c["track_id"] not in vus:
+        if c["track_id"] not in vus and recent_et_vu(c["track_id"]):
             vus.add(c["track_id"]); uniques.append(c)
     return uniques
+
+
+def recent_et_vu(track_id: int) -> bool:
+    """Clip officiel sorti depuis moins de CLIP_AGE_MAX jours, avec au moins CLIP_VUES_MIN vues (dernier relevé)."""
+    return bool(db.value("""SELECT 1 FROM track_platform_ids tpi
+                            WHERE tpi.track_id = ? AND tpi.platform = 'youtube' AND tpi.kind = 'clip' AND tpi.is_official = 1
+                              AND tpi.published_at >= CURRENT_DATE - ?
+                              AND (SELECT s.plays FROM snapshots s WHERE s.track_platform_id = tpi.id
+                                   ORDER BY s.captured_on DESC LIMIT 1) >= ? LIMIT 1""", [track_id, CLIP_AGE_MAX, CLIP_VUES_MIN]))
 
 
 SLOT_INTERVIEW = 1   # la vidéo de 17 h devient un « moment d'interview » quand un passage valable est trouvé
@@ -140,10 +154,12 @@ def _interview(jour: date, k: int, essai: bool, pris: set) -> tuple[str, str] | 
     return f"{titre} → {due:%H:%M} (moment d'interview)", res["artist"]
 
 
-def du_jour(jour: date | None = None, n: int = 3, essai: bool = False) -> list[str]:
+def du_jour(jour: date | None = None, n: int = 1, essai: bool = False) -> list[str]:
     """Fabrique jusqu'à n vidéos pour la journée et les programme (file d'attente) aux heures HEURES.
     Une des vidéos (créneau SLOT_INTERVIEW) est un « moment d'interview » si un passage valable est trouvé."""
     jour = jour or datetime.now(timezone.utc).date()
+    if jour.isoweekday() not in JOURS_CLIPS and not essai:
+        return ["pas de clip aujourd'hui (clips le lundi, le mercredi et le vendredi)"]
     PI.DIR.mkdir(parents=True, exist_ok=True)
     faits_du_jour = db.all("SELECT theme FROM social_posts WHERE slot_date = ? AND theme LIKE 'format-clip-%'", [jour.isoformat()])
     deja_faits = {r["theme"] for r in faits_du_jour}

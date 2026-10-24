@@ -15,7 +15,7 @@ class Command(BaseCommand):
     help = "Fabrique et programme les vidéos du jour (clips officiels coupés au refrain)."
 
     def add_arguments(self, p):
-        p.add_argument("--n", type=int, default=3)
+        p.add_argument("--n", type=int, default=1)   # 1 clip, 3 jours par semaine (24/10/2026)
         p.add_argument("--essai", action="store_true")
         p.add_argument("--jour", help="AAAA-MM-JJ (par défaut aujourd'hui)")
 
