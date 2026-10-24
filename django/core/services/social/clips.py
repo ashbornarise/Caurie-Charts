@@ -154,11 +154,11 @@ def _interview(jour: date, k: int, essai: bool, pris: set) -> tuple[str, str] | 
     return f"{titre} → {due:%H:%M} (moment d'interview)", res["artist"]
 
 
-def du_jour(jour: date | None = None, n: int = 1, essai: bool = False) -> list[str]:
+def du_jour(jour: date | None = None, n: int = 1, essai: bool = False, force: bool = False) -> list[str]:
     """Fabrique jusqu'à n vidéos pour la journée et les programme (file d'attente) aux heures HEURES.
     Une des vidéos (créneau SLOT_INTERVIEW) est un « moment d'interview » si un passage valable est trouvé."""
     jour = jour or datetime.now(timezone.utc).date()
-    if jour.isoweekday() not in JOURS_CLIPS and not essai:
+    if jour.isoweekday() not in JOURS_CLIPS and not essai and not force:
         return ["pas de clip aujourd'hui (clips le lundi, le mercredi et le vendredi)"]
     PI.DIR.mkdir(parents=True, exist_ok=True)
     faits_du_jour = db.all("SELECT theme FROM social_posts WHERE slot_date = ? AND theme LIKE 'format-clip-%'", [jour.isoformat()])
@@ -199,6 +199,8 @@ def du_jour(jour: date | None = None, n: int = 1, essai: bool = False) -> list[s
         vignette = PI.DIR / f"{nom}.jpg"
         R.vignette(str(video), str(vignette))
         due = _due(jour, k)
+        if force:   # clip hors calendrier : au plus tôt 25 min après sa fabrication
+            due = max(due, datetime.now(timezone.utc) + timedelta(minutes=25))
         titre = f"{c['haut']} : {res['title']} · {res['artist']}"
         legende = (f"🎬 {c['haut']} : « {res['title']} » de {res['artist']}\n\n"
                    + (f"📈 {c['chiffre']}\n\n" if c["chiffre"] else "")

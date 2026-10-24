@@ -313,7 +313,32 @@ def maison(track_id: int, haut: str, chiffre: str, out: str, par_photo: float = 
     return {"file": out, "title": t["title"], "artist": t["artist"], "credits": " · ".join(dict.fromkeys(credits))}
 
 
-def extrait(track_id: int, haut: str, chiffre: str, out: str, duree: float = 35.0) -> dict | None:
+COUVERTURE_S = 1.2   # la couverture Cauri ouvre la vidéo (et lui sert de vignette sur TikTok et Instagram)
+
+
+def couverture(video: str, haut: str, titre: str, artiste: str, tmp: str, source: str, instant: float) -> bool:
+    """Pose la couverture « actu » de Cauri (image du clip, étiquette, grand titre) sur les premières 1,2 s ;
+    le son du clip continue dessous. En cas d'échec, la vidéo reste telle quelle."""
+    from core.services.social import couverture2026 as C26
+    from core.services.social.encodage import VIDEO_HQ
+    try:
+        img = os.path.join(tmp, "image.jpg")
+        subprocess.run([ffmpeg(), "-y", "-v", "error", "-ss", f"{instant:.2f}", "-i", source, "-frames:v", "1", img], check=True, timeout=120)
+        cov = os.path.join(tmp, "couverture.png")
+        C26.actu(img, haut, f"{titre} · {artiste}", fmt="story").convert("RGB").resize((W, H)).save(cov)
+        sortie = os.path.join(tmp, "avec-couverture.mp4")
+        subprocess.run([ffmpeg(), "-y", "-v", "error", "-i", video, "-loop", "1", "-t", f"{COUVERTURE_S}", "-i", cov,
+                        "-filter_complex", f"[0:v][1:v]overlay=0:0:enable='lt(t,{COUVERTURE_S})',format=yuv420p[v]",
+                        "-map", "[v]", "-map", "0:a", *VIDEO_HQ, "-c:a", "copy", "-movflags", "+faststart", sortie],
+                       check=True, timeout=1500, capture_output=True)
+        os.replace(sortie, video)
+        return True
+    except Exception as exc:  # noqa: BLE001
+        log_write("social", "warning", f"couverture du clip non posée : {exc}")
+        return False
+
+
+def extrait(track_id: int, haut: str, chiffre: str, out: str, duree: float = 60.0) -> dict | None:
     """Du titre à la vidéo finie : clip officiel → refrain → montage habillé. Rien n'est gardé du clip complet."""
     c = clip_officiel(track_id)
     if not c or c["artist"].lower() in exclus() or (c.get("label_owner") or "").lower() in exclus():
@@ -327,5 +352,6 @@ def extrait(track_id: int, haut: str, chiffre: str, out: str, duree: float = 35.
         calque(haut, c["title"], c["artist"], chiffre, "Extrait du clip officiel · YouTube").save(png)
         if not monte(src, debut, fin, png, out):
             return None
+        couverture(out, haut, c["title"], c["artist"], tmp, src, debut + min(8.0, (fin - debut) / 3))
     return {"file": out, "video_id": c["external_id"], "debut": debut, "fin": fin, "title": c["title"], "artist": c["artist"],
             "source": f"https://www.youtube.com/watch?v={c['external_id']}"}

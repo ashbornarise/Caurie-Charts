@@ -40,3 +40,9 @@ def test_heures_de_pointe_africaines():
 def test_hashtags_pays():
     assert "#Benin #229" in buffer.hashtags_pays("N°1 au Bénin cette semaine")
     assert buffer.hashtags_pays("#Togo déjà là, Togo").count("#Togo") == 1
+
+
+def test_video_hors_limite(monkeypatch):
+    monkeypatch.setattr(buffer.db, "value", lambda *a, **k: 3)
+    clip = {**_post("format-clip-1"), "video": "clip.mp4", "facts": json.dumps({"kind": "format-clip"})}
+    assert buffer.tiktok_refus(clip) is None

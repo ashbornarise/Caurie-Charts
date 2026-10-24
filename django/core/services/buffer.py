@@ -197,7 +197,9 @@ def tiktok_refus(post: dict) -> str | None:
         from core.services.social.monde import africain
         if not fiches or not africain(fiches[0]):
             return "tiktok : sujet mondial (TikTok réservé à l'Afrique)"
-    deja = int(db.value("""SELECT COUNT(DISTINCT substring(reason from 'post-(\\d+)-')) FROM audit_log
+    if video_seule(post):
+        return None   # vidéos (clips, interviews) prioritaires sur TikTok : hors limite (24/10/2026), la limite vise les photos
+    deja =int(db.value("""SELECT COUNT(DISTINCT substring(reason from 'post-(\\d+)-')) FROM audit_log
                            WHERE action = 'buffer.post' AND reason LIKE 'post-%-tiktok%' AND created_at >= CURRENT_DATE""") or 0)
     if deja >= TIKTOK_PAR_JOUR:
         return f"tiktok : {TIKTOK_PAR_JOUR} posts par jour au plus"
