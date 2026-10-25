@@ -50,6 +50,7 @@ urlpatterns = [
     re_path(S + r"/job/(?P<ident>\d+)/envoyer$", studio.envoyer),
     path("tiktok/connecter", views_tiktok.connecter),
     path("tiktok/retour", views_tiktok.retour),
+    path("tiktok/webhook", views_tiktok.webhook),
     path("", views.home),
     re_path(r"^classements/afrique-de-l-ouest$", views.regional),
     re_path(rf"^classements/afrique-de-l-ouest/{P}$", views.regional),

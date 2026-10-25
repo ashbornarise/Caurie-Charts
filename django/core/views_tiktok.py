@@ -3,6 +3,7 @@ import secrets
 from urllib.parse import urlencode
 
 from django.http import HttpResponse, HttpResponseRedirect
+from django.views.decorators.csrf import csrf_exempt
 
 from core import db, env
 from core.services import tiktok
@@ -40,3 +41,32 @@ def retour(request):
         from core.services.platforms import log_write
         log_write("tiktok", "error", f"retour : {exc}")
         return HttpResponse("Connexion TikTok non disponible", status=503, content_type="text/plain; charset=utf-8")
+
+
+@csrf_exempt
+def webhook(request):
+    """Événements envoyés par TikTok (publication terminée ou refusée, autorisation retirée…), notés pour le Studio.
+    Signature « TikTok-Signature: t=…,s=… » = HMAC-SHA256(secret, "t.corps") vérifiée quand le secret est présent."""
+    import hashlib
+    import hmac
+    import json
+    if request.method != "POST":
+        return HttpResponse("ok")   # TikTok teste l'adresse en GET
+    corps = request.body.decode("utf-8", "replace")
+    secret = env.get("TIKTOK_CLIENT_SECRET", "") or ""
+    verifie = False
+    if secret:
+        champs = dict(p.split("=", 1) for p in request.headers.get("TikTok-Signature", "").split(",") if "=" in p)
+        attendu = hmac.new(secret.encode(), f"{champs.get('t', '')}.{corps}".encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(attendu, champs.get("s", "")):
+            return HttpResponse("signature invalide", status=401)
+        verifie = True
+    try:
+        d = json.loads(corps or "{}")
+    except ValueError:
+        d = {}
+    db.run("""CREATE TABLE IF NOT EXISTS tiktok_evenements (id BIGSERIAL PRIMARY KEY, evenement TEXT, contenu TEXT,
+              verifie BOOLEAN, recu_le TIMESTAMPTZ DEFAULT NOW())""")
+    db.run("INSERT INTO tiktok_evenements (evenement, contenu, verifie) VALUES (?, ?, ?)",
+           [str(d.get("event") or "")[:80], corps[:4000], verifie])
+    return HttpResponse("ok")
