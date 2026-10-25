@@ -42,7 +42,14 @@ def taille_origine(infos: dict, video: str) -> tuple[int, int]:
 MAX_DUREE = 90
 
 
+class TacheAnnulee(Exception):
+    """Le fondateur a annulé la tâche dans le Studio : le montage s'arrête à l'étape suivante (25/10/2026)."""
+
+
 def _maj(job_id: int, **champs) -> None:
+    # Annulation réelle : chaque étape vérifie d'abord que la tâche n'a pas été annulée ; elle ne repasse jamais « prête »
+    if db.value("SELECT statut FROM studio_jobs WHERE id = ?", [job_id]) == "annule":
+        raise TacheAnnulee(job_id)
     if "params" in champs and not isinstance(champs["params"], str):
         champs["params"] = json.dumps(champs["params"], ensure_ascii=False)
     db.update("studio_jobs", champs, "id = :id", {"id": job_id})
@@ -497,8 +504,13 @@ def traite(job_id: int) -> dict:
             if p.get("mode") == "profil":
                 return studio_photos.traite_profil(job_id, job, p, _maj)
             return studio_photos.traite(job_id, job, p, _maj)
+        except TacheAnnulee:
+            return {"statut": "annule"}
         except Exception as exc:  # noqa: BLE001
-            _maj(job_id, statut="erreur", erreur=str(exc)[:500])
+            try:
+                _maj(job_id, statut="erreur", erreur=str(exc)[:500])
+            except TacheAnnulee:
+                return {"statut": "annule"}
             raise
     fmt = p.get("format") if p.get("format") in FORMATS else "origine"
     with tempfile.TemporaryDirectory(prefix=f"cauri-studio-{job_id}-") as tmp:
@@ -559,7 +571,12 @@ def traite(job_id: int) -> dict:
             storage.store_media("social", nom + ".jpg", open(vignette, "rb").read(), "image/jpeg")
             _maj(job_id, statut="pret", video=nom + ".mp4", vignette=nom + ".jpg", params=p)
             return {"statut": "pret", "video": nom + ".mp4"}
+        except TacheAnnulee:
+            return {"statut": "annule"}
         except Exception as exc:  # noqa: BLE001
-            _maj(job_id, statut="erreur", erreur=str(exc)[:500])
+            try:
+                _maj(job_id, statut="erreur", erreur=str(exc)[:500])
+            except TacheAnnulee:
+                return {"statut": "annule"}
             raise
 

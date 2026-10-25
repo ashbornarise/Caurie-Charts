@@ -359,6 +359,53 @@ def annuler(request, chemin, ident):
     return _json({"ok": True})
 
 
+def relancer(request, chemin, ident):
+    """Recommencer une tâche annulée ou en échec (même lien, mêmes réglages)."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
+    if not j or j["statut"] not in ("annule", "erreur"):
+        return _json({"erreur": "seule une tâche annulée ou en échec se relance"}, 400)
+    db.update("studio_jobs", {"statut": "attente", "erreur": None}, "id = :id", {"id": j["id"]})
+    erreur = _lance(j["id"])
+    if erreur:
+        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": j["id"]})
+    return _json({"ok": not erreur, "erreur": erreur})
+
+
+def profil_artiste(request, chemin):
+    """GET ?nom= : profils Instagram et TikTok connus de l'artiste ; POST {nom, instagram, tiktok} : les enregistre
+    sur sa fiche, pour toutes les publications suivantes (invitation en collaboration)."""
+    import re as _re
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    db.run("ALTER TABLE artists ADD COLUMN IF NOT EXISTS tiktok VARCHAR(60) NULL")
+    if request.method == "GET":
+        a = db.one("SELECT id, name, instagram, tiktok FROM artists WHERE lower(name) = lower(?) "
+                   "ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 1", [request.GET.get("nom", "").strip()])
+        return _json({"artiste": a})
+    c = _corps(request)
+
+    def compte(v: str, site: str) -> str | None:
+        v = (v or "").strip()
+        m = _re.search(rf"{site}\.com/@?([A-Za-z0-9._]+)", v)
+        v = m.group(1) if m else v.lstrip("@")
+        return v[:60] if _re.fullmatch(r"[A-Za-z0-9._]{2,60}", v or "") else None
+    a = db.one("SELECT id FROM artists WHERE lower(name) = lower(?) ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 1",
+               [str(c.get("nom") or "").strip()])
+    if not a:
+        return _json({"erreur": "artiste inconnu dans la base"}, 404)
+    champs = {k: compte(c.get(k), site) for k, site in (("instagram", "instagram"), ("tiktok", "tiktok")) if c.get(k)}
+    if any(v is None for v in champs.values()):
+        return _json({"erreur": "profil illisible : collez le lien du profil ou le nom après @"}, 400)
+    if champs:
+        db.update("artists", champs, "id = :id", {"id": a["id"]})
+    return _json({"ok": True, **champs})
+
+
 def envoyer(request, chemin, ident):
     """Crée le post (légende FR + EN, crédit) et le programme partout via Buffer dans 2 minutes.
     Toute erreur revient en clair dans l'appli (au lieu d'une page « Erreur 500 ») et dans le journal."""

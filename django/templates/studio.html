@@ -286,6 +286,8 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
         <label>Légende en français<textarea id="r-fr"></textarea></label>
         <label>Légende en anglais<textarea id="r-en"></textarea></label>
         <label>Crédit<input id="r-credit"></label>
+        <label>Profil Instagram de l'artiste <span style="font-weight:400;color:var(--doux)">(invité en collaboration, retenu pour la suite)</span><input id="r-ig" placeholder="instagram.com/… ou @…" inputmode="url"></label>
+        <label>Profil TikTok de l'artiste<input id="r-tt" placeholder="tiktok.com/@…" inputmode="url"></label>
       </div>
 
     </div>
@@ -470,7 +472,11 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     window.scrollTo({top: 0}); action();
     if (nom === 'videos') grille(); if (nom === 'reglages') reglages();
   }
-  $$('.nav button').forEach(b => b.onclick = () => { vibre(); montre(b.dataset.ecran === 'creer' && jobEnCours ? 'suivi' : b.dataset.ecran); });
+  // multitâche (25/10/2026) : « Créer » ouvre toujours un formulaire neuf ; les vidéos lancées continuent dans « Mes vidéos »
+  $$('.nav button').forEach(b => b.onclick = () => { vibre(); montre(b.dataset.ecran); });
+  const EN_COURS = ['attente', 'attente_pc', 'telechargement', 'analyse', 'montage'];
+  async function annulerJob(id) { await post('/job/' + id + '/annuler', {}); vibre(); }
+  async function relancerJob(id) { const r = await post('/job/' + id + '/relancer', {}); if (r.erreur) throw new Error(r.erreur); vibre(); }
 
   // bouton d'action fixe, selon l'écran
   let etatJob = null;
@@ -485,15 +491,21 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     else if (ecran === 'suivi' && etatJob && etatJob.statut === 'envoye') a.innerHTML =
       `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn second" id="btn-nouvelle" style="margin-top:0">${icone('plus')}Nouvelle</button>` +
       `<button class="btn" id="btn-envoyer" style="margin-top:0">${icone('refaire')}Republier</button></div>`;
-    else if (ecran === 'suivi' && etatJob && etatJob.statut === 'erreur') a.innerHTML =
-      `<button class="btn second" id="btn-nouvelle">${icone('plus')}Nouvelle vidéo</button>`;
+    else if (ecran === 'suivi' && etatJob && ['erreur', 'annule'].includes(etatJob.statut)) a.innerHTML =
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn" id="btn-relancer" style="margin-top:0">${icone('refaire')}Recommencer</button>` +
+      `<button class="btn second" id="btn-nouvelle" style="margin-top:0">${icone('plus')}Nouvelle</button></div>`;
+    else if (ecran === 'suivi' && (!etatJob || EN_COURS.includes(etatJob.statut))) a.innerHTML =
+      `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn second" id="btn-annuler-job" style="margin-top:0">Annuler</button>` +
+      `<button class="btn" id="btn-nouvelle" style="margin-top:0">${icone('plus')}Autre vidéo</button></div>`;
     else if (ecran === 'photos') a.innerHTML = actionPhotos();
     else a.innerHTML = '';
     if (ecran === 'photos') branchePhotos();
     const f = $('#btn-fabriquer'); if (f) f.onclick = fabriquer;
     const vv = $('#btn-valider'); if (vv) vv.onclick = validerAccroche;
     const e = $('#btn-envoyer'); if (e) e.onclick = envoyer;
-    const aj = $('#btn-annuler-job'); if (aj) aj.onclick = async () => { aj.disabled = true; await post('/job/' + jobEnCours + '/annuler', {}); jobEnCours = null; etatJob = null; montre('creer'); };
+    const aj = $('#btn-annuler-job'); if (aj) aj.onclick = async () => { aj.disabled = true; await annulerJob(jobEnCours); jobEnCours = null; etatJob = null; montre('videos'); };
+    const rl = $('#btn-relancer'); if (rl) rl.onclick = async () => { rl.disabled = true;
+      try { await relancerJob(jobEnCours); suivre(jobEnCours); } catch (e) { message('#msg-suivi', e.message, false); rl.disabled = false; } };
     const n = $('#btn-nouvelle'); if (n) n.onclick = () => { jobEnCours = null; etatJob = null; montre('creer'); };
   }
 
@@ -554,6 +566,8 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       if (j.statut === 'a_valider') return validation(j);
       if (j.statut === 'erreur') { $('#suivi-titre').textContent = 'Échec'; $('#suivi-sous').textContent = '';
         message('#msg-suivi', j.erreur || 'Échec de la fabrication', false); action(); return; }
+      if (j.statut === 'annule') { $('#suivi-titre').textContent = 'Annulée'; $('#suivi-sous').textContent = 'Le montage est arrêté. Tu peux la recommencer.'; action(); return; }
+      action();
       if (j.statut === 'pret' || j.statut === 'envoye') return resultat(j);
       setTimeout(tour, 3000);
     };
@@ -586,6 +600,10 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     $('#video').src = j.video; if (j.vignette) $('#video').poster = j.vignette;
     $('#r-accroche').value = j.params.accroche || ''; $('#r-fr').value = j.params.legende_fr || '';
     $('#r-en').value = j.params.legende_en || ''; $('#r-credit').value = j.params.credit || '';
+    $('#r-ig').value = ''; $('#r-tt').value = '';
+    if (j.params.artiste) get('/artiste-profil?nom=' + encodeURIComponent(j.params.artiste)).then(d => {
+      const a = d.artiste || {}; $('#r-ig').value = a.instagram ? '@' + a.instagram : ''; $('#r-tt').value = a.tiktok ? '@' + a.tiktok : '';
+      $('#r-ig').dataset.avant = $('#r-ig').value; $('#r-tt').dataset.avant = $('#r-tt').value; }).catch(() => {});
     const envoyee = j.statut === 'envoye';
     $('#carte-textes').style.display = '';
     $('#suivi-titre').textContent = envoyee ? 'Déjà envoyée' : 'Prête !';
@@ -610,6 +628,11 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   async function envoyerVraiment(notifier) {
     const b = $('#btn-envoyer'); b.disabled = true;
     try {
+      const ig = $('#r-ig').value.trim(), tt = $('#r-tt').value.trim(), nom = (etatJob.params || {}).artiste || '';
+      if (nom && ((ig && ig !== $('#r-ig').dataset.avant) || (tt && tt !== $('#r-tt').dataset.avant))) {
+        const p = await post('/artiste-profil', {nom, instagram: ig, tiktok: tt});   // retenu pour les prochaines publications
+        if (p.erreur) throw new Error(p.erreur);
+      }
       const k = await post('/job/' + jobEnCours + '/envoyer', {accroche: $('#r-accroche').value, legende_fr: $('#r-fr').value,
         legende_en: $('#r-en').value, credit: $('#r-credit').value, artiste: (etatJob.params || {}).artiste || '',
         notifier, reseaux: reseauxChoisis()});
@@ -907,21 +930,32 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   }
 
   // ---------------- écran Mes vidéos
-  const LIB = {attente_pc: 'Au PC', attente: 'En file', telechargement: 'Téléchargement', analyse: 'Analyse', a_valider: 'À valider', montage: 'Habillage', pret: 'Prête', erreur: 'Échec', envoye: 'Envoyée'};
+  const LIB = {attente_pc: 'Au PC', attente: 'En file', telechargement: 'Téléchargement', analyse: 'Analyse', a_valider: 'À valider', montage: 'Habillage', pret: 'Prête', erreur: 'Échec', envoye: 'Envoyée', annule: 'Annulée'};
   async function grille() {
     const g = $('#grille');
     try {
       const d = await get('/historique'); g.innerHTML = '';
       if (!d.jobs.length) { g.innerHTML = `<div class="vide" style="grid-column:1/-1">${icone('film', 'width:40px;height:40px')}<p>Aucune vidéo pour l’instant.</p></div>`; return; }
       d.jobs.forEach(j => {
+        const boite = document.createElement('div');
         const el = document.createElement('button'); el.className = 'vignette';
-        const cls = ['pret', 'envoye', 'erreur'].includes(j.statut) ? j.statut : 'cours';
+        const cls = ['pret', 'envoye', 'erreur'].includes(j.statut) ? j.statut : j.statut === 'annule' ? 'erreur' : 'cours';
         el.innerHTML = `<span class="cadre">${j.vignette ? '<img alt="">' : ''}<span class="statut ${cls}"></span></span><span class="bas"></span>`;
         if (j.vignette) el.querySelector('img').src = j.vignette;
         el.querySelector('.statut').textContent = LIB[j.statut] || j.statut;
         el.querySelector('.bas').textContent = j.params.accroche || j.lien.replace(/^https?:\/\/(www\.)?/, '').slice(0, 40);
         el.onclick = () => suivre(j.id);
-        g.appendChild(el);
+        boite.appendChild(el);
+        // annuler / recommencer directement depuis la liste (multitâche)
+        const geste = EN_COURS.includes(j.statut) || ['a_valider', 'pret'].includes(j.statut) ? ['Annuler', annulerJob]
+                    : ['erreur', 'annule'].includes(j.statut) ? ['Recommencer', relancerJob] : null;
+        if (geste) {
+          const b = document.createElement('button'); b.className = 'btn second'; b.textContent = geste[0];
+          b.style.cssText = 'margin-top:6px;min-height:36px;padding:6px 10px;font-size:13px';
+          b.onclick = async () => { b.disabled = true; try { await geste[1](j.id); grille(); } catch (e) { b.textContent = 'Échec'; } };
+          boite.appendChild(b);
+        }
+        g.appendChild(boite);
       });
     } catch (e) { g.innerHTML = '<div class="vide">Impossible de charger.</div>'; }
   }
