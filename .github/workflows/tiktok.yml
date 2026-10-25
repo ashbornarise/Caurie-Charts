@@ -2,6 +2,8 @@ name: Connexion TikTok
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"   # jeton TikTok (24 h) renouvelé toutes les 6 h
 
 jobs:
   connecter:
@@ -24,5 +26,9 @@ jobs:
       - name: Dépendances
         run: pip install -r requirements.txt
       - name: Échanger le code reçu
+        if: github.event_name == 'workflow_dispatch'
         working-directory: django
         run: python manage.py tiktok_connecte
+      - name: Renouveler le jeton
+        working-directory: django
+        run: python manage.py tiktok_jeton

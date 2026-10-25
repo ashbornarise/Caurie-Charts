@@ -86,5 +86,5 @@ def test_vue_connecter_cree_state_et_redirect(monkeypatch):
     params = parse_qs(urlparse(reponse["Location"]).query)
     assert reponse.status_code == 302
     assert params["client_key"] == [tiktok.CLIENT_KEY_DEFAUT]
-    assert params["scope"] == ["user.info.basic,user.info.profile,user.info.stats,video.list"]
+    assert params["scope"] == ["user.info.basic,user.info.stats,video.list,video.upload,video.publish"]
     assert params["state"][0] in ajouts[0][1]

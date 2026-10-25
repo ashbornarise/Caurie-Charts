@@ -404,6 +404,28 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
     <button class="puce actif" data-r="instagram">Instagram</button><button class="puce actif" data-r="facebook">Facebook</button>
     <button class="puce actif" data-r="tiktok">TikTok</button><button class="puce actif" data-r="telegram">Telegram</button>
   </div>
+  <!-- TikTok : écran exigé par TikTok avant toute publication par son API (25/10/2026) -->
+  <div class="carte texte" id="tt-bloc" style="display:none;margin:0 0 14px">
+    <div style="display:flex;gap:10px;align-items:center"><img id="tt-avatar" alt="" width="40" height="40" style="border-radius:50%;background:var(--trait)">
+      <div><b id="tt-nom">TikTok</b><div style="font-size:13px;color:var(--doux)">Compte TikTok qui publiera la vidéo</div></div></div>
+    <p id="tt-erreur" style="display:none;color:#fda4af;font-size:14px;margin:10px 0 0"></p>
+    <div id="tt-champs">
+      <label>Mode
+        <select id="tt-mode"><option value="direct">Publier directement sur TikTok</option><option value="brouillon">Envoyer en brouillon (j'ajoute un son dans TikTok)</option></select></label>
+      <div id="tt-direct">
+        <label>Qui peut voir cette vidéo ?<select id="tt-vis"><option value="">Choisir…</option></select></label>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="tt-com" style="width:auto"> Autoriser les commentaires</label>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="tt-duo" style="width:auto"> Autoriser les duos</label>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="tt-col" style="width:auto"> Autoriser les collages (Stitch)</label>
+        <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="tt-commercial" style="width:auto"> Ce contenu fait la promotion d'une marque, d'un produit ou d'un service</label>
+        <div id="tt-marques" style="display:none;padding-left:26px">
+          <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="tt-ma-marque" style="width:auto"> Votre marque (contenu promotionnel)</label>
+          <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="tt-contenu-marque" style="width:auto"> Contenu de marque (partenariat rémunéré)</label>
+        </div>
+        <p style="font-size:13px;color:var(--doux);margin:10px 0 0" id="tt-consent">En publiant, vous acceptez la <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener">Confirmation d'utilisation de la musique</a> de TikTok.</p>
+      </div>
+    </div>
+  </div>
   <button class="choix" id="choix-auto">
     <span class="pastille vert-p"><svg class="i"><use href="#i-envoi"/></svg></span>
     <span><b>Publier partout maintenant</b><small>Instagram, Facebook, TikTok et Telegram dans 2 minutes, avec le son de la vidéo.</small></span>
@@ -619,15 +641,60 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   let apresChoix = null;
   $('#choix-auto').onclick = () => { feuille(false); apresChoix && apresChoix(false); };
   $('#choix-notif').onclick = () => { feuille(false); apresChoix && apresChoix(true); };
+  // ---- bloc TikTok (Content Posting API) : compte, visibilité sans valeur par défaut, interactions, contenu commercial
+  let ttPret = false;
+  const VIS = {PUBLIC_TO_EVERYONE: 'Tout le monde', MUTUAL_FOLLOW_FRIENDS: 'Amis (abonnés mutuels)', FOLLOWER_OF_CREATOR: 'Mes abonnés', SELF_ONLY: 'Moi uniquement'};
+  async function chargeTiktok() {
+    const b = $('#tt-bloc'), err = $('#tt-erreur');
+    b.style.display = $$('#feuille-reseaux .puce.actif').some(x => x.dataset.r === 'tiktok') ? '' : 'none';
+    if (ttPret || b.style.display === 'none') return;
+    try {
+      const d = await get('/tiktok-createur');
+      if (d.erreur || !d.createur) throw new Error(d.erreur || 'TikTok indisponible');
+      const c = d.createur; ttPret = true;
+      $('#tt-nom').textContent = '@' + (c.creator_username || c.creator_nickname || 'compte'); if (c.creator_avatar_url) $('#tt-avatar').src = c.creator_avatar_url;
+      const s = $('#tt-vis'); s.innerHTML = '<option value="">Choisir…</option>';
+      (c.privacy_level_options || []).forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = VIS[v] || v; s.appendChild(o); });
+      [['#tt-com', c.comment_disabled], ['#tt-duo', c.duet_disabled], ['#tt-col', c.stitch_disabled]].forEach(([id, off]) => {
+        $(id).checked = false; $(id).disabled = !!off; if (off) $(id).parentElement.title = 'Désactivé dans les réglages du compte TikTok'; });
+      err.style.display = 'none'; $('#tt-champs').style.display = '';
+    } catch (e) { err.textContent = e.message + ' — TikTok passera par la notification habituelle.'; err.style.display = ''; $('#tt-champs').style.display = 'none'; }
+  }
+  $('#tt-mode').onchange = () => { $('#tt-direct').style.display = $('#tt-mode').value === 'direct' ? '' : 'none'; };
+  $('#tt-commercial').onchange = () => { $('#tt-marques').style.display = $('#tt-commercial').checked ? '' : 'none'; majConsent(); };
+  function majConsent() {
+    const marque = $('#tt-contenu-marque').checked;
+    $('#tt-consent').innerHTML = 'En publiant, vous acceptez ' + (marque ? 'la <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener">Politique relative au contenu de marque</a> et ' : '') +
+      'la <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener">Confirmation d’utilisation de la musique</a> de TikTok.';
+    const prive = [...$('#tt-vis').options].find(o => o.value === 'SELF_ONLY');   // un contenu de marque ne peut pas être privé
+    if (prive) { prive.disabled = marque; if (marque && $('#tt-vis').value === 'SELF_ONLY') $('#tt-vis').value = ''; }
+  }
+  $('#tt-contenu-marque').onchange = majConsent; $('#tt-ma-marque').onchange = majConsent;
+  function reglagesTiktok() {
+    if (!ttPret || !$$('#feuille-reseaux .puce.actif').some(x => x.dataset.r === 'tiktok')) return null;
+    const mode = $('#tt-mode').value;
+    if (mode === 'direct') {
+      if (!$('#tt-vis').value) throw new Error('TikTok : choisissez qui peut voir la vidéo.');
+      if ($('#tt-commercial').checked && !$('#tt-ma-marque').checked && !$('#tt-contenu-marque').checked)
+        throw new Error('TikTok : indiquez s’il s’agit de votre marque ou d’un contenu de marque.');
+    }
+    return {mode, privacy_level: $('#tt-vis').value, commentaires: $('#tt-com').checked, duos: $('#tt-duo').checked, collages: $('#tt-col').checked,
+            ma_marque: $('#tt-commercial').checked && $('#tt-ma-marque').checked, contenu_marque: $('#tt-commercial').checked && $('#tt-contenu-marque').checked};
+  }
+  $$('#feuille-reseaux .puce').forEach(b => b.addEventListener('click', chargeTiktok));
+
   function envoyer() {
     vibre(); apresChoix = envoyerVraiment; $('#feuille-reseaux').style.display = '';
     const choisis = (etatJob && etatJob.params && etatJob.params.reseaux) || ['instagram', 'facebook', 'tiktok', 'telegram'];
     $$('#feuille-reseaux .puce').forEach(b => b.classList.toggle('actif', choisis.includes(b.dataset.r)));
-    feuille(true);
+    feuille(true); chargeTiktok();
   }
   async function envoyerVraiment(notifier) {
     const b = $('#btn-envoyer'); b.disabled = true;
     try {
+      // TikTok : réglages de l'écran (erreur lisible si un choix obligatoire manque) ; « j'ajoute ma musique » = brouillon
+      const ttActif = ttPret && $$('#feuille-reseaux .puce.actif').some(x => x.dataset.r === 'tiktok');
+      const tiktok = notifier ? (ttActif ? {mode: 'brouillon'} : null) : reglagesTiktok();
       const ig = $('#r-ig').value.trim(), tt = $('#r-tt').value.trim(), nom = (etatJob.params || {}).artiste || '';
       if (nom && ((ig && ig !== $('#r-ig').dataset.avant) || (tt && tt !== $('#r-tt').dataset.avant))) {
         const p = await post('/artiste-profil', {nom, instagram: ig, tiktok: tt});   // retenu pour les prochaines publications
@@ -635,7 +702,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       }
       const k = await post('/job/' + jobEnCours + '/envoyer', {accroche: $('#r-accroche').value, legende_fr: $('#r-fr').value,
         legende_en: $('#r-en').value, credit: $('#r-credit').value, artiste: (etatJob.params || {}).artiste || '',
-        notifier, reseaux: reseauxChoisis()});
+        notifier, reseaux: reseauxChoisis(), tiktok});
       vibre(); etatJob.statut = 'envoye'; resultat(etatJob);
       const noms = {instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok'};
       const recus = (k.recus || []).map(r => noms[r] || r).concat(reseauxChoisis().includes('telegram') ? ['Telegram'] : []).join(', ');

@@ -375,6 +375,36 @@ def relancer(request, chemin, ident):
     return _json({"ok": not erreur, "erreur": erreur})
 
 
+def tiktok_createur(request, chemin):
+    """Compte TikTok qui publiera, visibilités et interactions permises (affichés avant toute publication, règle TikTok)."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services import tiktok_publie
+    try:
+        return _json({"createur": tiktok_publie.createur()})
+    except Exception as exc:  # noqa: BLE001
+        return _json({"erreur": str(exc)}, 200)
+
+
+def _tiktok_direct(post: dict, c: dict, pid: int) -> str:
+    """Publication TikTok depuis l'écran du Studio (réglages choisis par le fondateur). Compte rendu pour le Studio."""
+    from core import audit
+    from core.services import buffer, tiktok_publie
+    t = c.get("tiktok") or {}
+    brouillon = t.get("mode") == "brouillon"
+    reglages = {"privacy_level": t.get("privacy_level"), "disable_comment": not t.get("commentaires"),
+                "disable_duet": not t.get("duos"), "disable_stitch": not t.get("collages"),
+                "brand_organic_toggle": bool(t.get("ma_marque")), "brand_content_toggle": bool(t.get("contenu_marque"))}
+    try:
+        pub = tiktok_publie.publier(buffer.video_url(post), buffer.text(post, "tiktok"), reglages, brouillon)
+    except Exception as exc:  # noqa: BLE001
+        return f"tiktok : {exc}"
+    audit.log(None, "buffer.post", "social_post", pid, f"post-{pid}-tiktok", {"publish_id": pub, "direct": True,
+                                                                              "brouillon": brouillon}, None)
+    return "tiktok programmé"
+
+
 def profil_artiste(request, chemin):
     """GET ?nom= : profils Instagram et TikTok connus de l'artiste ; POST {nom, instagram, tiktok} : les enregistre
     sur sa fiche, pour toutes les publications suivantes (invitation en collaboration)."""
@@ -439,8 +469,12 @@ def _envoyer(request, ident):
     legende = fr + (f"\n\n🎥 Source : {credit}" if credit else "")
     tags = "#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine"
     maintenant = datetime.now(timezone.utc)
+    reseaux = reseaux_choisis(c)
+    tiktok_direct = bool(c.get("tiktok")) and (reseaux is None or "tiktok" in reseaux)
+    if tiktok_direct:   # TikTok part par sa propre API avec les réglages de l'écran ; Buffer ne s'en occupe plus
+        reseaux = [r for r in (reseaux or ["instagram", "facebook", "tiktok", "telegram"]) if r != "tiktok"]
     faits = {"kind": "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
-             "source": j["lien"], "notifier": bool(c.get("notifier")), "reseaux": reseaux_choisis(c)}
+             "source": j["lien"], "notifier": bool(c.get("notifier")), "reseaux": reseaux, "artiste": artiste}
     if en:
         faits["en"] = {"title": accroche, "caption": en + (f"\n\n🎥 Source: {credit}" if credit else "")}
     pid = db.insert("social_posts", {"slot_date": maintenant.date().isoformat(), "theme": theme_libre(j["id"], maintenant),
@@ -450,9 +484,11 @@ def _envoyer(request, ident):
     post = db.one("SELECT * FROM social_posts WHERE id = ?", [pid])
     from core.services import buffer
     try:
-        resultat = buffer.schedule(post, maintenant + timedelta(minutes=2))
+        resultat = buffer.schedule(post, maintenant + timedelta(minutes=2)) if reseaux != [] else ""
     except Exception as exc:  # noqa: BLE001
         resultat = f"échec ({exc})"
+    if tiktok_direct:
+        resultat = ", ".join(x for x in (resultat, _tiktok_direct(post, c, pid)) if x)
     # Dès qu'un réseau a reçu la vidéo, elle est « envoyée » (un nouvel envoi ferait un doublon) ; les refus sont signalés
     recus = [r["reason"].split("-")[2] for r in db.all("SELECT reason FROM audit_log WHERE reason LIKE ?", [f"post-{pid}-%"])
              if r["reason"].count("-") >= 2]

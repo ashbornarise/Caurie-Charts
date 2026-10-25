@@ -48,6 +48,7 @@ urlpatterns = [
     re_path(S + r"/job/(?P<ident>\d+)/annuler$", studio.annuler),
     re_path(S + r"/job/(?P<ident>\d+)/relancer$", studio.relancer),
     re_path(S + r"/artiste-profil$", studio.profil_artiste),
+    re_path(S + r"/tiktok-createur$", studio.tiktok_createur),
     re_path(S + r"/job/(?P<ident>\d+)/envoyer$", studio.envoyer),
     path("tiktok/connecter", views_tiktok.connecter),
     path("tiktok/retour", views_tiktok.retour),

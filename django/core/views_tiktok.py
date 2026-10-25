@@ -16,7 +16,8 @@ def connecter(request):
         state = secrets.token_urlsafe(32)
         db.run("INSERT INTO tiktok_auth (state, recu_le) VALUES (?, NOW())", [state])
         params = {"client_key": env.get("TIKTOK_CLIENT_KEY", tiktok.CLIENT_KEY_DEFAUT),
-                  "scope": "user.info.basic,user.info.profile,user.info.stats,video.list",
+                  # 25/10/2026 : publication par le Studio (Content Posting API) en plus des statistiques
+                  "scope": "user.info.basic,user.info.stats,video.list,video.upload,video.publish",
                   "response_type": "code", "redirect_uri": tiktok.REDIRECT_URI, "state": state}
         return HttpResponseRedirect("https://www.tiktok.com/v2/auth/authorize/?" + urlencode(params))
     except Exception as exc:
