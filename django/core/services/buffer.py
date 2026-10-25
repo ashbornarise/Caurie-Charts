@@ -229,6 +229,17 @@ def hashtags_pays(texte: str) -> str:
     return (texte + "\n" + " ".join(tags)) if tags else texte
 
 
+def direct(ch: dict, post: dict, when: datetime | None) -> bool:
+    """Envoi direct par l'API Meta (25/10/2026) : Instagram et Facebook, posts à publier dans les 15 min (Studio, file
+    d'attente, flashs) ; les posts programmés plus tard et ceux où l'on ajoute la musique dans l'appli restent sur Buffer."""
+    from core.services import meta
+    if ch["service"] not in ("instagram", "facebook") or not meta.actif():
+        return False
+    if ch["service"] == "instagram" and (video_muette(post) or notification_demandee(post)):
+        return False
+    return when is None or when <= datetime.now(timezone.utc) + timedelta(minutes=15)
+
+
 def video_muette(post: dict) -> bool:
     """Vidéo maison sans son (photos libres) : Instagram et TikTok en notification, pour ajouter le son officiel."""
     try:
@@ -345,7 +356,8 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
 
     def todo(js):
         return [(ch, s, r, w) for ch in chans for s, r, w in js
-                if not (r and ch["service"] not in NOTIFY_REELS and (not video_seule(post) or video_muette(post)))  # Facebook : reel d'Instagram repartagé
+                if not direct(ch, post, w)   # envoi direct Meta : ne prend pas de place dans la file Buffer
+                and not (r and ch["service"] not in NOTIFY_REELS and (not video_seule(post) or video_muette(post)))  # Facebook : reel d'Instagram repartagé
                 and (force or not db.value("SELECT 1 FROM audit_log WHERE action = 'buffer.post' AND reason = ? LIMIT 1",
                                            [f"post-{post['id']}-{ch['service']}{s}"]))]
     room = capacity(http)
@@ -375,6 +387,12 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
                 done.append(f"{label} déjà programmé")
                 continue
             try:
+                if direct(ch, post, when):   # Instagram / Facebook en direct par l'API Meta (collaboration de l'artiste)
+                    from core.services import meta
+                    mid = (meta.instagram if ch["service"] == "instagram" else meta.facebook)(post, reel)
+                    audit.log(None, "buffer.post", "social_post", post["id"], key, {"meta_id": mid, "direct": True}, None)
+                    done.append(f"{label} programmé")
+                    continue
                 quand = heure_tiktok(when) if ch["service"] == "tiktok" else when
                 r = call(CREATE, {"input": payload(post, ch, quand, reel)}, http)["createPost"]
             except PlatformException as exc:

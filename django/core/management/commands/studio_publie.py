@@ -55,6 +55,7 @@ class Command(BaseCommand):
                     "studio_job": j["id"],
                     "due": (maintenant + timedelta(minutes=2)).isoformat(),
                     "source": j["lien"],
+                    "artiste": artiste,   # collaboration Instagram (meta.collaborateurs)
                 }
                 if en_txt:
                     faits["en"] = {"title": accroche, "caption": en_txt + (f"\n\n🎥 Source: {credit}" if credit else "")}
