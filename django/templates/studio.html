@@ -413,7 +413,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
     <p id="tt-erreur" style="display:none;color:#fda4af;font-size:14px;margin:10px 0 0"></p>
     <div id="tt-champs">
       <label>Mode
-        <select id="tt-mode"><option value="direct">Publier directement sur TikTok</option><option value="brouillon">Envoyer en brouillon (j'ajoute un son dans TikTok)</option></select></label>
+        <select id="tt-mode"><option value="direct">Publier directement sur TikTok (via Buffer en attendant l’audit TikTok)</option><option value="brouillon">Envoyer en brouillon (j'ajoute un son dans TikTok)</option></select></label>
       <div id="tt-direct">
         <label>Qui peut voir cette vidéo ?<select id="tt-vis"><option value="">Choisir…</option></select></label>
         <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="tt-com" style="width:auto"> Autoriser les commentaires</label>
@@ -672,9 +672,11 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     if (prive) { prive.disabled = marque; if (marque && $('#tt-vis').value === 'SELF_ONLY') $('#tt-vis').value = ''; }
   }
   $('#tt-contenu-marque').onchange = majConsent; $('#tt-ma-marque').onchange = majConsent;
+  const TT_AUDITE = false;   // passe à true quand TikTok aura audité l'application (publication directe par notre API)
   function reglagesTiktok() {
     if (!ttPret || !$$('#feuille-reseaux .puce.actif').some(x => x.dataset.r === 'tiktok')) return null;
     const mode = $('#tt-mode').value;
+    if (mode === 'direct' && !TT_AUDITE) return null;   // Buffer publie (application déjà validée par TikTok)
     if (mode === 'direct') {
       if (!$('#tt-vis').value) throw new Error('TikTok : choisissez qui peut voir la vidéo.');
       if ($('#tt-commercial').checked && !$('#tt-ma-marque').checked && !$('#tt-contenu-marque').checked)

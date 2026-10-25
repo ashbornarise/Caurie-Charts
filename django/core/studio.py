@@ -470,7 +470,12 @@ def _envoyer(request, ident):
     tags = "#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine"
     maintenant = datetime.now(timezone.utc)
     reseaux = reseaux_choisis(c)
-    tiktok_direct = bool(c.get("tiktok")) and (reseaux is None or "tiktok" in reseaux)
+    # Notre API TikTok : brouillons seulement tant que l'application n'est pas auditée (TikTok refuse alors toute
+    # publication directe sur un compte public, 25/10/2026). La publication directe passe par Buffer, déjà validé
+    # par TikTok ; TIKTOK_AUDITE=1 basculera la publication directe sur notre API après l'audit.
+    audite = env.get("TIKTOK_AUDITE", "") in ("1", "oui", "true")
+    tiktok_direct = (bool(c.get("tiktok")) and (reseaux is None or "tiktok" in reseaux)
+                     and ((c.get("tiktok") or {}).get("mode") == "brouillon" or audite))
     if tiktok_direct:   # TikTok part par sa propre API avec les réglages de l'écran ; Buffer ne s'en occupe plus
         reseaux = [r for r in (reseaux or ["instagram", "facebook", "tiktok", "telegram"]) if r != "tiktok"]
     faits = {"kind": "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
