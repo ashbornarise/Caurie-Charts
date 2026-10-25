@@ -48,6 +48,9 @@ def titre_valable(titre: str, artiste: str) -> bool:
     """Interview de l'artiste lui-même : son nom en mot entier, pas un clip / live musical / paroles, pas « à propos de »."""
     if not _mot(artiste, titre) or EXCLUS.search(titre):
         return False
+    # Vidéo à plusieurs artistes (« SETHLO x GHETTOVI x MIC FLAMMEZ », 25/10/2026) : on ne sait pas qui parle, refusée
+    if re.search(r"(^|\s)(x|×|&|feat\.?|ft\.?|vs\.?|avec)(\s|$)", titre, re.I):
+        return False
     nom = re.escape(_sans_accents(artiste))
     return not re.search(rf"\b(about|on|to|vs|versus|disses?|slams?|blasts?|calls\s+out|responds\s+to)\s+{nom}\b", _sans_accents(titre))
 
