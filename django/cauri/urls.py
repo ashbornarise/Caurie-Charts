@@ -1,4 +1,5 @@
 """Routes : mêmes adresses que public/index.php (site PHP de référence)."""
+from django.http import HttpResponse
 from django.urls import path, re_path
 
 from core import studio
