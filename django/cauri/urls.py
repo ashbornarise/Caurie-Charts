@@ -105,6 +105,9 @@ urlpatterns = [
     re_path(r"^partage/(?P<run_id>\d+)-(?P<fmt>square|story)$", views.share_image),
     re_path(r"^apercu/(?P<kind>classement|titre|artiste|edition|defaut)/(?P<key>[a-z0-9-]+)\.jpg$", views.apercu),
     path("robots.txt", views.robots),
+    # Vérification du site par TikTok for Developers (URL prefix https://www.cauricharts.com/), 25/10/2026
+    path("tiktokrGLodkebA5OdnAFwgh1Sz1A5xUkpncMr.txt", lambda r: HttpResponse(
+        "tiktok-developers-site-verification=rGLodkebA5OdnAFwgh1Sz1A5xUkpncMr", content_type="text/plain")),
     path("favicon.ico", views.favicon),
     re_path(r"^google(?P<token>[0-9a-f]{16})\.html$", views.google_verification),
     path("llms.txt", views.llms),
