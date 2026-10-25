@@ -46,7 +46,15 @@ def _post(chemin: str, corps: dict, jet: str) -> dict:
         raise PlatformException(f"TikTok : {exc}") from exc
     err = d.get("error") or {}
     if err.get("code") not in (None, "ok"):
-        raise PlatformException(f"TikTok : {err.get('message') or err.get('code')}")
+        lisible = {
+            "unaudited_client_can_only_post_to_private_accounts":
+                "application pas encore auditée par TikTok : publication directe possible seulement si le compte TikTok est "
+                "privé (Réglages > Confidentialité > Compte privé) et la vidéo en « Moi uniquement ». Le brouillon, lui, marche.",
+            "spam_risk_too_many_posts": "trop de publications aujourd'hui : TikTok limite le nombre de posts par jour.",
+            "privacy_level_option_mismatch": "cette visibilité n'est pas permise pour ce compte.",
+            "access_token_invalid": "jeton TikTok invalide : reconnectez le compte sur cauricharts.com/tiktok/connecter.",
+        }.get(err.get("code"))
+        raise PlatformException(f"TikTok : {lisible or err.get('message') or err.get('code')} ({err.get('code')})")
     return d.get("data") or {}
 
 
