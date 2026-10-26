@@ -110,4 +110,4 @@ def test_telegram_appel_api_avec_le_jeton(monkeypatch):
 def test_telegram_post_legende_tronquee_a_1024_caracteres():
     from core.services.telegram import post_caption
     cap = post_caption({"title": "Top <Ghana>", "caption": "ligne\n" * 400, "hashtags": "#CauriCharts"})
-    assert len(cap) <= 1024 and cap.startswith("<b>Top &lt;Ghana&gt;</b>") and "#CauriCharts" in cap
+    assert len(cap) <= 1024 and cap.startswith("<b>Top &lt;Ghana&gt;</b>") and "#cauricharts" in cap

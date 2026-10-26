@@ -85,7 +85,7 @@ def send_chart(code: str = chart_top.REGION, force: bool = False, http: HttpClie
 
 def post_caption(post: dict, limit: int = 1024) -> str:
     """Légende HTML d'un post (titre, texte, hashtags, lien), tronquée à la limite des légendes Telegram."""
-    tail = f"\n\n{escape(post.get('hashtags') or '')}\n👉 <a href=\"{url('/')}\">cauricharts.com</a>"
+    tail = f"\n\n{escape((post.get('hashtags') or '').lower())}\n👉 <a href=\"{url('/')}\">cauricharts.com</a>"
     head = f"<b>{escape(post['title'])}</b>\n\n"
     body = escape(post.get("caption") or "")
     room = limit - len(head) - len(tail)

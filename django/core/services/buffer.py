@@ -63,7 +63,13 @@ def text(post: dict, service: str) -> str:
         link = "https://www.cauricharts.com/"  # un post programmé depuis un poste de travail garde le vrai lien du site
     # Français puis anglais (🇬🇧), dans la limite des légendes Instagram et TikTok (2 200 caractères)
     texte = bilingue.legende(post, link)
-    return hashtags_pays(texte)[:2200] if service == "tiktok" else texte
+    texte = hashtags_pays(texte)[:2200] if service == "tiktok" else texte
+    return minuscules_hashtags(texte)
+
+
+def minuscules_hashtags(texte: str) -> str:
+    """Règle du fondateur (26/10/2026) : les hashtags toujours en minuscules (#cauricharts, #togo, #sethlo)."""
+    return re.sub(r"#[^\s#.,;:!?)»]+", lambda m: m.group().lower(), texte)
 
 
 TIKTOK_SIZE = (1080, 1920)  # TikTok refuse les photos de plus de 2 073 600 pixels : nos visuels 4K sont réduits
