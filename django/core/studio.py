@@ -285,7 +285,7 @@ def fabriquer(request, chemin):
     if debut < 0 or fin <= debut or fin - debut > MAX_DUREE:
         return _json({"erreur": f"extrait de 1 à {MAX_DUREE} secondes"}, 400)
     fmt = c.get("format") if c.get("format") in FORMATS else "origine"
-    params = {"format": fmt, "debut": debut, "fin": fin}
+    params = {"format": fmt, "debut": debut, "fin": fin, "resume": bool(c.get("resume"))}   # résumé : temps forts enchaînés
     for k in ("etiquette", "accroche", "artiste", "credit", "legende_fr", "legende_en", "contexte"):
         params[k] = str(c.get(k) or "").strip()[:600]
     params["valider"] = bool(c.get("valider", True))   # montrer l'accroche avant de fabriquer (sauf « Refaire »)

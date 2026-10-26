@@ -89,6 +89,72 @@ def telecharge(lien: str, dossier: str) -> tuple[str, dict]:
     return fichiers[0], infos
 
 
+TRANSITION = 0.5   # fondu enchaîné entre deux passages du résumé (secondes)
+
+
+def _duree_fichier(video: str) -> float:
+    try:
+        ff = ffmpeg()
+        sonde = os.path.join(os.path.dirname(ff), os.path.basename(ff).replace("ffmpeg", "ffprobe")) if os.path.dirname(ff) else "ffprobe"
+        r = subprocess.run([sonde, "-v", "error",
+                            "-show_entries", "format=duration", "-of", "csv=p=0", video], capture_output=True, text=True, timeout=60)
+        return float(r.stdout.strip() or 0)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return 0.0
+
+
+def moments_forts(video: str, total: float, longueur: float) -> list[tuple[float, float]]:
+    """Découpe la vidéo en n fenêtres régulières (5 % à 95 % de sa durée) et garde dans chacune le passage le plus
+    énergique (volume sonore moyen le plus haut : parole animée, refrain, foule). Renvoie [(début, durée)]."""
+    import numpy as np
+    n = max(3, min(8, round(total / 9)))
+    seg = (total + (n - 1) * TRANSITION) / n
+    try:
+        brut = subprocess.run([ffmpeg(), "-v", "error", "-i", video, "-ac", "1", "-ar", "8000", "-f", "s16le", "-"],
+                              capture_output=True, timeout=600).stdout
+        a = np.frombuffer(brut, np.int16).astype(np.float32)
+        pas = 4000   # 0,5 s
+        rms = np.array([np.sqrt(np.mean(a[i:i + pas] ** 2)) for i in range(0, len(a) - pas, pas)]) if len(a) > pas else np.zeros(1)
+    except (OSError, subprocess.SubprocessError, ValueError):
+        rms = np.zeros(1)
+    lo, hi = longueur * .05, longueur * .95 - seg
+    largeur = (hi - lo) / n
+    out = []
+    for k in range(n):
+        g, d = lo + k * largeur, lo + (k + 1) * largeur
+        meilleur, score = g, -1.0
+        t = g
+        while t <= max(g, d - seg * .5):
+            i0, i1 = int(t * 2), int((t + seg) * 2)
+            s = float(rms[i0:i1].mean()) if i1 <= len(rms) and i1 > i0 else 0.0
+            if s > score:
+                meilleur, score = t, s
+            t += 1.0
+        out.append((round(max(0.0, meilleur), 2), round(seg, 2)))
+    return out
+
+
+def resume_video(source: str, total: float, longueur: float, dossier: str) -> str:
+    """Enchaîne les moments forts avec des fondus simples (image et son) : une seule vidéo de `total` secondes."""
+    parts = moments_forts(source, total, longueur)
+    args = [ffmpeg(), "-y", "-v", "error"]
+    for d, s in parts:
+        args += ["-ss", f"{d:.2f}", "-t", f"{s:.2f}", "-i", source]
+    f, v, a, decal = [], "v0", "a0", parts[0][1]
+    for i in range(len(parts)):
+        f.append(f"[{i}:v]scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=30,format=yuv420p,setpts=PTS-STARTPTS[v{i}]")
+        f.append(f"[{i}:a]aresample=48000,aformat=channel_layouts=stereo,asetpts=PTS-STARTPTS[a{i}]")
+    for i in range(1, len(parts)):
+        f.append(f"[{v}][v{i}]xfade=transition=fade:duration={TRANSITION}:offset={decal - TRANSITION:.2f}[x{i}]")
+        f.append(f"[{a}][a{i}]acrossfade=d={TRANSITION}[y{i}]")
+        v, a = f"x{i}", f"y{i}"
+        decal += parts[i][1] - TRANSITION
+    sortie = os.path.join(dossier, "resume.mp4")
+    subprocess.run(args + ["-filter_complex", ";".join(f), "-map", f"[{v}]", "-map", f"[{a}]", "-c:v", "libx264", "-crf", "18",
+                           "-preset", "veryfast", "-c:a", "aac", "-b:a", "192k", sortie], check=True, capture_output=True, timeout=1500)
+    return sortie
+
+
 def credit_auto(infos: dict) -> str:
     """« @compte sur TikTok » à partir des infos yt-dlp."""
     compte = infos.get("uploader") or infos.get("channel") or infos.get("uploader_id") or ""
@@ -523,6 +589,16 @@ def traite(job_id: int) -> dict:
             if p.get("refrain_auto"):            # idée du jour : on prend le refrain du clip
                 from core.services.social import refrain as RF
                 debut, fin = RF.refrain(source, duree=float(p.get("duree") or 20))
+            if p.get("resume"):                  # résumé : les temps forts de toute la vidéo, enchaînés (26/10/2026)
+                total = fin - debut
+                longueur = longueur or _duree_fichier(source)
+                if longueur and longueur > total * 1.5:
+                    _maj(job_id, statut="telechargement")
+                    try:
+                        source = resume_video(source, total, longueur, tmp)
+                        debut, fin, longueur = 0.0, total, total
+                    except Exception as exc:  # noqa: BLE001 — vidéo sans son, format exotique : extrait simple
+                        log_write("studio", "warning", f"résumé impossible ({str(exc)[:200]}) : extrait simple")
             if longueur:
                 fin = min(fin, longueur)
             fin = min(fin, debut + MAX_DUREE)
