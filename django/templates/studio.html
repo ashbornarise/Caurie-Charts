@@ -223,15 +223,17 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
     </div>
 
     <div class="carte">
-      <div class="etiq">Passage</div>
+      <div class="etiq">Type de vidéo</div>
+      <div class="puces" id="types">
+        <button class="puce actif" data-t="extrait">Extrait</button><button class="puce" data-t="refrain">Refrain</button>
+        <button class="puce" data-t="resume">Résumé</button>
+      </div>
+      <small id="aide-type" style="display:block;color:var(--doux);margin:0 0 12px">Le passage exact que tu choisis (début → fin).</small>
+      <div class="etiq">Durée</div>
       <div class="puces" id="durees">
         <button class="puce" data-d="15">15 s</button><button class="puce" data-d="30">30 s</button>
         <button class="puce actif" data-d="60">60 s</button><button class="puce" data-d="90">90 s</button>
       </div>
-      <label style="display:flex;gap:10px;align-items:flex-start;font-weight:600;margin:4px 0 10px">
-        <input type="checkbox" id="resume" style="width:auto;margin-top:3px">
-        <span>Résumé de toute la vidéo<small style="display:block;font-weight:400;color:var(--doux)">Pour une vidéo longue : les temps forts du début à la fin, enchaînés avec des fondus, sur la durée choisie.</small></span>
-      </label>
       <div class="duree">
         <label id="lab-debut">Début (secondes)<input id="debut" type="number" min="0" step="0.5" value="0" inputmode="decimal"></label>
         <label id="lab-fin"><span id="txt-fin">Fin (secondes)</span><input id="fin" type="number" min="1" step="0.5" value="60" inputmode="decimal"></label>
@@ -541,7 +543,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   let format = 'origine';
   $$('.format').forEach(b => b.onclick = () => { vibre(); format = b.dataset.v; $$('.format').forEach(x => x.classList.toggle('actif', x === b)); });
   $$('#durees .puce').forEach(b => b.onclick = () => { vibre(); $$('#durees .puce').forEach(x => x.classList.toggle('actif', x === b));
-    $('#fin').value = (parseFloat($('#debut').value) || 0) + parseFloat(b.dataset.d); });
+    $('#fin').value = (typeVideo === 'extrait' ? parseFloat($('#debut').value) || 0 : 0) + parseFloat(b.dataset.d); });
   $$('#creer-reseaux .puce').forEach(b => b.onclick = () => { vibre(); b.classList.toggle('actif'); });
   $('#btn-textes').onclick = () => { const t = $('#textes'), o = t.style.display === 'none'; t.style.display = o ? '' : 'none'; $('#btn-textes').classList.toggle('ouvert', o); };
   const droits = $('#droits');
@@ -561,16 +563,24 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       box.classList.add('vu');
     } catch (e) { box.classList.remove('vu'); }
   }
-  $('#resume').onchange = () => { const r = $('#resume').checked;
-    $('#lab-debut').style.display = r ? 'none' : ''; $('#txt-fin').textContent = r ? 'Durée totale du résumé (secondes)' : 'Fin (secondes)'; };
+  let typeVideo = 'extrait';   // extrait (début → fin), refrain (trouvé tout seul), résumé (temps forts enchaînés)
+  const AIDES = {extrait: 'Le passage exact que tu choisis (début → fin).',
+    refrain: 'Le Studio trouve tout seul le refrain du clip et le coupe sur la durée choisie.',
+    resume: 'Pour une vidéo longue : les temps forts du début à la fin, enchaînés avec des fondus, sur la durée choisie.'};
+  $$('#types .puce').forEach(b => b.onclick = () => { vibre(); typeVideo = b.dataset.t;
+    $$('#types .puce').forEach(x => x.classList.toggle('actif', x === b));
+    $('#aide-type').textContent = AIDES[typeVideo];
+    $('#lab-debut').style.display = typeVideo === 'extrait' ? '' : 'none';
+    $('#txt-fin').textContent = typeVideo === 'extrait' ? 'Fin (secondes)' : 'Durée totale (secondes)';
+    if (typeVideo !== 'extrait') $('#fin').value = ($('#durees .puce.actif') || {dataset: {d: 60}}).dataset.d; });
   async function fabriquer() {
     message('#msg-creer', '');
     const v = id => $(id).value.trim();
     if (!droits.classList.contains('on')) { message('#msg-creer', 'Active l’interrupteur des droits pour continuer.', false); return; }
     const btn = $('#btn-fabriquer'); btn.disabled = true;
     try {
-      const resume = $('#resume').checked;   // résumé : début 0, « fin » = durée totale voulue
-      const j = await post('/fabriquer', {lien: v('#lien'), format, resume, debut: resume ? 0 : v('#debut'), fin: v('#fin'), etiquette: v('#etiquette'),
+      const libre = typeVideo !== 'extrait';   // refrain / résumé : début 0, « fin » = durée totale voulue
+      const j = await post('/fabriquer', {lien: v('#lien'), format, type: typeVideo, debut: libre ? 0 : v('#debut'), fin: v('#fin'), etiquette: v('#etiquette'),
         accroche: v('#accroche'), artiste: v('#artiste'), credit: v('#credit'), contexte: v('#contexte'), droits: true,
         reseaux: $$('#creer-reseaux .puce.actif').map(b => b.dataset.r)});
       if (j.erreur) throw new Error(j.erreur);
