@@ -376,9 +376,16 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <!-- ÉCRAN ANNONCE (27/10/2026) : une actu chaude en images, publiée en carrousel -->
   <section class="ecran" id="e-annonce">
     <h1 class="titre">Annonce</h1>
-    <p class="sous">Une actu chaude en images : la 1re devient la couverture Cauri, les autres suivent en carrousel.</p>
+    <p class="sous">Une actu chaude en images, depuis le lien d'un post ou ton téléphone : la 1re devient la couverture Cauri, les autres suivent en carrousel.</p>
     <div class="carte">
-      <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-photo"/></svg>Images (1 à 10)</div>
+      <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-lien"/></svg>Lien du post</div>
+      <div class="champ">
+        <input id="an-lien" type="url" inputmode="url" placeholder="Instagram, X, Facebook, TikTok…" autocomplete="off" autocapitalize="off">
+        <button class="coller" id="an-coller"><svg class="i" style="width:18px;height:18px"><use href="#i-presse"/></svg>Coller</button>
+      </div>
+      <button class="btn second" id="an-recuperer" style="margin-top:10px"><svg class="i"><use href="#i-lien"/></svg>Récupérer les images du post</button>
+      <div class="ou">OU</div>
+      <div class="etiq" style="margin-top:4px"><svg class="i" style="width:16px;height:16px"><use href="#i-photo"/></svg>Images (10 au plus)</div>
       <div class="galerie" id="an-galerie"></div>
       <button class="btn second" id="an-choisir" style="margin-top:10px"><svg class="i"><use href="#i-photo"/></svg><span>Choisir sur mon téléphone</span></button>
       <input type="file" id="an-fichiers" accept="image/*" multiple style="display:none">
@@ -1059,49 +1066,79 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     } catch (e) { message('#msg-photos', e.message, false); }
   }
 
-  // ---------------- écran Annonce : images du téléphone → carrousel (couverture Cauri + photos), texte FR (EN traduit)
-  let an = {fichiers: [], job: null};
+  // ---------------- écran Annonce : images d'un lien de post et/ou du téléphone → carrousel (couverture Cauri + photos)
+  // Chaque image : {url, idx (rang dans la tâche une fois sur le serveur), f (fichier du téléphone pas encore envoyé)}
+  let an = {items: [], job: null, n: 0};
   const anEtiquette = () => { const b = $('#an-etiquettes .puce.actif'); return (b && b.dataset.e) || $('#an-etiquette').value.trim(); };
   $$('#an-etiquettes .puce').forEach(b => b.onclick = () => { vibre(); $$('#an-etiquettes .puce').forEach(x => x.classList.toggle('actif', x === b));
     $('#an-etiquette-libre').style.display = b.dataset.e ? 'none' : ''; if (!b.dataset.e) $('#an-etiquette').focus(); });
   $$('#an-reseaux .puce').forEach(b => b.onclick = () => { vibre(); b.classList.toggle('actif'); });
   function anGalerie() {
     const g = $('#an-galerie'); g.innerHTML = '';
-    an.fichiers.forEach((f, i) => { const b = document.createElement('button');
+    an.items.forEach((it, i) => { const b = document.createElement('button');
       b.innerHTML = '<img alt="">' + (i === 0 ? '<span class="statut" style="top:6px;left:6px">Couverture</span>' : '');
-      b.querySelector('img').src = f.url;
+      b.querySelector('img').src = it.url;
       if (i === 0) b.classList.add('choisie');
       let t, long = false;
-      b.onpointerdown = () => { long = false; t = setTimeout(() => { long = true; vibre(); URL.revokeObjectURL(f.url); an.fichiers.splice(i, 1); an.job = null; anGalerie(); }, 650); };
+      b.onpointerdown = () => { long = false; t = setTimeout(() => { long = true; vibre(); if (it.f) URL.revokeObjectURL(it.url); an.items.splice(i, 1); anGalerie(); }, 650); };
       b.onpointerup = b.onpointerleave = () => clearTimeout(t);
-      b.onclick = () => { if (long) return; vibre(); an.fichiers.unshift(an.fichiers.splice(i, 1)[0]); an.job = null; anGalerie(); };
+      b.onclick = () => { if (long) return; vibre(); an.items.unshift(an.items.splice(i, 1)[0]); anGalerie(); };
       g.appendChild(b); });
-    $('#an-choisir span').textContent = an.fichiers.length ? 'Ajouter des images' : 'Choisir sur mon téléphone';
+    $('#an-choisir span').textContent = an.items.length ? 'Ajouter des images du téléphone' : 'Choisir sur mon téléphone';
   }
+  $('#an-coller').onclick = async () => { try { $('#an-lien').value = (await navigator.clipboard.readText()).trim(); } catch (e) { $('#an-lien').focus(); } };
+  $('#an-recuperer').onclick = async () => {
+    const lien = $('#an-lien').value.trim();
+    if (!/^https?:\/\//.test(lien)) return message('#msg-annonce', 'Colle le lien d’un post (Instagram, X, Facebook, TikTok…).', false);
+    if (an.job) return message('#msg-annonce', 'Un seul lien par annonce : publie celle-ci ou recharge la page pour une nouvelle.', false);
+    const btn = $('#an-recuperer'); btn.disabled = true;
+    try {
+      const j = await post('/photos/nouveau', {lien, artiste_nom: $('#an-artiste').value.trim()});
+      if (j.erreur) throw new Error(j.erreur);
+      an.job = j.id;
+      message('#msg-annonce', 'Récupération des images du post (1 à 2 minutes)…', true);
+      const tour = async () => { const d = await get('/job/' + j.id);
+        if (d.statut === 'erreur') { an.job = null; btn.disabled = false; return message('#msg-annonce', d.erreur || 'Images introuvables sur ce lien.', false); }
+        if (d.statut === 'pret' && (d.photos || []).length) {
+          an.n = d.photos.length;
+          an.items = d.photos.map((url, idx) => ({url, idx})).concat(an.items);
+          anGalerie(); btn.disabled = false; $('#an-lien').value = '';
+          if (!$('#an-credit').value.trim() && d.params && d.params.credit) $('#an-credit').value = d.params.credit;
+          return message('#msg-annonce', d.photos.length + ' image' + (d.photos.length > 1 ? 's' : '') + ' récupérée' + (d.photos.length > 1 ? 's' : '') + ' : appui long pour retirer celles qui ne vont pas.', true); }
+        setTimeout(tour, 3000); };
+      tour();
+    } catch (e) { an.job = null; btn.disabled = false; message('#msg-annonce', e.message, false); }
+  };
   $('#an-choisir').onclick = () => $('#an-fichiers').click();
   $('#an-fichiers').onchange = () => {
-    [...$('#an-fichiers').files].forEach(f => { if (an.fichiers.length < 10) an.fichiers.push({f, url: URL.createObjectURL(f)}); });
-    $('#an-fichiers').value = ''; an.job = null; anGalerie();
+    [...$('#an-fichiers').files].forEach(f => { if (an.items.length < 10) an.items.push({f, url: URL.createObjectURL(f)}); });
+    $('#an-fichiers').value = ''; anGalerie();
   };
-  async function anEnvoieImages() {   // une fois par série d'images : l'IA puis la publication s'en servent
-    if (an.job) return an.job;
-    const j = await post('/photos/nouveau', {lien: '', artiste_nom: $('#an-artiste').value.trim()});
-    if (j.erreur) throw new Error(j.erreur);
-    for (let k = 0; k < an.fichiers.length; k++) {
-      message('#msg-annonce', 'Envoi des images : ' + (k + 1) + ' / ' + an.fichiers.length + '…', true);
-      const blob = await reduit(an.fichiers[k].f);
-      const r = await fetch(BASE + '/photos/' + j.id + '/importer', {method: 'POST', headers: {'Content-Type': 'image/jpeg', 'X-CSRFToken': CSRF}, body: blob});
-      if (!r.ok) throw new Error('image ' + (k + 1) + ' refusée');
+  async function anEnvoieImages() {   // la tâche existe (lien) ou est créée ; seules les images du téléphone pas encore envoyées partent
+    if (!an.job) {
+      const j = await post('/photos/nouveau', {lien: '', artiste_nom: $('#an-artiste').value.trim()});
+      if (j.erreur) throw new Error(j.erreur);
+      an.job = j.id; an.n = 0;
     }
-    an.job = j.id; return an.job;
+    const aEnvoyer = an.items.filter(it => it.idx === undefined);
+    for (let k = 0; k < aEnvoyer.length; k++) {
+      message('#msg-annonce', 'Envoi des images : ' + (k + 1) + ' / ' + aEnvoyer.length + '…', true);
+      const blob = await reduit(aEnvoyer[k].f);
+      const r = await fetch(BASE + '/photos/' + an.job + '/importer', {method: 'POST', headers: {'Content-Type': 'image/jpeg', 'X-CSRFToken': CSRF}, body: blob});
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) throw new Error('image ' + (k + 1) + ' refusée (trop petite ou illisible) : retire-la');
+      aEnvoyer[k].idx = an.n++;
+    }
+    return an.job;
   }
+  const anIndices = () => an.items.slice(0, 10).map(it => it.idx);
   $('#an-ia').onclick = async () => {
-    if (!an.fichiers.length) return message('#msg-annonce', 'Choisis d’abord les images.', false);
+    if (!an.items.length) return message('#msg-annonce', 'Ajoute d’abord les images (lien ou téléphone).', false);
     const btn = $('#an-ia'); btn.disabled = true;
     try {
       const id = await anEnvoieImages();
       message('#msg-annonce', 'L’IA regarde les images et rédige…', true);
-      const s = await post('/photos/' + id + '/suggestions', {indices: an.fichiers.map((_, i) => i),
+      const s = await post('/photos/' + id + '/suggestions', {indices: anIndices(),
         contexte: [$('#an-accroche').value, $('#an-artiste').value, $('#an-fr').value].filter(Boolean).join(' · ')});
       if (s.accroche && !$('#an-accroche').value.trim()) $('#an-accroche').value = s.accroche;
       if (s.legende_fr) $('#an-fr').value = s.legende_fr;
@@ -1111,13 +1148,13 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   };
   async function publierAnnonce() {
     const accroche = $('#an-accroche').value.trim(), reseaux = $$('#an-reseaux .puce.actif').map(b => b.dataset.r);
-    if (!an.fichiers.length) return message('#msg-annonce', 'Choisis au moins une image.', false);
+    if (!an.items.length) return message('#msg-annonce', 'Ajoute au moins une image (lien ou téléphone).', false);
     if (!accroche) return message('#msg-annonce', 'Écris le titre de l’annonce.', false);
     if (!reseaux.length) return message('#msg-annonce', 'Choisis au moins une plateforme.', false);
     const btn = $('#btn-annonce'); btn.disabled = true;
     try {
       const id = await anEnvoieImages();
-      const r = await post('/photos/' + id + '/publier', {indices: an.fichiers.map((_, i) => i), reseaux, notifier: false,
+      const r = await post('/photos/' + id + '/publier', {indices: anIndices(), reseaux, notifier: false,
         etiquette: anEtiquette() || 'ANNONCE', accroche, legende_fr: $('#an-fr').value.trim() || accroche, legende_en: '',
         artiste_nom: $('#an-artiste').value.trim(), credit: $('#an-credit').value.trim()});
       if (r.erreur) throw new Error(r.erreur);
@@ -1125,8 +1162,8 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       const tour = async () => { const j = await get('/job/' + id);
         if (j.statut === 'envoye') {
           message('#msg-annonce', 'Annonce publiée (post n°' + j.post_id + ').', true);
-          an.fichiers.forEach(x => URL.revokeObjectURL(x.url)); an = {fichiers: [], job: null}; anGalerie();
-          ['#an-accroche', '#an-artiste', '#an-fr', '#an-credit', '#an-etiquette'].forEach(s => { $(s).value = ''; });
+          an.items.forEach(x => { if (x.f) URL.revokeObjectURL(x.url); }); an = {items: [], job: null, n: 0}; anGalerie();
+          ['#an-accroche', '#an-artiste', '#an-fr', '#an-credit', '#an-etiquette', '#an-lien'].forEach(s => { $(s).value = ''; });
           btn.disabled = false; return; }
         if (j.statut === 'erreur') { message('#msg-annonce', j.erreur || 'Échec', false); btn.disabled = false; return; }
         setTimeout(tour, 4000); };
