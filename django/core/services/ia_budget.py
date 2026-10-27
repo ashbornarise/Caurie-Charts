@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from core import db, env
 
 JOURS = 30
-DEFAUT_CREDIT = {"gemini": 10.0, "deepseek": 5.0}
+DEFAUT_CREDIT = {"gemini": 5.0, "deepseek": 5.0}   # rechargés le 27/10/2026
 # $ par million de jetons (entrée, sortie) et $ par requête avec recherche Google
 PRIX = {"gemini": (0.30, 2.50), "deepseek": (0.28, 0.42)}
 PRIX_RECHERCHE = 0.035
