@@ -6,7 +6,7 @@ on:
     inputs:
       limit:
         description: "Nombre max d'artistes à chercher"
-        default: "40"
+        default: "20"
 jobs:
   comptes:
     runs-on: ubuntu-latest
@@ -24,4 +24,4 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Chercher les comptes
         working-directory: django
-        run: python manage.py comptes_artistes --limit=${{ inputs.limit || 40 }}
+        run: python manage.py comptes_artistes --limit=${{ inputs.limit || 20 }}

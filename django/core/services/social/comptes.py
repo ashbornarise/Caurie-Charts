@@ -27,12 +27,13 @@ def colonnes() -> None:
         db.run(sql)
 
 
-def _gemini(prompt: str, http: HttpClient) -> tuple[str, dict]:
+def _gemini(prompt: str, http: HttpClient, reflexion: str = "minimal") -> tuple[str, dict]:
     cle = env.get("GEMINI_API_KEY", "")
     if not cle:
         raise PlatformException("GEMINI_API_KEY absente")
     corps = json.dumps({"contents": [{"role": "user", "parts": [{"text": prompt}]}], "tools": [{"google_search": {}}],
-                        "generationConfig": {"temperature": 0.1}}, ensure_ascii=False).encode()
+                        "generationConfig": {"temperature": 0.1, "thinkingConfig": {"thinkingLevel": reflexion}}},
+                       ensure_ascii=False).encode()
     dernier = "aucun modèle"
     for m in MODELES:
         r = http.request("POST", URL.format(m), {"x-goog-api-key": cle, "Content-Type": "application/json"}, corps)

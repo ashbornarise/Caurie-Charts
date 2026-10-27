@@ -48,6 +48,13 @@ class Command(BaseCommand):
             from core.services.charts import Period
             debut = Period.from_key("week", week).start
             for code in countries:
+                # Règle du fondateur : pas de classement officiel sous 8 artistes (pas de remplissage)
+                artistes = int(db.value("""SELECT COUNT(DISTINCT t.artist_id) FROM weekly_scores w JOIN tracks t ON t.id = w.track_id
+                                           JOIN countries c ON c.id = w.country_id
+                                           WHERE c.code = ? AND w.week_start = ? AND w.score > 0""", [code, debut]) or 0)
+                if not o["country"] and artistes < 8:
+                    out(f"{code} : {artistes} artiste(s) seulement, pas de classement officiel (8 au moins)")
+                    continue
                 # Titres signalés : Gemini + recherche Google tranchent d'abord ce qui est prouvé (27/10/2026)
                 if not o["sans_revue"] and revue_ia.en_attente(code, debut):
                     try:

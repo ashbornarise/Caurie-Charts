@@ -71,7 +71,9 @@ class GeminiClient:
             raise PlatformException("GEMINI_API_KEY absente")
         body = {"systemInstruction": {"parts": [{"text": system}]},
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-                "generationConfig": {"maxOutputTokens": max(max_tokens, 2048) + RESERVE_REFLEXION, "temperature": 0.1 if web_searches > 0 else 0.8}}
+                "generationConfig": {"maxOutputTokens": max(max_tokens, 2048) + RESERVE_REFLEXION, "temperature": 0.1 if web_searches > 0 else 0.8,
+                                     # Économie (27/10/2026) : la réflexion coûtait ~12 fois la réponse (947 jetons pour 78 écrits)
+                                     "thinkingConfig": {"thinkingLevel": env.get("GEMINI_REFLEXION", "minimal")}}}
         if web_searches > 0 and env.bool("GEMINI_GROUNDING"):
             body["tools"] = [{"google_search": {}}]
         last = "aucun modèle disponible"

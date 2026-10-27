@@ -1,7 +1,8 @@
 """Revue des titres signalés par Gemini avec la recherche Google, avant la publication du mardi (27/10/2026).
 
 Demande du fondateur : pour chaque pays, Google cherche d'abord les titres qui buzzent cette semaine-là, puis Gemini
-juge chaque titre signalé (pic soudain, rapport YouTube anormal) au vu de ce buzz et de ses propres recherches :
+juge chaque titre signalé (pic soudain, rapport YouTube anormal) au vu de ce buzz et de ses propres recherches, le tout
+en un seul appel par pays et pour les seuls titres qui peuvent entrer au classement :
 - « valider » : preuve d'un vrai buzz (sortie récente, tendance, presse, réseaux, autres classements) ;
 - « exclure » : seulement devant une preuve claire de gonflement (achat de vues, re-upload, compilation, faux titre) ;
 - sinon le titre reste en attente et le fondateur tranche.
@@ -18,40 +19,40 @@ DRAPEAUX = {"spike": "hausse soudaine des vues d'une semaine à l'autre",
             "youtube_ratio": "vues YouTube très au-dessus des écoutes audio (Spotify, Deezer, Audiomack…)"}
 
 
-def en_attente(code: str, week_start: str) -> list:
-    return db.all("""SELECT w.track_id, a.name AS artiste, t.title AS titre, w.score, w.flags, w.breakdown
-                     FROM weekly_scores w JOIN countries c ON c.id = w.country_id JOIN tracks t ON t.id = w.track_id
-                     JOIN artists a ON a.id = t.artist_id
-                     WHERE c.code = ? AND w.week_start = ? AND w.review_status = 'pending' AND w.score > 0
-                     ORDER BY w.score DESC""", [code, week_start])
+MARGE = 10   # titres classés jusqu'à taille du classement + 10 : une exclusion plus haut peut les faire entrer
 
 
-def buzz(pays: str, debut: date, http: HttpClient) -> str:
-    """Étape 1 : les titres qui buzzent dans le pays cette semaine (recherche Google)."""
+def en_attente(code: str, week_start: str, tous: bool = False) -> list:
+    """Titres signalés du pays cette semaine ; par défaut seulement ceux qui peuvent entrer dans le classement
+    (un titre classé 300e ne paraît nulle part : inutile de payer une recherche pour lui)."""
+    lignes = db.all("""SELECT w.track_id, a.name AS artiste, t.title AS titre, w.score, w.flags, w.breakdown, w.review_status,
+                              c.chart_size
+                       FROM weekly_scores w JOIN countries c ON c.id = w.country_id JOIN tracks t ON t.id = w.track_id
+                       JOIN artists a ON a.id = t.artist_id
+                       WHERE c.code = ? AND w.week_start = ? AND w.score > 0
+                       ORDER BY w.score DESC""", [code, week_start])
+    garde = lignes if tous else lignes[:int((lignes[0]["chart_size"] if lignes else 20) or 20) + MARGE]
+    return [x for x in garde if x["review_status"] == "pending"]
+
+
+def juger(pays: str, debut: date, titres: list, http: HttpClient) -> list:
+    """Un seul appel par pays : Google cherche le buzz de la semaine puis Gemini tranche chaque titre signalé."""
     fin = debut + timedelta(days=6)
-    texte, meta = _gemini(
-        f"Quels sont les titres de musique qui buzzent au {pays} pendant la semaine du {debut:%d/%m/%Y} au {fin:%d/%m/%Y} ? "
-        "Cherche sur Google : nouvelles sorties, tendances TikTok et YouTube, classements locaux (Apple Music, Boomplay, "
-        "Audiomack, Shazam), presse musicale du pays. Donne une liste courte : artiste – titre – pourquoi ça buzze.", http)
-    return texte.strip()[:4000] if meta.get("webSearchQueries") else ""
-
-
-def juger(pays: str, debut: date, titres: list, contexte: str, http: HttpClient) -> list:
-    """Étape 2 : une décision par titre signalé, au vu du buzz et de recherches propres à chaque titre."""
     lignes = []
     for t in titres:
         drapeaux = ", ".join(DRAPEAUX.get(f, f) for f in json.loads(t["flags"] or "[]"))
         lignes.append(f'- id {t["track_id"]} : {t["artiste"]} – « {t["titre"]} » (signalé : {drapeaux} ; détail {t["breakdown"]})')
     texte, meta = _gemini(
-        f"Tu es le contrôleur anti-fraude d'un classement musical du {pays}, semaine du {debut:%d/%m/%Y}.\n"
-        f"Ce que la recherche Google a trouvé comme titres qui buzzent cette semaine :\n{contexte or '(rien trouvé)'}\n\n"
-        "Titres signalés par notre système :\n" + "\n".join(lignes) + "\n\n"
-        "Pour chaque titre, cherche sur Google s'il y a un vrai buzz (sortie récente, clip, tendance, presse, polémique, "
-        "autres classements). Règles : « valider » si le buzz est réel et prouvé ; « exclure » seulement s'il y a une preuve "
-        "claire de gonflement (achat de vues, re-upload, compilation, live ou vidéo qui n'est pas le titre) ; sinon "
-        "« attente ». Termine par une ligne JSON : "
+        f"Tu es le contrôleur anti-fraude d'un classement musical du {pays}, semaine du {debut:%d/%m/%Y} au {fin:%d/%m/%Y}.\n"
+        f"1) Cherche sur Google les titres qui buzzent au {pays} cette semaine-là : nouvelles sorties, tendances TikTok et "
+        "YouTube, classements locaux (Apple Music, Boomplay, Audiomack, Shazam), presse musicale du pays.\n"
+        "2) Puis juge chacun des titres signalés par notre système, en cherchant s'il le faut chaque titre :\n"
+        + "\n".join(lignes) + "\n\n"
+        "Règles : « valider » si le buzz est réel et prouvé ; « exclure » seulement s'il y a une preuve claire de gonflement "
+        "(achat de vues, re-upload, compilation, live ou vidéo qui n'est pas le titre) ; sinon « attente ». "
+        "Termine par une ligne JSON : "
         '{"decisions": [{"id": 0, "decision": "valider|exclure|attente", "certitude": "haute|moyenne|faible", '
-        '"raison": "une phrase en français, factuelle"}]}', http)
+        '"raison": "une phrase en français, factuelle"}]}', http, reflexion="low")
     if not meta.get("webSearchQueries"):
         return []
     from core.services import ai
@@ -68,16 +69,13 @@ def revoir(code: str, week_start: str, user_id: int = 1, appliquer: bool = True,
     if not titres:
         return bilan
     pays = db.value("SELECT name_fr FROM countries WHERE code = ?", [code]) or code
-    debut = date.fromisoformat(week_start)
-    contexte = buzz(pays, debut, http)
     par_id = {int(t["track_id"]): t for t in titres}
     decisions = {}
-    for i in range(0, len(titres), 10):   # lots de 10 : des recherches précises pour chaque titre
-        for x in juger(pays, debut, titres[i:i + 10], contexte, http):
-            try:
-                decisions[int(x.get("id"))] = x
-            except (TypeError, ValueError):
-                continue
+    for x in juger(pays, date.fromisoformat(week_start), titres[:25], http):
+        try:
+            decisions[int(x.get("id"))] = x
+        except (TypeError, ValueError):
+            continue
     service = ChartService()
     for tid, t in par_id.items():
         x = decisions.get(tid) or {}

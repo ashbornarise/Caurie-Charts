@@ -129,7 +129,9 @@ def preparer(post: dict) -> dict:
     if faits.get("tags_auto") or faits.get("kind") not in ("format-clip", "format-video"):
         return post
     texte = post.get("caption") or ""
-    tags = choisir(post.get("title") or "", texte, faits.get("artiste") or "", faits.get("etiquette") or "")
+    # IA seulement pour les posts du Studio (actu chaude) ; clips et interviews : les règles suffisent (économie)
+    tags = choisir(post.get("title") or "", texte, faits.get("artiste") or "", faits.get("etiquette") or "",
+                   ia=str(post.get("theme") or "").startswith("format-studio"))
     faits["tags_auto"] = True
     post = {**post, "hashtags": tags, "facts": json.dumps(faits, ensure_ascii=False)}
     if post.get("id"):

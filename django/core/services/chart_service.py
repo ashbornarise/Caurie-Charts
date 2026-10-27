@@ -374,7 +374,9 @@ class ChartService:
         country = self.country(country_code)
         cid = int(country["id"])
         period = Period.from_key(period_type, period_key)
-        pending = self.pending_count(cid, period.start)
+        # Seuls comptent les titres signalés qui peuvent paraître au classement (taille + 10) ; un titre 300e ne bloque plus
+        from core.services import revue_ia
+        pending = len(revue_ia.en_attente(country["code"], period.start))
         if pending > 0:
             raise RuntimeError(f"{pending} titre(s) à vérifier : validez ou excluez-les avant de publier.")
         count = db.run("""UPDATE chart_runs SET status = 'published', published_at = ?, published_by = ?
