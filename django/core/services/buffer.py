@@ -62,9 +62,30 @@ def text(post: dict, service: str) -> str:
     if "localhost" in link or "127.0.0.1" in link:
         link = "https://www.cauricharts.com/"  # un post programmé depuis un poste de travail garde le vrai lien du site
     # Français puis anglais (🇬🇧), dans la limite des légendes Instagram et TikTok (2 200 caractères)
-    texte = bilingue.legende(post, link)
+    texte = bilingue.legende(post, link) + mention(post, service)
     texte = hashtags_pays(texte)[:2200] if service == "tiktok" else texte
     return minuscules_hashtags(texte)
+
+
+def mention(post: dict, service: str) -> str:
+    """« 🎤 @compte » de l'artiste sur Instagram et TikTok (comptes trouvés par core.services.social.comptes)."""
+    if service not in ("instagram", "tiktok"):
+        return ""
+    try:
+        nom = json.loads(post.get("facts") or "{}").get("artiste")
+    except ValueError:
+        return ""
+    if not nom:
+        return ""
+    try:
+        compte = db.value(f"SELECT {service} FROM artists WHERE lower(name) = lower(?) AND coalesce({service}, '') <> '' "
+                          "ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 1", [nom])
+    except Exception:  # noqa: BLE001 — colonne tiktok absente d'une vieille base
+        return ""
+    compte = str(compte or "").lstrip("@")
+    if not compte or ("@" + compte).lower() in (post.get("caption") or "").lower():
+        return ""
+    return f"\n\n🎤 @{compte}"
 
 
 def minuscules_hashtags(texte: str) -> str:

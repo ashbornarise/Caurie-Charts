@@ -416,11 +416,18 @@ def profil_artiste(request, chemin):
     _verifie(chemin)
     if not _utilisateur(request):
         return _json({"erreur": "connexion requise"}, 401)
-    db.run("ALTER TABLE artists ADD COLUMN IF NOT EXISTS tiktok VARCHAR(60) NULL")
+    from core.services.social import comptes
+    comptes.colonnes()
     if request.method == "GET":
-        a = db.one("SELECT id, name, instagram, tiktok FROM artists WHERE lower(name) = lower(?) "
-                   "ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 1", [request.GET.get("nom", "").strip()])
-        return _json({"artiste": a})
+        a = db.one("SELECT id, name, instagram, tiktok, origin_country, base_country, comptes_source, comptes_le FROM artists "
+                   "WHERE lower(name) = lower(?) ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 1",
+                   [request.GET.get("nom", "").strip()])
+        if a and not (a.get("instagram") and a.get("tiktok")) and not a.get("comptes_le"):
+            try:   # jamais cherché : recherche Google tout de suite (Gemini), le Studio pré-remplit les champs
+                a.update(comptes.completer(a))
+            except Exception:  # noqa: BLE001
+                pass
+        return _json({"artiste": a and {k: a.get(k) for k in ("id", "name", "instagram", "tiktok")}})
     c = _corps(request)
 
     def compte(v: str, site: str) -> str | None:
@@ -436,7 +443,7 @@ def profil_artiste(request, chemin):
     if any(v is None for v in champs.values()):
         return _json({"erreur": "profil illisible : collez le lien du profil ou le nom après @"}, 400)
     if champs:
-        db.update("artists", champs, "id = :id", {"id": a["id"]})
+        db.update("artists", {**champs, "comptes_source": "manuel"}, "id = :id", {"id": a["id"]})   # jamais remplacé par l'IA
     return _json({"ok": True, **champs})
 
 
