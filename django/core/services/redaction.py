@@ -59,10 +59,10 @@ def tables() -> None:
 
 
 def client():
-    """DeepSeek (rapide, peu coûteux) ; à défaut la chaîne d'IA habituelle."""
+    """DeepSeek d'abord (rapide, peu coûteux) ; solde épuisé ou panne : la chaîne d'IA habituelle (Gemini, Groq…)."""
     from core.services import ai
-    ds = ai.DeepSeekClient(HttpClient(90))
-    return ds if ds.is_available() else ai.make()
+    chaine = [c for c in (ai.DeepSeekClient(HttpClient(90)), ai.make()) if c and c.is_available()]
+    return ai.FallbackClient(chaine) if chaine else None
 
 
 def agents(modes=("actif", "essai")) -> list:
