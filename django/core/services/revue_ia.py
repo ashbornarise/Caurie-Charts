@@ -86,8 +86,10 @@ def revoir(code: str, week_start: str, user_id: int = 1, appliquer: bool = True,
             bilan["attente"].append(f"{nom} : {raison or 'pas de preuve trouvée'}")
             continue
         if appliquer:
-            service.decide(tid, week_start, choix, f"Revue IA (Gemini + Google) : {raison}", user_id)
+            service.decide(tid, week_start, choix, f"Revue IA (Gemini + Google) : {raison}", user_id, recalcul=False)
         bilan["valides" if choix == "validated" else "exclus"].append(f"{nom} : {raison}")
+    if appliquer and (bilan["valides"] or bilan["exclus"]):   # une semaine recalculée une fois (3 min par titre avant)
+        service.compute_week(code, week_start, None, user_id)
     log_write("revue_ia", "info", f"{code} {week_start} : {len(bilan['valides'])} validé(s), {len(bilan['exclus'])} exclu(s), "
                                   f"{len(bilan['attente'])} en attente")
     return bilan

@@ -386,7 +386,8 @@ class ChartService:
         self._after_week_published(country["code"], period, user_id or None)
         return count
 
-    def decide(self, track_id: int, week_start: str, decision: str, reason: str, user_id: int, ip: str | None = None) -> None:
+    def decide(self, track_id: int, week_start: str, decision: str, reason: str, user_id: int, ip: str | None = None,
+               recalcul: bool = True) -> str | None:
         """Titre signalé validé ou exclu (raison obligatoire, exclusion publique) ; la semaine est recalculée."""
         if decision not in ("validated", "excluded") or reason.strip() == "":
             raise ValueError("Décision invalide ou raison manquante.")
@@ -400,4 +401,7 @@ class ChartService:
                     user_id = EXCLUDED.user_id, created_at = CURRENT_TIMESTAMP""", [track_id, week_start, decision, reason, user_id])
         audit.log(user_id, "track." + ("exclude" if decision == "excluded" else "validate"), "track", track_id, reason, {"week_start": week_start}, ip)
         correction = f"Décision sur un titre signalé : {reason}" if row["status"] == "published" else None
+        if not recalcul:   # plusieurs décisions d'affilée (revue IA) : un seul recalcul à la fin
+            return row["code"]
         self.compute_week(row["code"], week_start, correction, user_id)
+        return row["code"]

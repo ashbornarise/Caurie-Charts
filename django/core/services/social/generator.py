@@ -154,7 +154,8 @@ class PostGenerator:
     def _write(self, facts: dict) -> dict:
         # La phrase de la demande et l'explication interne ne sont pas des faits : l'IA ne les voit pas
         shown = {k: v for k, v in facts.items() if k not in ("request", "explanation", "measure", "unsupported", "style")}
-        answer = self.ai.ask(SYSTEM, "Faits (JSON) :\n" + json.dumps(shown, ensure_ascii=False, indent=4, default=str), 1500)
+        from core.services import redaction
+        answer = self.ai.ask(SYSTEM + redaction.consignes("classement"), "Faits (JSON) :\n" + json.dumps(shown, ensure_ascii=False, indent=4, default=str), 1500)
         j = ai.extract_json(answer["text"])
         if not j or not j.get("title") or not j.get("caption"):
             raise RuntimeError("Réponse IA inexploitable")

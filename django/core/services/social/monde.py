@@ -249,7 +249,8 @@ def _redige(histoires: list) -> list:
         "projet personnel d'un artiste (marque, film, livre, tournée record) ; monde = le reste (cérémonies, événements, industrie).\n"
         "Français impeccable, aucun anglicisme (concerts et pas shows), noms propres exacts, phrases complètes.\n"
         "Rends une liste JSON, rien d'autre.\n\n" + json.dumps(lots, ensure_ascii=False))
-    r = ai.make().ask(SYSTEME, consigne, max_tokens=6000)
+    from core.services import redaction
+    r = ai.make().ask(SYSTEME + redaction.consignes("monde"), consigne, max_tokens=6000)   # + leçons de la rédaction
     texte = r["text"].strip()
     texte = texte[texte.find("["): texte.rfind("]") + 1]
     try:
@@ -911,6 +912,9 @@ def edition(jour: date, quand: str, rendu_seul: bool = False) -> dict | None:
             continue
         vus_artistes.add(a); choix.append(f)
     choix = selection(choix, PAR_EDITION)
+    if not rendu_seul:   # comité de rédaction : vérité, fraîcheur, qualité de chaque info avant publication (27/10/2026)
+        from core.services import redaction
+        choix = [x for x in (redaction.fiche_monde(f) for f in choix) if x]
     if not choix:
         return None
     # UNE info = UN post = UN visage : celui qui aime Lady Gaga voit son post, celui qui aime Burna Boy le sien.
@@ -937,6 +941,9 @@ def flash(rendu_seul: bool = False, forcer: bool = False) -> dict | None:
         return None
     fiches = sorted(redige(histoires[:8]), key=lambda f: f["choc"], reverse=True)
     f = next((x for x in fiches if (x["choc"] >= SEUIL_FLASH or forcer) and not deja_vu_aujourdhui(x.get("artiste"))), None)
+    if f and not rendu_seul:
+        from core.services import redaction
+        f = redaction.fiche_monde(f)   # un flash faux ou réchauffé ne part pas
     if not f:
         return None
     maintenant = datetime.now(timezone.utc)
