@@ -480,6 +480,15 @@ def _envoyer(request, ident):
     audite = env.get("TIKTOK_AUDITE", "") in ("1", "oui", "true")
     tiktok_direct = (bool(c.get("tiktok")) and (reseaux is None or "tiktok" in reseaux)
                      and ((c.get("tiktok") or {}).get("mode") == "brouillon" or audite))
+    # Une même vidéo ne part qu'une fois sur TikTok (Burna Boy envoyé 3 fois le 26/10/2026, faute de le voir en ligne)
+    deja_tiktok = bool(db.value("""SELECT 1 FROM audit_log a JOIN social_posts p ON a.entity_id = CAST(p.id AS TEXT)
+                                   WHERE a.action = 'buffer.post' AND a.reason LIKE 'post-%-tiktok%'
+                                   AND p.facts LIKE ? LIMIT 1""", [f'%"studio_job": {j["id"]},%']))
+    if deja_tiktok and (reseaux is None or "tiktok" in reseaux):
+        reseaux = [r for r in (reseaux or list(PLATEFORMES_POST)) if r != "tiktok"]
+        tiktok_direct = False
+        if not reseaux:
+            return _json({"erreur": "cette vidéo est déjà partie sur TikTok : pas de doublon"}, 409)
     if tiktok_direct:   # TikTok part par sa propre API avec les réglages de l'écran ; Buffer ne s'en occupe plus
         reseaux = [r for r in (reseaux or ["instagram", "facebook", "tiktok", "telegram"]) if r != "tiktok"]
     faits = {"kind": "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
@@ -492,6 +501,8 @@ def _envoyer(request, ident):
                                      "video": j["video"], "status": "approved", "facts": json.dumps(faits, ensure_ascii=False)})
     post = db.one("SELECT * FROM social_posts WHERE id = ?", [pid])
     from core.services import buffer
+    from core.services.social import hashtags
+    post = hashtags.preparer(post)   # les 5 hashtags du sujet, avant tout envoi
     try:
         resultat = buffer.schedule(post, maintenant + timedelta(minutes=2)) if reseaux != [] else ""
     except Exception as exc:  # noqa: BLE001
@@ -506,6 +517,8 @@ def _envoyer(request, ident):
         return _json({"erreur": f"aucun réseau n'a accepté la vidéo : {resultat}"}, 502)
     db.update("studio_jobs", {"statut": "envoye", "post_id": pid}, "id = :id", {"id": j["id"]})
     refus = [m.strip() for m in str(resultat).split(",") if ":" in m and "déjà" not in m]
+    if deja_tiktok:
+        refus.append("tiktok : cette vidéo est déjà partie sur TikTok (pas de doublon)")
     return _json({"ok": True, "post_id": pid, "recus": sorted(set(recus)), "refus": refus})
 
 

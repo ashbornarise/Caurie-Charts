@@ -260,7 +260,7 @@ def reseaux(post: dict) -> set | None:
         r = json.loads(post.get("facts") or "{}").get("reseaux")
     except ValueError:
         return None
-    return set(r) if r else None
+    return set(r) if r is not None else None   # [] = aucun réseau (TikTok parti en brouillon seul), pas « tous »
 
 
 def notification_demandee(post: dict) -> bool:
@@ -350,6 +350,8 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
     (jamais un carrousel publié sur un seul réseau)."""
     if not configured():
         return "Buffer non configuré (BUFFER_API_KEY)"
+    from core.services.social import hashtags
+    post = hashtags.preparer(post)   # hashtags du sujet, les plus utilisés (27/10/2026)
     done = []
     jobs = [("", False, due_at)]
     if video_seule(post):
@@ -399,7 +401,9 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
                     audit.log(None, "buffer.post", "social_post", post["id"], key, {"meta_id": mid, "direct": True}, None)
                     done.append(f"{label} programmé")
                     continue
-                quand = heure_tiktok(when) if ch["service"] == "tiktok" else when
+                # Studio : publié quand le fondateur l'envoie ; les automatismes attendent le créneau de pointe
+                studio = str(post.get("theme") or "").startswith("format-studio")
+                quand = heure_tiktok(when) if ch["service"] == "tiktok" and not studio else when
                 r = call(CREATE, {"input": payload(post, ch, quand, reel)}, http)["createPost"]
             except PlatformException as exc:
                 done.append(f"{label} : {exc}")

@@ -99,6 +99,8 @@ def send_post(post: dict, force: bool = False, http: HttpClient | None = None) -
     from core import storage
     if not configured():
         return "Telegram non configuré"
+    from core.services.social import hashtags
+    post = hashtags.preparer(post)
     key = f"post-{post['id']}"
     if not force and db.value("SELECT 1 FROM audit_log WHERE action = 'telegram.post' AND reason = ? LIMIT 1", [key]):
         return f"déjà envoyé ({key})"

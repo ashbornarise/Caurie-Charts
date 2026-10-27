@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "cauri.settings")
+os.environ.setdefault("HASHTAGS_IA", "0")   # pas d'appel à l'IA pour les hashtags pendant les tests
 
 import django  # noqa: E402
 
