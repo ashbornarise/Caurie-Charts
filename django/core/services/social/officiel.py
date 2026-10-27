@@ -18,7 +18,8 @@ def _au(code: str) -> str:
 
 def _vues(n: int) -> str:
     if n >= 1_000_000:
-        return f"{n / 1e6:.1f}".replace(".", ",").replace(",0", "") + " millions de vues cette semaine"
+        m = f"{n / 1e6:.1f}".replace(".", ",").replace(",0", "")
+        return m + (" million" if n < 2_000_000 else " millions") + " de vues cette semaine"   # 1,1 million, 2,3 millions
     return f"{n:,}".replace(",", " ") + " vues cette semaine"
 
 

@@ -16,6 +16,7 @@ MAX_TAGS = 5
 
 # (motif cherché dans le texte, tags du plus utilisé au moins utilisé)
 EVENEMENTS = [   # motifs sans accents : le texte est comparé sans accents
+    (r"\bn ?1\b|numero 1|classement|top 20", ["#top20", "#charts"]),   # nos N°1 (« N°1 » devient « n1 » sans accents)
     (r"ballon d.or", ["#ballondor"]),
     (r"grammy", ["#grammys", "#grammy"]),
     (r"\bbet awards|\bbet 20", ["#betawards"]),
@@ -27,7 +28,7 @@ EVENEMENTS = [   # motifs sans accents : le texte est comparé sans accents
     (r"\bclash|\bbeef\b|\brepond|polemique|comparaison", ["#clash"]),
     (r"challenge|\bdanse\b|\bdance\b|choregraph", ["#dance", "#challenge"]),
     (r"freestyle", ["#freestyle"]),
-    (r"nouveau (son|single|clip|titre)|new (music|song|single)|vient de sortir|clip officiel", ["#newmusic", "#nouveauclip"]),
+    (r"nouveau (son|single|clip|titre)|new (music|song|single)|vient de sortir|nouveau clip", ["#newmusic", "#nouveauclip"]),
     (r"\bnouvel album|\bnew album|\bson album|\bl.album\b", ["#newalbum"]),
     (r"\bmariage|\bbebe\b|\ben couple", ["#people"]),
     (r"\btenue|\bcostume|\bfashion|\bdefile", ["#fashion"]),
