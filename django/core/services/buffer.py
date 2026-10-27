@@ -169,11 +169,16 @@ FACEBOOK_PAR_JOUR = 4
 INSTAGRAM_THEMES = ("format-", "flash", "monde-matin-1", "monde-soir-1", "hebdo")
 
 
+# Hors quota sur tous les réseaux : le classement officiel du mardi (notre cœur, écarté le 27/10/2026 parce que
+# Cauri Monde avait rempli la journée) et les posts du Studio choisis à la main
+PRIORITAIRES = ("format-officiel", "format-studio")
+
+
 def facebook_ok(post: dict) -> bool:
     """Facebook (23/10/2026) : 75 posts la semaine 43 pour une portée médiane de 0. Même règle qu'Instagram :
     thèmes prioritaires, FACEBOOK_PAR_JOUR posts par jour au plus ; les posts de Cauri Studio passent toujours."""
     theme = str(post.get("theme") or "")
-    if theme.startswith("format-studio"):
+    if theme.startswith(PRIORITAIRES):
         return True
     if not theme.startswith(INSTAGRAM_THEMES):
         return False
@@ -187,7 +192,7 @@ def facebook_ok(post: dict) -> bool:
 def instagram_ok(post: dict) -> bool:
     """Post retenu pour Instagram : thème prioritaire et moins de INSTAGRAM_PAR_JOUR posts déjà envoyés aujourd'hui.
     Les posts de Cauri Studio, choisis à la main par le fondateur, passent toujours et ne comptent pas dans la limite."""
-    if str(post.get("theme") or "").startswith("format-studio"):
+    if str(post.get("theme") or "").startswith(PRIORITAIRES):
         return True
     if not str(post.get("theme") or "").startswith(INSTAGRAM_THEMES):
         return False
@@ -216,8 +221,8 @@ def tiktok_refus(post: dict) -> str | None:
     theme = str(post.get("theme") or "")
     if REPRISE.search(post.get("caption") or ""):
         return "tiktok : vidéo reprise d'un autre compte (non recommandée par TikTok)"
-    if theme.startswith("format-studio"):
-        return None   # posts choisis à la main dans le Studio (actu chaude…) : jamais bloqués (24/10/2026)
+    if theme.startswith(PRIORITAIRES):
+        return None   # classement officiel et posts choisis à la main dans le Studio (actu chaude…) : jamais bloqués (24/10/2026)
     if theme.startswith(("monde", "flash", "ecoutes_monde")):
         try:
             fiches = json.loads(post.get("facts") or "{}").get("fiches") or []
