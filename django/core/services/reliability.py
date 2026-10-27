@@ -22,7 +22,7 @@ def measure(country_id, rows: list | None = None) -> dict:
     flt, params = ("", []) if country_id is None else (" AND country_id = ?", [country_id])
     stats = db.one(f"""SELECT COUNT(DISTINCT source) FILTER (WHERE source NOT IN ('{"','".join(COMPUTED)}')) AS sources,
                               COUNT(DISTINCT observed_on) AS days, MAX(observed_on) AS last
-                       FROM chart_observations WHERE observed_on >= CURRENT_DATE - 7{flt}""", params) or {}
+                       FROM chart_observations WHERE observed_on > CURRENT_DATE - 7{flt}""", params) or {}
     sources, days = int(stats.get("sources") or 0), int(stats.get("days") or 0)
     top = [r for r in (rows or []) if not r.get("is_artist")][:20]
     seen_twice = sum(1 for r in top if len({s["source"] for s in (r.get("seen") or [])}) >= 2)

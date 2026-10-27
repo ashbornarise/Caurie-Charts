@@ -408,3 +408,28 @@ def footer_links() -> dict:
     }
     cache.set("footer-links", data, 3600)
     return data
+
+
+def numeros_un() -> dict:
+    """Les N°1 qui durent (fondateur, 27/10/2026) : pour chaque pays, le N°1 du dernier classement officiel publié et
+    son nombre de semaines consécutives au sommet ; et le record de Cauri Charts (plus longue série, tous pays)."""
+    rows = db.all("""SELECT r.country_id, c.code, r.period_start, e.track_id, t.title, t.slug AS track_slug,
+                            a.name AS artist_name, a.slug AS artist_slug
+                     FROM chart_runs r JOIN chart_types ct ON ct.id = r.chart_type_id AND ct.code IN ('prime', 'prime-wa')
+                     LEFT JOIN countries c ON c.id = r.country_id
+                     JOIN chart_entries e ON e.chart_run_id = r.id AND e.position = 1
+                     LEFT JOIN tracks t ON t.id = e.track_id LEFT JOIN artists a ON a.id = COALESCE(e.artist_id, t.artist_id)
+                     WHERE r.period_type = 'week' AND r.status = 'published'
+                     ORDER BY r.country_id NULLS FIRST, r.period_start""")
+    actuels, record, serie = {}, None, None
+    for x in rows:
+        cle = x["code"] or "WA"
+        prec = actuels.get(cle)
+        # même titre, semaine suivante publiée : la série continue (une semaine non publiée ne la casse pas)
+        n = prec["semaines"] + 1 if prec and prec["track_id"] == x["track_id"] else 1
+        actuels[cle] = {**x, "code": cle, "semaines": n, "depuis": prec["depuis"] if n > 1 else x["period_start"]}
+        if not record or n > record["semaines"]:
+            record = actuels[cle]
+    derniere = max((a["period_start"] for a in actuels.values()), default=None)   # pays publiés cette semaine seulement
+    return {"actuels": sorted((a for a in actuels.values() if a["period_start"] == derniere and a["code"] != "WA"),
+                              key=lambda a: (-a["semaines"], a["code"])), "record": record}

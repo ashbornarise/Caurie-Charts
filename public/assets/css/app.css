@@ -765,3 +765,17 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .official__more { margin-top: 12px; }
 .official__note { color: var(--muted); font-size: .85rem; margin-top: 12px; }
 @media (min-width: 760px) { .official__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Les N°1 qui durent (classement Afrique de l'Ouest, vue officielle) */
+.numeros-un { margin: 24px 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.numeros-un h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.numeros-un__record { margin: 0 0 14px; padding: 10px 14px; background: var(--surface-2); border-left: 4px solid var(--accent); }
+.numeros-un__record .eyebrow { display: block; margin-bottom: 2px; }
+.numeros-un__liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.numeros-un__liste li { display: grid; grid-template-columns: minmax(7rem, 10rem) 1fr auto; gap: 4px 12px; align-items: baseline;
+    padding: 8px 0; border-bottom: 1px solid var(--line); }
+.numeros-un__liste li:last-child { border-bottom: 0; }
+.numeros-un__titre { min-width: 0; overflow-wrap: anywhere; }
+.numeros-un__titre small { display: block; color: var(--muted); }
+.numeros-un__semaines { font-weight: 700; white-space: nowrap; color: var(--accent); }
+@media (max-width: 480px) { .numeros-un__liste li { grid-template-columns: 1fr auto; } .numeros-un__pays { grid-column: 1 / -1; } }

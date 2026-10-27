@@ -249,6 +249,7 @@ def _render_chart(request, country: dict, chart_code: str, period: str, key: str
         "country": country, "regional": is_regional, "chartCode": chart_code, "chart": chart, "periodType": period_type,
         "run": run, "entries": repos.entries(int(run["id"])) if run else [],
         "history": repos.published_runs(country["id"], chart_code, period_type), "aside": aside(country),
+        "numerosUn": repos.numeros_un() if is_regional and view == "official" and period_type == "week" else None,
         "meta": {
             "title": title + (" · " + period_label(run) if run else "") + " · " + brand(),
             "description": t(f"chart.description.{chart_code}", country=country_name(country["code"])),

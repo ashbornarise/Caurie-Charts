@@ -94,6 +94,27 @@
     {% endif %}
 </section>
 {% else %}
+{% if numerosUn and numerosUn.actuels %}
+<section class="numeros-un" aria-labelledby="numeros-un-titre">
+    <h2 id="numeros-un-titre">{{ t('chart.numeros_un') }}</h2>
+    {% set rec = numerosUn.record %}
+    {% if rec %}
+    <p class="numeros-un__record"><span class="eyebrow">{{ t('chart.record') }}</span>
+        <strong>{% if rec.track_slug %}<a href="{{ path('titre/' ~ rec.track_slug) }}">{{ rec.title }}</a>{% else %}{{ rec.title }}{% endif %}</strong>
+        · {{ rec.artist_name }} · {{ flag(rec.code, 14) if rec.code != 'WA' }}{{ country_name(rec.code) if rec.code != 'WA' else t('chart.region_short') }}
+        — <strong>{{ t('chart.weeks_at_one', {'n': rec.semaines}) }}</strong></p>
+    {% endif %}
+    <ol class="numeros-un__liste">
+        {% for a in numerosUn.actuels %}
+        <li><span class="numeros-un__pays">{{ flag(a.code, 14) }}{{ country_name(a.code) }}</span>
+            <span class="numeros-un__titre">{% if a.track_slug %}<a href="{{ path('titre/' ~ a.track_slug) }}">{{ a.title }}</a>{% else %}{{ a.title }}{% endif %}
+                <small>{{ a.artist_name }}</small></span>
+            <span class="numeros-un__semaines">{{ t('chart.weeks_at_one', {'n': a.semaines}) }}</span></li>
+        {% endfor %}
+    </ol>
+    <p class="fineprint">{{ t('chart.numeros_un_note') }}</p>
+</section>
+{% endif %}
 <section>
     {% if not entries %}
         <p class="empty">{{ t('chart.empty_legend') if chartCode == 'legend' else t('chart.empty') }}</p>

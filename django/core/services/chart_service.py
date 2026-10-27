@@ -290,7 +290,13 @@ class ChartService:
                   "sources_count": int(r["sources_count"]), "prev_score": float(r["prev_score"] or 0), "release_date": r["release_date"],
                   "is_emerging": False, "flags": [], "review_status": "ok", "country": r["country"],
                   "breakdown": json.loads(r["breakdown"] or "[]") or []} for r in rows]
-        complete = len(published) == countries
+        # Complet quand tous les pays éligibles (8 artistes au moins, règle du fondateur) sont publiés : avec « tous les
+        # pays actifs », le régional n'était jamais publié (les petits pays n'ont pas de classement officiel)
+        eligibles = int(db.value("""SELECT COUNT(*) FROM (SELECT ws.country_id FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id
+                                    JOIN countries c ON c.id = ws.country_id AND c.is_active = 1
+                                    WHERE ws.week_start = ? AND ws.score > 0 GROUP BY ws.country_id
+                                    HAVING COUNT(DISTINCT t.artist_id) >= 8) x""", [week.start]) or countries)
+        complete = len(published) >= min(countries, eligibles)
         formula = formula_effective_for(week.start)
         entries = ChartRanker(formula).prime(items, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, "week", week.start),
                                              conf.get("charts.prime-wa.country_cap"))
