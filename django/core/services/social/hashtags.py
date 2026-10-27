@@ -128,7 +128,7 @@ def preparer(post: dict) -> dict:
         faits = json.loads(post.get("facts") or "{}")
     except ValueError:
         return post
-    if faits.get("tags_auto") or faits.get("kind") not in ("format-clip", "format-video"):
+    if faits.get("tags_auto") or faits.get("kind") not in ("format-clip", "format-video", "format-studio-photos"):
         return post
     texte = post.get("caption") or ""
     # IA seulement pour les posts du Studio (actu chaude) ; clips et interviews : les règles suffisent (économie)

@@ -743,6 +743,9 @@ def photos_publier(request, chemin, ident):
         return _json({"erreur": str(exc)}, 400)
     p.update({"publier_indices": indices, "notifier": bool(c.get("notifier")), "reseaux": reseaux,
               **{k: str(c.get(k) or "").strip()[:900] for k in ("etiquette", "accroche", "legende_fr", "legende_en")}})
+    for k in ("artiste_nom", "credit"):   # écran Annonce (27/10/2026) : artiste et crédit saisis avec les textes
+        if c.get(k):
+            p[k] = str(c[k]).strip()[:120]
     db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False), "statut": "attente", "erreur": None}, "id = :id", {"id": j["id"]})
     erreur = _lance(j["id"])
     if erreur:

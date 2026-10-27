@@ -76,7 +76,7 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stro
 .btn.vert{background:linear-gradient(135deg,#34d399,#16a34a);box-shadow:0 12px 30px rgba(34,197,94,.35);color:#04150a}
 .btn.second{background:var(--carte-forte);box-shadow:none;border:1px solid var(--trait)}
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:rgba(14,9,28,.86);backdrop-filter:blur(18px);border-top:1px solid var(--trait);padding:8px 10px calc(var(--bas) + 8px)}
-.nav div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+.nav div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
 .nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;font-size:11px;font-weight:700;color:var(--faible)}
 .nav button.actif{color:#fff}.nav button.actif svg{color:var(--violet-clair)}
 .ecran{display:none;animation:entre .28s ease}.ecran.vu{display:block}
@@ -166,6 +166,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <symbol id="i-poubelle" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></symbol>
   <symbol id="i-photo" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
   <symbol id="i-musique" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-annonce" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></symbol>
   <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
 </svg>
 
@@ -372,6 +373,44 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
     <div class="msg" id="msg-photos"></div>
   </section>
 
+  <!-- ÉCRAN ANNONCE (27/10/2026) : une actu chaude en images, publiée en carrousel -->
+  <section class="ecran" id="e-annonce">
+    <h1 class="titre">Annonce</h1>
+    <p class="sous">Une actu chaude en images : la 1re devient la couverture Cauri, les autres suivent en carrousel.</p>
+    <div class="carte">
+      <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-photo"/></svg>Images (1 à 10)</div>
+      <div class="galerie" id="an-galerie"></div>
+      <button class="btn second" id="an-choisir" style="margin-top:10px"><svg class="i"><use href="#i-photo"/></svg><span>Choisir sur mon téléphone</span></button>
+      <input type="file" id="an-fichiers" accept="image/*" multiple style="display:none">
+      <p style="margin:8px 0 0;font-size:12px;color:var(--faible)">Touche une image pour la mettre en couverture ; appui long pour la retirer.</p>
+    </div>
+    <div class="carte">
+      <div class="etiq">Étiquette</div>
+      <div class="puces" id="an-etiquettes">
+        <button class="puce actif" data-e="EXCLU">Exclu</button><button class="puce" data-e="ANNONCE">Annonce</button>
+        <button class="puce" data-e="NOUVEAU SON">Nouveau son</button><button class="puce" data-e="ALBUM">Album</button>
+        <button class="puce" data-e="CONCERT">Concert</button><button class="puce" data-e="RECORD">Record</button>
+        <button class="puce" data-e="CLASH">Clash</button><button class="puce" data-e="">Autre…</button>
+      </div>
+      <div class="champ" id="an-etiquette-libre" style="display:none;margin-top:10px"><input id="an-etiquette" maxlength="28" placeholder="Ton étiquette (28 caractères)"></div>
+    </div>
+    <div class="carte texte">
+      <label style="margin-top:0">Titre de l'annonce<input id="an-accroche" maxlength="90" placeholder="ex. Didi B annonce un concert au stade FHB"></label>
+      <label>Artiste <span style="font-weight:400;color:var(--doux)">(mention et collaboration)</span><input id="an-artiste" placeholder="ex. Didi B" autocomplete="off"></label>
+      <label>Texte en français<textarea id="an-fr" placeholder="Les faits : quoi, quand, où. L'anglais est traduit tout seul."></textarea></label>
+      <label>Crédit photo <span style="font-weight:400;color:var(--doux)">(si l'image n'est pas à nous)</span><input id="an-credit" placeholder="ex. @didib sur Instagram"></label>
+      <button class="btn second" id="an-ia"><svg class="i"><use href="#i-magie"/></svg>L'IA écrit le titre et le texte</button>
+    </div>
+    <div class="carte">
+      <div class="etiq">Plateformes</div>
+      <div class="puces" id="an-reseaux">
+        <button class="puce actif" data-r="instagram">Instagram</button><button class="puce actif" data-r="facebook">Facebook</button>
+        <button class="puce actif" data-r="tiktok">TikTok</button><button class="puce actif" data-r="telegram">Telegram</button>
+      </div>
+    </div>
+    <div class="msg" id="msg-annonce"></div>
+  </section>
+
   <!-- ÉCRAN MES VIDÉOS -->
   <section class="ecran" id="e-videos">
     <h1 class="titre">Mes vidéos</h1>
@@ -447,6 +486,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 
 <nav class="nav"><div>
   <button class="actif" data-ecran="creer"><svg class="i"><use href="#i-plus"/></svg>Créer</button>
+  <button data-ecran="annonce"><svg class="i"><use href="#i-annonce"/></svg>Annonce</button>
   <button data-ecran="photos"><svg class="i"><use href="#i-photo"/></svg>Photos<span class="badge" id="badge-photos" style="display:none"></span></button>
   <button data-ecran="videos"><svg class="i"><use href="#i-film"/></svg>Mes vidéos</button>
   <button data-ecran="reglages"><svg class="i"><use href="#i-reglages"/></svg>Réglages</button>
@@ -528,9 +568,11 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn second" id="btn-annuler-job" style="margin-top:0">Annuler</button>` +
       `<button class="btn" id="btn-nouvelle" style="margin-top:0">${icone('plus')}Autre vidéo</button></div>`;
     else if (ecran === 'photos') a.innerHTML = actionPhotos();
+    else if (ecran === 'annonce') a.innerHTML = `<button class="btn" id="btn-annonce">${icone('envoi')}Publier l’annonce</button>`;
     else a.innerHTML = '';
     if (ecran === 'photos') branchePhotos();
     const f = $('#btn-fabriquer'); if (f) f.onclick = fabriquer;
+    const pa = $('#btn-annonce'); if (pa) pa.onclick = publierAnnonce;
     const vv = $('#btn-valider'); if (vv) vv.onclick = validerAccroche;
     const e = $('#btn-envoyer'); if (e) e.onclick = envoyer;
     const aj = $('#btn-annuler-job'); if (aj) aj.onclick = async () => { aj.disabled = true; await annulerJob(jobEnCours); jobEnCours = null; etatJob = null; montre('videos'); };
@@ -1015,6 +1057,81 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
         setTimeout(tour, 4000); };
       tour();
     } catch (e) { message('#msg-photos', e.message, false); }
+  }
+
+  // ---------------- écran Annonce : images du téléphone → carrousel (couverture Cauri + photos), texte FR (EN traduit)
+  let an = {fichiers: [], job: null};
+  const anEtiquette = () => { const b = $('#an-etiquettes .puce.actif'); return (b && b.dataset.e) || $('#an-etiquette').value.trim(); };
+  $$('#an-etiquettes .puce').forEach(b => b.onclick = () => { vibre(); $$('#an-etiquettes .puce').forEach(x => x.classList.toggle('actif', x === b));
+    $('#an-etiquette-libre').style.display = b.dataset.e ? 'none' : ''; if (!b.dataset.e) $('#an-etiquette').focus(); });
+  $$('#an-reseaux .puce').forEach(b => b.onclick = () => { vibre(); b.classList.toggle('actif'); });
+  function anGalerie() {
+    const g = $('#an-galerie'); g.innerHTML = '';
+    an.fichiers.forEach((f, i) => { const b = document.createElement('button');
+      b.innerHTML = '<img alt="">' + (i === 0 ? '<span class="statut" style="top:6px;left:6px">Couverture</span>' : '');
+      b.querySelector('img').src = f.url;
+      if (i === 0) b.classList.add('choisie');
+      let t, long = false;
+      b.onpointerdown = () => { long = false; t = setTimeout(() => { long = true; vibre(); URL.revokeObjectURL(f.url); an.fichiers.splice(i, 1); an.job = null; anGalerie(); }, 650); };
+      b.onpointerup = b.onpointerleave = () => clearTimeout(t);
+      b.onclick = () => { if (long) return; vibre(); an.fichiers.unshift(an.fichiers.splice(i, 1)[0]); an.job = null; anGalerie(); };
+      g.appendChild(b); });
+    $('#an-choisir span').textContent = an.fichiers.length ? 'Ajouter des images' : 'Choisir sur mon téléphone';
+  }
+  $('#an-choisir').onclick = () => $('#an-fichiers').click();
+  $('#an-fichiers').onchange = () => {
+    [...$('#an-fichiers').files].forEach(f => { if (an.fichiers.length < 10) an.fichiers.push({f, url: URL.createObjectURL(f)}); });
+    $('#an-fichiers').value = ''; an.job = null; anGalerie();
+  };
+  async function anEnvoieImages() {   // une fois par série d'images : l'IA puis la publication s'en servent
+    if (an.job) return an.job;
+    const j = await post('/photos/nouveau', {lien: '', artiste_nom: $('#an-artiste').value.trim()});
+    if (j.erreur) throw new Error(j.erreur);
+    for (let k = 0; k < an.fichiers.length; k++) {
+      message('#msg-annonce', 'Envoi des images : ' + (k + 1) + ' / ' + an.fichiers.length + '…', true);
+      const blob = await reduit(an.fichiers[k].f);
+      const r = await fetch(BASE + '/photos/' + j.id + '/importer', {method: 'POST', headers: {'Content-Type': 'image/jpeg', 'X-CSRFToken': CSRF}, body: blob});
+      if (!r.ok) throw new Error('image ' + (k + 1) + ' refusée');
+    }
+    an.job = j.id; return an.job;
+  }
+  $('#an-ia').onclick = async () => {
+    if (!an.fichiers.length) return message('#msg-annonce', 'Choisis d’abord les images.', false);
+    const btn = $('#an-ia'); btn.disabled = true;
+    try {
+      const id = await anEnvoieImages();
+      message('#msg-annonce', 'L’IA regarde les images et rédige…', true);
+      const s = await post('/photos/' + id + '/suggestions', {indices: an.fichiers.map((_, i) => i),
+        contexte: [$('#an-accroche').value, $('#an-artiste').value, $('#an-fr').value].filter(Boolean).join(' · ')});
+      if (s.accroche && !$('#an-accroche').value.trim()) $('#an-accroche').value = s.accroche;
+      if (s.legende_fr) $('#an-fr').value = s.legende_fr;
+      message('#msg-annonce', 'Textes proposés : relis-les, tu peux tout changer.', true);
+    } catch (e) { message('#msg-annonce', e.message, false); }
+    btn.disabled = false;
+  };
+  async function publierAnnonce() {
+    const accroche = $('#an-accroche').value.trim(), reseaux = $$('#an-reseaux .puce.actif').map(b => b.dataset.r);
+    if (!an.fichiers.length) return message('#msg-annonce', 'Choisis au moins une image.', false);
+    if (!accroche) return message('#msg-annonce', 'Écris le titre de l’annonce.', false);
+    if (!reseaux.length) return message('#msg-annonce', 'Choisis au moins une plateforme.', false);
+    const btn = $('#btn-annonce'); btn.disabled = true;
+    try {
+      const id = await anEnvoieImages();
+      const r = await post('/photos/' + id + '/publier', {indices: an.fichiers.map((_, i) => i), reseaux, notifier: false,
+        etiquette: anEtiquette() || 'ANNONCE', accroche, legende_fr: $('#an-fr').value.trim() || accroche, legende_en: '',
+        artiste_nom: $('#an-artiste').value.trim(), credit: $('#an-credit').value.trim()});
+      if (r.erreur) throw new Error(r.erreur);
+      message('#msg-annonce', 'Carrousel en fabrication (1 à 3 minutes), puis envoyé.', true);
+      const tour = async () => { const j = await get('/job/' + id);
+        if (j.statut === 'envoye') {
+          message('#msg-annonce', 'Annonce publiée (post n°' + j.post_id + ').', true);
+          an.fichiers.forEach(x => URL.revokeObjectURL(x.url)); an = {fichiers: [], job: null}; anGalerie();
+          ['#an-accroche', '#an-artiste', '#an-fr', '#an-credit', '#an-etiquette'].forEach(s => { $(s).value = ''; });
+          btn.disabled = false; return; }
+        if (j.statut === 'erreur') { message('#msg-annonce', j.erreur || 'Échec', false); btn.disabled = false; return; }
+        setTimeout(tour, 4000); };
+      tour();
+    } catch (e) { message('#msg-annonce', e.message, false); btn.disabled = false; }
   }
 
   // ---------------- écran Mes vidéos

@@ -378,7 +378,8 @@ def publie(job_id: int, job: dict, p: dict, maj) -> dict:
     tags = "#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine"
     maintenant = datetime.now(timezone.utc)
     faits = {"kind": f"format-studio-photos", "studio_job": job_id, "due": (maintenant + timedelta(minutes=2)).isoformat(),
-             "source": job["lien"], "notifier": bool(p.get("notifier")), "reseaux": p.get("reseaux")}
+             "source": job["lien"], "notifier": bool(p.get("notifier")), "reseaux": p.get("reseaux"),
+             "artiste": artiste, "etiquette": p.get("etiquette") or ""}   # mention @artiste et hashtags du sujet
     if p.get("legende_en"):
         faits["en"] = {"title": p.get("accroche") or "", "caption": p["legende_en"] + (f"\n\n📸 {p.get('credit')}" if p.get("credit") else "")}
     from core.studio import theme_libre
