@@ -17,9 +17,11 @@ class Command(BaseCommand):
             lignes = redaction.relecture_du_jour()
             if options["semaine"]:
                 lignes += redaction.analyste() + redaction.directeur()
+            from core.services import ia_budget
+            lignes.append("budget IA : " + ia_budget.bilan())
             for l in lignes:
                 out(l)
-                if "bloquer" in l or "directeur" in l or "analyste" in l:   # repris dans Admin > Contrôles et le rapport
+                if "bloquer" in l or "directeur" in l or "analyste" in l or "budget IA" in l:   # repris dans Admin > Contrôles et le rapport
                     db.insert("agent_findings", {"agent": "rédaction", "level": "alerte" if "bloquer" in l else "info",
                                                  "message": l[:600], "link": "/admin"})
             return lignes[:3]

@@ -27,10 +27,14 @@ def colonnes() -> None:
         db.run(sql)
 
 
-def _gemini(prompt: str, http: HttpClient, reflexion: str = "minimal") -> tuple[str, dict]:
+def _gemini(prompt: str, http: HttpClient, reflexion: str = "minimal", part: float = 1.0) -> tuple[str, dict]:
+    """Gemini avec recherche Google ; part < 1 pour une tâche secondaire (s'arrête avant le plafond du jour)."""
+    from core.services import ia_budget
     cle = env.get("GEMINI_API_KEY", "")
     if not cle:
         raise PlatformException("GEMINI_API_KEY absente")
+    if not ia_budget.peut("gemini", part):
+        raise PlatformException("Gemini : budget du jour atteint")
     corps = json.dumps({"contents": [{"role": "user", "parts": [{"text": prompt}]}], "tools": [{"google_search": {}}],
                         "generationConfig": {"temperature": 0.1, "thinkingConfig": {"thinkingLevel": reflexion}}},
                        ensure_ascii=False).encode()
@@ -43,6 +47,7 @@ def _gemini(prompt: str, http: HttpClient, reflexion: str = "minimal") -> tuple[
             d = {}
         c = (d.get("candidates") or [None])[0]
         if r["status"] == 200 and c:
+            ia_budget.gemini_usage(d)
             texte = "".join(p.get("text", "") for p in (c.get("content") or {}).get("parts") or [])
             return texte, c.get("groundingMetadata") or {}
         dernier = (d.get("error") or {}).get("message") or f"HTTP {r['status']}"
@@ -75,7 +80,7 @@ def chercher(nom: str, pays: str = "", http: HttpClient | None = None) -> dict:
         "Cherche sur Google ses liens officiels (bio YouTube, Spotify, Audiomack, Wikidata, Chartmetric, presse) pour ne pas "
         "confondre avec un fan club, un média ou son label. Termine ta réponse par une ligne JSON : "
         '{"instagram": "nom sans @ ou null", "tiktok": "nom sans @ ou null", "certitude_instagram": "haute|moyenne|faible", '
-        '"certitude_tiktok": "haute|moyenne|faible", "preuve": "courte"}', http)
+        '"certitude_tiktok": "haute|moyenne|faible", "preuve": "courte"}', http, part=0.5)   # tâche secondaire
     if not meta.get("webSearchQueries") or not meta.get("groundingChunks"):
         return {"instagram": None, "tiktok": None, "preuve": "pas de recherche Google : rien enregistré"}
     d = ai.extract_json(texte[texte.rfind('{"instagram"'):] if '{"instagram"' in texte else texte) or {}

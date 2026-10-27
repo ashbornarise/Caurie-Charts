@@ -69,6 +69,9 @@ class GeminiClient:
     def ask(self, system: str, prompt: str, max_tokens: int = 1500, web_searches: int = 0) -> dict:
         if not self.is_available():
             raise PlatformException("GEMINI_API_KEY absente")
+        from core.services import ia_budget
+        if not ia_budget.peut("gemini"):   # crédits étalés sur 30 jours : la suite passe aux IA gratuites
+            raise PlatformException("Gemini : budget du jour atteint")
         body = {"systemInstruction": {"parts": [{"text": system}]},
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                 "generationConfig": {"maxOutputTokens": max(max_tokens, 2048) + RESERVE_REFLEXION, "temperature": 0.1 if web_searches > 0 else 0.8,
@@ -86,6 +89,7 @@ class GeminiClient:
             except ValueError:
                 data = {}
             if resp["status"] == 200 and (data.get("candidates") or [None])[0]:
+                ia_budget.gemini_usage(data)
                 return self._read(data["candidates"][0])
             last = (data.get("error") or {}).get("message") or f"HTTP {resp['status']}"
             if resp["status"] not in (404, 429, 500, 503):
@@ -119,6 +123,9 @@ class GroqClient:
     def ask(self, system: str, prompt: str, max_tokens: int = 1500, web_searches: int = 0) -> dict:
         if not self.is_available():
             raise PlatformException(f"{self.NAME} : clé absente")
+        from core.services import ia_budget
+        if self.NAME == "DeepSeek" and not ia_budget.peut("deepseek"):
+            raise PlatformException("DeepSeek : budget du jour atteint")
         last = "aucun modèle disponible"
         for model in self.models:
             body = {"model": model, "max_tokens": max(max_tokens, 6000), "temperature": 0.1 if web_searches > 0 else 0.5,
@@ -132,6 +139,9 @@ class GroqClient:
             except ValueError:
                 data = {}
             if resp["status"] == 200 and (data.get("choices") or [None])[0]:
+                if self.NAME == "DeepSeek":
+                    u = data.get("usage") or {}
+                    ia_budget.compte("deepseek", u.get("prompt_tokens", 0), u.get("completion_tokens", 0))
                 text = re.sub(r"<think>.*?</think>", "", (data["choices"][0].get("message") or {}).get("content") or "", flags=re.S).strip()
                 if text:
                     return {"text": text, "sources": []}

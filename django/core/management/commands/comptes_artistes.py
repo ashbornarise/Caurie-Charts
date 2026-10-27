@@ -23,7 +23,7 @@ class Command(BaseCommand):
                     champs = comptes.completer(a)
                 except Exception as exc:  # noqa: BLE001 — quota Gemini épuisé : on reprendra demain
                     out(f"{a['name']} : {exc}")
-                    if "quota" in str(exc).lower() or "429" in str(exc):
+                    if "quota" in str(exc).lower() or "429" in str(exc) or "budget" in str(exc):
                         break
                     continue
                 trouves += bool(champs)

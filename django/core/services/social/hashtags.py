@@ -71,7 +71,8 @@ def _pays_artiste(artiste: str) -> str | None:
 
 def _ia(sujet: str, deja: list) -> list:
     """Un ou deux tags d'événement précis proposés par l'IA gratuite (jamais de tag inventé ou générique)."""
-    if env.get("HASHTAGS_IA", "1") in ("0", "non"):
+    from core.services import ia_budget
+    if env.get("HASHTAGS_IA", "1") in ("0", "non") or not ia_budget.peut("gemini", 0.5):   # secondaire : mi-budget
         return []
     from core.services import ai
     client = ai.make()
