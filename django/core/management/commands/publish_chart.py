@@ -19,6 +19,7 @@ class Command(BaseCommand):
         p.add_argument("--country", help="Code pays (TG, GH, NG…) ; si absent, tous les pays prêts")
         p.add_argument("--clips-only", action="store_true",
                        help="Crée uniquement les clips N°1 (pas de publication ni de post)")
+        p.add_argument("--sans-revue", action="store_true", help="Ne pas faire trancher les titres signalés par l'IA")
 
     def handle(self, *args, **o):
         def task():
@@ -43,7 +44,20 @@ class Command(BaseCommand):
                 countries = [r["code"] for r in db.all(
                     "SELECT code FROM countries WHERE is_active = 1 ORDER BY sort_order")]
             publies = []
+            from core.services import revue_ia
+            from core.services.charts import Period
+            debut = Period.from_key("week", week).start
             for code in countries:
+                # Titres signalés : Gemini + recherche Google tranchent d'abord ce qui est prouvé (27/10/2026)
+                if not o["sans_revue"] and revue_ia.en_attente(code, debut):
+                    try:
+                        b = revue_ia.revoir(code, debut)
+                        out(f"{code} revue IA : {len(b['valides'])} validé(s), {len(b['exclus'])} exclu(s), "
+                            f"{len(b['attente'])} pour le fondateur")
+                        for x in b["attente"]:
+                            out(f"  à trancher : {x}")
+                    except Exception as exc:  # noqa: BLE001
+                        out(f"{code} revue IA impossible : {exc}")
                 try:
                     n = service.publish(code, "week", week, 1)
                 except Exception as exc:
