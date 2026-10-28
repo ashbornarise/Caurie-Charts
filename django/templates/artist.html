@@ -66,6 +66,27 @@
         </div>
     </dl>
 
+    {% if spotify and spotify.auditeurs %}
+    <section class="panel spotify-bloc" aria-labelledby="spotify-titre">
+        <h2 class="section-title" id="spotify-titre">{{ t('artist.spotify_title') }}</h2>
+        <dl class="spotify-bloc__chiffres">
+            <div><dt>{{ t('artist.spotify_listeners') }}</dt><dd>{{ fmt_number(spotify.auditeurs|int) }}</dd>
+                {% if spotify.evolution %}<small class="{{ 'hausse' if spotify.evolution > 0 else 'baisse' }}">{{ '+' if spotify.evolution > 0 }}{{ fmt_number(spotify.evolution|int) }} {{ t('artist.spotify_week') }}</small>{% endif %}</div>
+            <div><dt>{{ t('artist.spotify_followers') }}</dt><dd>{{ fmt_number(spotify.abonnes|int) if spotify.abonnes else '—' }}</dd></div>
+            {% if spotify.rang %}<div><dt>{{ t('artist.spotify_rank') }}</dt><dd>#{{ spotify.rang }}</dd></div>{% endif %}
+        </dl>
+        {% if spotify.villes %}
+        <h3 class="spotify-bloc__sous">{{ t('artist.spotify_cities') }}</h3>
+        <ol class="spotify-bloc__villes">
+            {% for v in spotify.villes %}
+            <li><span>{{ v.ville }} <small>{{ v.pays }}</small></span><strong>{{ fmt_number(v.auditeurs|int) }}</strong></li>
+            {% endfor %}
+        </ol>
+        {% endif %}
+        <p class="fineprint">{{ t('artist.spotify_source', {'date': fmt_date(spotify.releve_le)}) }}</p>
+    </section>
+    {% endif %}
+
     {{ partial('partials/artist-news', items=artistNews, title='Son actualité', hide_artist=true) }}
 
     {% if live.positions %}

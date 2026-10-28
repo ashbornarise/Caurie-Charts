@@ -260,6 +260,8 @@ def _render_chart(request, country: dict, chart_code: str, period: str, key: str
 
 # ---------------------------------------------------------------- catalogue
 
+from core.services import spotify_apify  # noqa: E402 — auditeurs mensuels sur les pages artistes
+
 def artist(request, slug: str):
     a = repos.artist(slug)
     if not a:
@@ -278,6 +280,7 @@ def artist(request, slug: str):
         "bestPeak": min(x["peak"] for x in charted) if charted else None,
         "totalWeeks": sum(int(x["weeks"] or 0) for x in tracks),
         "iconHistory": repos.artist_icon_history(int(a["id"])),
+        "spotify": spotify_apify.fiche(int(a["id"])),
         "meta": {"title": a["name"] + " · " + brand(),
                  "description": t("artist.meta_description", name=a["name"], country=country_name(a["country_code"])), "type": "profile",
                  "image": og_image("artiste", a["slug"]),

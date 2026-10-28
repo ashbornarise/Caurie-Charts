@@ -779,3 +779,17 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .numeros-un__titre small { display: block; color: var(--muted); }
 .numeros-un__semaines { font-weight: 700; white-space: nowrap; color: var(--accent); }
 @media (max-width: 480px) { .numeros-un__liste li { grid-template-columns: 1fr auto; } .numeros-un__pays { grid-column: 1 / -1; } }
+
+/* Bloc Spotify des pages artistes (auditeurs mensuels, villes) */
+.spotify-bloc__chiffres { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 12px; margin: 8px 0 16px; }
+.spotify-bloc__chiffres dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.spotify-bloc__chiffres dd { margin: 2px 0 0; font-family: var(--serif); font-weight: 700; font-size: 1.6rem; }
+.spotify-bloc__chiffres small { font-size: .8rem; font-weight: 600; }
+.spotify-bloc__chiffres .hausse { color: #1a7f45; }
+.spotify-bloc__chiffres .baisse { color: #b3261e; }
+.spotify-bloc__sous { font-size: 1rem; margin: 0 0 8px; }
+.spotify-bloc__villes { margin: 0; padding: 0; list-style: none; counter-reset: v; }
+.spotify-bloc__villes li { counter-increment: v; display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.spotify-bloc__villes li::before { content: counter(v); color: var(--accent); font-weight: 700; width: 1.5rem; flex: none; }
+.spotify-bloc__villes li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.spotify-bloc__villes small { color: var(--muted); }

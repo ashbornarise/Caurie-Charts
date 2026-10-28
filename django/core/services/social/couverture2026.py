@@ -27,7 +27,10 @@ def propre(t: str) -> str:
     for a, b in (("‑", "-"), ("‐", "-"), ("‒", "-"), ("­", ""), (" ", " "), (" ", " "),
                  ("​", ""), ("⁠", "")):
         t = (t or "").replace(a, b)
-    return t
+    # Émojis : absents des polices du visuel (ils sortaient en carrés vides, post Toofan du 27/10/2026) ; ils restent
+    # dans la légende du post
+    t = re.sub("[🀀-🫿☀-➿⬀-⯿️‍⃣]", "", t)
+    return re.sub(r"[ 	]{2,}", " ", t).strip()
 
 
 def police(nom: str, taille: int, poids: str | None = None) -> ImageFont.FreeTypeFont:

@@ -1,0 +1,23 @@
+name: Relevé Spotify (Apify)
+on:
+  schedule:
+    - cron: "30 5 * * 1"   # lundi matin, avant le calcul de la semaine
+  workflow_dispatch:
+jobs:
+  spotify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - name: Relever
+        working-directory: django
+        run: python manage.py spotify_releve
