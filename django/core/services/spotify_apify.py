@@ -161,3 +161,40 @@ def ecoutes_semaine(spotify_id: str) -> int | None:
         if 6 <= ecart <= 8:
             return int(dernier["ecoutes"]) - int(r["ecoutes"])
     return None
+
+
+def classement(pays: str | None = None, limite: int = 50) -> dict:
+    """Page « Les plus écoutés sur Spotify » : dernier relevé de chaque artiste (auditeurs, évolution, 1re ville),
+    complété par Kworb pour les stars du top mondial pas encore relevées. {"rows", "hausses", "pays"}."""
+    try:
+        rows = db.all("""SELECT DISTINCT ON (s.artist_id) s.artist_id, s.auditeurs, s.rang, s.villes, s.releve_le,
+                                a.name, a.slug, a.image_url, COALESCE(a.base_country, a.origin_country) AS country,
+                                (SELECT p.auditeurs FROM spotify_artistes p WHERE p.artist_id = s.artist_id AND p.releve_le < s.releve_le
+                                 ORDER BY p.releve_le DESC LIMIT 1) AS avant
+                         FROM spotify_artistes s JOIN artists a ON a.id = s.artist_id AND a.status = 'active'
+                         WHERE s.auditeurs IS NOT NULL ORDER BY s.artist_id, s.releve_le DESC""")
+    except Exception:  # noqa: BLE001 — table absente : la page se contente de Kworb
+        rows = []
+    vus = {int(r["artist_id"]) for r in rows}
+    try:
+        from core.services import kworb
+        aud = kworb.auditeurs()
+        for a in db.all("""SELECT a.id, a.name, a.slug, a.image_url, a.spotify_id, COALESCE(a.base_country, a.origin_country) AS country
+                           FROM artists a WHERE a.status = 'active' AND a.spotify_id IS NOT NULL AND a.spotify_id <> ''"""):
+            if int(a["id"]) not in vus and a["spotify_id"] in aud:
+                rows.append({"artist_id": a["id"], "auditeurs": aud[a["spotify_id"]][0], "rang": None, "villes": "[]",
+                             "name": a["name"], "slug": a["slug"], "image_url": a["image_url"], "country": a["country"], "avant": None})
+    except Exception:  # noqa: BLE001 — Kworb injoignable
+        pass
+    out = []
+    for r in rows:
+        villes = json.loads(r.get("villes") or "[]")
+        out.append({**r, "auditeurs": int(r["auditeurs"]), "ville": villes[0] if villes else None,
+                    "evolution": int(r["auditeurs"]) - int(r["avant"]) if r.get("avant") else None,
+                    "country": str(r.get("country") or "").upper()[:2] or None})
+    tous_pays = sorted({r["country"] for r in out if r["country"]})
+    if pays:
+        out = [r for r in out if r["country"] == pays.upper()]
+    out.sort(key=lambda r: -r["auditeurs"])
+    hausses = sorted((r for r in out if r["evolution"] and r["evolution"] > 0), key=lambda r: -r["evolution"])[:6]
+    return {"rows": out[:limite], "hausses": hausses, "pays": tous_pays}

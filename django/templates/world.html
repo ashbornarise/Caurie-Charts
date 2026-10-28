@@ -1,12 +1,34 @@
-{#- Les artistes d’Afrique de l’Ouest les plus écoutés dans le monde : auditeurs mensuels Spotify (compteurs publics relevés par Kworb). -#}
+{#- Les artistes d’Afrique de l’Ouest les plus écoutés sur Spotify : nos relevés de la semaine (auditeurs mensuels, hausse,
+    1re ville d’écoute), complétés par Kworb pour le top mondial ; filtre par pays. -#}
 <div class="wrap world-page">
     <p class="eyebrow">Classements</p>
-    <h1>Les plus écoutés dans le monde</h1>
-    <p class="lead">Les artistes d’Afrique de l’Ouest qui comptent le plus d’auditeurs chaque mois sur Spotify, partout dans le monde.
-        Le chiffre est celui que Spotify affiche publiquement, relevé chaque jour. Un artiste apparaît ici dès qu’il entre dans les
-        2 500 artistes les plus écoutés de la planète.</p>
+    <h1>Les plus écoutés sur Spotify</h1>
+    <p class="lead">Les artistes d’Afrique de l’Ouest qui comptent le plus d’auditeurs chaque mois sur Spotify, et ceux qui en gagnent
+        le plus cette semaine. Chiffres publics de Spotify, relevés chaque semaine : aucun chiffre n’est estimé.</p>
+
+    {% if pays %}
+    <nav class="chips" aria-label="Pays">
+        <a class="chip" href="{{ path('les-plus-ecoutes-dans-le-monde') }}" {{ Markup('aria-current="page"') if not paysChoisi }}>Tous</a>
+        {% for c in pays %}
+        <a class="chip" href="{{ path('les-plus-ecoutes-dans-le-monde', {'pays': c}) }}" {{ Markup('aria-current="page"') if c == paysChoisi }}>{{ flag(c, 14) }} {{ country_name(c) }}</a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    {% if hausses %}
+    <section class="spotify-hausses" aria-labelledby="hausses-titre">
+        <h2 id="hausses-titre" class="section-title">Les plus fortes hausses de la semaine</h2>
+        <ol class="spotify-hausses__liste">
+            {% for a in hausses %}
+            <li><a href="{{ path('artiste/' ~ a.slug) }}">{{ flag(a.country, 14) if a.country }}{{ a.name }}</a>
+                <strong>+{{ fmt_number(a.evolution) }}</strong> <small>auditeurs</small></li>
+            {% endfor %}
+        </ol>
+    </section>
+    {% endif %}
+
     {% if rows %}
-    <section class="hot-artists" aria-label="Classement mondial">
+    <section class="hot-artists" aria-label="Classement des auditeurs mensuels">
         <ul class="hot-artists__grid">
             {% for a in rows %}
             <li>
@@ -17,16 +39,18 @@
                         {% if a.country %}<span class="hot-artist__flag">{{ flag(a.country, 14) }}</span>{% endif %}
                     </span>
                     <span class="hot-artist__name">N°{{ loop.index }} · {{ a.name }}</span>
-                    <span class="hot-artist__meta">{{ fmt_number(a.listeners) }} auditeurs par mois
-                        {% if a.record and a.record > a.listeners * 1.05 %}<br>record : {{ fmt_number(a.record) }}{% endif %}</span>
+                    <span class="hot-artist__meta">{{ fmt_number(a.auditeurs) }} auditeurs par mois
+                        {% if a.evolution %}<br><span class="{{ 'hausse' if a.evolution > 0 else 'baisse' }}">{{ '+' if a.evolution > 0 }}{{ fmt_number(a.evolution) }} en une semaine</span>{% endif %}
+                        {% if a.ville %}<br>1re ville : {{ a.ville.ville }}{% endif %}
+                        {% if a.rang %}<br>rang mondial : {{ a.rang }}{% endif %}</span>
                 </a>
             </li>
             {% endfor %}
         </ul>
     </section>
     {% else %}
-    <p class="empty">Le classement mondial se met à jour, revenez dans quelques minutes.</p>
+    <p class="empty">Pas encore de relevé Spotify pour ce pays.</p>
     {% endif %}
-    <p class="news-page__note">Source : Spotify, auditeurs mensuels (compteurs publics relevés par Kworb). Seuls les artistes suivis par
-        {{ brand() }} et présents dans le top mondial sont listés : aucun chiffre n’est estimé.</p>
+    <p class="news-page__note">Source : Spotify, auditeurs mensuels (28 derniers jours), chiffres publics relevés chaque semaine pour les
+        artistes qui font l’actualité, et par Kworb pour le top mondial. Seuls les artistes suivis par {{ brand() }} sont listés.</p>
 </div>

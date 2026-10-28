@@ -793,3 +793,13 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .spotify-bloc__villes li::before { content: counter(v); color: var(--accent); font-weight: 700; width: 1.5rem; flex: none; }
 .spotify-bloc__villes li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .spotify-bloc__villes small { color: var(--muted); }
+
+/* Page « Les plus écoutés sur Spotify » */
+.world-page .chips { margin: 0 0 20px; }
+.spotify-hausses { margin: 0 0 28px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; }
+.spotify-hausses .section-title { margin: 0 0 10px; font-size: 1.2rem; }
+.spotify-hausses__liste { margin: 0; padding-left: 1.4rem; display: grid; gap: 6px; }
+.spotify-hausses__liste strong { color: #1a7f45; }
+.spotify-hausses__liste small { color: var(--muted); }
+.hot-artist__meta .hausse { color: #1a7f45; font-weight: 600; }
+.hot-artist__meta .baisse { color: #b3261e; }

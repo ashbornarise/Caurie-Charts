@@ -857,26 +857,18 @@ def machine(request):
 
 
 def world_listeners(request):
-    """Les artistes d’Afrique de l’Ouest les plus écoutés dans le monde (auditeurs mensuels Spotify, compteurs publics via Kworb)."""
+    """Les artistes d’Afrique de l’Ouest les plus écoutés sur Spotify : nos relevés de la semaine (auditeurs, hausse,
+    1re ville), complétés par Kworb pour le top mondial ; filtre par pays (?pays=NG)."""
     use_locale(request)
     from django.core.cache import cache
-    rows = cache.get("monde-auditeurs")
-    if rows is None:
-        rows = []
-        try:
-            from core.services import kworb
-            aud = kworb.auditeurs()
-            arts = db.all("""SELECT a.name, a.slug, a.image_url, a.spotify_id, COALESCE(a.base_country, gc.code) AS country
-                             FROM artists a LEFT JOIN countries gc ON gc.id = a.guessed_country_id
-                             WHERE a.status = 'active' AND a.spotify_id IS NOT NULL AND a.spotify_id <> ''""")
-            for a in sorted((a for a in arts if a["spotify_id"] in aud), key=lambda a: -aud[a["spotify_id"]][0])[:30]:
-                n, rec = aud[a["spotify_id"]]
-                rows.append({**a, "listeners": n, "record": rec})
-            cache.set("monde-auditeurs", rows, 6 * 3600)
-        except Exception:  # noqa: BLE001 — Kworb injoignable : page vide plutôt qu'en erreur
-            rows = []
+    pays = (req_str(request, "pays") or "").upper()[:2] or None
+    cle = f"spotify-classement-{pays or 'tous'}"
+    data = cache.get(cle)
+    if data is None:
+        data = spotify_apify.classement(pays)
+        cache.set(cle, data, 3 * 3600)
     return render(request, "world", {
-        "rows": rows,
-        "meta": {"title": "Les plus écoutés dans le monde · " + brand(),
-                 "description": "Les artistes d’Afrique de l’Ouest les plus écoutés dans le monde, classés par auditeurs mensuels sur Spotify."},
+        **data, "paysChoisi": pays,
+        "meta": {"title": "Les plus écoutés sur Spotify · " + brand(),
+                 "description": "Les artistes d’Afrique de l’Ouest les plus écoutés sur Spotify : auditeurs mensuels, hausses de la semaine et villes d’écoute."},
     })
