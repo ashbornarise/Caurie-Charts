@@ -2,7 +2,7 @@
 
 - auditeurs() : auditeurs mensuels, abonnés, rang mondial et villes d'écoute des artistes qui BUZZENT cette semaine
   (Top 20 publiés, plus fortes hausses, liste « buzz » des clips) : pas de relevé de masse, seulement ceux qui peuvent
-  nous rapporter des vues. Outil omkar-cloud : 2 500 artistes offerts par mois.
+  nous rapporter des vues. Outil omkar-cloud, environ 2 $ les 1 000 artistes (facture réelle).
 - playlists() : écoutes cumulées de chaque titre des playlists suivies (0,01 $ la playlist) ; d'une semaine à l'autre,
   la différence donne les écoutes mondiales de la semaine. Données gardées pour l'affichage et le contrôle anti-fraude :
   elles n'entrent pas dans le score officiel sans nouvelle version publique de la formule.
@@ -21,7 +21,7 @@ ACTEUR_AUDITEURS = "omkar-cloud~spotify-monthly-listeners-scraper"
 ACTEUR_PLAYLISTS = "s-r~free-spotify-playlist-intelligence"
 PLAFOND_MOIS = 4.50
 PRIX_PLAYLIST = 0.01
-PRIX_ARTISTE = 0.002          # au-delà des 2 500 offerts ; compté par prudence
+PRIX_ARTISTE = 0.002          # réellement facturé (0,27 $ pour 130 artistes le 28/10/2026) : ~1,1 $ par mois
 MAX_ARTISTES = 150            # par semaine : ~600 par mois, loin des 2 500 offerts
 # Playlists éditoriales suivies (Spotify ne publie de Top 50 par pays que pour le Nigeria dans notre zone)
 PLAYLISTS = {"37i9dQZEVXbKY7jLzlJ11V": "Top 50 - Nigeria"}
