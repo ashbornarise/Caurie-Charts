@@ -884,3 +884,76 @@ def photo_simple(photo, fmt: str = "feed", credit: str = "") -> Image.Image:
         ImageDraw.Draw(c).text((int(50 * u), h - int((70 if fmt == "feed" else 330) * u)), f"Photo : {credit}"[:70],
                                font=police("Montserrat.ttf", int(26 * u), "Medium"), fill=(230, 230, 240))
     return c
+
+
+def triptyque(colonnes: list, titre: str, surligne: list | None = None, fmt: str = "feed", source: str = "") -> Image.Image:
+    """Versus / top 3 en trois colonnes (format repris des comptes rap, 29/10/2026) : pour chaque artiste sa photo,
+    son NOM, la pochette du titre, le CHIFFRE en grand et sa légende ; le titre du post en bas, mots clés en bleu ciel.
+    colonnes : [{"photo", "nom", "pochette", "valeur", "legende"}] (2 ou 3)."""
+    w, h = FORMATS.get(fmt, FORMATS["feed"])
+    u = w / 1080
+    k = max(2, min(3, len(colonnes)))
+    pw = w // k
+    c = Image.new("RGB", (w, h), NUIT)
+    haut_photo = int(h * (.70 if fmt == "feed" else .66))
+    for i, col in enumerate(colonnes[:k]):
+        im = _image_nette(col.get("photo")) or _image(col.get("photo"))
+        if im is not None:
+            c.paste(cadre_personne(im.convert("RGB"), pw, haut_photo), (i * pw, 0))
+    # voile : la photo se fond dans la nuit sous les visages
+    voile = Image.new("L", (1, h), 0)
+    for y in range(h):
+        voile.putpixel((0, y), int(255 * min(1, max(0, (y - h * .38) / (h * .30)))))
+    c = Image.composite(Image.new("RGB", (w, h), NUIT), c, voile.resize((w, h)))
+    d = ImageDraw.Draw(c)
+    for i in range(1, k):   # filets entre les colonnes
+        d.line([(i * pw, 0), (i * pw, int(h * .72))], fill=(255, 255, 255), width=max(2, int(3 * u)))
+    fn, fv, fl = police("Anton-Regular.ttf", int(58 * u)), police("Montserrat.ttf", int(64 * u), "ExtraBold"), \
+        police("Montserrat.ttf", int(22 * u), "Bold")
+    y_nom = int(h * (.50 if fmt == "feed" else .52))
+    cote = int(pw * (.52 if fmt == "feed" else .62))
+    for i, col in enumerate(colonnes[:k]):
+        cx = i * pw + pw // 2
+        nom = propre(col.get("nom") or "").upper()
+        while d.textlength(nom, font=fn) > pw * .9 and fn.size > 30:
+            fn = police("Anton-Regular.ttf", fn.size - 4)
+        d.text((cx, y_nom), nom, font=fn, fill=BLANC, anchor="mt", stroke_width=int(2 * u), stroke_fill=NUIT)
+        y_poch = y_nom + int(78 * u)
+        poch = _image(col.get("pochette")) if col.get("pochette") else None
+        if poch is not None:
+            p = ImageOps.fit(poch.convert("RGB"), (cote, cote), Image.LANCZOS)
+            cadre = Image.new("RGB", (cote + int(8 * u), cote + int(8 * u)), BLANC)
+            cadre.paste(p, (int(4 * u), int(4 * u)))
+            c.paste(cadre, (cx - cadre.width // 2, y_poch))
+            y_val = y_poch + cadre.height + int(18 * u)
+        else:
+            y_val = y_poch + int(20 * u)
+        d.text((cx, y_val), propre(str(col.get("valeur") or "")), font=fv, fill=CIEL, anchor="mt")
+        leg = propre(str(col.get("legende") or "")).upper()
+        while d.textlength(leg, font=fl) > pw * .9 and fl.size > 14:
+            fl = police("Montserrat.ttf", fl.size - 2, "Bold")
+        d.text((cx, y_val + int(78 * u)), leg, font=fl, fill=BLANC, anchor="mt")
+    # titre du post en bas, mots clés en bleu ciel
+    ft = police("Anton-Regular.ttf", int(84 * u))
+    mots, lignes_t, cour = propre(titre).upper().split(), [], ""
+    for m in mots:
+        essai = (cour + " " + m).strip()
+        if d.textlength(essai, font=ft) > w * .92 and cour:
+            lignes_t.append(cour); cour = m
+        else:
+            cour = essai
+    lignes_t.append(cour)
+    cibles = {s.upper() for s in (surligne or [])}
+    pas = int(100 * u)
+    y = h - int((56 if fmt == "feed" else 230) * u) - len(lignes_t) * pas - (int(40 * u) if source else 0)
+    for ligne in lignes_t:
+        x = (w - d.textlength(ligne, font=ft)) / 2
+        for m in ligne.split():
+            d.text((x, y), m, font=ft, fill=CIEL if m.strip(".,!?:").upper() in cibles else BLANC)
+            x += d.textlength(m + " ", font=ft)
+        y += pas
+    if source:
+        d.text((w // 2, y + int(12 * u)), propre(source), font=police("Montserrat.ttf", int(22 * u), "Medium"), fill=(200, 200, 215),
+               anchor="mt")
+    _logo(c, int(36 * u), int((36 if fmt == "feed" else 190) * u), int(70 * u))
+    return c
