@@ -171,7 +171,7 @@ INSTAGRAM_THEMES = ("format-", "flash", "monde-matin-1", "monde-soir-1", "hebdo"
 
 # Hors quota sur tous les réseaux : le classement officiel du mardi (notre cœur, écarté le 27/10/2026 parce que
 # Cauri Monde avait rempli la journée) et les posts du Studio choisis à la main
-PRIORITAIRES = ("format-officiel", "format-studio")
+PRIORITAIRES = ("format-officiel", "format-studio", "format-top")   # + tops et versus validés par le fondateur
 
 
 def facebook_ok(post: dict) -> bool:
