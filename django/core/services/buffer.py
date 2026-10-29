@@ -156,10 +156,21 @@ def images(post: dict, service: str) -> list:
     return [f"{base}/media/social/{f}" for f in files if f][:MAX_IMAGES.get(service, 10)]
 
 
-def video_url(post: dict) -> str | None:
+def video_url(post: dict, service: str = "") -> str | None:
+    """Adresse publique de la vidéo ; pour TikTok, sa copie 1080 x 1920 (« -tt ») quand elle existe."""
     from core import storage
     base = storage.blob_public_url()
-    return f"{base}/media/social/{post['video']}" if base and post.get("video") else None
+    if not (base and post.get("video")):
+        return None
+    if service == "tiktok":
+        from core.services.social.encodage import nom_tiktok
+        tt = f"{base}/media/social/{nom_tiktok(post['video'])}"
+        try:
+            if HttpClient(10).request("HEAD", tt)["status"] == 200:
+                return tt
+        except PlatformException:
+            pass
+    return f"{base}/media/social/{post['video']}"
 
 
 INSTAGRAM_PAR_JOUR = 4
@@ -309,7 +320,7 @@ def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = Fal
     """Carrousel de photos, ou vidéo 9:16 (reel Instagram et Facebook, vidéo TikTok) si reel=True."""
     service = channel["service"]
     if reel:
-        video = video_url(post)
+        video = video_url(post, service)
         if not video:
             raise PlatformException("pas de vidéo pour ce post")
         assets = [{"video": {"url": video}}]

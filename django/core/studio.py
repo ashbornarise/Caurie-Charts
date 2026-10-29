@@ -401,7 +401,7 @@ def _tiktok_direct(post: dict, c: dict, pid: int) -> str:
                 "disable_duet": not t.get("duos"), "disable_stitch": not t.get("collages"),
                 "brand_organic_toggle": bool(t.get("ma_marque")), "brand_content_toggle": bool(t.get("contenu_marque"))}
     try:
-        pub = tiktok_publie.publier(buffer.video_url(post), buffer.text(post, "tiktok"), reglages, brouillon)
+        pub = tiktok_publie.publier(buffer.video_url(post, "tiktok"), buffer.text(post, "tiktok"), reglages, brouillon)
     except Exception as exc:  # noqa: BLE001
         return f"tiktok : {exc}"
     audit.log(None, "buffer.post", "social_post", pid, f"post-{pid}-tiktok", {"publish_id": pub, "direct": True,

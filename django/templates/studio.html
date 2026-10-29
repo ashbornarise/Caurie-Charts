@@ -658,6 +658,9 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
         message('#msg-suivi', j.erreur || 'Échec de la fabrication', false); action(); return; }
       if (j.statut === 'annule') { $('#suivi-titre').textContent = 'Annulée'; $('#suivi-sous').textContent = 'Le montage est arrêté. Tu peux la recommencer.'; action(); return; }
       action();
+      if ((j.statut === 'pret' || j.statut === 'envoye') && (j.params || {}).source_basse)
+        message('#msg-suivi', 'Source en basse définition (' + j.params.source_basse + ') : la vidéo sera floue sur TikTok. ' +
+          'Pour un clip de musique, colle plutôt le lien du clip officiel YouTube.', false);
       if (j.statut === 'pret' || j.statut === 'envoye') return resultat(j);
       setTimeout(tour, 3000);
     };

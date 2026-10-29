@@ -13,6 +13,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 
 import requests
 from PIL import Image, ImageDraw
@@ -21,6 +22,36 @@ from core import db, env, storage
 from core.services.platforms import log_write
 
 FORMATS = {"origine": None, "story": (1080, 1920), "feed": (1080, 1350), "square": (1080, 1080)}
+
+
+def _verifie_en_ligne(nom: str) -> None:
+    """La vidéo doit être lisible sur le Blob avant d'être dite « prête » (sinon : erreur, et on peut recommencer)."""
+    import requests
+    from core import storage
+    base = storage.blob_public_url()
+    if not base:
+        return
+    for _ in range(3):
+        try:
+            if requests.head(f"{base}/media/social/{nom}", timeout=20).status_code == 200:
+                return
+        except requests.RequestException:
+            pass
+        time.sleep(3)
+    raise RuntimeError("la vidéo n'a pas pu être mise en ligne : recommence")
+
+
+def _source_basse(video: str, infos: dict) -> str | None:
+    """« 720 × 1280 » si la source fait moins de 1000 px sur son petit côté (720p ou moins), sinon None."""
+    w, h = infos.get("width") or 0, infos.get("height") or 0
+    if not (w and h):
+        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+                            "-of", "csv=p=0", video], capture_output=True, text=True, timeout=30)
+        try:
+            w, h = (int(x) for x in r.stdout.strip().split(",")[:2])
+        except ValueError:
+            return None
+    return f"{w} × {h}" if min(w, h) < 1000 else None
 
 
 def taille_origine(infos: dict, video: str) -> tuple[int, int]:
@@ -516,7 +547,9 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
                f":enable='between(t,{flash_t},{flash_t + 0.08})'[v4];")
 
     # ── finition : fps, couleur, fondus entrée/sortie ──
-    filtre += f"[v4]fps=30,format=yuv420p,fade=t=in:d=0.25,fade=t=out:st={max(0, duree - 0.4):.2f}:d=0.4[v]"
+    # léger débruitage puis netteté (29/10/2026) : TikTok recompresse vers ~0,5 Mb/s ; une image propre y garde ses détails
+    filtre += (f"[v4]hqdn3d=1.2:1.2:5:5,unsharp=5:5:0.45:5:5:0,fps=30,format=yuv420p,fade=t=in:d=0.25,"
+               f"fade=t=out:st={max(0, duree - 0.4):.2f}:d=0.4[v]")
 
     from core.services.social.encodage import AUDIO_HQ, FIN, VIDEO_HQ
     cmd = [ffmpeg(), "-y", "-v", "error", "-ss", f"{debut:.2f}", "-t", f"{duree:.2f}", "-i", source,
@@ -583,6 +616,9 @@ def traite(job_id: int) -> dict:
         try:
             _maj(job_id, statut="telechargement", erreur=None)
             source, infos = telecharge(job["lien"], tmp)
+            basse = _source_basse(source, infos)
+            if basse:   # affiché dans le Studio : conseil de prendre le clip officiel YouTube
+                p["source_basse"] = basse
             longueur = float(infos.get("duration") or 0) or None
             debut = max(0.0, float(p.get("debut") or 0))
             fin = float(p.get("fin") or 60)
@@ -640,6 +676,11 @@ def traite(job_id: int) -> dict:
             subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3", vignette],
                            capture_output=True, timeout=60)
             storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")
+            _verifie_en_ligne(nom + ".mp4")   # le relais du PC déclarait « prête » une vidéo jamais mise en ligne (29/10/2026)
+            from core.services.social.encodage import copie_tiktok
+            tt = copie_tiktok(video)
+            if tt:
+                storage.store_media("social", os.path.basename(tt), open(tt, "rb").read(), "video/mp4")
             from core.services.social.encodage import copie_telegram
             tg = copie_telegram(video)   # Telegram : copie sous 20 Mo ; Instagram, TikTok et Facebook gardent la haute qualité
             if tg:
