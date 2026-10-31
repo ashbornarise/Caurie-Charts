@@ -56,10 +56,13 @@ def test_stars_sans_doublon():
 
 def test_anecdote_chaque_jour_a_midi(monkeypatch):
     vus = []
-    for nom in ("power", "promo", "top10", "citation", "versus", "histoire", "qui_est", "anecdote", "punchline", "bandeaux", "record"):
+    from core.services.social import officiel
+    for nom in ("power", "promo", "top10", "citation", "versus", "histoire", "qui_est", "anecdote", "punchline", "bandeaux", "record",
+                "evenement_photos", "evenement_video", "post"):
         fn = (lambda n: (lambda jour, due: vus.append((n, due.hour)) or None))(nom)
         fn.__name__ = nom
-        monkeypatch.setattr(F, nom, fn)
+        # jamais les vrais formats ici : ils écriraient dans la base (de production) et appelleraient l'IA
+        monkeypatch.setattr(officiel if nom == "post" else F, nom, fn)
     F.du_jour(date(2026, 10, 20))            # un mardi ordinaire
     assert ("anecdote", 12) in vus and ("citation", 21) in vus and not any(n == "punchline" for n, _ in vus)
     vus.clear()
