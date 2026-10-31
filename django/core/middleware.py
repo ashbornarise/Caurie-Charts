@@ -44,7 +44,7 @@ NO_EDGE_CACHE = ("/admin", "/contact", "/envoie-ta-video", "/declarer", "/revend
 
 
 def edge_cache(request, response) -> None:
-    """Pages publiques gardées 10 min par le réseau de Vercel (puis rafraîchies en arrière-plan) : un robot ou un
+    """Pages publiques gardées 3 h par le réseau de Vercel (puis rafraîchies en arrière-plan) : un robot ou un
     visiteur qui revoit une page ne réinterroge pas la base Neon, dont le transfert mensuel est limité."""
     from django.conf import settings
     if request.method not in ("GET", "HEAD") or response.status_code != 200 or response.cookies:
@@ -53,10 +53,17 @@ def edge_cache(request, response) -> None:
         return
     if "Cache-Control" in response.headers:
         return  # la vue a déjà choisi (images, plan du site…)
-    response.headers["Cache-Control"] = "public, max-age=0, s-maxage=600, stale-while-revalidate=86400"
+    response.headers["Cache-Control"] = "public, max-age=0, s-maxage=10800, stale-while-revalidate=86400"
     # consigne propre au réseau de Vercel (n'est pas transmise au navigateur)
-    response.headers["Vercel-CDN-Cache-Control"] = "max-age=600, stale-while-revalidate=86400"
+    response.headers["Vercel-CDN-Cache-Control"] = "max-age=10800, stale-while-revalidate=86400"
     response._cauri_edge = True   # EdgeVaryMiddleware retirera « Vary: Cookie », qui empêche toute mise en cache
+
+
+import re  # noqa: E402
+
+ASPIRATEUR = re.compile(r"AhrefsBot|SemrushBot|MJ12bot|DotBot|BLEXBot|DataForSeoBot|SeekportBot|PetalBot|Bytespider|GPTBot|"
+                        r"CCBot|ClaudeBot|anthropic-ai|Amazonbot|meta-externalagent|ImagesiftBot|Timpibot|omgili|Diffbot|"
+                        r"serpstatbot|barkrowler", re.I)
 
 
 class CauriMiddleware:
@@ -64,6 +71,10 @@ class CauriMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        ua = request.META.get("HTTP_USER_AGENT", "")
+        if ASPIRATEUR.search(ua) and not request.path.startswith("/robots.txt"):
+            from django.http import HttpResponse
+            return HttpResponse("", status=403)   # aspirateur qui ignore robots.txt : refusé sans toucher à la base
         token = current_request.set(request)
         set_locale(conf.get("app.locale", "fr"))
         try:

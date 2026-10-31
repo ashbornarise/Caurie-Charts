@@ -37,20 +37,69 @@ def sources(country_id=None) -> list[str]:
 
 
 def build(country_id=None, source=None, limit: int = 100, mode: str = "prime", top_size: int = 20, period: str = "latest") -> dict:
-    """Classement demandé, mis en cache 30 minutes. La clé inclut le dernier relevé : un nouvel import l'invalide."""
-    stamp = db.value("SELECT MAX(created_at) FROM chart_observations") or ""
-    key = "live:" + hashlib.md5(json.dumps([country_id, source, limit, mode, top_size, period, str(stamp)]).encode()).hexdigest()
+    """Classement demandé, mis en cache 30 minutes. La clé inclut le dernier relevé : un nouvel import l'invalide.
+    Deux niveaux : la mémoire de l'instance, puis la table live_cache (partagée par toutes les instances Vercel, qui
+    repartent à vide à chaque démarrage). Sans elle, chaque page vue par un robot recalculait tout (Neon jamais en
+    veille, 207 heures de calcul en octobre 2026)."""
+    stamp = cache.get("live:stamp")
+    if stamp is None:
+        stamp = str(db.value("SELECT MAX(id) FROM chart_observations") or "")   # index de la clé : immédiat
+        cache.set("live:stamp", stamp, 120)
+    key = "live:" + hashlib.md5(json.dumps([country_id, source, limit, mode, top_size, period, stamp]).encode()).hexdigest()
     cached = cache.get(key)
     if cached is not None:
         return cached
-    result = _compute(country_id, source, limit, mode, top_size, period)
-    result["rows"] = _with_spotify(result["rows"])
-    cache.set(key, result, CACHE_TTL)
-    return result
+    cached = _partage_lit(key)
+    if cached is None:
+        cached = _compute(country_id, source, limit, mode, top_size, period)
+        cached["rows"] = _with_spotify(cached["rows"])
+        _partage_ecrit(key, cached)
+    cache.set(key, cached, CACHE_TTL)
+    return cached
+
+
+def _table() -> None:
+    db.run("""CREATE TABLE IF NOT EXISTS live_cache (cle VARCHAR(40) PRIMARY KEY, valeur TEXT NOT NULL,
+              expire TIMESTAMPTZ NOT NULL)""")
+
+
+def _partage_lit(key: str):
+    try:
+        v = db.value("SELECT valeur FROM live_cache WHERE cle = ? AND expire > NOW()", [key])
+        if not v:
+            return None
+        result = json.loads(v)
+        # JSON a rendu les dates en texte : on les retrouve telles que la base les donne
+        for obj, champs in [(result, ("day", "since"))] + [(r, ("release_date", "observed_on")) for r in result["rows"]]:
+            for c in champs:
+                if isinstance(obj.get(c), str) and len(obj[c]) == 10:
+                    obj[c] = date.fromisoformat(obj[c])
+        return result
+    except Exception:  # noqa: BLE001 — table absente : elle est créée à la première écriture
+        return None
+
+
+def _partage_ecrit(key: str, value: dict) -> None:
+    texte = json.dumps(value, default=str, ensure_ascii=False)
+    for essai in range(2):
+        try:
+            db.run(f"""INSERT INTO live_cache (cle, valeur, expire) VALUES (?, ?, NOW() + INTERVAL '{CACHE_TTL} seconds')
+                       ON CONFLICT (cle) DO UPDATE SET valeur = EXCLUDED.valeur, expire = EXCLUDED.expire""", [key, texte])
+            if int(key[-4:], 16) % 50 == 0:   # ménage de temps en temps
+                db.run("DELETE FROM live_cache WHERE expire < NOW() - INTERVAL '1 day'")
+            return
+        except Exception:  # noqa: BLE001
+            if essai:
+                return
+            _table()
 
 
 def clear_cache() -> None:
     cache.clear()
+    try:
+        db.run("DELETE FROM live_cache")
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _with_spotify(rows: list[dict]) -> list[dict]:
@@ -155,6 +204,10 @@ def _observations(country_id, source, window) -> list[dict]:
         params.append(source)
     if isinstance(window, int):
         flt += f" AND o.observed_on >= CURRENT_DATE - {int(window)}"
+    # taille de chaque classement : calculée sur la même fenêtre, pas sur tout l'historique
+    sizes = flt.replace("o.", "")
+    if window == "latest":
+        sizes += " AND observed_on >= CURRENT_DATE - 3"
     latest = "" if window != "latest" else """JOIN (SELECT source, country_id, MAX(observed_on) AS day FROM chart_observations
                   WHERE observed_on >= CURRENT_DATE - 3 GROUP BY source, country_id) d
              ON d.source = o.source AND d.country_id = o.country_id AND d.day = o.observed_on"""
@@ -167,7 +220,7 @@ def _observations(country_id, source, window) -> list[dict]:
             FROM chart_observations o
             {latest}
             JOIN (SELECT source, country_id, observed_on, MAX(position) AS size FROM chart_observations
-                   GROUP BY source, country_id, observed_on) l
+                   WHERE TRUE{sizes} GROUP BY source, country_id, observed_on) l
               ON l.source = o.source AND l.country_id = o.country_id AND l.observed_on = o.observed_on
             JOIN countries oc ON oc.id = o.country_id
             JOIN tracks t ON t.id = o.track_id
@@ -175,7 +228,7 @@ def _observations(country_id, source, window) -> list[dict]:
             LEFT JOIN countries ac ON ac.id = a.submission_country_id
             LEFT JOIN countries gc ON gc.id = a.guessed_country_id
             WHERE a.status <> 'out_of_scope'{flt}
-            ORDER BY o.id""", params)
+            ORDER BY o.id""", params + params)
 
 
 def _rises(country_id, day) -> dict:

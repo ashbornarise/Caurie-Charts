@@ -668,9 +668,17 @@ def _submit_render(request, old, errors, status=200):
 
 # ---------------------------------------------------------------- référencement
 
+ASPIRATEURS = ("AhrefsBot", "SemrushBot", "MJ12bot", "DotBot", "BLEXBot", "DataForSeoBot", "SeekportBot", "PetalBot",
+               "Bytespider", "GPTBot", "CCBot", "ClaudeBot", "anthropic-ai", "Amazonbot", "meta-externalagent",
+               "ImagesiftBot", "Timpibot", "omgili", "Diffbot", "serpstatbot", "barkrowler")
+
+
 def robots(request):
     allow = conf.get("app.env") == "production"
-    body = "User-agent: *\n" + ("Disallow: /admin\nDisallow: /partage/\n" if allow else "Disallow: /\n") + "Sitemap: " + url("sitemap.xml") + "\n"
+    # Aspirateurs (outils SEO, collecte pour IA) : des milliers de pages par jour, aucun visiteur en retour, et la base
+    # Neon tenue éveillée. Google, Bing et les aperçus de liens des réseaux restent les bienvenus.
+    aspirateurs = ("".join(f"User-agent: {b}\n" for b in ASPIRATEURS) + "Disallow: /\n\n") if allow else ""
+    body = aspirateurs + "User-agent: *\n" +("Disallow: /admin\nDisallow: /partage/\n" if allow else "Disallow: /\n") + "Sitemap: " + url("sitemap.xml") + "\n"
     return HttpResponse(body, content_type="text/plain; charset=utf-8")
 
 
