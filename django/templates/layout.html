@@ -47,14 +47,14 @@
             <!-- Logo : public/assets/img/brand/logo.svg (généré par bin/build-brand-assets.php) -->
             <img class="brand__logo" src="{{ asset('img/brand/logo.svg') }}" alt="{{ brand() }}" width="100" height="44">
         </a>
-        <nav class="site-nav" aria-label="{{ t('nav.main') }}">
+        <nav class="site-nav" id="site-nav" aria-label="{{ t('nav.main') }}">
             <a href="{{ chart_path('WA', 'prime-wa') }}" {{ Markup('aria-current="page"') if current.startswith('/classements') }}>{{ t('nav.charts') }}</a>
             {% if config('show.public') %}<a href="{{ path('show') }}" {{ Markup('aria-current="page"') if current == '/show' }}>{{ t('nav.show') }}</a>{% endif %}
             <a href="{{ path('actu-artistes') }}" {{ Markup('aria-current="page"') if current == '/actu-artistes' }}>Actu</a>
             <a href="{{ path('methodologie') }}" {{ Markup('aria-current="page"') if current == '/methodologie' }}>{{ t('nav.methodology') }}</a>
             <a href="{{ path('a-propos') }}" {{ Markup('aria-current="page"') if current == '/a-propos' }}>{{ t('nav.about') }}</a>
-            <a class="site-nav__cta" href="{{ path('declarer') }}">{{ t('nav.submit') }}</a>
         </nav>
+        <a class="site-nav__cta header-cta" href="{{ path('declarer') }}">{{ t('nav.submit') }}</a>
     </div>
 </header>
 
@@ -75,5 +75,6 @@
 {{ partial('partials/footer', countries=countries, footer=footer, other_locale=other_locale, current=current, ask_consent=ask_consent) }}
 {% if ask_consent %}{{ partial('partials/consent') }}{% endif %}
 <script src="{{ asset('js/consent.js') }}" defer></script>
+<script src="{{ asset('js/ui.js') }}" defer></script>
 </body>
 </html>
