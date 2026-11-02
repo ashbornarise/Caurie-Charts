@@ -110,3 +110,73 @@ pre.json { white-space: pre-wrap; font-size: .75rem; margin: 0; max-width: 360px
 .distinction-contact { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .distinction-contact input { flex: 1 1 140px; min-width: 0; }
 .distinction-dm { width: 100%; font-size: .8rem; margin-top: 6px; }
+
+/* ===== Admin (refonte du 02/11/2026) : menu latéral en verre, aide en tête de page, tableau de bord orienté action ===== */
+body.admin { background: linear-gradient(180deg, var(--ciel) 0, #F7FAFF 320px, #fff 100%); min-height: 100vh; }
+@media (min-width: 980px) { body.admin--connecte { display: grid; grid-template-columns: 252px 1fr; align-items: start; } }
+.admin img.flag { padding: 0; background: none; border-radius: 2px; margin: 0 4px 0 0; vertical-align: -3px; font: inherit; }
+.ico { flex: none; }
+
+.adm-menu { position: sticky; top: 0; z-index: 40; background: rgba(255, 255, 255, .82); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--ciel-ligne); }
+@media (min-width: 980px) { .adm-menu { height: 100vh; overflow-y: auto; border-bottom: 0; border-right: 1px solid var(--ciel-ligne); } }
+.adm-menu__plier > summary { list-style: none; cursor: pointer; }
+.adm-menu__plier > summary::-webkit-details-marker { display: none; }
+.adm-menu__tete { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
+.adm-marque { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.adm-marque span { display: grid; font-family: var(--serif); font-weight: 700; font-size: 1.1rem; line-height: 1.1; }
+.adm-marque small { font: 700 .66rem/1.2 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: #6A4FC2; }
+.adm-menu__bouton { font-size: .82rem; font-weight: 700; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--ciel-ligne); background: #fff; }
+@media (min-width: 980px) { .adm-menu__bouton { display: none; } .adm-menu__plier > summary { cursor: default; pointer-events: none; } .adm-marque { pointer-events: auto; } }
+.adm-menu nav { padding: 0 12px 18px; }
+.adm-groupe { margin: 14px 10px 6px; font: 700 .68rem/1.2 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.adm-menu ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.adm-lien { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 10px; text-decoration: none; color: var(--ink-2);
+    font: 500 .92rem/1.2 var(--sans); background: none; border: 0; cursor: pointer; text-align: left; transition: background .15s ease, color .15s ease; }
+.adm-lien:hover { background: var(--ciel); color: var(--ink); }
+.adm-lien--actif { background: var(--violet-verre); color: #5B2BD6; font-weight: 700; }
+.adm-lien--actif .ico { color: #7A3CF5; }
+.adm-menu__pied { margin-top: 16px !important; padding-top: 12px !important; border-top: 1px solid var(--ciel-ligne); }
+.adm-menu__pied form { margin: 0; }
+@media (max-width: 979px) { .adm-menu nav { max-height: 70vh; overflow-y: auto; } }
+
+.admin-main { max-width: 1180px; width: 100%; margin: 0 auto; padding: 22px 24px 70px; }
+.admin-main--seul { max-width: 520px; }
+.adm-aide { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 18px; padding: 12px 16px; border-radius: 14px; font-size: .9rem; color: var(--ink-2);
+    background: rgba(255, 255, 255, .75); border: 1px solid var(--ciel-ligne); }
+.adm-aide .ico { color: #7A3CF5; margin-top: 1px; }
+.adm-aide strong { color: var(--ink); }
+.admin h1 { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+
+.adm-entete { margin-bottom: 18px; }
+.adm-entete h1 { margin: 0 0 4px; }
+.adm-taches { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); margin-bottom: 22px; }
+.adm-tache { position: relative; display: grid; gap: 4px; align-content: start; padding: 18px; border-radius: 18px; text-decoration: none; background: #fff;
+    border: 1px solid var(--ciel-ligne); box-shadow: 0 14px 30px -26px rgba(40, 90, 160, .7); transition: transform .2s ease, box-shadow .2s ease; }
+.adm-tache:hover { transform: translateY(-2px); box-shadow: 0 18px 34px -22px rgba(40, 90, 160, .7); }
+.adm-tache__chiffre { font-family: var(--serif); font-size: 2.2rem; font-weight: 700; line-height: 1; }
+.adm-tache__titre { font-weight: 700; }
+.adm-tache__quoi { font-size: .85rem; color: var(--ink-2); }
+.adm-tache__action { margin-top: 6px; font-size: .85rem; font-weight: 700; color: #5B2BD6; }
+.adm-tache--urgent { border-color: rgba(180, 35, 24, .35); background: linear-gradient(160deg, #fff 50%, #FFF1EF 100%); }
+.adm-tache--urgent .adm-tache__chiffre { color: var(--danger); }
+.adm-tache--info { border-color: rgba(139, 82, 255, .3); background: linear-gradient(160deg, #fff 50%, #F4EEFF 100%); }
+.adm-tache--info .adm-tache__chiffre { color: #5B2BD6; }
+
+.adm-carte { padding: 20px; margin: 0 0 18px; border-radius: 18px; background: #fff; border: 1px solid var(--ciel-ligne); }
+.adm-carte h2 { font-size: 1.25rem; }
+.adm-liste { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.adm-liste li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border-radius: 10px; background: var(--ciel); }
+.adm-semaine { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.adm-semaine li { display: grid; grid-template-columns: 130px 1fr; gap: 12px; align-items: start; font-size: .92rem; }
+@media (max-width: 560px) { .adm-semaine li { grid-template-columns: 1fr; gap: 2px; } }
+.adm-semaine em { color: #5B2BD6; font-style: normal; font-weight: 600; }
+.adm-jour { font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--ciel); justify-self: start; font-size: .82rem; }
+.adm-jour--fort { background: linear-gradient(135deg, #A57BFF, #7A3CF5); color: #fff; }
+
+/* Tableaux et formulaires existants : coins arrondis et respiration */
+.admin .data-table { background: #fff; border-radius: 14px; overflow: hidden; border: 1px solid var(--ciel-ligne); }
+.admin .data-table th { background: var(--ciel); }
+.admin .card, .admin .box { border-radius: 14px; background: #fff; border-color: var(--ciel-ligne); }
+.admin .button { border-radius: 999px; }
+@media (prefers-reduced-motion: reduce) { .adm-tache, .adm-lien { transition: none; } .adm-tache:hover { transform: none; } }

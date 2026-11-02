@@ -1,54 +1,79 @@
-<h1>{{ t('admin.nav_dashboard') }}</h1>
-<div class="cards">
-    <a class="card{{ ' card--alert' if pending }}" href="{{ path('admin/classements') }}">
-        <span class="card__value">{{ pending|sum(attribute='n') }}</span>
-        <span class="card__label">{{ t('admin.card_flags') }}</span>
+{#- Tableau de bord (refonte du 02/11/2026) : d'abord ce qui attend une décision, chaque carte dit quoi faire ;
+    puis la routine de la semaine jour par jour ; puis les brouillons. -#}
+{%- set derniere = (pending|map(attribute='week_start')|map('string')|max) if pending else '' -%}
+{%- set recents = [] -%}
+{%- for p in pending if p.week_start|string == derniere %}{% do recents.append(p) %}{% endfor -%}
+{%- set anciens = (pending|sum(attribute='n')) - (recents|sum(attribute='n')) -%}
+{%- set flags = recents|sum(attribute='n') -%}
+{%- set a_faire = (1 if flags else 0) + (1 if submissions else 0) + (1 if messages else 0) + (1 if drafts else 0) -%}
+<header class="adm-entete">
+    <p class="eyebrow">Bonjour {{ user.name }}</p>
+    <h1>{% if a_faire %}{{ a_faire }} chose{{ 's' if a_faire > 1 }} à traiter{% else %}Tout est à jour{% endif %}</h1>
+    <p class="muted">Dernier relevé des plateformes : <strong>{{ fmt_date(lastSnapshot, false) if lastSnapshot else 'aucun' }}</strong>{{ ' · ' ~ t('admin.quota_used', {'n': quota.units_used}) if quota }}</p>
+</header>
+
+<div class="adm-taches">
+    <a class="adm-tache{{ ' adm-tache--urgent' if flags }}" href="{{ path('admin/classements') }}">
+        <span class="adm-tache__chiffre">{{ flags }}</span>
+        <span class="adm-tache__titre">Titres signalés</span>
+        <span class="adm-tache__quoi">{% if flags %}Des chiffres paraissent suspects : vérifiez-les avant de publier le classement.{% else %}Aucun chiffre suspect cette semaine.{% endif %}</span>
+        {% if flags %}<span class="adm-tache__action">Examiner →</span>{% endif %}
     </a>
-    <a class="card" href="{{ path('admin/classements') }}">
-        <span class="card__value">{{ drafts|length }}</span>
-        <span class="card__label">{{ t('admin.card_drafts') }}</span>
+    <a class="adm-tache{{ ' adm-tache--urgent' if submissions }}" href="{{ path('admin/declarations') }}">
+        <span class="adm-tache__chiffre">{{ submissions }}</span>
+        <span class="adm-tache__titre">Déclarations à valider</span>
+        <span class="adm-tache__quoi">{% if submissions %}Des artistes ou labels ont envoyé leurs chiffres : validez-les ou refusez-les.{% else %}Aucune déclaration en attente.{% endif %}</span>
+        {% if submissions %}<span class="adm-tache__action">Valider →</span>{% endif %}
     </a>
-    <a class="card{{ ' card--alert' if submissions }}" href="{{ path('admin/declarations') }}">
-        <span class="card__value">{{ submissions }}</span>
-        <span class="card__label">{{ t('admin.card_submissions') }}</span>
+    <a class="adm-tache{{ ' adm-tache--info' if drafts }}" href="{{ path('admin/classements') }}">
+        <span class="adm-tache__chiffre">{{ drafts|length }}</span>
+        <span class="adm-tache__titre">Classements en brouillon</span>
+        <span class="adm-tache__quoi">{% if drafts %}Calculés mais pas encore publiés : relisez puis publiez (le mardi).{% else %}Aucun brouillon : tout est publié.{% endif %}</span>
+        {% if drafts %}<span class="adm-tache__action">Ouvrir →</span>{% endif %}
     </a>
-    <a class="card" href="{{ path('admin/messages') }}">
-        <span class="card__value">{{ messages }}</span>
-        <span class="card__label">{{ t('admin.card_messages') }}</span>
+    <a class="adm-tache{{ ' adm-tache--info' if messages }}" href="{{ path('admin/messages') }}">
+        <span class="adm-tache__chiffre">{{ messages }}</span>
+        <span class="adm-tache__titre">Messages reçus</span>
+        <span class="adm-tache__quoi">Formulaire de contact du site. Les demandes de partenariat arrivent ici.</span>
+        {% if messages %}<span class="adm-tache__action">Lire →</span>{% endif %}
     </a>
-    <div class="card">
-        <span class="card__value">{{ fmt_date(lastSnapshot, false) if lastSnapshot else '—' }}</span>
-        <span class="card__label">{{ t('admin.card_last_snapshot') }}{{ ' · ' ~ t('admin.quota_used', {'n': quota.units_used}) if quota }}</span>
-    </div>
 </div>
 
-{% if pending %}
-<h2>{{ t('admin.flags_to_review') }}</h2>
-<ul>
-    {% for p in pending %}
-        <li>{{ p.code }}, {{ t('admin.week_of', {'date': fmt_date(p.week_start)}) }} : <strong>{{ p.n|int }}</strong></li>
-    {% endfor %}
-</ul>
+{% if recents %}
+<section class="adm-carte">
+    <h2 class="flush">Titres signalés cette semaine, par pays</h2>
+    <ul class="adm-liste">
+        {% for p in recents|sort(attribute='n', reverse=true) %}
+        <li><span>{{ flag(p.code, 16) }} {{ country_name(p.code) }} · {{ t('admin.week_of', {'date': fmt_date(p.week_start)}) }}</span><strong>{{ p.n|int }}</strong></li>
+        {% endfor %}
+    </ul>
+    {% if anciens %}<p class="muted">Plus {{ anciens|int }} signalement(s) restés sur des semaines déjà passées, consultables dans <a href="{{ path('admin/classements') }}">Classements</a>.</p>{% endif %}
+</section>
 {% endif %}
 
-<h2>{{ t('admin.drafts') }}</h2>
-{% if drafts %}
-<table class="data-table">
-    <thead><tr><th>{{ t('admin.country') }}</th><th>{{ t('admin.period') }}</th><th>{{ t('admin.runs') }}</th><th></th></tr></thead>
-    <tbody>
-    {% for d in drafts %}
-        <tr><td>{{ d.code }}</td><td>{{ d.period_key }}</td><td>{{ d.runs|int }}</td><td><a href="{{ path('admin/classements/' ~ d.first_id) }}">{{ t('admin.open') }}</a></td></tr>
-    {% endfor %}
-    </tbody>
-</table>
-{% else %}<p class="muted">{{ t('admin.no_drafts') }}</p>{% endif %}
-
-<div class="box box--accent">
-    <h2 class="flush">{{ t('admin.weekly_routine') }}</h2>
-    <ol>
-        <li>{{ t('admin.routine_1') }}</li>
-        <li>{{ t('admin.routine_2') }}</li>
-        <li>{{ t('admin.routine_3') }}</li>
-        <li>{{ t('admin.routine_4') }}</li>
+<section class="adm-carte">
+    <h2 class="flush">La semaine type</h2>
+    <p class="muted">Presque tout est automatique. Voici ce qui se passe, et où vous intervenez.</p>
+    <ol class="adm-semaine">
+        <li><span class="adm-jour">Chaque nuit</span><span>Relevés des plateformes (Apple Music, Deezer, Shazam, YouTube), nouveaux clips des artistes, pays vérifiés par Google. <em>Rien à faire.</em></span></li>
+        <li><span class="adm-jour">Chaque jour</span><span>Cauri Monde à 8 h et 20 h, vidéos du Studio, publications sur les réseaux. <em>Vous validez les accroches dans le <a href="{{ path('studio') }}">Studio</a>.</em></span></li>
+        <li><span class="adm-jour">Lundi</span><span>Calcul du classement de la semaine passée et relevé Spotify des artistes des tops. <em>Rien à faire.</em></span></li>
+        <li><span class="adm-jour adm-jour--fort">Mardi</span><span>Revue des titres signalés par Google et l’IA, puis publication du classement officiel. <em>Vous tranchez les cas douteux dans <a href="{{ path('admin/classements') }}">Classements</a>.</em></span></li>
+        <li><span class="adm-jour">Le 1er du mois</span><span>Distinctions du mois et préparation du show. <em>Vous relisez dans <a href="{{ path('admin/distinctions') }}">Distinctions</a>.</em></span></li>
     </ol>
-</div>
+</section>
+
+<section class="adm-carte">
+    <h2 class="flush">{{ t('admin.drafts') }}</h2>
+    {% if drafts %}
+    <table class="data-table">
+        <thead><tr><th>{{ t('admin.country') }}</th><th>{{ t('admin.period') }}</th><th>{{ t('admin.runs') }}</th><th></th></tr></thead>
+        <tbody>
+        {% for d in drafts[:8] %}
+            <tr><td>{{ flag(d.code, 16) }} {{ country_name(d.code) }}</td><td>{{ d.period_key }}</td><td>{{ d.runs|int }}</td><td><a class="button button--small" href="{{ path('admin/classements/' ~ d.first_id) }}">{{ t('admin.open') }}</a></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% if drafts|length > 8 %}<p class="muted">Et {{ drafts|length - 8 }} autre(s) dans <a href="{{ path('admin/classements') }}">Classements</a>.</p>{% endif %}
+    {% else %}<p class="muted">{{ t('admin.no_drafts') }}</p>{% endif %}
+</section>

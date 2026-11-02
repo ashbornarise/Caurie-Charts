@@ -17,3 +17,13 @@ document.querySelectorAll('[data-copy]').forEach(function (btn) {
         }
     });
 });
+
+// Menu latéral : ouvert sur ordinateur, replié derrière « Menu » sur téléphone (refonte du 02/11/2026)
+(function () {
+    var menu = document.querySelector('.adm-menu__plier');
+    if (!menu) return;
+    var large = window.matchMedia('(min-width: 980px)');
+    var regle = function () { menu.open = large.matches; };
+    regle();
+    if (large.addEventListener) large.addEventListener('change', regle);
+})();
