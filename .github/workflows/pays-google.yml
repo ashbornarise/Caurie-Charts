@@ -1,7 +1,7 @@
 name: Pays des artistes vérifiés par Google (Gemini + recherche Google)
 on:
   schedule:
-    - cron: "50 4 * * *"   # chaque nuit, 4 lots de 40 artistes au plus (moitié du budget Gemini du jour)
+    - cron: "50 4 * * 0,1,3-6"   # chaque nuit sauf le mardi (budget Gemini gardé pour la revue du classement), 4 lots de 40 au plus
   workflow_dispatch:
     inputs:
       lots:
