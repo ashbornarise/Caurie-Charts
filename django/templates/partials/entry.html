@@ -27,6 +27,7 @@
         {% else %}
         <span class="entry__artist">{{ t('chart.tracks_count', {'n': e.sources_count}) }}</span>
         {% endif %}
+        {% set sp = spotify_auditeurs(e.artist_slug) %}{% if sp %}<span class="sp-aud" title="Auditeurs mensuels de l’artiste sur Spotify (information, hors calcul du classement)">{{ fmt_court(sp) }} auditeurs Spotify</span>{% endif %}
         {% if is_group_label(e.label_owner) %}
             <a class="badge" href="{{ path('methodologie') }}#independance" title="{{ t('badge.title') }}">{{ config('app.group_label.name') }}</a>
         {% endif %}

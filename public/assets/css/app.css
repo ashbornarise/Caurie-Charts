@@ -803,3 +803,84 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .spotify-hausses__liste small { color: var(--muted); }
 .hot-artist__meta .hausse { color: #1a7f45; font-weight: 600; }
 .hot-artist__meta .baisse { color: #b3261e; }
+
+/* ===== Accueil (refonte du 02/11/2026) : blanc, bleu ciel en verre, touches de violet ; carrousels au lieu des listes empilées ===== */
+:root { --ciel: #EAF5FF; --ciel-2: #D6ECFF; --ciel-ligne: rgba(120, 180, 235, .35); --violet-verre: rgba(139, 82, 255, .10); }
+.acc-wrap { max-width: 1120px; }
+.acc-hero { background: linear-gradient(180deg, var(--ciel) 0%, #fff 78%); padding: 18px 0 28px; border-bottom: 1px solid var(--ciel-ligne); }
+.acc-pays { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 14px; scroll-snap-type: x proximity; }
+.acc-pays::-webkit-scrollbar { display: none; }
+.acc-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; font-size: .86rem; font-weight: 600;
+    text-decoration: none; background: rgba(255, 255, 255, .7); border: 1px solid var(--ciel-ligne); backdrop-filter: blur(8px); scroll-snap-align: start; white-space: nowrap; }
+.acc-chip:hover { border-color: var(--accent); }
+.acc-chip--on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.acc-hero__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 18px; }
+.acc-hero__title { font-size: clamp(1.9rem, 4.6vw, 3rem); margin: 0; text-wrap: balance; }
+.acc-hero .tabs { margin: 0; }
+.acc-top { display: grid; gap: 22px; }
+@media (min-width: 820px) { .acc-top { grid-template-columns: minmax(260px, 360px) 1fr; align-items: start; } }
+.acc-one { position: relative; display: block; text-decoration: none; border-radius: 22px; overflow: hidden; background: #fff;
+    box-shadow: 0 18px 40px -18px rgba(70, 120, 190, .45); border: 1px solid var(--ciel-ligne); }
+@media (max-width: 819px) { .acc-one { max-width: 420px; } }
+.acc-one__cover { display: block; aspect-ratio: 1; background: var(--ciel-2); }
+.acc-one__cover img { width: 100%; height: 100%; object-fit: cover; }
+.acc-one__body { position: absolute; left: 12px; right: 12px; bottom: 12px; display: grid; gap: 2px; padding: 14px 16px; border-radius: 16px;
+    background: rgba(255, 255, 255, .78); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border: 1px solid rgba(255, 255, 255, .9); }
+.acc-one__badge { justify-self: start; font-size: .72rem; font-weight: 800; letter-spacing: .08em; color: #fff; padding: 3px 10px; border-radius: 999px;
+    background: linear-gradient(135deg, #A57BFF, #7A3CF5); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 4px 10px -4px rgba(122, 60, 245, .8); }
+.acc-one__title { font-family: var(--serif); font-size: 1.45rem; line-height: 1.1; color: var(--ink); }
+.acc-one__artist { font-size: .9rem; color: var(--ink-2); }
+.acc-list { margin: 0; border-top: 0; }
+@media (min-width: 820px) { .acc-list { display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: column; grid-template-rows: repeat(5, auto); column-gap: 22px; } }
+.acc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 18px; }
+.acc-link { font-size: .88rem; font-weight: 600; color: var(--ink-2); }
+.acc-bloc { padding-top: 34px; max-width: 1120px; }
+.acc-bloc__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 12px; }
+.acc-bloc__head h2 { margin: 0; font-size: clamp(1.35rem, 3vw, 1.75rem); }
+.acc-bloc__lead { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+/* Carrousels : on fait défiler du doigt, la page ne s'allonge plus */
+.acc-rail { list-style: none; margin: 0; padding: 4px 2px 14px; display: grid; grid-auto-flow: column; gap: 14px; overflow-x: auto;
+    scroll-snap-type: x mandatory; scrollbar-width: thin; scrollbar-color: var(--ciel-2) transparent; overscroll-behavior-x: contain; }
+.acc-rail > * { scroll-snap-align: start; }
+.acc-rail--n1 { grid-auto-columns: 168px; }
+.acc-n1 { display: grid; align-content: start; gap: 3px; text-decoration: none; padding: 10px; border-radius: 18px; background: #fff; border: 1px solid var(--ciel-ligne); height: 100%;
+    transition: transform .2s ease, box-shadow .2s ease; }
+.acc-n1:hover { transform: translateY(-3px); box-shadow: 0 14px 30px -18px rgba(70, 120, 190, .6); }
+.acc-n1__photo { aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--ciel-2); margin-bottom: 6px; }
+.acc-n1__photo img { width: 100%; height: 100%; object-fit: cover; }
+.acc-n1__pays { display: flex; align-items: center; gap: 6px; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.acc-n1__title { font-weight: 700; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.acc-n1__artist { font-size: .85rem; color: var(--ink-2); }
+.acc-n1__views { font-size: .78rem; font-weight: 700; color: var(--accent); }
+.acc-rail--une { grid-auto-columns: 250px; }
+.acc-news { display: grid; align-content: start; gap: 2px; text-decoration: none; height: 100%; }
+.acc-news__img { display: block; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: var(--ciel-2); }
+.acc-news__img img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
+.acc-news:hover .acc-news__img img { transform: scale(1.04); }
+.acc-news .une__meta { margin: 8px 0 2px; }
+.acc-news__title { font-weight: 700; font-size: .95rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.acc-rail--charts { grid-auto-columns: minmax(270px, 1fr); }
+.acc-chart { padding: 16px; border-radius: 18px; background: linear-gradient(160deg, #fff 40%, var(--ciel) 100%); border: 1px solid var(--ciel-ligne); }
+.acc-chart__title { font-size: 1.2rem; margin: 0; }
+.acc-chart__title a { text-decoration: none; }
+.acc-chart__desc { margin: 2px 0 6px; font-size: .82rem; color: var(--muted); }
+.acc-chart .chart-list { margin-top: 6px; border-top: 0; }
+.acc-rail--artistes { grid-auto-columns: 112px; }
+.acc-artiste { display: grid; justify-items: center; gap: 6px; text-decoration: none; text-align: center; }
+.acc-artiste__photo { position: relative; width: 96px; height: 96px; border-radius: 50%; background: var(--ciel-2);
+    box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(139, 82, 255, .35); }
+.acc-artiste__photo > img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.acc-artiste__flag { position: absolute; right: 2px; bottom: 2px; }
+.acc-artiste__name { font-size: .85rem; font-weight: 700; line-height: 1.2; }
+.acc-fin { display: grid; gap: 16px; padding-top: 34px; padding-bottom: 44px; max-width: 1120px; }
+@media (min-width: 820px) { .acc-fin { grid-template-columns: 1fr 1fr; } }
+.acc-fin__card { padding: 22px; border-radius: 20px; background: var(--ciel); border: 1px solid var(--ciel-ligne); }
+.acc-fin__card h2 { font-size: 1.3rem; margin: 0 0 6px; }
+.acc-fin__card p { margin: 0 0 10px; color: var(--ink-2); font-size: .92rem; }
+.acc-fin__card--violet { background: linear-gradient(150deg, var(--violet-verre), rgba(234, 245, 255, .9)); border-color: rgba(139, 82, 255, .25); }
+.acc-fin__logos { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+@media (prefers-reduced-motion: reduce) { .acc-n1, .acc-news__img img { transition: none; } .acc-n1:hover { transform: none; } }
+/* Auditeurs mensuels Spotify de l'artiste (information, hors calcul du classement) */
+.sp-aud { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 600; color: #1a7f45; white-space: nowrap; }
+.sp-aud::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #1ED760; flex: none; }
+.entry__main .sp-aud { display: flex; margin-top: 1px; }

@@ -1,5 +1,7 @@
 {%- set code = country.code -%}
-{#- Lien d'accueil qui garde le pays et la période choisis (sans pays = classement des cinq pays) -#}
+{#- Accueil (refonte du 02/11/2026) : six blocs, sans doublon. 1. Top de la semaine (pays + période, N°1 en grand, 2 à 10)
+    2. N°1 de chaque pays (carrousel) 3. À la une 4. Buzz / Fresh / Icon 5. Artistes du moment 6. Méthode et partenaires.
+    L'ancienne page faisait 17 écrans sur téléphone (grille des N°1 par pays, Top 20 et actualités affichés deux fois). -#}
 {%- macro home_link(country_code, period) -%}
 {%- set cc = country_code or code -%}
 {%- set q = {} -%}
@@ -8,135 +10,180 @@
 {{ path('/', q) }}
 {%- endmacro -%}
 {%- macro tab_link(p) %}{{ home_link(none, p) }}{% endmacro -%}
-{{ partial('partials/top-band', rows=(entries if entries else (live.rows if live else [])),
-           title=t('home.title', {'country': country_name(code), 'size': country.chart_size}),
-           day=(period_label(run) if run else (t('chart.live_day', {'date': fmt_date(live.day)}) if live and live.day else '')),
-           more='#classement') }}
-{{ partial('partials/official-tops', tops=officialTops) }}
 {%- macro news_href(n) -%}{{ n.source_url if (n.origin or 'manual') == 'feed' and n.source_url else path('actualites/' ~ n.slug) }}{%- endmacro -%}
 {%- macro news_ext(n) -%}{{ Markup(' target="_blank" rel="noopener noreferrer"') if (n.origin or 'manual') == 'feed' and n.source_url }}{%- endmacro -%}
+{%- set rows = entries if entries else (live.rows if live else []) -%}
+{%- set top_title = t('home.title', {'country': country_name(code), 'size': country.chart_size}) -%}
+
+{# 1. Top de la semaine #}
+<section class="acc-hero" id="classement" aria-labelledby="acc-top-title">
+    <div class="wrap acc-wrap">
+        <nav class="acc-pays" aria-label="{{ t('home.all_countries') }}">
+            <a class="acc-chip{{ ' acc-chip--on' if regional }}" href="{{ home_link('WA', periodType) }}" {{ Markup('aria-current="true"') if regional }}>{{ country_name('WA') }}</a>
+            {% for c in countries %}{% set on = c.code == code %}
+            <a class="acc-chip{{ ' acc-chip--on' if on }}" href="{{ home_link(c.code, periodType) }}" {{ Markup('aria-current="true"') if on }}>{{ flag(c.code, 16) }}{{ country_name(c.code) }}</a>
+            {% endfor %}
+        </nav>
+        <div class="acc-hero__head">
+            <div>
+                <p class="eyebrow">{% if run %}Classement officiel · {{ period_label(run) }}{% elif live and live.day %}{{ t('chart.live_day', {'date': fmt_date(live.day)}) }}{% endif %}</p>
+                <h1 class="acc-hero__title" id="acc-top-title">{{ top_title }}</h1>
+            </div>
+            {{ partial('partials/period-tabs', periodType=periodType, periods=['week', 'month', 'year', 'all'], link=tab_link) }}
+        </div>
+        {% if rows %}
+        {%- set one = rows[0] -%}
+        {%- set one_artist = one.track_id is none -%}
+        {%- set one_cover = one.cover_url or one.artist_image -%}
+        <div class="acc-top">
+            <a class="acc-one" href="{{ path('artiste/' ~ one.artist_slug) if one_artist else path('titre/' ~ one.track_slug) }}">
+                <span class="acc-one__cover">
+                    {% if one_cover %}<img src="{{ one_cover }}" alt="" width="480" height="480" fetchpriority="high">
+                    {% else %}<span class="cover__initials">{{ initials(one.title or one.artist_name) }}</span>{% endif %}
+                </span>
+                <span class="acc-one__body">
+                    <span class="acc-one__badge">N°1</span>
+                    <span class="acc-one__title">{{ one.artist_name if one_artist else one.title }}</span>
+                    {% if not one_artist %}<span class="acc-one__artist">{% if one.artist_country %}{{ flag(one.artist_country, 14) }} {% endif %}{{ one.artist_name }}</span>{% endif %}
+                    {% set sp = spotify_auditeurs(one.artist_slug) %}{% if sp %}<span class="sp-aud">{{ fmt_court(sp) }} auditeurs Spotify par mois</span>{% endif %}
+                </span>
+            </a>
+            <ol class="chart-list chart-list--compact acc-list" start="2">
+                {% for e in rows[1:10] %}
+                    {% if entries %}{{ partial('partials/entry', e=e, compact=true, showCountry=regional) }}
+                    {% else %}{{ partial('partials/live-entry', e=e, compact=true, showSourceCountry=true) }}{% endif %}
+                {% endfor %}
+            </ol>
+        </div>
+        <div class="acc-actions">
+            {% if entries %}
+            <a class="button" href="{{ chart_path(code, chartCode, periodType, run.period_key) }}">{{ t('home.full_chart') }} →</a>
+            <a class="acc-link" href="{{ share_url(run.id, 'square') }}" download>{{ t('share.square') }}</a>
+            <a class="acc-link" href="{{ share_url(run.id, 'story') }}" download>{{ t('share.story') }}</a>
+            {% else %}
+            <a class="button" href="{{ chart_path(code, chartCode) ~ '?vue=direct' }}">{{ t('home.full_chart') }} →</a>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="empty">{{ t('chart.empty') }}</p>
+        {% endif %}
+    </div>
+</section>
+
+{# 2. N°1 de chaque pays : un carrousel au lieu de 13 cartes empilées #}
+{% if officialTops %}
+<section class="wrap acc-bloc" aria-labelledby="acc-n1-title">
+    <div class="acc-bloc__head">
+        <h2 id="acc-n1-title">Le N°1 dans chaque pays</h2>
+        <a class="link-arrow" href="{{ path('methodologie') }}">Méthode publique</a>
+    </div>
+    <ul class="acc-rail acc-rail--n1">
+        {% for c in officialTops %}{% set one = c.rows[0] %}
+        <li>
+            <a class="acc-n1" href="{{ chart_path(c.code, 'prime', 'week') }}">
+                <span class="acc-n1__photo">{% if one.image %}<img src="{{ one.image }}" alt="" loading="lazy" width="240" height="240">{% else %}<span class="cover__initials">{{ initials(one.artist_name) }}</span>{% endif %}</span>
+                <span class="acc-n1__pays">{{ flag(c.code, 14) }}{{ country_name(c.code) }}</span>
+                <span class="acc-n1__title">{{ one.title }}</span>
+                <span class="acc-n1__artist">{{ one.artist_name }}</span>
+                {% if one.views %}<span class="acc-n1__views">+{{ fmt_number(one.views) }} vues</span>{% endif %}
+                {% set sp = spotify_auditeurs(one.artist_slug) %}{% if sp %}<span class="sp-aud">{{ fmt_court(sp) }} auditeurs Spotify</span>{% endif %}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+{# 3. À la une #}
 {% if homeNews %}
-<section class="wrap une" aria-labelledby="une-title">
-    <div class="partners__head">
+<section class="wrap acc-bloc" aria-labelledby="une-title">
+    <div class="acc-bloc__head">
         <h2 id="une-title">À la une</h2>
         <a class="link-arrow" href="{{ path('actualites') }}">{{ t('news.all') }}</a>
     </div>
-    <div class="une__grid">
-        {% set lead = homeNews[0] %}
-        <article class="une__lead">
-            <a class="une__media" href="{{ news_href(lead) }}"{{ news_ext(lead) }} tabindex="-1" aria-hidden="true">
-                {% if lead.image_path %}<img src="/{{ news_image(lead.image_path) }}" alt="" width="1280" height="720">{% endif %}
+    {#- Un seul carrousel de cartes compactes (les actualités prenaient un écran entier) -#}
+    <ul class="acc-rail acc-rail--une">
+        {% for n in homeNews[:8] %}
+        <li>
+            <a class="acc-news" href="{{ news_href(n) }}"{{ news_ext(n) }}>
+                <span class="acc-news__img">{% if n.image_path %}<img src="/{{ news_image(n.image_path) }}" alt="" loading="lazy" width="480" height="270">{% endif %}</span>
+                <span class="une__meta"><span class="news-card__tag">{{ t('news.cat_' ~ n.category) }}</span> {{ fmt_date(n.published_at[:10], false) }}</span>
+                <span class="acc-news__title">{{ n.title }}</span>
             </a>
-            <p class="une__meta"><span class="news-card__tag">{{ t('news.cat_' ~ lead.category) }}</span> {{ fmt_date(lead.published_at[:10], false) }}</p>
-            <h3 class="une__title"><a href="{{ news_href(lead) }}"{{ news_ext(lead) }}>{{ lead.title }}</a></h3>
-            <p class="une__summary">{{ lead.summary }}</p>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+{# 4. Les autres classements : Top 3 de chacun #}
+{% if highlights %}
+<section class="wrap acc-bloc" aria-labelledby="acc-autres-title">
+    <div class="acc-bloc__head"><h2 id="acc-autres-title">Les autres classements</h2></div>
+    <div class="acc-rail acc-rail--charts">
+        {% for hcode, h in highlights.items() %}
+        <article class="acc-chart">
+            <h3 class="acc-chart__title"><a href="{{ chart_path(code, hcode) }}">{{ chart_name(hcode) }}</a></h3>
+            <p class="acc-chart__desc">{{ t('chart.short.' ~ hcode) }}</p>
+            {% if h.live %}
+                <ol class="chart-list chart-list--compact">{% for e in h.live[:3] %}{{ partial('partials/live-entry', e=e, compact=true) }}{% endfor %}</ol>
+            {% elif h.entries %}
+                <ol class="chart-list chart-list--compact">{% for e in h.entries[:3] %}{{ partial('partials/entry', e=e, compact=true) }}{% endfor %}</ol>
+            {% else %}
+                <p class="empty">{{ t('chart.empty_short') }}</p>
+            {% endif %}
         </article>
-        <ul class="une__list">
-            {% for n in homeNews[1:5] %}
-            <li class="une__item">
-                <a class="une__thumb" href="{{ news_href(n) }}"{{ news_ext(n) }} tabindex="-1" aria-hidden="true">
-                    {% if n.image_path %}<img src="/{{ news_image(n.image_path) }}" alt="" loading="lazy" width="320" height="180">{% endif %}
-                </a>
-                <div>
-                    <p class="une__meta"><span class="news-card__tag">{{ t('news.cat_' ~ n.category) }}</span> {{ fmt_date(n.published_at[:10], false) }}</p>
-                    <h3 class="une__item-title"><a href="{{ news_href(n) }}"{{ news_ext(n) }}>{{ n.title }}</a></h3>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
+        {% endfor %}
     </div>
 </section>
 {% endif %}
-<div class="wrap">{{ partial('partials/artist-news', items=artistNews, more=path('actu-artistes'), strip=true) }}</div>
-<div class="wrap page-grid">
-<div class="page-main">
-    <section class="chart-hero" id="classement">
-        <p class="eyebrow">{% if regional %}{% for c in countries %}{{ flag(c.code, 14) }}{% endfor %}{% else %}{{ flag(code, 16) }}{% endif %}{{ chart_name('prime-wa' if regional else 'prime') }}</p>
-        <h1 class="chart-hero__title">{{ t('home.title', {'country': country_name(code), 'size': country.chart_size}) }}</h1>
-        {{ partial('partials/period-tabs', periodType=periodType, periods=['week', 'month', 'year', 'all'], link=tab_link) }}
-        {% if run %}
-            <p class="chart-hero__period">{{ period_label(run) }}</p>
-        {% endif %}
-        {% if regional %}<p class="chart-hero__lead">{{ t('home.region_lead') }}</p>{% endif %}
-    </section>
 
-    <section aria-label="{{ t('home.title', {'country': country_name(code), 'size': country.chart_size}) }}">
-        {% if not entries and live and live.rows %}
-            <p class="notice notice--live">{{ t('chart.live_intro') }} <strong>{{ t('chart.live_day', {'date': fmt_date(live.day)}) }}</strong></p>
-            <ol class="chart-list chart-list--compact chart-list--grid">
-                {% for e in live.rows[:10] %}
-                    {{ partial('partials/live-entry', e=e, compact=true, showSourceCountry=true) }}
-                {% endfor %}
-            </ol>
-            <div class="chart-actions">
-                <a class="button" href="{{ chart_path(code, chartCode) ~ '?vue=direct' }}">{{ t('home.full_chart') }} →</a>
-            </div>
-        {% elif not entries %}
-            <p class="empty">{{ t('chart.empty') }}</p>
-        {% else %}
-            <ol class="chart-list chart-list--compact chart-list--grid">
-                {% for e in entries[:10] %}
-                    {{ partial('partials/entry', e=e, compact=true, showCountry=regional) }}
-                {% endfor %}
-            </ol>
-            <div class="chart-actions">
-                <a class="button" href="{{ chart_path(code, chartCode, periodType, run.period_key) }}">{{ t('home.full_chart') }} →</a>
-                <a class="button button--ghost" href="{{ share_url(run.id, 'square') }}" download>{{ t('share.square') }}</a>
-                <a class="button button--ghost" href="{{ share_url(run.id, 'story') }}" download>{{ t('share.story') }}</a>
-            </div>
-        {% endif %}
-    </section>
-
-    {% if hotArtists %}
-    {{ partial('partials/hot-artists', artists=hotArtists) }}
-    {% endif %}
-
-    {% if highlights %}
-    <section class="highlights">
-        {% for hcode, h in highlights.items() %}
-            <article class="highlight">
-                <h2 class="highlight__title"><a href="{{ chart_path(code, hcode) }}">{{ chart_name(hcode) }}</a></h2>
-                <p class="highlight__desc">{{ t('chart.short.' ~ hcode) }}</p>
-                {% if h.live %}
-                    <ol class="chart-list chart-list--compact">
-                        {% for e in h.live[:3] %}
-                            {{ partial('partials/live-entry', e=e, compact=true) }}
-                        {% endfor %}
-                    </ol>
-                {% elif h.entries %}
-                    <ol class="chart-list chart-list--compact">
-                        {% for e in h.entries[:3] %}
-                            {{ partial('partials/entry', e=e, compact=true) }}
-                        {% endfor %}
-                    </ol>
-                {% else %}
-                    <p class="empty">{{ t('chart.empty_short') }}</p>
-                {% endif %}
-            </article>
+{# 5. Artistes du moment, puis leur actu #}
+{% if hotArtists %}
+<section class="wrap acc-bloc" aria-labelledby="hot-artists-title">
+    <div class="acc-bloc__head">
+        <div>
+            <h2 id="hot-artists-title">{{ t('home.hot_title') }}</h2>
+            <p class="acc-bloc__lead">{{ t('home.hot_lead') }}</p>
+        </div>
+    </div>
+    <ul class="acc-rail acc-rail--artistes">
+        {% for a in hotArtists %}
+        <li>
+            <a class="acc-artiste" href="{{ path('artiste/' ~ a.slug) }}">
+                <span class="acc-artiste__photo">
+                    {% if a.image_url %}<img src="{{ a.image_url }}" alt="" loading="lazy" width="160" height="160">
+                    {% else %}<span class="cover__initials">{{ initials(a.name) }}</span>{% endif %}
+                    <span class="acc-artiste__flag">{{ flag(a.country_code, 14) }}</span>
+                </span>
+                <span class="acc-artiste__name">{{ a.name }}</span>
+                {% set sp = spotify_auditeurs(a.slug) %}{% if sp %}<span class="sp-aud">{{ fmt_court(sp) }} sur Spotify</span>{% endif %}
+            </a>
+        </li>
         {% endfor %}
-    </section>
-    {% endif %}
+    </ul>
+</section>
+{% endif %}
+<div class="wrap acc-bloc">{{ partial('partials/artist-news', items=artistNews, more=path('actu-artistes'), strip=true) }}</div>
 
-    <section class="countries countries--chips" id="pays">
-        <h2 class="section-title">{{ t('home.all_countries') }}</h2>
-        <ul class="country-chips">
-            <li><a class="country-chip{{ ' country-chip--current' if regional }}" href="{{ home_link('WA', periodType) }}#classement" {{ Markup('aria-current="true"') if regional }}>{{ country_name('WA') }}</a></li>
-            {% for c in countries %}{% set current = c.code == code %}
-            <li><a class="country-chip{{ ' country-chip--current' if current }}" href="{{ home_link(c.code, periodType) }}#classement" {{ Markup('aria-current="true"') if current }}
-                   title="{{ ('N°1 : ' ~ numberOnes[c.code].title ~ ' · ' ~ numberOnes[c.code].artist_name) if numberOnes.get(c.code) }}">{{ flag(c.code, 18) }}{{ country_name(c.code) }}</a></li>
-            {% endfor %}
-        </ul>
-    </section>
-
-
-    {% set playlist = config('app.tracking.spotify_playlist') %}
-    {% if playlist %}
-    {{ partial('partials/spotify', playlist=playlist) }}
-    {% endif %}
-
-    {{ partial('partials/partners', partners=partners, compact=true) }}
-
-    {{ partial('partials/method-block') }}
-</div>
-{{ partial('partials/aside', aside=aside) }}
-</div>
+{# 6. Méthode et partenaires #}
+<section class="wrap acc-fin">
+    <article class="acc-fin__card">
+        <h2>Un classement vérifiable</h2>
+        <p>Chaque semaine, nous mesurons la progression des écoutes et des vues du lundi au dimanche, selon une formule publique. Les chiffres suspects sont examinés avant publication.</p>
+        <a class="link-arrow" href="{{ path('methodologie') }}">Lire la méthodologie</a>
+    </article>
+    <article class="acc-fin__card acc-fin__card--violet">
+        {% if partners %}
+        <h2>Nos partenaires</h2>
+        <ul class="acc-fin__logos">{% for p in partners[:6] %}<li>{% if p.logo_path %}<img src="/media/partners/{{ rawurlencode(p.logo_path.split('/')[-1]) }}" alt="{{ p.name }}" loading="lazy" height="40">{% else %}{{ p.name }}{% endif %}</li>{% endfor %}</ul>
+        <a class="link-arrow" href="{{ path('partenaires') }}">Tous les partenaires</a>
+        {% else %}
+        <h2>Devenez partenaire officiel</h2>
+        <p>Label, média, marque, salle de concert ou institution : associez votre nom à la référence de la musique ouest-africaine.</p>
+        <a class="link-arrow" href="{{ path('contact') }}">Nous contacter</a>
+        {% endif %}
+    </article>
+</section>
+{% set playlist = config('app.tracking.spotify_playlist') %}
+{% if playlist %}<div class="wrap acc-bloc">{{ partial('partials/spotify', playlist=playlist) }}</div>{% endif %}

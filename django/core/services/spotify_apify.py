@@ -22,7 +22,7 @@ ACTEUR_PLAYLISTS = "s-r~free-spotify-playlist-intelligence"
 PLAFOND_MOIS = 4.50
 PRIX_PLAYLIST = 0.01
 PRIX_ARTISTE = 0.002          # réellement facturé (0,27 $ pour 130 artistes le 28/10/2026) : ~1,1 $ par mois
-MAX_ARTISTES = 150            # par semaine : ~600 par mois, loin des 2 500 offerts
+MAX_ARTISTES = 250            # par semaine (tous les tops depuis le 02/11/2026) : ~0,50 $, ~2 $ par mois
 # Playlists éditoriales suivies (Spotify ne publie de Top 50 par pays que pour le Nigeria dans notre zone)
 PLAYLISTS = {"37i9dQZEVXbKY7jLzlJ11V": "Top 50 - Nigeria"}
 
@@ -63,10 +63,25 @@ def _lance(acteur: str, entree: dict, cout: float) -> list:
     return r.json()
 
 
+def tops() -> list:
+    """Artistes présents dans un top : dernier classement officiel publié de chaque pays et de la région, plus le Top 20
+    en direct de chaque pays (là où le classement officiel n'existe pas encore)."""
+    from core import repos
+    from core.services import live_chart
+    ids = [r["a"] for r in db.all(
+        """SELECT DISTINCT COALESCE(e.artist_id, t.artist_id) AS a FROM chart_entries e JOIN tracks t ON t.id = e.track_id
+           WHERE e.chart_run_id IN (SELECT DISTINCT ON (country_id, chart_type_id) id FROM chart_runs
+                                    WHERE status = 'published' AND period_type = 'week' ORDER BY country_id, chart_type_id, period_start DESC)""")]
+    for cid in [None] + [c["id"] for c in repos.countries()]:
+        ids += [r["artist_id"] for r in live_chart.build(cid, None, 20, "prime", 20, "week")["rows"] if r.get("artist_id")]
+    return list(dict.fromkeys(int(i) for i in ids if i))
+
+
 def selection(limite: int = MAX_ARTISTES) -> list:
     """Les artistes qui buzzent : Top 20 des derniers classements publiés, plus fortes hausses de la semaine, liste buzz."""
     from core.services.social.clips import BUZZ
-    ids = [r["artist_id"] for r in db.all(
+    ids = tops()   # tous les artistes des tops (officiels et en direct), décision du 02/11/2026
+    ids += [r["artist_id"] for r in db.all(
         """SELECT DISTINCT ON (a.id) a.id AS artist_id, e.position FROM chart_entries e
            JOIN chart_runs r ON r.id = e.chart_run_id AND r.status = 'published' AND r.period_type = 'week'
            JOIN tracks t ON t.id = e.track_id JOIN artists a ON a.id = COALESCE(e.artist_id, t.artist_id)

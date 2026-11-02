@@ -57,12 +57,38 @@ def environment(**options) -> Environment:
         "is_group_label": helpers.is_group_label, "chart_path": helpers.chart_path, "rank_chart_svg": helpers.rank_chart_svg,
         "flag": helpers.flag, "news_image": helpers.news_image, "legal": helpers.legal, "platform_name": helpers.platform_name, "url_with": helpers.url_with,
         "spotify_url": helpers.spotify_url, "period_slug": helpers.period_slug, "rawurlencode": helpers.rawurlencode,
-        "ucfirst": helpers.ucfirst, "dict": dict, "from_json": helpers.from_json, "to_json": helpers.to_json, "php_str": helpers.php_str, "add_days": helpers.add_days, "number_format": helpers.number_format, "php_round": _php_round, "today": lambda: clock.today().isoformat(), "nl2br": helpers.nl2br, "paragraphs": helpers.paragraphs, "url_host": helpers.url_host, "share_url": helpers.share_url, "Markup": Markup, "live_sources": _live_sources, "now_year": lambda: clock.today().year, "trim": lambda s: str(s or "").strip(),
+        "ucfirst": helpers.ucfirst, "dict": dict, "from_json": helpers.from_json, "to_json": helpers.to_json, "php_str": helpers.php_str, "add_days": helpers.add_days, "number_format": helpers.number_format, "php_round": _php_round, "today": lambda: clock.today().isoformat(), "nl2br": helpers.nl2br, "paragraphs": helpers.paragraphs, "url_host": helpers.url_host, "share_url": helpers.share_url, "Markup": Markup, "live_sources": _live_sources, "spotify_auditeurs": _spotify_auditeurs, "fmt_court": _fmt_court, "now_year": lambda: clock.today().year, "trim": lambda s: str(s or "").strip(),
         "enumerate": enumerate, "len": len, "min": min, "max": max, "int": int, "str": str, "round": round,
         "sorted": sorted, "list": list, "range": range, "zip": zip, "abs": abs, "float": float,
     })
     _env = env
     return env
+
+
+def _fmt_court(n) -> str:
+    """1 234 567 → « 1,2 M » ; 45 300 → « 45 k » (chiffres des cartes)."""
+    n = int(n or 0)
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}".replace(".", ",").replace(",0", "") + " M"
+    if n >= 10_000:
+        return f"{round(n / 1000)} k"
+    return helpers.fmt_number(n)
+
+
+def _spotify_auditeurs(slug) -> int | None:
+    """Auditeurs mensuels Spotify (dernier relevé) d'un artiste, par son adresse : une seule requête, gardée 1 h."""
+    from django.core.cache import cache
+    table = cache.get("spotify:auditeurs")
+    if table is None:
+        try:
+            from core import db
+            table = {r["slug"]: int(r["auditeurs"]) for r in db.all(
+                """SELECT DISTINCT ON (s.artist_id) a.slug, s.auditeurs FROM spotify_artistes s JOIN artists a ON a.id = s.artist_id
+                   WHERE s.auditeurs IS NOT NULL ORDER BY s.artist_id, s.releve_le DESC""")}
+        except Exception:  # noqa: BLE001 — table pas encore créée : aucun chiffre plutôt qu'une page cassée
+            table = {}
+        cache.set("spotify:auditeurs", table, 3600)
+    return table.get(slug)
 
 
 def _live_sources() -> dict:

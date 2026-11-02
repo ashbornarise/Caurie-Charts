@@ -24,6 +24,7 @@
             {% if e.artist_country %}<span class="entry__country" title="{{ country_name(e.artist_country) }}">{{ flag(e.artist_country, 12) }}</span>{% endif %}
             <a href="{{ path('artiste/' ~ e.artist_slug) }}">{{ e.artist_name }}</a>{% if e.featuring %} <span class="feat">feat. {{ e.featuring }}</span>{% endif %}
         </span>
+        {% set spa = spotify_auditeurs(e.artist_slug) %}{% if spa %}<span class="sp-aud" title="Auditeurs mensuels de l’artiste sur Spotify (information, hors calcul du classement)">{{ fmt_court(spa) }} auditeurs Spotify</span>{% endif %}
         {% endif %}
         {% if not compact %}
         <ul class="sources" aria-label="{{ t('chart.sources_label') }}">
