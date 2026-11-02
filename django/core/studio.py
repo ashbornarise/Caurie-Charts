@@ -972,3 +972,27 @@ def photos_profils(request, chemin):
 for _nom in ("fabriquer", "idees", "idees_fabriquer", "brouillon", "photos_profils", "photos_tri_retirer", "photos_nouveau", "photos_importer", "photos_enregistrer", "photos_suggestions", "photos_publier",
              "apercu_job", "valider_job", "banque", "banque_artiste", "banque_retirer", "artistes", "reglages"):
     globals()[_nom] = _erreur_lisible(globals()[_nom])
+
+
+
+# ---------------------------------------------------------------- alertes « photo à trouver » (02/11/2026)
+
+def alertes(request, chemin):
+    """Artistes sans photo nette : affichés en haut du Studio jusqu'au clic."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    try:
+        lignes = db.all("""SELECT s.id, s.motif, a.id AS artist_id, a.name FROM studio_alertes s JOIN artists a ON a.id = s.artist_id
+                           WHERE s.vue_le IS NULL ORDER BY s.id DESC LIMIT 20""")
+    except Exception:  # noqa: BLE001 — aucune alerte encore créée
+        lignes = []
+    return _json({"alertes": [{"id": r["id"], "motif": r["motif"], "artiste_id": r["artist_id"], "nom": r["name"]} for r in lignes]})
+
+
+def alerte_vue(request, chemin, ident):
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    db.run("UPDATE studio_alertes SET vue_le = NOW() WHERE id = ?", [int(ident)])
+    return _json({"ok": True})

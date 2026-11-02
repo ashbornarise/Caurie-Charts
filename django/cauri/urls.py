@@ -29,6 +29,8 @@ urlpatterns = [
     re_path(S + r"/verrouiller$", studio.verrouiller),
     re_path(S + r"/artistes$", studio.artistes),
     re_path(S + r"/banque$", studio.banque),
+    re_path(S + r"/alertes$", studio.alertes),
+    re_path(S + r"/alertes/(?P<ident>[0-9]+)/vue$", studio.alerte_vue),
     re_path(S + r"/banque/(?P<ident>[0-9]+)$", studio.banque_artiste),
     re_path(S + r"/banque/photo/(?P<ident>[0-9]+)/retirer$", studio.banque_retirer),
     re_path(S + r"/job/(?P<ident>\d+)/apercu$", studio.apercu_job),

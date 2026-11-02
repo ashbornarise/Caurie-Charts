@@ -595,6 +595,9 @@ def traite(job_id: int) -> dict:
     if not job:
         raise RuntimeError("tâche introuvable")
     p = job["params"] if isinstance(job["params"], dict) else json.loads(job["params"] or "{}")
+    if p.get("type") == "vedette":   # mise en valeur d'un artiste (02/11/2026) : aperçus des modèles, puis publication
+        from core.services.social import vedette
+        return vedette.publie(job_id, job, p, _maj) if p.get("choix") else vedette.traite(job_id, job, p, _maj)
     if p.get("type") == "photos":   # section Photos : récupérer les images d'un post pour la banque de l'artiste
         from core.services.social import studio_photos
         try:

@@ -201,3 +201,15 @@ a.adm-etat:hover { transform: translateY(-1px); }
 .adm-etat--draft { background: #F3F4F7; color: #4A4F5C; border-color: #D5D8E0; }
 .adm-etat--pending { background: #FFF1EF; color: #A4271B; border-color: #F0A79E; }
 .admin details.adm-carte > summary { cursor: pointer; }
+
+/* Catalogue : recherche d'abord, fiches d'artistes, réglages des pays repliés (02/11/2026) */
+.adm-recherche label { display: block; margin-bottom: 8px; }
+.adm-recherche__ligne { display: flex; gap: 10px; margin-bottom: 10px; }
+.adm-recherche__ligne input { flex: 1; min-width: 0; font: inherit; font-size: 1.05rem; padding: 12px 16px; border-radius: 999px; border: 1.5px solid var(--ciel-bord, #8FC3EF); background: #fff; }
+.adm-recherche__ajouts { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.adm-fiches { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.adm-fiche { padding: 14px; border-radius: 14px; border: 1px solid var(--ciel-ligne); background: linear-gradient(160deg, #fff 60%, var(--ciel) 100%); display: grid; gap: 6px; }
+.adm-fiche__haut { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.adm-fiche__actions { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 4px 0 0; font-size: .88rem; }
+.admin .button { white-space: nowrap; }
+.adm-petit { width: 5.5em; }

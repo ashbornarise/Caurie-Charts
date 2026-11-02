@@ -147,8 +147,26 @@ def colonnes() -> None:
         db.run(f"ALTER TABLE artist_photos ADD COLUMN IF NOT EXISTS {col}")
 
 
+def alerte(artist_id: int, motif: str) -> None:
+    """Notification du Studio (02/11/2026) : il manque une photo nette de cet artiste. Une seule alerte ouverte par
+    artiste ; elle reste affichée jusqu'au clic du fondateur, qui part alors chercher des photos."""
+    from core import db
+    try:
+        db.run("""CREATE TABLE IF NOT EXISTS studio_alertes (id SERIAL PRIMARY KEY, artist_id INTEGER NOT NULL, motif VARCHAR(200) NOT NULL,
+                  cree_le TIMESTAMPTZ DEFAULT NOW(), vue_le TIMESTAMPTZ NULL)""")
+        if not db.value("SELECT 1 FROM studio_alertes WHERE artist_id = ? AND vue_le IS NULL", [artist_id]):
+            db.run("INSERT INTO studio_alertes (artist_id, motif) VALUES (?, ?)", [artist_id, motif[:200]])
+    except Exception:  # noqa: BLE001 — une alerte ne doit jamais bloquer un post
+        pass
+
+
+_NETTE = {"ok": True}
+
+
 def _premiere_valable(lignes: list):
-    """La première photo qui passe le garde-fou des couvertures (tête entière, pas de 2e personne) ; à défaut la 1re."""
+    """La première photo qui passe le garde-fou des couvertures (tête entière, pas de 2e personne) ; à défaut la 1re
+    (et _NETTE["ok"] passe à False : aucune photo vraiment nette)."""
+    _NETTE["ok"] = True
     if not lignes:
         return None
     try:
@@ -163,6 +181,7 @@ def _premiere_valable(lignes: list):
             with Image.open(io.BytesIO(data)) as im:
                 if C.photo_ok(im.convert("RGB")):
                     return r
+        _NETTE["ok"] = False
     except Exception:  # noqa: BLE001 — sans réseau ou sans outils : on garde l'ordre de la banque
         pass
     return lignes[0]
@@ -185,6 +204,9 @@ def photo_large(artist_id: int, detourable: bool = False) -> str | None:
         except Exception:  # noqa: BLE001
             return None
     if not r:
+        alerte(artist_id, "aucune photo dans la banque")
         return None
+    if not _NETTE["ok"]:
+        alerte(artist_id, "aucune photo nette où l'artiste est en entier")
     db.run("UPDATE artist_photos SET utilise_le = NOW() WHERE id = ?", [r["id"]])
     return f"{storage.blob_public_url()}/media/artists/plans/{r['fichier']}"

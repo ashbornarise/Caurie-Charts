@@ -145,6 +145,10 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 .empreinte svg.i{width:46px;height:46px;stroke-width:1.5}
 @keyframes pulse{50%{box-shadow:0 0 0 18px rgba(124,58,237,.03)}}
 .verrou .aide{margin-top:30px;font-size:13px;color:var(--faible)}.verrou .aide a{color:var(--ciel)}
+.alertes{display:grid;gap:8px;margin:0 0 14px}
+.alerte{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border-radius:16px;border:1.5px solid #F0A79E;background:#FFF1EF;color:#7A1A10;font:inherit;cursor:pointer}
+.alerte span{display:grid;flex:1;min-width:0}.alerte small{color:#A4271B;font-size:.82rem}
+.alerte em{font-style:normal;font-weight:800;padding:6px 12px;border-radius:999px;background:#A4271B;color:#fff;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -184,6 +188,9 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <div class="barre-haut">
     <div class="marque"><img src="/assets/marque/studio-192.png" alt=""><div><b>Cauri Studio</b><span>Bonjour {{ nom.split(' ')[0] if nom else '' }}</span></div></div>
   </div>
+
+  <!-- Alertes « photo à trouver » : restent jusqu'au clic (02/11/2026) -->
+  <div id="alertes" class="alertes" style="display:none"></div>
 
   <!-- ÉCRAN CRÉER -->
   <section class="ecran vu" id="e-creer">
@@ -549,6 +556,21 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     window.scrollTo({top: 0}); action();
     if (nom === 'videos') grille(); if (nom === 'reglages') reglages();
   }
+  // alertes : artiste sans photo nette -> clic = onglet Photos, artiste déjà recherché
+  async function alertes() {
+    let r; try { r = await get('/alertes'); } catch (e) { return; }
+    const box = $('#alertes'); const l = (r && r.alertes) || [];
+    box.style.display = l.length ? '' : 'none';
+    box.innerHTML = l.map(a => `<button class="alerte" data-id="${a.id}" data-nom="${a.nom.replace(/"/g, '&quot;')}">
+      <svg class="i"><use href="#i-photo"/></svg><span><b>Photos à trouver : ${a.nom}</b><small>${a.motif}</small></span><em>Chercher</em></button>`).join('');
+    $$('#alertes .alerte').forEach(b => b.onclick = async () => {
+      vibre(); await post('/alertes/' + b.dataset.id + '/vue', {}); b.remove();
+      if (!$('#alertes .alerte')) $('#alertes').style.display = 'none';
+      montre('photos'); const champ = $('#ph-recherche'); champ.value = b.dataset.nom;
+      champ.dispatchEvent(new Event('input', {bubbles: true})); champ.focus();
+    });
+  }
+  alertes();
   // multitâche (25/10/2026) : « Créer » ouvre toujours un formulaire neuf ; les vidéos lancées continuent dans « Mes vidéos »
   $$('.nav button').forEach(b => b.onclick = () => { vibre(); montre(b.dataset.ecran); });
   const EN_COURS = ['attente', 'attente_pc', 'telechargement', 'analyse', 'montage'];
