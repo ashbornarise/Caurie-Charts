@@ -300,7 +300,16 @@ def _photo(fr: PI.Frame, url, height: int, bg) -> Image.Image:
         PI.paste_cover(part, ph, fr.w, height, 0.18)
         img.paste(part, (0, 0))
     else:
-        fr.gradient(img, 0, fr.bh, (40, 30, 70), 90, 0)
+        # pas de photo : collage de vraies photos des artistes du moment (02/11/2026), jamais une carte vide
+        try:
+            from core.services.social import collage
+            k = collage.collage(collage.photos_tendance(3), fr.w, height, graine=height + fr.w)
+        except Exception:  # noqa: BLE001
+            k = None
+        if k is not None:
+            img.paste(k, (0, 0))
+        else:
+            fr.gradient(img, 0, fr.bh, (40, 30, 70), 90, 0)
     return img
 
 

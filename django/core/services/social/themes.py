@@ -199,7 +199,16 @@ def key_figures():
                              (SELECT COUNT(*) FROM artists a WHERE a.status = 'active' AND a.base_country = c.code) AS artists,
                              (SELECT COUNT(DISTINCT o.track_id) FROM chart_observations o WHERE o.country_id = c.id AND {RECENT}) AS tracks
                       FROM countries c WHERE c.is_active = 1 ORDER BY c.sort_order""")
+    from core.services.social import collage
+
+    def image(code):   # collage des artistes du pays (plus de carte sombre vide, 02/11/2026)
+        try:
+            from core import clock
+            return collage.adresse(collage.photos_pays(code, 4), f"pays-{code.lower()}-{clock.today():%Y%m%d}", graine=collage.graine_de(code))
+        except Exception:  # noqa: BLE001
+            return None
     return [{"title": f"{_fmt(r['artists'])} artistes suivis", "artist": country_name(r["code"]), "row_title": country_name(r["code"]),
+             "image": image(r["code"]),
              "detail": f"{_fmt(r['artists'])} artistes suivis · {_fmt(r['tracks'])} titres dans les classements cette semaine",
              "figure_value": _fmt(r["tracks"]), "figure_label": "titres classés cette semaine",
              "line": f"{country_name(r['code'])} : {_fmt(r['artists'])} artistes suivis, {_fmt(r['tracks'])} titres dans les classements"}

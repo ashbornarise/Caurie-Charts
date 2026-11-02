@@ -93,7 +93,19 @@ def _banque(famille: str):
 
 
 def genere(sujet: str, famille: str, ratio: str = "4:5") -> str | None:
-    """Renvoie le chemin local d'un PNG, avec plafond journalier et rotation de banque."""
+    """Plus d'illustration générée par IA (décision du fondateur, 02/11/2026) : un collage façon magazine de VRAIES
+    photos d'artistes du moment (collage.py). L'ancienne génération reste ci-dessous (genere_ia), plus appelée."""
+    try:
+        from core.services.social import collage
+        w, h = (2160, 3840) if ratio == "9:16" else (2160, 2700)
+        return collage.fichier(collage.photos_tendance(4), f"{famille}-{collage.graine_de(sujet)}", w, h, collage.graine_de(sujet))
+    except Exception as exc:  # noqa: BLE001 — aucun fond ne doit bloquer un post
+        log_write("social", "warning", f"collage indisponible ({type(exc).__name__})")
+        return None
+
+
+def genere_ia(sujet: str, famille: str, ratio: str = "4:5") -> str | None:
+    """Ancienne illustration générée par IA (plus utilisée depuis le 02/11/2026)."""
     try:
         if famille not in FAMILLES:
             return None
@@ -143,5 +155,6 @@ def genere(sujet: str, famille: str, ratio: str = "4:5") -> str | None:
 
 
 def mention(caption: str, langue: str = "fr") -> str:
-    from core.services.social.bilingue import mention_illustration
-    return mention_illustration(caption, langue)
+    """Crédit du collage : de vraies photos des artistes, plus « illustration générée par IA »."""
+    texte = "Photos: artists' official accounts" if langue.lower().startswith("en") else "Photos : comptes officiels des artistes"
+    return caption if texte in (caption or "") else f"{(caption or '').rstrip()}\n\n{texte}"

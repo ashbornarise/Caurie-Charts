@@ -54,7 +54,7 @@ def test_plafond_quotidien_reutilise_la_banque(monkeypatch, tmp_path):
     monkeypatch.setattr(I.storage, "MEDIA", tmp_path)
     monkeypatch.setattr(I, "_ensure_table", lambda: None)
     monkeypatch.setattr(I, "_path", lambda f: tmp_path / f)
-    assert I.genere("record", "record") == str(bankfile)
+    assert I.genere_ia("record", "record") == str(bankfile)
     assert I.db.updated
 
 
@@ -67,7 +67,7 @@ def test_generation_api_et_stockage(monkeypatch, tmp_path):
     monkeypatch.setattr(I.requests, "post", lambda *a, **kw: Response())
     monkeypatch.setattr(I.storage, "store_media", lambda folder, filename, data, content_type: (tmp_path / filename).write_bytes(data))
     monkeypatch.setattr(I.storage, "MEDIA", tmp_path)
-    path = I.genere("citation musique", "citation")
+    path = I.genere_ia("citation musique", "citation")
     assert path and path.endswith(".png")
     assert fake.inserted[0]["famille"] == "citation"
 
@@ -79,10 +79,10 @@ def test_erreur_retourne_none_et_ne_journalise_pas_cle(monkeypatch):
     monkeypatch.setattr(I.requests, "post", lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("failed")))
     logs = []
     monkeypatch.setattr(I, "log_write", lambda *a: logs.append(a))
-    assert I.genere("musique", "monde") is None
+    assert I.genere_ia("musique", "monde") is None
     assert "secret-key" not in repr(logs)
 
 
 def test_mention_fr_et_en():
-    assert I.mention("Une légende") == "Une légende\n\nIllustration générée par IA"
-    assert I.mention("Caption", "en") == "Caption\n\nAI-generated illustration"
+    assert I.mention("Une légende") == "Une légende\n\nPhotos : comptes officiels des artistes"
+    assert I.mention("Caption", "en") == "Caption\n\nPhotos: artists' official accounts"
