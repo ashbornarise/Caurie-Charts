@@ -56,6 +56,12 @@
 
 {% if flagged %}
 <h2>{{ t('admin.flagged_tracks') }}</h2>
+<div class="adm-carte adm-carte--ciel">
+    <p class="flush"><strong>Que faire ici ?</strong> Ces titres ont des chiffres inhabituels (hausse brutale, une seule source…).
+    Google les a déjà examinés : il reste ceux où il n’était pas sûr. Pour chacun, ouvrez le titre, regardez ses sources, puis
+    <strong>Valider</strong> (chiffres crédibles) ou <strong>Exclure</strong> (manipulation probable), avec une raison courte.
+    La semaine est recalculée aussitôt, même si elle est déjà publiée.</p>
+</div>
 <p class="muted">{{ t('admin.flagged_intro') }}</p>
 <div class="table-scroll">
 <table class="data-table">
@@ -65,7 +71,7 @@
         <tr>
             <td><a href="{{ path('titre/' ~ f.slug) }}" target="_blank" rel="noopener">{{ f.title }}</a><br><small class="muted">{{ f.artist_name }}</small></td>
             <td class="num">{{ fmt_number(f.score|float) }}</td>
-            <td>{% for fl in flags %}<span class="flag{{ ' flag--blocking' if fl in blocking }}" title="{{ t('flag.' ~ fl) }}">{{ fl }}</span>{% endfor %}
+            <td>{% for fl in flags %}<span class="flag{{ ' flag--blocking' if fl in blocking }}" title="{{ fl }}">{{ t('flag.' ~ fl) }}</span>{% endfor %}
                 <br><span class="status status--{{ f.review_status }}">{{ t('admin.review_' ~ f.review_status) }}</span></td>
             <td><small>{{ breakdown(f.breakdown) }}</small></td>
             <td>
@@ -109,7 +115,7 @@
             <td class="num">{{ e.peak_position|int }}</td>
             <td class="num">{{ e.weeks_on_chart|int }}</td>
             <td class="num">{{ e.sources_count|int }}</td>
-            <td>{% for fl in flags %}<span class="flag{{ ' flag--blocking' if fl in blocking or fl == 'pending_review' }}" title="{{ t('flag.' ~ fl) }}">{{ fl }}</span>{% endfor %}</td>
+            <td>{% for fl in flags %}<span class="flag{{ ' flag--blocking' if fl in blocking or fl == 'pending_review' }}" title="{{ fl }}">{{ t('flag.' ~ fl) }}</span>{% endfor %}</td>
         </tr>
     {% endfor %}
     </tbody>

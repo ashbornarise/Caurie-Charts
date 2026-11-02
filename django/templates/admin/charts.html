@@ -1,23 +1,61 @@
+{#- Classements (refonte du 02/11/2026) : une carte par semaine, chaque pays en pastille d'état ; mois et années à part. -#}
 <h1>{{ t('admin.nav_charts') }}</h1>
-<p class="muted">{{ t('admin.charts_intro') }}</p>
-<div class="table-scroll">
-<table class="data-table">
-    <thead><tr>
-        <th>{{ t('admin.period') }}</th><th>{{ t('admin.country') }}</th><th>{{ t('admin.status') }}</th>
-        <th>{{ t('admin.flags') }}</th><th>{{ t('admin.published_at') }}</th><th></th>
-    </tr></thead>
-    <tbody>
-    {% for r in rows %}
-        <tr>
-            <td><strong>{{ r.period_key }}</strong> <span class="muted">{{ t('period.' ~ r.period_type) }}{{ ' · ' ~ t('period.provisional') if r.provisional }}</span><br>
-                <small class="muted">{{ fmt_date(r.period_start, false) }} → {{ fmt_date(r.period_end) }}</small></td>
-            <td>{{ r.code }}</td>
-            <td><span class="status status--{{ r.status }}">{{ t('admin.status_' ~ r.status) }}</span>{% if r.corrected_at %} <span class="muted">{{ t('admin.corrected') }}</span>{% endif %}</td>
-            <td>{% if r.pending %}<span class="status status--pending">{{ r.pending|int }} {{ t('admin.to_review') }}</span>{% else %}—{% endif %}</td>
-            <td>{{ fmt_date(r.published_at[:10]) if r.published_at else '—' }}</td>
-            <td>{% if r.prime_id %}<a href="{{ path('admin/classements/' ~ r.prime_id) }}">{{ t('admin.open') }}</a>{% endif %}</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<div class="adm-carte adm-carte--ciel">
+    <p class="flush"><strong>Comment ça marche.</strong> Chaque lundi, le classement de la semaine passée est calculé (brouillon).
+    <strong>Chaque mardi à 8 h UTC, il est publié automatiquement</strong> : Google examine d’abord les titres signalés (chiffres suspects)
+    et exclut ce qui est prouvé. Ce qui reste douteux apparaît en rouge ci-dessous : ouvrez le pays pour valider ou exclure, la semaine est
+    alors recalculée. Les mois et l’année se calculent seuls à partir des semaines publiées.</p>
 </div>
+
+<div class="adm-legende">
+    <span class="adm-etat adm-etat--published">Publié</span>
+    <span class="adm-etat adm-etat--draft">Brouillon</span>
+    <span class="adm-etat adm-etat--pending">À vérifier</span>
+</div>
+
+{%- set semaines = rows|selectattr('period_type', 'equalto', 'week')|groupby('period_key')|reverse|list -%}
+{% for key, pays in semaines[:8] %}
+{%- set p0 = pays[0] -%}
+{%- set publies = pays|selectattr('status', 'equalto', 'published')|list|length -%}
+<section class="adm-carte adm-semaine-carte">
+    <header class="adm-semaine-carte__tete">
+        <div>
+            <h2 class="flush">Semaine du {{ fmt_date(p0.period_start, false) }} au {{ fmt_date(p0.period_end) }}</h2>
+            <p class="muted flush">{{ key }} · {{ publies }} pays publié{{ 's' if publies > 1 }} sur {{ pays|length }}</p>
+        </div>
+    </header>
+    <ul class="adm-pays">
+        {% for r in pays|sort(attribute='code') %}
+        {%- set etat = r.status if r.status == 'published' else ('pending' if r.pending else 'draft') -%}
+        <li>
+            <a class="adm-etat adm-etat--{{ etat }}" href="{{ path('admin/classements/' ~ r.prime_id) if r.prime_id else '#' }}"
+               title="{{ country_name(r.code) }} : {{ (r.pending|int ~ ' titre(s) signalé(s) à examiner') if etat == 'pending' else t('admin.status_' ~ r.status) }}">
+                {{ flag(r.code, 14) }}{{ country_name(r.code) }}{% if etat == 'pending' %} · {{ r.pending|int }}{% endif %}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endfor %}
+
+<details class="adm-carte">
+    <summary><strong>Mois et années</strong> <span class="muted">(calculés automatiquement à partir des semaines publiées)</span></summary>
+    <div class="table-scroll">
+    <table class="data-table">
+        <thead><tr><th>{{ t('admin.period') }}</th><th>{{ t('admin.country') }}</th><th>{{ t('admin.status') }}</th><th>{{ t('admin.published_at') }}</th><th></th></tr></thead>
+        <tbody>
+        {% for r in rows if r.period_type != 'week' %}
+            <tr>
+                <td><strong>{{ r.period_key }}</strong> <span class="muted">{{ t('period.' ~ r.period_type) }}{{ ' · ' ~ t('period.provisional') if r.provisional }}</span></td>
+                <td>{{ flag(r.code, 14) }}{{ country_name(r.code) }}</td>
+                <td><span class="status status--{{ r.status }}">{{ t('admin.status_' ~ r.status) }}</span></td>
+                <td>{{ fmt_date(r.published_at[:10]) if r.published_at else '—' }}</td>
+                <td>{% if r.prime_id %}<a href="{{ path('admin/classements/' ~ r.prime_id) }}">{{ t('admin.open') }}</a>{% endif %}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="5" class="muted">Aucun mois complet pour l’instant : il faut toutes les semaines du mois publiées.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</details>

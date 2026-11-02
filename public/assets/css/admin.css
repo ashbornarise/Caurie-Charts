@@ -180,3 +180,24 @@ body.admin { background: linear-gradient(180deg, var(--ciel) 0, #F7FAFF 320px, #
 .admin .card, .admin .box { border-radius: 14px; background: #fff; border-color: var(--ciel-ligne); }
 .admin .button { border-radius: 999px; }
 @media (prefers-reduced-motion: reduce) { .adm-tache, .adm-lien { transition: none; } .adm-tache:hover { transform: none; } }
+
+/* Responsive : la zone principale ne s'élargit plus au-delà de l'écran ; les tableaux défilent dans leur cadre (02/11/2026) */
+.admin-main { min-width: 0; }
+.admin-main .data-table { display: block; overflow-x: auto; max-width: 100%; }
+.admin-main pre.json { white-space: pre-wrap; word-break: break-word; max-width: 340px; }
+.admin-main td { overflow-wrap: anywhere; }
+@media (max-width: 700px) { .admin-main { padding: 16px 14px 60px; } .admin-main .data-table { font-size: .86rem; } }
+
+/* Classements : une carte par semaine, pays en pastilles d'état */
+.adm-carte--ciel { background: var(--ciel); }
+.adm-legende { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.adm-semaine-carte__tete { margin-bottom: 12px; }
+.adm-pays { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-etat { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: .85rem; font-weight: 600;
+    text-decoration: none; border: 1.5px solid transparent; transition: transform .15s ease; }
+a.adm-etat:hover { transform: translateY(-1px); }
+.adm-etat--published { background: #E7F4EC; color: #155C2C; border-color: #9CD3AE; }
+.adm-etat--published::before { content: "✓"; font-weight: 800; }
+.adm-etat--draft { background: #F3F4F7; color: #4A4F5C; border-color: #D5D8E0; }
+.adm-etat--pending { background: #FFF1EF; color: #A4271B; border-color: #F0A79E; }
+.admin details.adm-carte > summary { cursor: pointer; }
