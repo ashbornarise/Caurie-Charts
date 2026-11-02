@@ -190,7 +190,7 @@ class DailyPipeline:
             r = DeezerTrackMatcher(http).run()
             return [f"{r['matched']} titres retrouvés sur {r['checked']}"]
         self._step("10e. Titres retrouvés sur Deezer (popularité, pochette)", deezer, 90)
-        self._step("10f. Chaînes YouTube des artistes (tous leurs clips, audios, lyrics, lives)", lambda: YouTubeChannelSync(http).run(), 180)
+        self._step("10f. Chaînes YouTube des artistes (tous leurs clips, audios, lyrics, lives)", lambda: YouTubeChannelSync(http).run(), 300)
         self._step("10g. Clips YouTube des titres restants (recherche titre par titre)",
                    lambda: [json.dumps(imp.match_youtube(youtube_searches), ensure_ascii=False)], 60)
 

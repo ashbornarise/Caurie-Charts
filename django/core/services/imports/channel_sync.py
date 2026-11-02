@@ -22,6 +22,12 @@ def _enc(s) -> str:
     return quote(str(s), safe="-_.~")
 
 
+# Vidéos d'une chaîne d'artiste qui ne sont pas des titres (relecture de toutes les chaînes, 02/11/2026)
+PAS_UN_TITRE = re.compile(r"#|https?://|\b(live|soir[ée]e|show ?case|concert|vlog|interview|prestation|teaser|trailer|"
+                          r"r[ée]action|behind the scenes|making of|podcast|documentaire|documentary|conf[ée]rence|"
+                          r"euro tour|tour|sermon|worship|prayer|livestream|tournage|drops?|out now|dispo|lyrics?|paroles)\b", re.I)
+
+
 class YouTubeChannelSync:
     SEARCHES = 8  # recherches par nom (100 unités) par passage, en dernier recours
 
@@ -29,12 +35,34 @@ class YouTubeChannelSync:
         self.http = http
         self.searches_left = self.SEARCHES
 
-    def run(self, new_channels: int = 40, refresh: int = 300) -> list:
+    def run(self, new_channels: int = 40, refresh: int = 600) -> list:
         key = env.get("YOUTUBE_API_KEY", "")
         if not key:
             return ["clé YouTube absente"]
         found = clips = created = 0
-        # 1. Chaînes à trouver : artistes confirmés d'abord (Togo, Bénin en tête), puis présents dans les classements
+        # 1. Chaînes connues d'abord : c'est là que sortent les nouveaux sons des artistes suivis. Les 15 dernières vidéos
+        # de chaque chaîne (1 unité) sont lues en parallèle ; toutes les chaînes chaque jour (Joachin Migos « DESTIN »
+        # manqué le 31/10/2026 : 18 chaînes relues sur 478 en 48 h, l'étape s'épuisait avant d'y arriver).
+        known = db.all(f"""SELECT id, name, youtube_channel_id, submission_country_id FROM artists
+                           WHERE status <> 'out_of_scope' AND youtube_channel_id IS NOT NULL
+                             AND (channel_checked_at IS NULL OR channel_checked_at < LOCALTIMESTAMP - INTERVAL '20 hours')
+                           ORDER BY status = 'active' DESC, channel_checked_at NULLS FIRST
+                           LIMIT {max(0, int(refresh))}""")
+        refreshed = 0
+        for lot in [known[i:i + 40] for i in range(0, len(known), 40)]:
+            if budget.over() or not YouTubeQuota.spend(len(lot)):
+                break  # temps ou quota épuisé : la suite la nuit prochaine
+            pages = self._uploads_paralleles([a["youtube_channel_id"] for a in lot], key)
+            for a in lot:
+                videos = pages.get(a["youtube_channel_id"])
+                if videos is None:
+                    continue  # lecture ratée : la chaîne reste prioritaire pour la prochaine fois
+                c, n = self._sync_channel(int(a["id"]), a["name"], a["youtube_channel_id"], int(a["submission_country_id"]), key, 1,
+                                          videos=videos)
+                db.update("artists", {"channel_checked_at": now_utc()}, "id = :id", {"id": a["id"]})
+                clips, created, refreshed = clips + c, created + n, refreshed + 1
+
+        # 2. Chaînes à trouver : artistes confirmés d'abord (Togo, Bénin en tête), puis présents dans les classements
         todo = db.all(f"""SELECT a.id, a.name, a.status, a.submission_country_id FROM artists a JOIN countries c ON c.id = a.submission_country_id
                           WHERE a.status <> 'out_of_scope' AND a.youtube_channel_id IS NULL
                             AND (a.channel_checked_at IS NULL OR a.channel_checked_at < LOCALTIMESTAMP - INTERVAL '30 days')
@@ -59,21 +87,6 @@ class YouTubeChannelSync:
                 c, n = self._sync_channel(int(a["id"]), a["name"], channel, int(a["submission_country_id"]), key, 2)
                 clips, created = clips + c, created + n
 
-        # 2. Chaînes connues : nouvelles vidéos, les moins récemment relues d'abord
-        known = db.all(f"""SELECT id, name, youtube_channel_id, submission_country_id FROM artists
-                           WHERE status <> 'out_of_scope' AND youtube_channel_id IS NOT NULL
-                             AND (channel_checked_at IS NULL OR channel_checked_at < LOCALTIMESTAMP - INTERVAL '20 hours')
-                           ORDER BY status = 'active' DESC, channel_checked_at IS NOT NULL, channel_checked_at NULLS FIRST
-                           LIMIT {max(0, int(refresh))}""")
-        refreshed = 0
-        for a in known:
-            if budget.over():
-                break  # temps de l'étape écoulé : la suite la nuit prochaine
-            if not YouTubeQuota.spend(2):
-                break
-            c, n = self._sync_channel(int(a["id"]), a["name"], a["youtube_channel_id"], int(a["submission_country_id"]), key, 1)
-            db.update("artists", {"channel_checked_at": now_utc()}, "id = :id", {"id": a["id"]})
-            clips, created, refreshed = clips + c, created + n, refreshed + 1
         stats = refresh_channel_stats()
         return [f"{found} nouvelles chaînes trouvées sur {len(todo)} recherchées", f"{refreshed} chaînes relues",
                 f"abonnés et vues totales relevés pour {stats} chaînes",
@@ -188,26 +201,62 @@ class YouTubeChannelSync:
         tracks = db.all("SELECT id, title FROM tracks WHERE artist_id = ? ORDER BY id", [artist_id])
         return any(self.match_track(html.unescape(str((it.get("snippet") or {}).get("title") or "")), tracks) for it in r.get("items") or [])
 
-    def _sync_channel(self, artist_id: int, artist_name: str, channel_id: str, country_id: int, key: str, pages: int):
+    def _uploads_paralleles(self, channels: list, key: str) -> dict:
+        """15 dernières vidéos de chaque chaîne, lues en parallèle (1 unité chacune) ; None si la lecture a échoué."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        import requests
+
+        def lire(cid):
+            try:
+                r = requests.get(API + "playlistItems", timeout=20, params={"part": "snippet", "maxResults": 15,
+                                                                          "playlistId": "UU" + cid[2:], "key": key})
+                if r.status_code == 404:
+                    return cid, []   # chaîne sans vidéo publique
+                return cid, ([it["snippet"] for it in r.json().get("items") or []] if r.status_code == 200 else None)
+            except Exception:  # noqa: BLE001
+                return cid, None
+        with ThreadPoolExecutor(8) as ex:
+            return dict(ex.map(lire, channels))
+
+    def _sync_channel(self, artist_id: int, artist_name: str, channel_id: str, country_id: int, key: str, pages: int,
+                      videos: list | None = None):
         uploads = "UU" + channel_id[2:]  # liste « vidéos mises en ligne » de la chaîne
-        videos, token = [], ""
+        token = ""
+        pages = 0 if videos is not None else pages
+        videos = videos or []
         for _ in range(pages):
             r = self._get("playlistItems?part=snippet&maxResults=50&playlistId=" + _enc(uploads) + ("&pageToken=" + _enc(token) if token else ""), key)
             videos += [it["snippet"] for it in r.get("items") or []]
             token = r.get("nextPageToken") or ""
             if not token:
                 break
+        ids = [i for i in ((v.get("resourceId") or {}).get("videoId") for v in videos) if i]
+        if not ids:
+            return 0, 0
+        connues = {r["external_id"] for r in db.all(
+            f"SELECT external_id FROM track_platform_ids WHERE platform = 'youtube' AND external_id IN ({','.join(['?'] * len(ids))})", ids)}
+        if all(i in connues for i in ids):
+            return 0, 0   # rien de nouveau sur la chaîne
         tracks = db.all("SELECT id, title FROM tracks WHERE artist_id = ? ORDER BY id", [artist_id])
         linked = created = 0
         for v in videos:
             video_id = (v.get("resourceId") or {}).get("videoId")
             title = html.unescape(str(v.get("title") or ""))
-            if not video_id or db.value("SELECT 1 FROM track_platform_ids WHERE platform = 'youtube' AND external_id = ?", [video_id]):
+            if not video_id or video_id in connues:
                 continue
             track_id = self.match_track(title, tracks)
             if track_id is None:
+                if PAS_UN_TITRE.search(title):
+                    continue  # soirée, live, showcase, vlog, short à hashtags : pas un titre du catalogue
                 # « Artiste - Titre » inconnu : nouveau titre de l'artiste (hors teasers, mix, interviews)
                 rows = YouTubeDiscoverySource.parse([{"id": {"videoId": video_id}, "snippet": v}])["rows"]
+                if not rows and not re.search(r"\s[-–—|]\s|#|https?://|\b(live|vlog|lyrics?|paroles|freestyle|cypher|prestation|concert)\b", title, re.I) \
+                        and re.search(r"clip officiel|clip vid[ée]o|official (music )?video|official audio|audio officiel|visuali[sz]er", title, re.I):
+                    # « DESTIN (Clip officiel) » sans le nom : sur la chaîne officielle de l'artiste, c'est le sien. Seulement
+                    # avec une mention de clip/audio officiel : sinon shorts, lives et vlogs entraient au catalogue (test du 02/11)
+                    rows = YouTubeDiscoverySource.parse([{"id": {"videoId": video_id},
+                                                          "snippet": {**v, "title": f"{artist_name} - {title}"}}])["rows"]
                 row = rows[0] if rows else None
                 if not row or N.artist_key(row["artist"]) != N.artist_key(artist_name):
                     continue
