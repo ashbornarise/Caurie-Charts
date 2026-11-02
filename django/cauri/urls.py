@@ -81,6 +81,7 @@ urlpatterns = [
     path("la-machine", views.machine),
     path("envoie-ta-video", views.fan_video),
     path("api/relais/profils", views_relais.profils),
+    path("api/vu", views.vu),
     path("cron/nuit", views_cron.nuit),
     path("cron/rattrapage", views_cron.rattrapage),
     path("cron/monde", views_cron.monde),

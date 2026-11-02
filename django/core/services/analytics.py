@@ -34,6 +34,31 @@ def count_view(request, response) -> None:
         pass
 
 
+def vu_humain(request) -> bool:
+    """Vue envoyée par le navigateur (ui.js) après 1,5 s de page réellement affichée : la plupart des robots
+    n'exécutent pas ce script, d'où un compte honnête des visiteurs humains (pages vues et visites), sans cookie."""
+    try:
+        d = json.loads(request.body or b"{}")
+    except ValueError:
+        return False
+    path = str(d.get("p") or "")[:200]
+    if not path.startswith("/") or path.startswith(SKIP) or BOTS.search(request.META.get("HTTP_USER_AGENT", "")):
+        return False
+    ref = urlparse(str(d.get("r") or "")).hostname or ""
+    ref = "" if "cauricharts" in ref else ref.removeprefix("www.")[:100]
+    visite = 1 if d.get("n") else 0
+    sql = """INSERT INTO vues_humaines (day, path, referrer, views, visites) VALUES (?, ?, ?, 1, ?)
+             ON CONFLICT (day, path, referrer) DO UPDATE SET views = vues_humaines.views + 1, visites = vues_humaines.visites + EXCLUDED.visites"""
+    args = [clock.today().isoformat(), path, ref, visite]
+    try:
+        db.run(sql, args)
+    except Exception:  # noqa: BLE001 — première fois : la table n'existe pas encore
+        db.run("""CREATE TABLE IF NOT EXISTS vues_humaines (day DATE NOT NULL, path VARCHAR(200) NOT NULL, referrer VARCHAR(100) NOT NULL DEFAULT '',
+                  views INTEGER NOT NULL DEFAULT 0, visites INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (day, path, referrer))""")
+        db.run(sql, args)
+    return True
+
+
 def record_run(report: list) -> None:
     db.insert("pipeline_runs", {"seconds": int(sum(r["seconds"] for r in report)), "failed": sum(1 for r in report if not r["ok"]),
                                 "steps": json.dumps([[r["step"], r["ok"], round(r["seconds"])] for r in report], ensure_ascii=False)})

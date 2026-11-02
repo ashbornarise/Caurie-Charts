@@ -30,6 +30,21 @@
         });
     }
 
+    // Visiteurs humains : une vue n'est comptée qu'après 1,5 s de page réellement affichée (la plupart des robots
+    // n'exécutent pas ce script). Une « visite » = première page de l'onglet. Aucun cookie, aucun identifiant.
+    if (navigator.sendBeacon && document.visibilityState !== 'prerender') {
+        var envoye = false;
+        var compte = function () {
+            if (envoye || document.visibilityState !== 'visible') return;
+            envoye = true;
+            var nouvelle = false;
+            try { nouvelle = !sessionStorage.getItem('cc_v'); sessionStorage.setItem('cc_v', '1'); } catch (e) { nouvelle = false; }
+            navigator.sendBeacon('/api/vu', JSON.stringify({ p: location.pathname, r: document.referrer, n: nouvelle }));
+        };
+        setTimeout(compte, 1500);
+        document.addEventListener('visibilitychange', function () { setTimeout(compte, 1500); });
+    }
+
     // Carrousels : flèches précédent / suivant sur ordinateur
     if (window.matchMedia('(hover: hover) and (min-width: 820px)').matches) {
         Array.prototype.forEach.call(document.querySelectorAll('.acc-rail'), function (rail) {

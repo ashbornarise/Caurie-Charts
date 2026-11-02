@@ -6,8 +6,27 @@
     <a class="button button--small button--ghost" href="{{ path('admin/analyses/export/vues') }}">Vues du site (CSV)</a>
 </p>
 
-<h2>Le site · 30 derniers jours</h2>
-<p><strong>{{ fmt_number(total_30|int) }}</strong> pages vues.</p>
+<h2>Visiteurs humains · 30 derniers jours</h2>
+<p class="muted">Comptés par le navigateur après 1,5 s de page affichée : la plupart des robots ne déclenchent pas ce compteur. C'est le chiffre à montrer aux partenaires. Une visite = première page ouverte dans un onglet.</p>
+<div class="cards">
+    <div class="card"><span class="card__value">{{ fmt_number(h_visites|int) }}</span><span class="card__label">visites humaines</span></div>
+    <div class="card"><span class="card__value">{{ fmt_number(h_vues|int) }}</span><span class="card__label">pages vues par des humains</span></div>
+    <div class="card"><span class="card__value">{{ fmt_number((total_30|int - h_vues|int) if total_30|int > h_vues|int else 0) }}</span><span class="card__label">passages de robots et requêtes automatiques (estimation)</span></div>
+</div>
+{% if humains %}
+<div class="bars" role="img" aria-label="Pages vues par des humains, par jour">
+    {% for d in humains %}<span class="bars__bar bars__bar--{{ (10 * d.views|int / h_peak)|round|int }}" title="{{ fmt_date(d.day) }} : {{ d.views|int }} vues, {{ d.visites|int }} visites"></span>{% endfor %}
+</div>
+<div class="grid-3">
+    <div><h3>Pages vues par des humains</h3>
+        <table class="data-table"><tbody>{% for p in h_pages %}<tr><td>{{ p.path }}</td><td class="num">{{ fmt_number(p.views|int) }}</td></tr>{% endfor %}</tbody></table></div>
+    <div><h3>D'où viennent les visiteurs humains</h3>
+        <table class="data-table"><tbody>{% for r in h_refs %}<tr><td>{{ r.referrer }}</td><td class="num">{{ fmt_number(r.views|int) }}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% else %}<p class="muted">Le compteur des visiteurs humains a démarré le 2 novembre 2026 : les chiffres arrivent avec les premières visites.</p>{% endif %}
+
+<h2>Toutes les requêtes · 30 derniers jours (robots compris)</h2>
+<p><strong>{{ fmt_number(total_30|int) }}</strong> pages servies, comptées côté serveur. Ce total inclut les robots qui se font passer pour des navigateurs : ne pas le présenter comme une audience.</p>
 {% if days %}
 <div class="bars" role="img" aria-label="Pages vues par jour">
     {% for d in days %}<span class="bars__bar bars__bar--{{ (10 * d.views|int / peak)|round|int }}" title="{{ fmt_date(d.day) }} : {{ d.views|int }} vues"></span>{% endfor %}

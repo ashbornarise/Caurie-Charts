@@ -17,9 +17,21 @@ def analyses(request):
     posts = A.latest_post_metrics()
     days = db.all("""SELECT day, SUM(views) AS views FROM page_views WHERE day >= CURRENT_DATE - 29 GROUP BY day ORDER BY day""")
     peak = max([int(d["views"]) for d in days] or [1])
+    try:   # visiteurs humains (compteur du navigateur, depuis le 02/11/2026)
+        humains = db.all("""SELECT day, SUM(views) AS views, SUM(visites) AS visites FROM vues_humaines
+                            WHERE day >= CURRENT_DATE - 29 GROUP BY day ORDER BY day""")
+        h_pages = db.all("""SELECT path, SUM(views) AS views FROM vues_humaines WHERE day >= CURRENT_DATE - 29
+                            GROUP BY path ORDER BY views DESC LIMIT 15""")
+        h_refs = db.all("""SELECT CASE WHEN referrer = '' THEN 'accès direct' ELSE referrer END AS referrer, SUM(visites) AS views
+                           FROM vues_humaines WHERE day >= CURRENT_DATE - 29 GROUP BY 1 ORDER BY views DESC LIMIT 10""")
+    except Exception:  # noqa: BLE001 — pas encore de visite comptée : la table n'existe pas
+        humains, h_pages, h_refs = [], [], []
+    h_peak = max([int(d["views"]) for d in humains] or [1])
     return admin_render(request, "analyses", {
         "title": "Analyses",
         "days": days, "peak": peak,
+        "humains": humains, "h_peak": h_peak, "h_pages": h_pages, "h_refs": h_refs,
+        "h_vues": sum(int(d["views"]) for d in humains), "h_visites": sum(int(d["visites"]) for d in humains),
         "total_30": sum(int(d["views"]) for d in days),
         "pages": db.all("""SELECT path, SUM(views) AS views FROM page_views WHERE day >= CURRENT_DATE - 29
                            GROUP BY path ORDER BY views DESC LIMIT 15"""),

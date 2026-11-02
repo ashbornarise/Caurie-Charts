@@ -6,6 +6,7 @@ import math
 import re
 from datetime import date, datetime, timedelta, timezone
 
+from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.template.loader import get_template
 
@@ -671,6 +672,17 @@ def _submit_render(request, old, errors, status=200):
 ASPIRATEURS = ("AhrefsBot", "SemrushBot", "MJ12bot", "DotBot", "BLEXBot", "DataForSeoBot", "SeekportBot", "PetalBot",
                "Bytespider", "GPTBot", "CCBot", "ClaudeBot", "anthropic-ai", "Amazonbot", "meta-externalagent",
                "ImagesiftBot", "Timpibot", "omgili", "Diffbot", "serpstatbot", "barkrowler")
+
+
+@csrf_exempt
+def vu(request):
+    """Compteur des visiteurs humains (appelé par ui.js) : réponse vide, jamais mise en cache."""
+    from core.services import analytics
+    if request.method == "POST":
+        analytics.vu_humain(request)
+    resp = HttpResponse(status=204)
+    resp["Cache-Control"] = "no-store"
+    return resp
 
 
 def robots(request):
