@@ -89,9 +89,11 @@ def photos(artist_id: int, n: int = 12) -> list:
 def textes_proposes(artist_id: int) -> dict:
     """Textes tirés de nos vraies données : titre du moment, meilleure place de la semaine, auditeurs Spotify."""
     a = db.one("SELECT id, name, slug FROM artists WHERE id = ?", [artist_id]) or {}
-    titre = db.one("""SELECT t.title, MIN(o.position) AS pos, c.code FROM chart_observations o JOIN tracks t ON t.id = o.track_id
+    # seulement les vrais classements publics des plateformes (pas nos indicateurs calculés) ; la place est celle du TITRE
+    titre = db.one("""SELECT t.title, o.source, MIN(o.position) AS pos, c.code FROM chart_observations o JOIN tracks t ON t.id = o.track_id
                       JOIN countries c ON c.id = o.country_id WHERE t.artist_id = ? AND o.observed_on >= CURRENT_DATE - 7
-                      GROUP BY t.title, c.code ORDER BY MIN(o.position) LIMIT 1""", [artist_id])
+                        AND o.source IN ('apple_music', 'deezer', 'shazam', 'youtube_trending')
+                      GROUP BY t.title, o.source, c.code ORDER BY MIN(o.position), o.source LIMIT 1""", [artist_id])
     sp = None
     try:
         sp = db.value("SELECT auditeurs FROM spotify_artistes WHERE artist_id = ? ORDER BY releve_le DESC LIMIT 1", [artist_id])
@@ -101,10 +103,13 @@ def textes_proposes(artist_id: int) -> dict:
     if sp:
         from core.jinja import _fmt_court
         bas.append(f"{_fmt_court(sp)} auditeurs Spotify par mois")
-    if titre and titre.get("pos"):
-        from core.helpers import country_name
-        bas.append(f"N°{int(titre['pos'])} · {country_name(titre['code'])} cette semaine")
     nom_titre = re.split(r"\s+(?:feat\.?|ft\.?|featuring|&|x)\s+|\s*[(\[]", C.propre((titre or {}).get("title") or ""), flags=re.I)[0].strip()
+    if titre and titre.get("pos"):
+        # « MALADE » N°1 sur Deezer · Sénégal : le titre, la plateforme, le pays — jamais « l'artiste N°1 du Sénégal »
+        # (Didi B, ivoirien, n'est pas dans notre classement du Sénégal ; correction du fondateur, 02/11/2026)
+        from core.helpers import country_name
+        from core.services.live_chart import SOURCES
+        bas.append(f"« {nom_titre} » N°{int(titre['pos'])} sur {SOURCES.get(titre['source'], titre['source'])} · {country_name(titre['code'])}")
     return {"titre": nom_titre or a.get("name") or "", "sur_titre": a.get("name") or "", "bas": " · ".join(bas),
             "chiffre": _fmt_chiffre(sp) if sp else ""}
 
