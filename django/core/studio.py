@@ -348,7 +348,7 @@ def historique(request, chemin):
         return _json({"erreur": "connexion requise"}, 401)
     creer_tables()
     jobs = [_job_public(j) for j in db.all("SELECT * FROM studio_jobs ORDER BY id DESC LIMIT 60")]
-    return _json({"jobs": [j for j in jobs if j["params"].get("type") != "photos"][:20]})   # les photos ont leur onglet
+    return _json({"jobs": [j for j in jobs if j["params"].get("type") not in ("photos", "vedette")][:20]})   # les photos ont leur onglet
 
 
 def annuler(request, chemin, ident):
@@ -996,3 +996,87 @@ def alerte_vue(request, chemin, ident):
         return _json({"erreur": "connexion requise"}, 401)
     db.run("UPDATE studio_alertes SET vue_le = NOW() WHERE id = ?", [int(ident)])
     return _json({"ok": True})
+
+
+
+# ---------------------------------------------------------------- mise en valeur d'un artiste (02/11/2026)
+
+def vedette_preparer(request, chemin):
+    """Photos de la banque, textes tirés de nos données et modèles disponibles pour l'artiste choisi."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import vedette
+    aid = int(_corps(request).get("artiste_id") or 0)
+    photos = vedette.photos(aid, 12)
+    if not photos:
+        from core.services.social import plans
+        plans.alerte(aid, "aucune photo dans la banque (mise en valeur)")
+        return _json({"erreur": "aucune photo de cet artiste dans la banque : ajoute-en dans l'onglet Photos"}, 400)
+    from core import storage
+    base = storage.blob_public_url()
+    modeles = [{"id": k, "nom": m.get("nom"), "exemple": f"{base}/media/social/{m['exemple']}" if m.get("exemple") else None}
+               for k, m in vedette.modeles().items()]
+    return _json({"photos": photos, "textes": vedette.textes_proposes(aid), "modeles": modeles})
+
+
+def vedette_apercus(request, chemin):
+    """Lance la fabrication des aperçus (GitHub : détourage) pour les modèles cochés."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    c = _corps(request)
+    if not c.get("photo") or not c.get("artiste_id"):
+        return _json({"erreur": "choisis l'artiste et une photo"}, 400)
+    textes = {k: str((c.get("textes") or {}).get(k) or "").strip()[:120] for k in ("titre", "sur_titre", "bas", "chiffre", "credit")}
+    params = {"type": "vedette", "artiste_id": int(c["artiste_id"]), "artiste_nom": str(c.get("artiste_nom") or "")[:120],
+              "photo": str(c["photo"])[:500], "photo_id": int(c.get("photo_id") or 0) or None, "textes": textes,
+              "modeles": [str(m)[:12] for m in (c.get("modeles") or [])][:12]}
+    creer_tables()
+    job_id = db.insert("studio_jobs", {"lien": "vedette", "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
+    erreur = _lance(job_id)
+    if erreur:
+        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
+    return _json({"id": job_id, "erreur": erreur})
+
+
+def vedette_publier(request, chemin, ident):
+    """Le modèle choisi part en carré-portrait et en story, avec la légende."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
+    if not j:
+        raise Http404
+    c = _corps(request)
+    p = json.loads(j["params"] or "{}")
+    try:
+        reseaux = reseaux_choisis(c)
+    except ValueError as exc:
+        return _json({"erreur": str(exc)}, 400)
+    p.update({"choix": str(c.get("choix") or "")[:12], "reseaux": reseaux, "notifier": bool(c.get("notifier")),
+              **{k: str(c.get(k) or "").strip()[:900] for k in ("legende_fr", "legende_en")}})
+    if c.get("textes"):
+        p["textes"] = {k: str(c["textes"].get(k) or "").strip()[:120] for k in ("titre", "sur_titre", "bas", "chiffre", "credit")}
+    db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False), "statut": "attente", "erreur": None}, "id = :id", {"id": j["id"]})
+    erreur = _lance(j["id"])
+    if erreur:
+        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": j["id"]})
+    return _json({"ok": not erreur, "erreur": erreur})
+
+
+def vedette_modele(request, chemin):
+    """Exemple importé (image) : Gemini le traduit en modèle, gardé pour les prochaines fois."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import vedette
+    nom = (request.GET.get("nom") or "Mon modèle").strip()[:80]
+    if not request.body or len(request.body) > 8 * 1024 * 1024:
+        return _json({"erreur": "image manquante ou trop lourde (8 Mo au plus)"}, 400)
+    try:
+        m = vedette.modele_depuis_exemple(request.body, nom)
+    except Exception as exc:  # noqa: BLE001
+        return _json({"erreur": str(exc)[:300]}, 400)
+    return _json({"modele": {"id": m["id"], "nom": nom}})

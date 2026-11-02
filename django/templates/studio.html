@@ -145,6 +145,12 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 .empreinte svg.i{width:46px;height:46px;stroke-width:1.5}
 @keyframes pulse{50%{box-shadow:0 0 0 18px rgba(124,58,237,.03)}}
 .verrou .aide{margin-top:30px;font-size:13px;color:var(--faible)}.verrou .aide a{color:var(--ciel)}
+.ve-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ve-grille--apercus{grid-template-columns:repeat(2,1fr)}
+.ve-vignette{position:relative;padding:0;border:3px solid transparent;border-radius:14px;overflow:hidden;background:#EAF5FF;cursor:pointer}
+.ve-vignette img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover}
+.ve-vignette span{position:absolute;left:6px;bottom:6px;right:6px;font-size:11px;font-weight:700;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.88);color:#0E1228}
+.ve-vignette.choisi{border-color:#7A3CF5;box-shadow:0 0 0 3px rgba(122,60,245,.25)}
 .alertes{display:grid;gap:8px;margin:0 0 14px}
 .alerte{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border-radius:16px;border:1.5px solid #F0A79E;background:#FFF1EF;color:#7A1A10;font:inherit;cursor:pointer}
 .alerte span{display:grid;flex:1;min-width:0}.alerte small{color:#A4271B;font-size:.82rem}
@@ -380,10 +386,56 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
     <div class="msg" id="msg-photos"></div>
   </section>
 
+  <!-- ÉCRAN MISE EN VALEUR (02/11/2026) : nos meilleures photos de l'artiste, 10 modèles + les exemples importés -->
+  <section class="ecran" id="e-vedette">
+    <h1 class="titre">Mettre en valeur</h1>
+    <p class="sous">Choisis un artiste et une de ses photos de la banque : Cauri prépare un visuel par modèle, tu gardes le plus beau.</p>
+    <div class="carte">
+      <div class="etiq">1 · Artiste</div>
+      <div class="champ"><input id="ve-recherche" placeholder="Rechercher un artiste…" autocomplete="off"></div>
+      <div class="choix-artiste" id="ve-resultats"></div>
+      <p id="ve-artiste" style="margin:8px 0 0;font-weight:700"></p>
+    </div>
+    <div class="carte" id="ve-etape-photo" style="display:none">
+      <div class="etiq">2 · Photo <span style="text-transform:none;font-weight:600;color:var(--faible)">· les mieux notées d'abord</span></div>
+      <div class="ve-grille" id="ve-photos"></div>
+    </div>
+    <div class="carte texte" id="ve-etape-textes" style="display:none">
+      <label style="margin-top:0">Grand titre<input id="ve-titre" maxlength="40" placeholder="ex. NUMBER ONE, le titre du son"></label>
+      <label>Petit texte au-dessus<input id="ve-sur" maxlength="60" placeholder="ex. Himra feat. Minz"></label>
+      <label>Ligne du bas<input id="ve-bas" maxlength="90" placeholder="ex. 1,2 M auditeurs Spotify · N°1 Côte d'Ivoire"></label>
+      <label>Chiffre géant <span style="font-weight:400;color:var(--doux)">(modèle « Chiffre géant »)</span><input id="ve-chiffre" maxlength="8" placeholder="ex. 84K"></label>
+      <label>Crédit photo<input id="ve-credit" maxlength="80"></label>
+    </div>
+    <div class="carte" id="ve-etape-modeles" style="display:none">
+      <div class="etiq">3 · Modèles <span style="text-transform:none;font-weight:600;color:var(--faible)">· touche pour (dé)cocher</span></div>
+      <div class="puces" id="ve-modeles"></div>
+      <button class="btn second" id="ve-importer" style="margin-top:10px"><svg class="i"><use href="#i-photo"/></svg>Importer un exemple (devient un modèle)</button>
+      <input type="file" id="ve-exemple" accept="image/*" style="display:none">
+      <button class="btn" id="ve-generer" style="margin-top:10px"><svg class="i"><use href="#i-magie"/></svg>Voir les visuels</button>
+    </div>
+    <div class="carte" id="ve-etape-choix" style="display:none">
+      <div class="etiq">4 · Choisis le visuel</div>
+      <p id="ve-attente" style="margin:0;color:var(--doux)"></p>
+      <div class="ve-grille ve-grille--apercus" id="ve-apercus"></div>
+    </div>
+    <div class="carte texte" id="ve-etape-publier" style="display:none">
+      <label style="margin-top:0">Légende en français<textarea id="ve-fr" placeholder="Pourquoi on le met en avant. L'anglais est traduit tout seul."></textarea></label>
+      <div class="etiq" style="margin-top:12px">Plateformes</div>
+      <div class="puces" id="ve-reseaux">
+        <button class="puce actif" data-r="instagram">Instagram</button><button class="puce actif" data-r="facebook">Facebook</button>
+        <button class="puce actif" data-r="tiktok">TikTok</button><button class="puce actif" data-r="telegram">Telegram</button>
+      </div>
+      <button class="btn" id="ve-publier" style="margin-top:12px"><svg class="i"><use href="#i-annonce"/></svg>Publier ce visuel</button>
+    </div>
+    <div class="msg" id="msg-vedette"></div>
+  </section>
+
   <!-- ÉCRAN ANNONCE (27/10/2026) : une actu chaude en images, publiée en carrousel -->
   <section class="ecran" id="e-annonce">
     <h1 class="titre">Annonce</h1>
     <p class="sous">Une actu chaude en images, depuis le lien d'un post ou ton téléphone : la 1re devient la couverture Cauri, les autres suivent en carrousel.</p>
+    <button class="btn" id="ve-ouvrir" style="margin:0 0 14px"><svg class="i"><use href="#i-magie"/></svg>Mettre en valeur un artiste</button>
     <div class="carte">
       <div class="etiq"><svg class="i" style="width:16px;height:16px"><use href="#i-lien"/></svg>Lien du post</div>
       <div class="champ">
@@ -552,7 +604,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   let ecran = 'creer', jobEnCours = null;
   function montre(nom) {
     ecran = nom; $$('.ecran').forEach(e => e.classList.toggle('vu', e.id === 'e-' + nom));
-    $$('.nav button').forEach(b => b.classList.toggle('actif', b.dataset.ecran === (nom === 'suivi' ? 'creer' : nom)));
+    $$('.nav button').forEach(b => b.classList.toggle('actif', b.dataset.ecran === (nom === 'suivi' ? 'creer' : nom === 'vedette' ? 'annonce' : nom)));
     window.scrollTo({top: 0}); action();
     if (nom === 'videos') grille(); if (nom === 'reglages') reglages();
   }
@@ -571,6 +623,81 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     });
   }
   alertes();
+
+  // ---------------- mise en valeur d'un artiste (02/11/2026)
+  const ve = {artiste: null, photo: null, job: null, choix: null, minuterie: null};
+  $('#ve-ouvrir').onclick = () => { vibre(); montre('vedette'); $('#ve-recherche').focus(); };
+  let minVe;
+  $('#ve-recherche').addEventListener('input', () => { clearTimeout(minVe); minVe = setTimeout(async () => {
+    const q = $('#ve-recherche').value.trim(), box = $('#ve-resultats'); box.innerHTML = '';
+    if (q.length < 2) return;
+    const r = await get('/artistes?q=' + encodeURIComponent(q));
+    (r.artistes || []).forEach(a => { const b = document.createElement('button'); b.className = 'puce'; b.textContent = a.nom;
+      b.onclick = () => veArtiste(a); box.appendChild(b); });
+  }, 250); });
+  async function veArtiste(a) {
+    vibre(); ve.artiste = a; ve.photo = null; $('#ve-resultats').innerHTML = ''; $('#ve-recherche').value = '';
+    $('#ve-artiste').textContent = a.nom; message('#msg-vedette', '');
+    const r = await post('/vedette/preparer', {artiste_id: a.id});
+    if (r.erreur) { message('#msg-vedette', r.erreur, false); return; }
+    $('#ve-photos').innerHTML = r.photos.map((p, i) => '<button class="ve-vignette" data-i="' + i + '"><img src="' + p.url + '" alt="" loading="lazy"></button>').join('');
+    $$('#ve-photos .ve-vignette').forEach(b => b.onclick = () => { vibre(); ve.photo = r.photos[+b.dataset.i];
+      $$('#ve-photos .ve-vignette').forEach(x => x.classList.toggle('choisi', x === b)); $('#ve-credit').value = ve.photo.credit || ''; });
+    $('#ve-photos .ve-vignette').click();
+    $('#ve-titre').value = r.textes.titre || ''; $('#ve-sur').value = r.textes.sur_titre || '';
+    $('#ve-bas').value = r.textes.bas || ''; $('#ve-chiffre').value = r.textes.chiffre || '';
+    $('#ve-modeles').innerHTML = r.modeles.map(m => '<button class="puce actif" data-m="' + m.id + '">' + m.nom + '</button>').join('');
+    $$('#ve-modeles .puce').forEach(b => b.onclick = () => { vibre(); b.classList.toggle('actif'); });
+    ['photo', 'textes', 'modeles'].forEach(e => $('#ve-etape-' + e).style.display = '');
+  }
+  const veTextes = () => ({titre: $('#ve-titre').value, sur_titre: $('#ve-sur').value, bas: $('#ve-bas').value,
+                           chiffre: $('#ve-chiffre').value, credit: $('#ve-credit').value});
+  $('#ve-importer').onclick = () => $('#ve-exemple').click();
+  $('#ve-exemple').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    const nom = (f.name || 'Mon modèle').replace(/\.[a-z0-9]+$/i, '').slice(0, 40);
+    message('#msg-vedette', 'Gemini lit ton exemple…', true);
+    const r = await fetch(BASE + '/vedette/modele?nom=' + encodeURIComponent(nom), {method: 'POST', headers: {'Content-Type': f.type || 'image/jpeg', 'X-CSRFToken': CSRF}, body: f}).then(x => x.json());
+    if (r.erreur) { message('#msg-vedette', r.erreur, false); return; }
+    const b = document.createElement('button'); b.className = 'puce actif'; b.dataset.m = r.modele.id; b.textContent = r.modele.nom;
+    b.onclick = () => { vibre(); b.classList.toggle('actif'); }; $('#ve-modeles').appendChild(b);
+    message('#msg-vedette', 'Modèle « ' + r.modele.nom + ' » ajouté : il restera pour les prochaines fois.', true);
+  };
+  $('#ve-generer').onclick = async () => {
+    if (!ve.artiste || !ve.photo) { message('#msg-vedette', 'Choisis un artiste et une photo.', false); return; }
+    const modeles = $$('#ve-modeles .puce.actif').map(b => b.dataset.m);
+    if (!modeles.length) { message('#msg-vedette', 'Coche au moins un modèle.', false); return; }
+    vibre(); message('#msg-vedette', '');
+    const r = await post('/vedette/apercus', {artiste_id: ve.artiste.id, artiste_nom: ve.artiste.nom, photo: ve.photo.url, photo_id: ve.photo.id,
+                                              textes: veTextes(), modeles});
+    if (r.erreur) { message('#msg-vedette', r.erreur, false); return; }
+    ve.job = r.id; ve.choix = null; $('#ve-apercus').innerHTML = ''; $('#ve-etape-choix').style.display = '';
+    $('#ve-etape-publier').style.display = 'none';
+    $('#ve-attente').textContent = 'Fabrication des visuels (détourage de la photo)… environ 2 à 4 minutes.';
+    clearInterval(ve.minuterie); ve.minuterie = setInterval(veSuivre, 5000);
+    $('#ve-etape-choix').scrollIntoView({behavior: 'smooth'});
+  };
+  async function veSuivre() {
+    const j = await get('/job/' + ve.job);
+    if (j.statut === 'erreur') { clearInterval(ve.minuterie); $('#ve-attente').textContent = j.erreur || 'Échec de la fabrication.'; return; }
+    if (j.statut === 'envoye') { clearInterval(ve.minuterie); message('#msg-vedette', 'Publié !', true); return; }
+    if (j.statut !== 'a_choisir') return;
+    clearInterval(ve.minuterie); $('#ve-attente').textContent = '';
+    $('#ve-apercus').innerHTML = (j.params.apercus || []).map(a => '<button class="ve-vignette" data-m="' + a.modele + '"><img src="' + a.url + '" alt=""><span>' + a.nom + '</span></button>').join('');
+    $$('#ve-apercus .ve-vignette').forEach(b => b.onclick = () => { vibre(); ve.choix = b.dataset.m;
+      $$('#ve-apercus .ve-vignette').forEach(x => x.classList.toggle('choisi', x === b)); $('#ve-etape-publier').style.display = '';
+      $('#ve-etape-publier').scrollIntoView({behavior: 'smooth'}); });
+  }
+  $$('#ve-reseaux .puce').forEach(b => b.onclick = () => { vibre(); b.classList.toggle('actif'); });
+  $('#ve-publier').onclick = async () => {
+    if (!ve.choix) { message('#msg-vedette', 'Touche le visuel à publier.', false); return; }
+    vibre();
+    const r = await post('/vedette/' + ve.job + '/publier', {choix: ve.choix, textes: veTextes(), legende_fr: $('#ve-fr').value,
+                                                            reseaux: $$('#ve-reseaux .puce.actif').map(b => b.dataset.r)});
+    if (r.erreur) { message('#msg-vedette', r.erreur, false); return; }
+    message('#msg-vedette', 'Envoi en cours : le visuel part en carré et en story.', true);
+    clearInterval(ve.minuterie); ve.minuterie = setInterval(veSuivre, 6000);
+  };
   // multitâche (25/10/2026) : « Créer » ouvre toujours un formulaire neuf ; les vidéos lancées continuent dans « Mes vidéos »
   $$('.nav button').forEach(b => b.onclick = () => { vibre(); montre(b.dataset.ecran); });
   const EN_COURS = ['attente', 'attente_pc', 'telechargement', 'analyse', 'montage'];
