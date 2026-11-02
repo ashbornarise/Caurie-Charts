@@ -1,5 +1,6 @@
 <h2>Éditeur du site</h2>
-<p>Le site {{ url_host(config('app.url')) }} est édité par {{ legal('publisher') }}, {{ legal('status') }}, immatriculée sous le numéro {{ legal('registration') }}, dont le siège est situé {{ legal('address') }}.</p>
+<p>Le site {{ url_host(config('app.url')) }} est édité par {{ legal('publisher') }}, {{ legal('status') }}{% if config('app.legal.registration') %}, immatriculé sous le numéro {{ legal('registration') }}{% else %}, sans immatriculation à ce jour{% endif %}.</p>
+<p>Adresse : {{ legal('address') }}.</p>
 <p>Directeur ou directrice de la publication : {{ legal('director') }}.</p>
 <p>Contact : <a href="{{ path('contact') }}">formulaire de contact</a>{{ ' ou ' ~ config('app.contact_email') if config('app.contact_email') }}.</p>
 
