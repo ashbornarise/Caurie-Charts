@@ -488,7 +488,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <!-- ÉCRAN MES VIDÉOS -->
   <section class="ecran" id="e-videos">
     <h1 class="titre">Mes vidéos</h1>
-    <p class="sous">Les 20 dernières, du plus récent au plus ancien.</p>
+    <p class="sous">Tes vidéos et tes mises en valeur (les plus récentes d’abord), avec leur état : en cours, prête, à choisir, publiée.</p>
     <div class="grille" id="grille"></div>
   </section>
 
@@ -1373,7 +1373,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   }
 
   // ---------------- écran Mes vidéos
-  const LIB = {attente_pc: 'Au PC', attente: 'En file', telechargement: 'Téléchargement', analyse: 'Analyse', a_valider: 'À valider', montage: 'Habillage', pret: 'Prête', erreur: 'Échec', envoye: 'Envoyée', annule: 'Annulée'};
+  const LIB = {attente_pc: 'Au PC', attente: 'En file', telechargement: 'Téléchargement', analyse: 'Analyse', a_valider: 'À valider', montage: 'Habillage', pret: 'Prête', erreur: 'Échec', envoye: 'Publiée', annule: 'Annulée', a_choisir: 'À choisir'};
   async function grille() {
     const g = $('#grille');
     try {
@@ -1382,12 +1382,17 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       d.jobs.forEach(j => {
         const boite = document.createElement('div');
         const el = document.createElement('button'); el.className = 'vignette';
-        const cls = ['pret', 'envoye', 'erreur'].includes(j.statut) ? j.statut : j.statut === 'annule' ? 'erreur' : 'cours';
+        const vedette = j.params.type === 'vedette';
+        const cls = ['pret', 'envoye', 'erreur'].includes(j.statut) ? j.statut : j.statut === 'a_choisir' ? 'pret' : j.statut === 'annule' ? 'erreur' : 'cours';
         el.innerHTML = `<span class="cadre">${j.vignette ? '<img alt="">' : ''}<span class="statut ${cls}"></span></span><span class="bas"></span>`;
         if (j.vignette) el.querySelector('img').src = j.vignette;
         el.querySelector('.statut').textContent = LIB[j.statut] || j.statut;
-        el.querySelector('.bas').textContent = j.params.accroche || j.lien.replace(/^https?:\/\/(www\.)?/, '').slice(0, 40);
-        el.onclick = () => suivre(j.id);
+        el.querySelector('.bas').textContent = vedette ? 'Mise en valeur · ' + (j.params.artiste_nom || '') + (j.params.textes && j.params.textes.titre ? ' · ' + j.params.textes.titre : '')
+                                                       : (j.params.accroche || j.lien.replace(/^https?:\/\/(www\.)?/, '').slice(0, 40));
+        el.onclick = vedette ? () => { vibre(); montre('vedette'); veListe();
+            veReprendre({id: j.id, statut: j.statut, erreur: j.erreur, choix: j.params.choix, artiste: j.params.artiste_nom || '',
+                         artiste_id: j.params.artiste_id, textes: j.params.textes || {}}); }
+                             : () => suivre(j.id);
         boite.appendChild(el);
         // annuler / recommencer directement depuis la liste (multitâche)
         const geste = EN_COURS.includes(j.statut) || ['a_valider', 'pret'].includes(j.statut) ? ['Annuler', annulerJob]

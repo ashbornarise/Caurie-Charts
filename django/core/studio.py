@@ -348,7 +348,8 @@ def historique(request, chemin):
         return _json({"erreur": "connexion requise"}, 401)
     creer_tables()
     jobs = [_job_public(j) for j in db.all("SELECT * FROM studio_jobs ORDER BY id DESC LIMIT 60")]
-    return _json({"jobs": [j for j in jobs if j["params"].get("type") not in ("photos", "vedette")][:20]})   # les photos ont leur onglet
+    # les photos ont leur onglet ; les mises en valeur apparaissent ici avec les vidéos (historique commun, 02/11/2026)
+    return _json({"jobs": [j for j in jobs if j["params"].get("type") != "photos"][:24]})
 
 
 def annuler(request, chemin, ident):
