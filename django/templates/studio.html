@@ -145,6 +145,10 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 .empreinte svg.i{width:46px;height:46px;stroke-width:1.5}
 @keyframes pulse{50%{box-shadow:0 0 0 18px rgba(124,58,237,.03)}}
 .verrou .aide{margin-top:30px;font-size:13px;color:var(--faible)}.verrou .aide a{color:var(--ciel)}
+.ve-recents{display:grid;gap:8px}
+.ve-recent{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:6px;border-radius:14px;border:1px solid rgba(120,180,235,.4);background:#fff;font:inherit;cursor:pointer}
+.ve-recent img,.ve-recent__vide{width:48px;height:60px;object-fit:cover;border-radius:10px;background:#EAF5FF;flex:none}
+.ve-recent span{display:grid;min-width:0}.ve-recent small{color:var(--doux);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ve-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .ve-grille--apercus{grid-template-columns:repeat(2,1fr)}
 .ve-vignette{position:relative;padding:0;border:3px solid transparent;border-radius:14px;overflow:hidden;background:#EAF5FF;cursor:pointer}
@@ -390,6 +394,10 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <section class="ecran" id="e-vedette">
     <h1 class="titre">Mettre en valeur</h1>
     <p class="sous">Choisis un artiste et une de ses photos de la banque : Cauri prépare un visuel par modèle, tu gardes le plus beau.</p>
+    <div class="carte" id="ve-recents-carte" style="display:none">
+      <div class="etiq">Tes mises en valeur <span style="text-transform:none;font-weight:600;color:var(--faible)">· touche pour reprendre</span></div>
+      <div class="ve-recents" id="ve-recents"></div>
+    </div>
     <div class="carte">
       <div class="etiq">1 · Artiste</div>
       <div class="champ"><input id="ve-recherche" placeholder="Rechercher un artiste…" autocomplete="off"></div>
@@ -626,7 +634,46 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
 
   // ---------------- mise en valeur d'un artiste (02/11/2026)
   const ve = {artiste: null, photo: null, job: null, choix: null, minuterie: null};
-  $('#ve-ouvrir').onclick = () => { vibre(); montre('vedette'); $('#ve-recherche').focus(); };
+  $('#ve-ouvrir').onclick = () => { vibre(); montre('vedette'); veListe(); };
+  const VE_ETATS = {attente: 'En file', montage: 'Fabrication…', a_choisir: 'À choisir', envoye: 'Publié', erreur: 'Échec'};
+  // reprise après avoir quitté l'appli (02/11/2026) : la liste des dernières, et la dernière en cours rouverte toute seule
+  async function veListe(auto) {
+    let r; try { r = await get('/vedette/recents'); } catch (e) { return; }
+    const l = (r && r.jobs) || [];
+    $('#ve-recents-carte').style.display = l.length ? '' : 'none';
+    $('#ve-recents').innerHTML = l.map(j => '<button class="ve-recent" data-id="' + j.id + '">' +
+      (j.vignette ? '<img src="' + j.vignette + '" alt="">' : '<span class="ve-recent__vide"></span>') +
+      '<span><b>' + (j.artiste || 'Artiste') + '</b><small>' + (VE_ETATS[j.statut] || j.statut) + ' · ' + (j.textes.titre || '') + '</small></span></button>').join('');
+    $$('#ve-recents .ve-recent').forEach(b => b.onclick = () => { vibre(); veReprendre(l.find(j => j.id == b.dataset.id)); });
+    const prete = l.find(j => j.statut === 'a_choisir');
+    if (prete && !ve.job) {
+      const box = $('#alertes');
+      if (box && !$('#alertes .alerte-ve')) {
+        const b = document.createElement('button'); b.className = 'alerte alerte-ve';
+        b.innerHTML = '<svg class="i"><use href="#i-magie"/></svg><span><b>Une mise en valeur t’attend : ' + (prete.artiste || '') + '</b><small>Les visuels sont prêts, choisis le plus beau.</small></span><em>Ouvrir</em>';
+        b.onclick = () => { vibre(); b.remove(); if (!$('#alertes .alerte')) box.style.display = 'none'; montre('vedette'); veReprendre(prete); };
+        box.prepend(b); box.style.display = '';
+      }
+    }
+    if (auto) { const enCours = l.find(j => ['attente', 'montage', 'a_choisir'].includes(j.statut) && String(j.id) === localStorage.getItem('ve-job'));
+                if (enCours) veReprendre(enCours); }
+  }
+  function veReprendre(j) {
+    if (!j) return;
+    ve.job = j.id; ve.choix = j.choix || null; ve.artiste = {id: j.artiste_id, nom: j.artiste};
+    try { localStorage.setItem('ve-job', String(j.id)); } catch (e) {}
+    $('#ve-artiste').textContent = j.artiste || '';
+    $('#ve-titre').value = j.textes.titre || ''; $('#ve-sur').value = j.textes.sur_titre || '';
+    $('#ve-bas').value = j.textes.bas || ''; $('#ve-chiffre').value = j.textes.chiffre || ''; $('#ve-credit').value = j.textes.credit || '';
+    $('#ve-etape-textes').style.display = ''; $('#ve-etape-choix').style.display = '';
+    $('#ve-apercus').innerHTML = ''; $('#ve-etape-publier').style.display = 'none';
+    if (j.statut === 'erreur') { $('#ve-attente').textContent = j.erreur || 'Échec de la fabrication.'; return; }
+    if (j.statut === 'envoye') { $('#ve-attente').textContent = 'Déjà publiée.'; }
+    else $('#ve-attente').textContent = j.statut === 'a_choisir' ? '' : 'Fabrication des visuels… ils arrivent ici dès qu’ils sont prêts.';
+    clearInterval(ve.minuterie); veSuivre(); if (j.statut !== 'a_choisir' && j.statut !== 'envoye') ve.minuterie = setInterval(veSuivre, 5000);
+    $('#ve-etape-choix').scrollIntoView({behavior: 'smooth'});
+  }
+  veListe(true);
   let minVe;
   $('#ve-recherche').addEventListener('input', () => { clearTimeout(minVe); minVe = setTimeout(async () => {
     const q = $('#ve-recherche').value.trim(), box = $('#ve-resultats'); box.innerHTML = '';
@@ -672,6 +719,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
                                               textes: veTextes(), modeles});
     if (r.erreur) { message('#msg-vedette', r.erreur, false); return; }
     ve.job = r.id; ve.choix = null; $('#ve-apercus').innerHTML = ''; $('#ve-etape-choix').style.display = '';
+    try { localStorage.setItem('ve-job', String(r.id)); } catch (e) {}
     $('#ve-etape-publier').style.display = 'none';
     $('#ve-attente').textContent = 'Fabrication des visuels (détourage de la photo)… environ 2 à 4 minutes.';
     clearInterval(ve.minuterie); ve.minuterie = setInterval(veSuivre, 5000);
@@ -680,7 +728,8 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   async function veSuivre() {
     const j = await get('/job/' + ve.job);
     if (j.statut === 'erreur') { clearInterval(ve.minuterie); $('#ve-attente').textContent = j.erreur || 'Échec de la fabrication.'; return; }
-    if (j.statut === 'envoye') { clearInterval(ve.minuterie); message('#msg-vedette', 'Publié !', true); return; }
+    if (j.statut === 'envoye') { clearInterval(ve.minuterie); message('#msg-vedette', 'Publié !', true);
+      try { localStorage.removeItem('ve-job'); } catch (e) {} veListe(); return; }
     if (j.statut !== 'a_choisir') return;
     clearInterval(ve.minuterie); $('#ve-attente').textContent = '';
     $('#ve-apercus').innerHTML = (j.params.apercus || []).map(a => '<button class="ve-vignette" data-m="' + a.modele + '"><img src="' + a.url + '" alt=""><span>' + a.nom + '</span></button>').join('');

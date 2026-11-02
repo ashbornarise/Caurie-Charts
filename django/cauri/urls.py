@@ -31,6 +31,7 @@ urlpatterns = [
     re_path(S + r"/banque$", studio.banque),
     re_path(S + r"/alertes$", studio.alertes),
     re_path(S + r"/vedette/preparer$", studio.vedette_preparer),
+    re_path(S + r"/vedette/recents$", studio.vedette_recents),
     re_path(S + r"/vedette/apercus$", studio.vedette_apercus),
     re_path(S + r"/vedette/modele$", studio.vedette_modele),
     re_path(S + r"/vedette/(?P<ident>[0-9]+)/publier$", studio.vedette_publier),

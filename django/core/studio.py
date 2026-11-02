@@ -1080,3 +1080,16 @@ def vedette_modele(request, chemin):
     except Exception as exc:  # noqa: BLE001
         return _json({"erreur": str(exc)[:300]}, 400)
     return _json({"modele": {"id": m["id"], "nom": nom}})
+
+
+
+def vedette_recents(request, chemin):
+    """Les dernières mises en valeur (pour les rouvrir après avoir quitté l'appli)."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    jobs = [_job_public(j) for j in db.all("SELECT * FROM studio_jobs WHERE lien = 'vedette' ORDER BY id DESC LIMIT 12")]
+    return _json({"jobs": [{"id": j["id"], "statut": j["statut"], "erreur": j["erreur"], "vignette": j["vignette"], "cree_le": j["cree_le"],
+                            "artiste": j["params"].get("artiste_nom") or "", "artiste_id": j["params"].get("artiste_id"),
+                            "textes": j["params"].get("textes") or {}, "apercus": j["params"].get("apercus") or [],
+                            "choix": j["params"].get("choix")} for j in jobs]})
