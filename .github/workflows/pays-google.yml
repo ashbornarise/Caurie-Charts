@@ -1,0 +1,27 @@
+name: Pays des artistes vérifiés par Google (Gemini + recherche Google)
+on:
+  schedule:
+    - cron: "50 4 * * *"   # chaque nuit, 4 lots de 40 artistes au plus (moitié du budget Gemini du jour)
+  workflow_dispatch:
+    inputs:
+      lots:
+        description: "Nombre de lots de 40 artistes"
+        default: "4"
+jobs:
+  pays:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - name: Vérifier les pays
+        working-directory: django
+        run: python manage.py pays_google --lots=${{ inputs.lots || 4 }}
