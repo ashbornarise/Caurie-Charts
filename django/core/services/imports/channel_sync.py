@@ -25,11 +25,11 @@ def _enc(s) -> str:
 # Vidéos d'une chaîne d'artiste qui ne sont pas des titres (relecture de toutes les chaînes, 02/11/2026)
 PAS_UN_TITRE = re.compile(r"#|https?://|\b(live|soir[ée]e|show ?case|concert|vlog|interview|prestation|teaser|trailer|"
                           r"r[ée]action|behind the scenes|making of|podcast|documentaire|documentary|conf[ée]rence|"
-                          r"euro tour|tour|sermon|worship|prayer|livestream|tournage|drops?|out now|dispo|lyrics?|paroles)\b", re.I)
+                          r"euro tour|tour|sermon|worship|prayer|livestream|tournage|drops?|out now|dispo|lyrics?|paroles|tiktok|rendez-vous|[ée]pisode|story|improv|mise [àa] jour|annonce)\b", re.I)
 
 
 class YouTubeChannelSync:
-    SEARCHES = 8  # recherches par nom (100 unités) par passage, en dernier recours
+    SEARCHES = 20  # recherches par nom (100 unités) par passage, en dernier recours (8 → 20 le 02/11/2026 : 65 chaînes « Topic » à remplacer)
 
     def __init__(self, http):
         self.http = http
@@ -160,6 +160,9 @@ class YouTubeChannelSync:
                 for c in dict.fromkeys([*cands, *([pick] if pick else [])]):
                     if c and c not in found and self.confirms(c, artist_id, key):
                         found.append(c)
+        # Jamais une chaîne « Topic » : générée par YouTube, elle n'a aucune vidéo à elle, donc aucun nouveau clip à voir
+        # (81 artistes bloqués ainsi le 02/11/2026, dont Toofan, King Mensah, Kizz Daniel)
+        found = [f for f in found if not re.search(r"-\s*topic\s*$", titles.get(f, "") or "", re.I)]
         if len(found) <= 1:
             return found[0] if found else None
         if not YouTubeQuota.spend(1):
