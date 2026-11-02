@@ -977,3 +977,9 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
     .site-header, .site-nav a, .header-cta, .pied__reseaux a, .rail-fleche, .button, .acc-one, .acc-one__cover img, .acc-artiste__photo { transition: none; }
     .header-cta:hover, .button:hover, .acc-one:hover, .acc-one:hover .acc-one__cover img, .acc-artiste:hover .acc-artiste__photo { transform: none; }
 }
+/* Contour des cartes plus marqué (demande du 02/11/2026 : plus de contraste et de visibilité) */
+:root { --ciel-bord: #8FC3EF; }
+.acc-chart, .acc-n1, .acc-one, .acc-fin__card { border: 1.5px solid var(--ciel-bord); box-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 12px 28px -20px rgba(40, 100, 170, .55); }
+.acc-chart:hover, .acc-n1:hover { border-color: #6FAEE6; }
+.acc-fin__card--violet { border-color: rgba(139, 82, 255, .55); }
+.acc-chart .entry--top { border: 1.5px solid rgba(139, 82, 255, .55); }
