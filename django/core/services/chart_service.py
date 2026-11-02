@@ -373,7 +373,7 @@ class ChartService:
         return int(db.value("SELECT COUNT(*) FROM weekly_scores WHERE country_id = ? AND week_start = ? AND review_status = 'pending' AND score > 0",
                             [cid, week_start]))
 
-    def publish(self, country_code: str, period_type: str, period_key: str, user_id: int, ip: str | None = None) -> int:
+    def publish(self, country_code: str, period_type: str, period_key: str, user_id: int, ip: str | None = None, force: bool = False) -> int:
         """Publie ensemble les classements hebdomadaires d'un pays ; mois et année suivent automatiquement."""
         if period_type != "week":
             raise RuntimeError("Les mois et les années se publient automatiquement avec leurs semaines.")
@@ -383,8 +383,10 @@ class ChartService:
         # Seuls comptent les titres signalés qui peuvent paraître au classement (taille + 10) ; un titre 300e ne bloque plus
         from core.services import revue_ia
         pending = len(revue_ia.en_attente(country["code"], period.start))
-        if pending > 0:
+        if pending > 0 and not force:
             raise RuntimeError(f"{pending} titre(s) à vérifier : validez ou excluez-les avant de publier.")
+        # force : publication automatique du mardi (décision du fondateur, 02/11/2026) ; les titres restés douteux après
+        # la revue Google restent « à vérifier » dans l'admin, une exclusion ultérieure recalcule la semaine publiée
         count = db.run("""UPDATE chart_runs SET status = 'published', published_at = ?, published_by = ?
                           WHERE country_id = ? AND period_type = ? AND period_key = ? AND status = 'draft'""",
                        [now_utc(), user_id, cid, period_type, period_key])

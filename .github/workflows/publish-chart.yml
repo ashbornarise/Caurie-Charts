@@ -1,10 +1,12 @@
 name: Publication du classement officiel
 on:
+  schedule:
+    - cron: "0 8 * * 2"   # chaque mardi 8 h UTC : publication automatique, sans attendre le fondateur (sa décision du 02/11/2026)
   workflow_dispatch:
     inputs:
       week:
         description: "Semaine ISO (ex. 2026-W42)"
-        required: true
+        required: false
         type: string
       country:
         description: "Code pays (TG, GH, NG…) ou vide = tous les pays prêts"
@@ -51,6 +53,14 @@ jobs:
       - name: Publier
         working-directory: django
         run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Rattrapage des 2 semaines d'avant restées en brouillon (sans envoi), puis la semaine passée (avec ses envois)
+            for k in 3 2; do
+              python manage.py publish_chart --week=$(date -u -d "$k weeks ago" +%G-W%V) --auto --sans-envois || true
+            done
+            python manage.py publish_chart --week=$(date -u -d "7 days ago" +%G-W%V) --auto
+            exit 0
+          fi
           ARGS="--week=${{ inputs.week }}"
           if [ -n "${{ inputs.country }}" ]; then
             ARGS="$ARGS --country=${{ inputs.country }}"

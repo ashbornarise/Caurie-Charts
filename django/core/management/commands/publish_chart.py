@@ -20,6 +20,10 @@ class Command(BaseCommand):
         p.add_argument("--clips-only", action="store_true",
                        help="Crée uniquement les clips N°1 (pas de publication ni de post)")
         p.add_argument("--sans-revue", action="store_true", help="Ne pas faire trancher les titres signalés par l'IA")
+        p.add_argument("--auto", action="store_true",
+                       help="Publication automatique : après la revue Google, les titres encore douteux ne bloquent pas")
+        p.add_argument("--sans-envois", action="store_true",
+                       help="Rattrapage d'une ancienne semaine : ni Telegram, ni clips, ni post officiel")
 
     def handle(self, *args, **o):
         def task():
@@ -66,11 +70,14 @@ class Command(BaseCommand):
                     except Exception as exc:  # noqa: BLE001
                         out(f"{code} revue IA impossible : {exc}")
                 try:
-                    n = service.publish(code, "week", week, 1)
+                    n = service.publish(code, "week", week, 1, force=o["auto"])
                 except Exception as exc:
                     out(f"{code} : {exc}")
                     continue
-                if n:
+                if n and o["sans_envois"]:
+                    publies.append(code)
+                    out(f"{code} : {n} classement(s) publié(s) (rattrapage, sans envoi)")
+                elif n:
                     publies.append(code)
                     out(f"{code} : {n} classement(s) publié(s)")
                     from core.services import telegram
@@ -87,6 +94,8 @@ class Command(BaseCommand):
                         out(f"{code} Studio clips : {exc}")
                 else:
                     out(f"{code} : déjà publié ou pas de brouillon")
+            if o["sans_envois"]:
+                return [f"{len(publies)} pays publié(s) : {', '.join(publies)}"] if publies else ["rien à publier"]
             from datetime import datetime, timedelta, timezone
             from core.services.social import officiel as O
             maintenant = datetime.now(timezone.utc)
