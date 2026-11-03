@@ -53,7 +53,9 @@ jobs:
       - name: Publier
         working-directory: django
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
+          # planifié, ou lancé à la main sans semaine : même publication automatique du mardi (03/11/2026 : la planification
+          # toute neuve n'avait pas démarré)
+          if [ "${{ github.event_name }}" = "schedule" ] || [ -z "${{ inputs.week }}" ]; then
             # Rattrapage des 2 semaines d'avant restées en brouillon (sans envoi), puis la semaine passée (avec ses envois)
             for k in 3 2; do
               python manage.py publish_chart --week=$(date -u -d "$k weeks ago" +%G-W%V) --auto --sans-envois || true

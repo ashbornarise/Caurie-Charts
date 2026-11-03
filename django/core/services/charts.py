@@ -290,8 +290,25 @@ class ChartRanker:
     def eligible(items: list) -> list:
         return [i for i in items if i["score"] > 0 and (i.get("review_status") or "ok") != "excluded"]
 
-    def prime(self, items: list, size: int, previous: dict | None = None, country_cap: int | None = None) -> list:
-        ordered = self.apply_diversity(sorted(self.eligible(items), key=self.sort_key))
+    @staticmethod
+    def sans_anciens(items: list, ref: str | None = None) -> list:
+        """Règle du fondateur (03/11/2026) : un titre sorti il y a plus d'un an quitte le Top (il reste dans « Classiques »),
+        sauf retour en grâce — ses points de la semaine ont bondi d'au moins 50 % par rapport à la semaine d'avant.
+        Date inconnue : celle de la mise en ligne du clip YouTube ; sans aucune date, le titre reste."""
+        from datetime import date, timedelta
+        limite = ((date.fromisoformat(ref[:10]) if ref else date.today()) - timedelta(days=365)).isoformat()
+        garde = []
+        for i in items:
+            sortie = str(i.get("release_date") or "")[:10]
+            ancien = bool(sortie) and sortie < limite
+            regain = float(i.get("prev_score") or 0) > 0 and float(i["score"]) >= 1.5 * float(i["prev_score"])
+            if not ancien or regain:
+                garde.append(i)
+        return garde
+
+    def prime(self, items: list, size: int, previous: dict | None = None, country_cap: int | None = None,
+              ref: str | None = None) -> list:
+        ordered = self.apply_diversity(sorted(self.sans_anciens(self.eligible(items), ref), key=self.sort_key))
         if country_cap:
             ordered = self.cap_per_country(ordered, size, country_cap)
         return self._finalize(ordered[:size], previous or {}, "track_id")

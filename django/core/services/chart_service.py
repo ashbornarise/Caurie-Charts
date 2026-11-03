@@ -44,7 +44,7 @@ class ChartService:
         charts = conf.get("charts")
         cid = int(country["id"])
 
-        prime = ranker.prime(items, self._size("prime", size), self._history("prime", cid, "week", period.start))
+        prime = ranker.prime(items, self._size("prime", size), self._history("prime", cid, "week", period.start), ref=period.end)
         results = {"prime": prime}
         prime_ids = [e["track_id"] for e in prime]
         if charts["buzz"]["computed"]:
@@ -75,7 +75,7 @@ class ChartService:
         cid = int(country["id"])
         active = [p.strip() for p in (country["platforms"] or "").split(",") if p.strip()]
         calc = ScoreCalculator(formula)
-        tracks = db.all("""SELECT t.id, t.artist_id, t.release_date, a.is_emerging
+        tracks = db.all("""SELECT t.id, t.artist_id, COALESCE(t.release_date, (SELECT MIN(px.published_at) FROM track_platform_ids px WHERE px.track_id = t.id AND px.platform = 'youtube')) AS release_date, a.is_emerging
                            FROM tracks t JOIN artists a ON a.id = t.artist_id
                            WHERE a.submission_country_id = ? AND t.is_active = 1 AND a.status = 'active'""", [cid])
         if not tracks:
@@ -288,7 +288,7 @@ class ChartService:
         if not published:
             return None
         rows = db.all(
-            f"""SELECT ws.track_id, t.artist_id, t.release_date, ws.score, ws.sources_count, ws.breakdown, a.base_country AS country,
+            f"""SELECT ws.track_id, t.artist_id, COALESCE(t.release_date, (SELECT MIN(px.published_at) FROM track_platform_ids px WHERE px.track_id = t.id AND px.platform = 'youtube')) AS release_date, ws.score, ws.sources_count, ws.breakdown, a.base_country AS country,
                    (SELECT p.score FROM weekly_scores p WHERE p.track_id = ws.track_id AND p.week_start = ?) AS prev_score
                 FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id JOIN artists a ON a.id = t.artist_id
                 WHERE ws.week_start = ? AND ws.country_id IN ({', '.join(['?'] * len(published))}) AND ws.review_status <> 'excluded'""",
@@ -306,7 +306,7 @@ class ChartService:
         complete = len(published) >= min(countries, eligibles)
         formula = formula_effective_for(week.start)
         entries = ChartRanker(formula).prime(items, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, "week", week.start),
-                                             conf.get("charts.prime-wa.country_cap"))
+                                             conf.get("charts.prime-wa.country_cap"), ref=week.end)
         with db.atomic():
             self._save_run("prime-wa", None, week, formula, entries, not complete, None, user_id, True)
             if complete:
