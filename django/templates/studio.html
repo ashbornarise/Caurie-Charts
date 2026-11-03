@@ -160,6 +160,64 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 .alerte{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border-radius:16px;border:1.5px solid #F0A79E;background:#FFF1EF;color:#7A1A10;font:inherit;cursor:pointer}
 .alerte span{display:grid;flex:1;min-width:0}.alerte small{color:#A4271B;font-size:.82rem}
 .alerte em{font-style:normal;font-weight:800;padding:6px 12px;border-radius:999px;background:#A4271B;color:#fff;white-space:nowrap}
+/* ===== Thème clair du site (03/11/2026) : blanc dominant, bleu ciel en verre, violet pour les actions ===== */
+:root{
+  --fond:#F7FAFF;--fond2:#EAF5FF;--carte:#ffffff;--carte-forte:#F2F7FD;--trait:rgba(120,180,235,.45);
+  --texte:#0E1228;--doux:#4B5577;--faible:#7A84A3;--violet:#7A3CF5;--violet-clair:#7A3CF5;--ciel:#1D9BF0;--vert:#16A34A;--rouge:#C0362C
+}
+html,body{background:var(--fond);color:var(--texte)}
+body{background:linear-gradient(180deg,#EAF5FF 0,#F7FAFF 260px,#fff 100%)}
+input,textarea,select{color:var(--texte)}
+.carte{background:#fff;border:1px solid var(--trait);box-shadow:0 10px 28px -22px rgba(40,90,160,.6)}
+.champ,.duree input,.texte input,.texte textarea,.texte select{background:#F7FAFF;border-color:var(--trait);color:var(--texte)}
+.texte select option{background:#fff;color:var(--texte)}
+.champ:focus-within,.duree input:focus,.texte input:focus,.texte textarea:focus{border-color:var(--violet);box-shadow:0 0 0 4px rgba(122,60,245,.14)}
+.coller{background:var(--violet);color:#fff}
+.apercu-lien{background:#F2F7FD}.apercu-lien img,.apercu-lien .vide{background:#EAF5FF}
+.plat{background:#EAF5FF;color:#0B6FBF}
+.format{background:#fff;border-color:var(--trait)}
+.format.actif{background:rgba(122,60,245,.08);border-color:var(--violet);color:#5B2BD6}
+.puce{background:#fff;border-color:var(--trait);color:var(--doux)}
+.puce.actif{background:rgba(122,60,245,.08);border-color:var(--violet);color:#5B2BD6}
+.bascule{background:#D5DCEA}
+.btn{color:#fff;background:linear-gradient(135deg,#A57BFF,#7A3CF5);box-shadow:0 12px 26px -10px rgba(122,60,245,.7)}
+.btn.vert{color:#fff;background:linear-gradient(135deg,#34D399,#16A34A)}
+.btn.second{background:#fff;color:var(--texte);border:1.5px solid var(--trait);box-shadow:none}
+.nav{background:rgba(255,255,255,.9);border-top:1px solid var(--trait);box-shadow:0 -10px 30px -24px rgba(40,90,160,.6)}
+.nav div{grid-template-columns:repeat(6,1fr)}
+.nav button{color:var(--faible)}.nav button.actif{color:#5B2BD6}.nav button.actif svg{color:#7A3CF5}
+.etape .rond{border-color:#D5DCEA}.etape.faite .rond{color:#fff}.etape.cours{color:var(--texte)}
+.barre{background:#EAF5FF}
+.telephone{background:#0E1228;box-shadow:0 0 0 2px #D5DCEA,0 30px 60px -20px rgba(40,90,160,.6)}
+.reseaux span{background:#fff;border:1px solid var(--trait)}
+.msg.err{background:#FFF1EF;color:#A4271B}.msg.ok{background:#E7F4EC;color:#155C2C}
+.vignette .cadre{background:#EAF5FF}
+.statut{background:rgba(255,255,255,.92);color:var(--texte)}
+.statut.pret{color:#0B6FBF}.statut.envoye{color:#15803D}.statut.erreur{color:#B42318}.statut.cours{color:#5B2BD6}
+code{background:#F2F7FD;color:#3E1A9E}
+.voile{background:rgba(14,18,40,.35)}
+.feuille{background:#fff}.poignee{background:#D5DCEA}
+.choix{background:#fff}
+.vert-p{background:#E7F4EC;color:#15803D}.violet-p{background:rgba(122,60,245,.1);color:#7A3CF5}
+.galerie button{background:#EAF5FF}.galerie .coche{background:rgba(255,255,255,.7);border-color:#fff}
+.idee .vignettes img{border-color:#fff}
+.choix-artiste button{background:#F7FAFF}
+.artiste-choisi{background:rgba(122,60,245,.07);border-color:rgba(122,60,245,.35)}
+.verrou img{box-shadow:0 20px 50px -18px rgba(122,60,245,.7)}
+.empreinte{background:rgba(122,60,245,.08);border-color:rgba(122,60,245,.35);color:#7A3CF5}
+.marque span{color:var(--doux)}
+/* Accueil : une tuile par outil, ce qu'il fait en une phrase */
+.tuiles{display:grid;gap:12px}
+.tuile{display:flex;gap:14px;align-items:center;width:100%;text-align:left;padding:16px;border-radius:20px;background:#fff;border:1px solid var(--trait);
+  box-shadow:0 10px 28px -22px rgba(40,90,160,.6);transition:transform .15s ease}
+.tuile:active{transform:scale(.98)}
+.tuile .ic{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;flex:none;color:#fff;background:linear-gradient(135deg,#A57BFF,#7A3CF5)}
+.tuile .ic.ciel{background:linear-gradient(135deg,#7CCBFF,#1D9BF0)}
+.tuile b{display:block;font-size:16px}.tuile small{color:var(--doux);font-size:13px;line-height:1.35}
+.tuile .fl{margin-left:auto;color:var(--faible)}
+.compteurs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+.compteurs div{background:#fff;border:1px solid var(--trait);border-radius:16px;padding:10px 12px}
+.compteurs b{display:block;font-size:22px;color:#5B2BD6}.compteurs small{color:var(--doux);font-size:12px;font-weight:600}
 </style>
 </head>
 <body>
@@ -170,6 +228,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <symbol id="i-presse" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></symbol>
   <symbol id="i-lien" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
   <symbol id="i-envoi" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></symbol>
+  <symbol id="i-maison" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
   <symbol id="i-magie" viewBox="0 0 24 24"><path d="m15 4-1 1M19 8l1-1M4 20 14 10M17 3v2M21 7h-2M18 11l1 1M12 6l1-1"/><path d="m14 10 2 2"/></symbol>
   <symbol id="i-texte" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></symbol>
   <symbol id="i-bas" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
@@ -203,8 +262,22 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
   <!-- Alertes « photo à trouver » : restent jusqu'au clic (02/11/2026) -->
   <div id="alertes" class="alertes" style="display:none"></div>
 
+  <!-- ÉCRAN ACCUEIL (03/11/2026) : chaque outil en une tuile, ce qu'il fait en une phrase -->
+  <section class="ecran vu" id="e-accueil">
+    <h1 class="titre">Que veux-tu publier ?</h1>
+    <p class="sous">Choisis un outil. Tout ce que tu lances continue même si tu fermes l'appli, et t'attend dans « Créations ».</p>
+    <div class="compteurs"><div><b id="cpt-cours">–</b><small>en cours</small></div><div><b id="cpt-prets">–</b><small>prêtes à envoyer</small></div><div><b id="cpt-choix">–</b><small>à choisir</small></div></div>
+    <div class="tuiles">
+      <button class="tuile" data-va="creer"><span class="ic"><svg class="i"><use href="#i-film"/></svg></span><span><b>Vidéo d'un clip</b><small>Un lien YouTube, TikTok ou Instagram : Cauri coupe le meilleur passage et l'habille.</small></span><svg class="i fl"><use href="#i-plus"/></svg></button>
+      <button class="tuile" data-va="annonce"><span class="ic ciel"><svg class="i"><use href="#i-annonce"/></svg></span><span><b>Annonce en images</b><small>Une actu chaude : les images d'un post ou de ton téléphone, en carrousel.</small></span><svg class="i fl"><use href="#i-plus"/></svg></button>
+      <button class="tuile" data-va="vedette"><span class="ic"><svg class="i"><use href="#i-magie"/></svg></span><span><b>Mettre en valeur un artiste</b><small>Ses plus belles photos de la banque, 10 modèles de visuels, en un post ou un carrousel.</small></span><svg class="i fl"><use href="#i-plus"/></svg></button>
+      <button class="tuile" data-va="photos"><span class="ic ciel"><svg class="i"><use href="#i-photo"/></svg></span><span><b>Photos d'artistes</b><small>Ajouter des photos à la banque d'un artiste, ou trier celles qui attendent.</small></span><svg class="i fl"><use href="#i-plus"/></svg></button>
+      <button class="tuile" data-va="videos"><span class="ic"><svg class="i"><use href="#i-film"/></svg></span><span><b>Mes créations</b><small>Tout ce que tu as lancé, avec son état : en cours, prête, à choisir, publiée.</small></span><svg class="i fl"><use href="#i-plus"/></svg></button>
+    </div>
+  </section>
+
   <!-- ÉCRAN CRÉER -->
-  <section class="ecran vu" id="e-creer">
+  <section class="ecran" id="e-creer">
     <h1 class="titre">Nouvelle vidéo</h1>
     <p class="sous">Colle un lien : Cauri l'habille et l'envoie partout.</p>
 
@@ -488,7 +561,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 
   <!-- ÉCRAN MES VIDÉOS -->
   <section class="ecran" id="e-videos">
-    <h1 class="titre">Mes vidéos</h1>
+    <h1 class="titre">Mes créations</h1>
     <p class="sous">Tes vidéos et tes mises en valeur (les plus récentes d’abord), avec leur état : en cours, prête, à choisir, publiée.</p>
     <div class="grille" id="grille"></div>
   </section>
@@ -560,10 +633,11 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 </div>
 
 <nav class="nav"><div>
-  <button class="actif" data-ecran="creer"><svg class="i"><use href="#i-plus"/></svg>Créer</button>
+  <button class="actif" data-ecran="accueil"><svg class="i"><use href="#i-maison"/></svg>Accueil</button>
+  <button data-ecran="creer"><svg class="i"><use href="#i-plus"/></svg>Vidéo</button>
   <button data-ecran="annonce"><svg class="i"><use href="#i-annonce"/></svg>Annonce</button>
   <button data-ecran="photos"><svg class="i"><use href="#i-photo"/></svg>Photos<span class="badge" id="badge-photos" style="display:none"></span></button>
-  <button data-ecran="videos"><svg class="i"><use href="#i-film"/></svg>Mes vidéos</button>
+  <button data-ecran="videos"><svg class="i"><use href="#i-film"/></svg>Créations</button>
   <button data-ecran="reglages"><svg class="i"><use href="#i-reglages"/></svg>Réglages</button>
 </div></nav>
 {% endif %}
@@ -610,12 +684,12 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   post('/verrouiller').finally(() => location.reload());
 } else if ($('.app')) {
   // ---------------- navigation par onglets
-  let ecran = 'creer', jobEnCours = null;
+  let ecran = 'accueil', jobEnCours = null;
   function montre(nom) {
     ecran = nom; $$('.ecran').forEach(e => e.classList.toggle('vu', e.id === 'e-' + nom));
     $$('.nav button').forEach(b => b.classList.toggle('actif', b.dataset.ecran === (nom === 'suivi' ? 'creer' : nom === 'vedette' ? 'annonce' : nom)));
     window.scrollTo({top: 0}); action();
-    if (nom === 'videos') grille(); if (nom === 'reglages') reglages();
+    if (nom === 'videos') grille(); if (nom === 'reglages') reglages(); if (nom === 'accueil') compteurs(); if (nom === 'vedette') veListe();
   }
   // alertes : artiste sans photo nette -> clic = onglet Photos, artiste déjà recherché
   async function alertes() {
@@ -632,6 +706,17 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     });
   }
   alertes();
+  // accueil : tuiles et compteurs (03/11/2026)
+  $$('#e-accueil .tuile').forEach(b => b.onclick = () => { vibre(); montre(b.dataset.va); });
+  async function compteurs() {
+    try {
+      const d = await get('/historique'); const j = d.jobs || [];
+      $('#cpt-cours').textContent = j.filter(x => EN_COURS.includes(x.statut)).length;
+      $('#cpt-prets').textContent = j.filter(x => x.statut === 'pret' || x.statut === 'a_valider').length;
+      $('#cpt-choix').textContent = j.filter(x => x.statut === 'a_choisir').length;
+    } catch (e) {}
+  }
+  setTimeout(compteurs, 400);
 
   // ---------------- mise en valeur d'un artiste (02/11/2026)
   const ve = {artiste: null, photo: null, photos: [], job: null, choix: [], minuterie: null};
