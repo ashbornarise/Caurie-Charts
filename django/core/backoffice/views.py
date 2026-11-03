@@ -147,7 +147,6 @@ def logout(request):
 
 # ---------------------------------------------------------------- tableau de bord, journal, messages
 
-@admin_view()
 def _derniere_nuit() -> dict | None:
     """La dernière nuit : durée, étapes en échec avec leurs messages (gardés depuis le 03/11/2026)."""
     import json
@@ -160,6 +159,7 @@ def _derniere_nuit() -> dict | None:
                         if not e[1] or (len(e) > 3 and e[3])]}
 
 
+@admin_view()
 def dashboard(request):
     return admin_render(request, "dashboard", {
         "nuit": _derniere_nuit(),
