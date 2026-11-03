@@ -155,6 +155,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
 .ve-vignette img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover}
 .ve-vignette span{position:absolute;left:6px;bottom:6px;right:6px;font-size:11px;font-weight:700;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.88);color:#0E1228}
 .ve-vignette.choisi{border-color:#7A3CF5;box-shadow:0 0 0 3px rgba(122,60,245,.25)}
+.ve-vignette[data-ordre]:not([data-ordre=""])::after{content:attr(data-ordre);position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;background:#7A3CF5;color:#fff;font:800 12px/24px system-ui;text-align:center}
 .alertes{display:grid;gap:8px;margin:0 0 14px}
 .alerte{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border-radius:16px;border:1.5px solid #F0A79E;background:#FFF1EF;color:#7A1A10;font:inherit;cursor:pointer}
 .alerte span{display:grid;flex:1;min-width:0}.alerte small{color:#A4271B;font-size:.82rem}
@@ -405,7 +406,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
       <p id="ve-artiste" style="margin:8px 0 0;font-weight:700"></p>
     </div>
     <div class="carte" id="ve-etape-photo" style="display:none">
-      <div class="etiq">2 · Photo <span style="text-transform:none;font-weight:600;color:var(--faible)">· les mieux notées d'abord</span></div>
+      <div class="etiq">2 · Photos <span style="text-transform:none;font-weight:600;color:var(--faible)">· touche pour en choisir une ou plusieurs (carrousel)</span></div>
       <div class="ve-grille" id="ve-photos"></div>
     </div>
     <div class="carte texte" id="ve-etape-textes" style="display:none">
@@ -423,7 +424,7 @@ code{display:block;background:rgba(0,0,0,.35);padding:10px;border-radius:10px;fo
       <button class="btn" id="ve-generer" style="margin-top:10px"><svg class="i"><use href="#i-magie"/></svg>Voir les visuels</button>
     </div>
     <div class="carte" id="ve-etape-choix" style="display:none">
-      <div class="etiq">4 · Choisis le visuel</div>
+      <div class="etiq">4 · Choisis un ou plusieurs visuels <span style="text-transform:none;font-weight:600;color:var(--faible)">· ils ouvrent le carrousel</span></div>
       <p id="ve-attente" style="margin:0;color:var(--doux)"></p>
       <div class="ve-grille ve-grille--apercus" id="ve-apercus"></div>
     </div>
@@ -633,7 +634,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   alertes();
 
   // ---------------- mise en valeur d'un artiste (02/11/2026)
-  const ve = {artiste: null, photo: null, job: null, choix: null, minuterie: null};
+  const ve = {artiste: null, photo: null, photos: [], job: null, choix: [], minuterie: null};
   $('#ve-ouvrir').onclick = () => { vibre(); montre('vedette'); veListe(); };
   const VE_ETATS = {attente: 'En file', montage: 'Fabrication…', a_choisir: 'À choisir', envoye: 'Publié', erreur: 'Échec'};
   // reprise après avoir quitté l'appli (02/11/2026) : la liste des dernières, et la dernière en cours rouverte toute seule
@@ -660,7 +661,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   }
   function veReprendre(j) {
     if (!j) return;
-    ve.job = j.id; ve.choix = j.choix || null; ve.artiste = {id: j.artiste_id, nom: j.artiste};
+    ve.job = j.id; ve.choix = Array.isArray(j.choix) ? j.choix : (j.choix ? [j.choix] : []); ve.artiste = {id: j.artiste_id, nom: j.artiste};
     try { localStorage.setItem('ve-job', String(j.id)); } catch (e) {}
     $('#ve-artiste').textContent = j.artiste || '';
     $('#ve-titre').value = j.textes.titre || ''; $('#ve-sur').value = j.textes.sur_titre || '';
@@ -668,7 +669,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     $('#ve-etape-textes').style.display = ''; $('#ve-etape-choix').style.display = '';
     $('#ve-apercus').innerHTML = ''; $('#ve-etape-publier').style.display = 'none';
     if (j.statut === 'erreur') { $('#ve-attente').textContent = j.erreur || 'Échec de la fabrication.'; return; }
-    if (j.statut === 'envoye') { $('#ve-attente').textContent = 'Déjà publiée.'; }
+    if (j.statut === 'envoye') { $('#ve-attente').textContent = 'Déjà publiée : touche « Republier » pour la renvoyer.'; }
     else $('#ve-attente').textContent = j.statut === 'a_choisir' ? '' : 'Fabrication des visuels… ils arrivent ici dès qu’ils sont prêts.';
     clearInterval(ve.minuterie); veSuivre(); if (j.statut !== 'a_choisir' && j.statut !== 'envoye') ve.minuterie = setInterval(veSuivre, 5000);
     $('#ve-etape-choix').scrollIntoView({behavior: 'smooth'});
@@ -688,8 +689,14 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     const r = await post('/vedette/preparer', {artiste_id: a.id});
     if (r.erreur) { message('#msg-vedette', r.erreur, false); return; }
     $('#ve-photos').innerHTML = r.photos.map((p, i) => '<button class="ve-vignette" data-i="' + i + '"><img src="' + p.url + '" alt="" loading="lazy"></button>').join('');
-    $$('#ve-photos .ve-vignette').forEach(b => b.onclick = () => { vibre(); ve.photo = r.photos[+b.dataset.i];
-      $$('#ve-photos .ve-vignette').forEach(x => x.classList.toggle('choisi', x === b)); $('#ve-credit').value = ve.photo.credit || ''; });
+    // plusieurs photos (03/11/2026) : la 1re touchée porte le visuel, les autres suivent dans le carrousel
+    ve.photos = [];
+    $$('#ve-photos .ve-vignette').forEach(b => b.onclick = () => { vibre(); const p = r.photos[+b.dataset.i];
+      const i = ve.photos.indexOf(p);
+      if (i >= 0) ve.photos.splice(i, 1); else if (ve.photos.length < 10) ve.photos.push(p);
+      b.classList.toggle('choisi', ve.photos.includes(p));
+      $$('#ve-photos .ve-vignette').forEach(x => { const n = ve.photos.indexOf(r.photos[+x.dataset.i]); x.dataset.ordre = n >= 0 ? n + 1 : ''; });
+      ve.photo = ve.photos[0] || null; $('#ve-credit').value = (ve.photo && ve.photo.credit) || ''; });
     $('#ve-photos .ve-vignette').click();
     $('#ve-titre').value = r.textes.titre || ''; $('#ve-sur').value = r.textes.sur_titre || '';
     $('#ve-bas').value = r.textes.bas || ''; $('#ve-chiffre').value = r.textes.chiffre || '';
@@ -716,9 +723,9 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     if (!modeles.length) { message('#msg-vedette', 'Coche au moins un modèle.', false); return; }
     vibre(); message('#msg-vedette', '');
     const r = await post('/vedette/apercus', {artiste_id: ve.artiste.id, artiste_nom: ve.artiste.nom, photo: ve.photo.url, photo_id: ve.photo.id,
-                                              textes: veTextes(), modeles});
+                                              photos: ve.photos, textes: veTextes(), modeles});
     if (r.erreur) { message('#msg-vedette', r.erreur, false); return; }
-    ve.job = r.id; ve.choix = null; $('#ve-apercus').innerHTML = ''; $('#ve-etape-choix').style.display = '';
+    ve.job = r.id; ve.choix = []; $('#ve-apercus').innerHTML = ''; $('#ve-etape-choix').style.display = '';
     try { localStorage.setItem('ve-job', String(r.id)); } catch (e) {}
     $('#ve-etape-publier').style.display = 'none';
     $('#ve-attente').textContent = 'Fabrication des visuels (détourage de la photo)… environ 2 à 4 minutes.';
@@ -728,18 +735,29 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   async function veSuivre() {
     const j = await get('/job/' + ve.job);
     if (j.statut === 'erreur') { clearInterval(ve.minuterie); $('#ve-attente').textContent = j.erreur || 'Échec de la fabrication.'; return; }
-    if (j.statut === 'envoye') { clearInterval(ve.minuterie); message('#msg-vedette', 'Publié !', true);
+    if (j.statut === 'envoye' && !$('#ve-apercus .ve-vignette')) veAffiche(j);
+    if (j.statut === 'envoye') { clearInterval(ve.minuterie); message('#msg-vedette', 'Publié ! Tu peux republier quand tu veux.', true);
+      $('#ve-publier').lastChild.textContent = 'Republier'; $('#ve-etape-publier').style.display = '';
       try { localStorage.removeItem('ve-job'); } catch (e) {} veListe(); return; }
     if (j.statut !== 'a_choisir') return;
+    veAffiche(j);
+  }
+  function veAffiche(j) {
     clearInterval(ve.minuterie); $('#ve-attente').textContent = '';
     $('#ve-apercus').innerHTML = (j.params.apercus || []).map(a => '<button class="ve-vignette" data-m="' + a.modele + '"><img src="' + a.url + '" alt=""><span>' + a.nom + '</span></button>').join('');
-    $$('#ve-apercus .ve-vignette').forEach(b => b.onclick = () => { vibre(); ve.choix = b.dataset.m;
-      $$('#ve-apercus .ve-vignette').forEach(x => x.classList.toggle('choisi', x === b)); $('#ve-etape-publier').style.display = '';
-      $('#ve-etape-publier').scrollIntoView({behavior: 'smooth'}); });
+    // plusieurs visuels (03/11/2026) : chacun ouvre le carrousel, dans l'ordre touché
+    const deja = Array.isArray(j.params.choix) ? j.params.choix : (j.params.choix ? [j.params.choix] : []);
+    ve.choix = deja.slice();
+    $$('#ve-apercus .ve-vignette').forEach(b => { b.classList.toggle('choisi', ve.choix.includes(b.dataset.m));
+      b.onclick = () => { vibre(); const i = ve.choix.indexOf(b.dataset.m);
+        if (i >= 0) ve.choix.splice(i, 1); else ve.choix.push(b.dataset.m);
+        b.classList.toggle('choisi', ve.choix.includes(b.dataset.m));
+        $('#ve-etape-publier').style.display = ve.choix.length ? '' : 'none'; }; });
+    if (ve.choix.length) $('#ve-etape-publier').style.display = '';
   }
   $$('#ve-reseaux .puce').forEach(b => b.onclick = () => { vibre(); b.classList.toggle('actif'); });
   $('#ve-publier').onclick = async () => {
-    if (!ve.choix) { message('#msg-vedette', 'Touche le visuel à publier.', false); return; }
+    if (!ve.choix.length) { message('#msg-vedette', 'Touche au moins un visuel à publier.', false); return; }
     vibre();
     const r = await post('/vedette/' + ve.job + '/publier', {choix: ve.choix, textes: veTextes(), legende_fr: $('#ve-fr').value,
                                                             reseaux: $$('#ve-reseaux .puce.actif').map(b => b.dataset.r)});

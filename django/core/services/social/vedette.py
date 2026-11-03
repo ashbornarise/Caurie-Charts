@@ -393,7 +393,9 @@ def traite(job_id: int, job: dict, p: dict, maj) -> dict:
 
 
 def publie(job_id: int, job: dict, p: dict, maj) -> dict:
-    """Étape 2 : le modèle choisi en carré-portrait et en story, légende FR + EN, envoi via Buffer."""
+    """Étape 2 : carrousel (03/11/2026) — les visuels choisis (un par modèle coché, sur la 1re photo), puis les autres
+    photos choisies en plein cadre avec le logo ; carré-portrait et story ; légende FR + EN ; envoi via Buffer.
+    Republier : relancer cette étape (un nouveau post, thème suffixé -2, -3…)."""
     from datetime import datetime, timedelta, timezone
 
     from core.services import buffer
@@ -401,13 +403,27 @@ def publie(job_id: int, job: dict, p: dict, maj) -> dict:
     from core.services.social import image as PI
     from core.studio import theme_libre
     maj(job_id, statut="montage")
-    m = modeles().get(p.get("choix")) or BASE["geant"]
-    PI.DIR.mkdir(parents=True, exist_ok=True)
-    nom = f"vedette-{job_id}-final"
-    for fmt, suf in (("feed", ""), ("story", "-916")):
-        PI.save_jpeg(rendre(m, p["photo"], p.get("textes") or {}, fmt), PI.DIR / f"{nom}{suf}.jpg")
-    db.run("UPDATE artist_photos SET utilise_le = NOW() WHERE id = ?", [p.get("photo_id")])
+    tous = modeles()
+    choix = p.get("choix") or []
+    choix = [choix] if isinstance(choix, str) else list(choix)
+    choix = [k for k in choix if k in tous] or ["geant"]
+    photos = p.get("photos") or [{"url": p["photo"], "id": p.get("photo_id"), "credit": (p.get("textes") or {}).get("credit")}]
     t = p.get("textes") or {}
+    PI.DIR.mkdir(parents=True, exist_ok=True)
+    nom = f"vedette-{job_id}-{datetime.now(timezone.utc):%H%M%S}"
+    diapos = []
+    for n, k in enumerate(choix[:10]):
+        for fmt, suf in (("feed", ""), ("story", "-916")):
+            PI.save_jpeg(rendre(tous[k], photos[0]["url"], t, fmt), PI.DIR / f"{nom}-{n}{suf}.jpg")
+        diapos.append({"file": f"{nom}-{n}.jpg", "tiktok": f"{nom}-{n}-916.jpg", "label": tous[k].get("nom") or k})
+    for ph in photos[1:max(1, 10 - len(diapos) + 1)]:
+        n = len(diapos)
+        for fmt, suf in (("feed", ""), ("story", "-916")):
+            PI.save_jpeg(C.photo_simple(ph["url"], fmt, ph.get("credit") or ""), PI.DIR / f"{nom}-{n}{suf}.jpg")
+        diapos.append({"file": f"{nom}-{n}.jpg", "tiktok": f"{nom}-{n}-916.jpg", "label": "photo"})
+    ids = [ph.get("id") for ph in photos if ph.get("id")]
+    if ids:
+        db.run(f"UPDATE artist_photos SET utilise_le = NOW() WHERE id IN ({','.join(['?'] * len(ids))})", ids)
     artiste = p.get("artiste_nom") or t.get("sur_titre") or ""
     credit = f"\n\n📸 {t['credit']}" if t.get("credit") else ""
     legende = (p.get("legende_fr") or t.get("titre") or artiste) + credit
@@ -417,7 +433,7 @@ def publie(job_id: int, job: dict, p: dict, maj) -> dict:
     if p.get("legende_en"):
         faits["en"] = {"title": t.get("titre") or artiste, "caption": p["legende_en"] + credit}
     post = E.save_post(theme_libre(job_id, maintenant), maintenant.date().isoformat(), (t.get("titre") or artiste)[:160], legende,
-                       "#cauricharts", [{"file": f"{nom}.jpg", "tiktok": f"{nom}-916.jpg", "label": artiste}], faits)
+                       "#cauricharts", diapos, faits)
     resultat = buffer.schedule(post, maintenant + timedelta(minutes=2))
     recus = [r["reason"] for r in db.all("SELECT reason FROM audit_log WHERE reason LIKE ?", [f"post-{post['id']}-%"])]
     maj(job_id, statut="envoye" if recus else "erreur", post_id=post["id"],

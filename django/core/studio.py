@@ -1031,8 +1031,11 @@ def vedette_apercus(request, chemin):
     if not c.get("photo") or not c.get("artiste_id"):
         return _json({"erreur": "choisis l'artiste et une photo"}, 400)
     textes = {k: str((c.get("textes") or {}).get(k) or "").strip()[:120] for k in ("titre", "sur_titre", "bas", "chiffre", "credit")}
+    photos = [{"url": str(x.get("url") or "")[:500], "id": int(x.get("id") or 0) or None, "credit": str(x.get("credit") or "")[:120]}
+              for x in (c.get("photos") or []) if x.get("url")][:10]
     params = {"type": "vedette", "artiste_id": int(c["artiste_id"]), "artiste_nom": str(c.get("artiste_nom") or "")[:120],
               "photo": str(c["photo"])[:500], "photo_id": int(c.get("photo_id") or 0) or None, "textes": textes,
+              "photos": photos or [{"url": str(c["photo"])[:500], "id": int(c.get("photo_id") or 0) or None}],
               "modeles": [str(m)[:12] for m in (c.get("modeles") or [])][:12]}
     creer_tables()
     job_id = db.insert("studio_jobs", {"lien": "vedette", "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
@@ -1056,7 +1059,9 @@ def vedette_publier(request, chemin, ident):
         reseaux = reseaux_choisis(c)
     except ValueError as exc:
         return _json({"erreur": str(exc)}, 400)
-    p.update({"choix": str(c.get("choix") or "")[:12], "reseaux": reseaux, "notifier": bool(c.get("notifier")),
+    choix = c.get("choix") or []
+    choix = [choix] if isinstance(choix, str) else choix
+    p.update({"choix": [str(k)[:12] for k in choix][:10], "reseaux": reseaux, "notifier": bool(c.get("notifier")),
               **{k: str(c.get(k) or "").strip()[:900] for k in ("legende_fr", "legende_en")}})
     if c.get("textes"):
         p["textes"] = {k: str(c["textes"].get(k) or "").strip()[:120] for k in ("titre", "sur_titre", "bas", "chiffre", "credit")}
