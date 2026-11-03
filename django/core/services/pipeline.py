@@ -31,6 +31,10 @@ from core.services.social.generator import PostGenerator, purge_blob, purge_orph
 from core.services.social.editorial import DejaFait  # noqa: E402
 
 
+def lines_or(lignes: list, defaut: str) -> list:
+    return lignes or [defaut]
+
+
 class StepFailed(Exception):
     """Étape faite en partie (ex. post généré mais refusé par Buffer) : l'échec remonte, le compte rendu est gardé."""
 
@@ -216,6 +220,21 @@ class DailyPipeline:
             from core.services import analytics
             return [analytics.collect_post_metrics()]
         self._step("10i. Statistiques des publications (vues, portée, réactions)", stats)
+
+        if weekday == 3:
+            def revue_rattrapage():
+                """Mercredi : Google repasse sur les titres restés « à vérifier » de la semaine publiée mardi (budget du mardi
+                épuisé, 03/11/2026) ; une exclusion prouvée recalcule le classement publié."""
+                from datetime import timedelta
+                from core.services import revue_ia
+                debut = (clock.today() - timedelta(days=clock.today().weekday() + 7)).isoformat()
+                lignes = []
+                for c in db.all("SELECT code FROM countries WHERE is_active = 1 ORDER BY sort_order"):
+                    if revue_ia.en_attente(c["code"], debut):
+                        b = revue_ia.revoir(c["code"], debut)
+                        lignes.append(f"{c['code']} : {len(b['valides'])} validé(s), {len(b['exclus'])} exclu(s), {len(b['attente'])} en doute")
+                return lines_or(lignes, "rien à revoir")
+            self._step("7 bis. Revue Google de rattrapage (semaine publiée)", revue_rattrapage, 600)
 
         def jetons():   # jetons qui expirent (Meta, GitHub, TikTok) : e-mail 10 jours avant (03/11/2026)
             from core.services import jetons as J
