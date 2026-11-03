@@ -213,3 +213,10 @@ a.adm-etat:hover { transform: translateY(-1px); }
 .adm-fiche__actions { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 4px 0 0; font-size: .88rem; }
 .admin .button { white-space: nowrap; }
 .adm-petit { width: 5.5em; }
+
+/* La nuit dernière (03/11/2026) */
+.adm-carte--alerte { border-color: rgba(180, 35, 24, .35); background: linear-gradient(160deg, #fff 60%, #FFF1EF 100%); }
+.adm-nuit { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 8px; }
+.adm-nuit > li { padding: 10px 12px; border-radius: 10px; background: var(--ciel); font-size: .9rem; }
+.adm-nuit > li.adm-nuit--ko { background: #FFF1EF; }
+.adm-nuit ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink-2); font-size: .84rem; }

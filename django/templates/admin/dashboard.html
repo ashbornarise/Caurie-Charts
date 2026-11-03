@@ -51,6 +51,22 @@
 </section>
 {% endif %}
 
+{% if nuit %}
+<section class="adm-carte{{ ' adm-carte--alerte' if nuit.echecs }}">
+    <h2 class="flush">La nuit dernière</h2>
+    <p class="muted">{{ nuit.quand }} UTC · {{ nuit.minutes }} min · {% if nuit.echecs %}<strong>{{ nuit.echecs }} étape{{ 's' if nuit.echecs > 1 }} en échec</strong>{% else %}tout s’est bien passé{% endif %}</p>
+    {% if nuit.details %}
+    <ul class="adm-nuit">
+        {% for d in nuit.details %}
+        <li class="{{ 'adm-nuit--ko' if not d.ok }}"><strong>{{ d.etape }}</strong>
+            {% if d.messages %}<ul>{% for m in d.messages %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <p class="muted flush">L’historique des nuits est dans <a href="{{ path('admin/analyses') }}">Analyses</a>.</p>
+</section>
+{% endif %}
+
 <section class="adm-carte">
     <h2 class="flush">La semaine type</h2>
     <p class="muted">Presque tout est automatique. Voici ce qui se passe, et où vous intervenez.</p>

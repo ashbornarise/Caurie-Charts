@@ -148,8 +148,21 @@ def logout(request):
 # ---------------------------------------------------------------- tableau de bord, journal, messages
 
 @admin_view()
+def _derniere_nuit() -> dict | None:
+    """La dernière nuit : durée, étapes en échec avec leurs messages (gardés depuis le 03/11/2026)."""
+    import json
+    r = db.one("SELECT ran_at, seconds, failed, steps FROM pipeline_runs ORDER BY id DESC LIMIT 1")
+    if not r:
+        return None
+    etapes = json.loads(r["steps"] or "[]")
+    return {"quand": str(r["ran_at"])[:16], "minutes": round(int(r["seconds"] or 0) / 60), "echecs": int(r["failed"] or 0),
+            "details": [{"etape": e[0], "ok": e[1], "messages": e[3] if len(e) > 3 else []} for e in etapes
+                        if not e[1] or (len(e) > 3 and e[3])]}
+
+
 def dashboard(request):
     return admin_render(request, "dashboard", {
+        "nuit": _derniere_nuit(),
         "pending": db.all("""SELECT c.code, ws.week_start, COUNT(*) AS n FROM weekly_scores ws JOIN countries c ON c.id = ws.country_id
                              WHERE ws.review_status = 'pending' AND ws.score > 0 GROUP BY c.code, ws.week_start ORDER BY ws.week_start DESC"""),
         "drafts": db.all("""SELECT c.code, r.period_type, r.period_key, COUNT(*) AS runs, MIN(r.id) AS first_id

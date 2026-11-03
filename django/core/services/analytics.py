@@ -61,7 +61,11 @@ def vu_humain(request) -> bool:
 
 def record_run(report: list) -> None:
     db.insert("pipeline_runs", {"seconds": int(sum(r["seconds"] for r in report)), "failed": sum(1 for r in report if not r["ok"]),
-                                "steps": json.dumps([[r["step"], r["ok"], round(r["seconds"])] for r in report], ensure_ascii=False)})
+                                # 4e case : les messages des étapes en échec ou avec avertissement (03/11/2026 : ils se perdaient
+                                # avec le serveur GitHub, on ne les voyait que dans le mail du matin)
+                                "steps": json.dumps([[r["step"], r["ok"], round(r["seconds"]),
+                                                      [str(x)[:300] for x in (r.get("lines") or []) if not r["ok"] or re.search(r"ERREUR|échec|Échec", str(x))][:8]]
+                                                     for r in report], ensure_ascii=False)})
 
 
 POSTS = """query($org: OrganizationId!, $after: String) {
