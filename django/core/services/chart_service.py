@@ -116,17 +116,24 @@ class ChartService:
                 (SELECT plays FROM snapshots s WHERE s.track_platform_id = tpi.id AND s.captured_on BETWEEN ? AND ? ORDER BY s.captured_on DESC LIMIT 1) AS end_plays,
                 (SELECT likes FROM snapshots s WHERE s.track_platform_id = tpi.id AND s.captured_on BETWEEN ? AND ? ORDER BY s.captured_on DESC LIMIT 1) AS end_likes,
                 (SELECT plays FROM snapshots s WHERE s.track_platform_id = tpi.id AND s.captured_on < ? ORDER BY s.captured_on DESC LIMIT 1) AS base_plays,
-                (SELECT likes FROM snapshots s WHERE s.track_platform_id = tpi.id AND s.captured_on < ? ORDER BY s.captured_on DESC LIMIT 1) AS base_likes
+                (SELECT likes FROM snapshots s WHERE s.track_platform_id = tpi.id AND s.captured_on < ? ORDER BY s.captured_on DESC LIMIT 1) AS base_likes,
+                (SELECT plays FROM snapshots s WHERE s.track_platform_id = tpi.id AND s.captured_on BETWEEN ? AND ? ORDER BY s.captured_on LIMIT 1) AS first_plays,
+                (SELECT likes FROM snapshots s WHERE s.track_platform_id = tpi.id AND s.captured_on BETWEEN ? AND ? ORDER BY s.captured_on LIMIT 1) AS first_likes
                FROM track_platform_ids tpi JOIN tracks t ON t.id = tpi.track_id JOIN artists a ON a.id = t.artist_id
                WHERE a.submission_country_id = ? AND tpi.is_official = 1 AND tpi.platform <> 'spotify'""",
-            [period.start, period.end, period.start, period.end, period.start, period.start, cid])
+            [period.start, period.end, period.start, period.end, period.start, period.start,
+             period.start, period.end, period.start, period.end, cid])
         out: dict = {}
         for r in rows:
             if r["end_plays"] is None:
                 continue
             new_this_week = r["published_at"] is not None and str(r["published_at"])[:10] >= period.start
             if r["base_plays"] is None and not new_this_week:
-                continue  # premier relevé d'un contenu ancien : sert de point de départ
+                # clip trouvé en cours de semaine (03/11/2026 : « DESTIN » perdait 2 semaines) : on compte les vues RÉELLEMENT
+                # gagnées depuis son premier relevé de la semaine ; rien d'extrapolé, rien d'avant ce relevé
+                if r["first_plays"] is None or int(r["end_plays"]) <= int(r["first_plays"]):
+                    continue
+                r = {**r, "base_plays": r["first_plays"], "base_likes": r["first_likes"]}
             tid = int(r["track_id"])
             o = out.setdefault(tid, {"plays": {}})
             o["plays"][r["platform"]] = o["plays"].get(r["platform"], 0) + int(r["end_plays"]) - int(r["base_plays"] or 0)

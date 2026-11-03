@@ -326,6 +326,11 @@ class DeezerPopularitySource:
         return {"observed_on": _today(), "rows": rows}
 
 
+def _today_minus(jours: int) -> str:
+    from datetime import date, timedelta
+    return (date.fromisoformat(_today()) - timedelta(days=jours)).isoformat()
+
+
 class YouTubeViewsSource:
     """Vues YouTube des clips suivis (relevés quotidiens) : vues gagnées sur 6 jours, sinon vues des clips de moins de 18 mois."""
 
@@ -343,7 +348,9 @@ class YouTubeViewsSource:
             """SELECT t.title, a.name AS artist, p.external_id, p.url, p.published_at,
                    (SELECT s.plays FROM snapshots s WHERE s.track_platform_id = p.id ORDER BY s.captured_on DESC LIMIT 1) AS views,
                    (SELECT s.plays FROM snapshots s WHERE s.track_platform_id = p.id AND s.captured_on <= CURRENT_DATE - 6
-                     ORDER BY s.captured_on DESC LIMIT 1) AS views_before
+                     ORDER BY s.captured_on DESC LIMIT 1) AS views_before,
+                   (SELECT s.plays FROM snapshots s WHERE s.track_platform_id = p.id ORDER BY s.captured_on LIMIT 1) AS views_first,
+                   (SELECT MIN(s.captured_on) FROM snapshots s WHERE s.track_platform_id = p.id) AS first_on
                FROM track_platform_ids p
                JOIN tracks t ON t.id = p.track_id
                JOIN artists a ON a.id = t.artist_id AND a.status = 'active'
@@ -360,6 +367,13 @@ class YouTubeViewsSource:
                 continue
             if with_history:
                 score = int(c["views"]) - int(c["views_before"]) if c["views_before"] is not None else None
+                if score is None:
+                    # clip suivi depuis moins de 6 jours (03/11/2026) : sorti cette semaine = toutes ses vues ; sinon les vues
+                    # gagnées depuis le premier relevé (rien d'extrapolé)
+                    if c["published_at"] and str(c["published_at"])[:10] >= str(_today_minus(7)):
+                        score = int(c["views"])
+                    elif c["views_first"] is not None and str(c["first_on"])[:10] < str(_today_minus(0)):
+                        score = int(c["views"]) - int(c["views_first"])
             else:
                 score = int(c["views"]) if not c["published_at"] or str(c["published_at"])[:10] >= recent else None
             if score is not None and score > 0:
