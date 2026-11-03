@@ -53,9 +53,12 @@ def edge_cache(request, response) -> None:
         return
     if "Cache-Control" in response.headers:
         return  # la vue a déjà choisi (images, plan du site…)
-    response.headers["Cache-Control"] = "public, max-age=0, s-maxage=10800, stale-while-revalidate=86400"
+    # Fiches de titres et d'artistes : 22 000 pages, parcourues une à une par Google, qui ne changent qu'une fois par nuit :
+    # 24 h au lieu de 3 h (03/11/2026, chaque première visite réveillait Neon)
+    duree = 86400 if request.path.startswith(("/titre/", "/artiste/")) else 10800
+    response.headers["Cache-Control"] = f"public, max-age=0, s-maxage={duree}, stale-while-revalidate=86400"
     # consigne propre au réseau de Vercel (n'est pas transmise au navigateur)
-    response.headers["Vercel-CDN-Cache-Control"] = "max-age=10800, stale-while-revalidate=86400"
+    response.headers["Vercel-CDN-Cache-Control"] = f"max-age={duree}, stale-while-revalidate=86400"
     response._cauri_edge = True   # EdgeVaryMiddleware retirera « Vary: Cookie », qui empêche toute mise en cache
 
 
