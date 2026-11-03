@@ -45,7 +45,7 @@ jobs:
     needs: guard
     if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180   # la nuit dure 75 à 111 min (03/11/2026) : marge avant la coupure
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}

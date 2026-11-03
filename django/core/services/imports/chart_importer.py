@@ -79,7 +79,7 @@ def _find_or_create_track(row: dict, source: str, cid: int, stats: dict) -> int:
         image = row.get("image") or ""
         track_id = db.insert("tracks", {
             "title": str(row["title"]).strip()[:200],
-            "slug": unique_slug("tracks", slugify(N.primary_artist(row["artist"]) + " " + str(row["title"]))),
+            "slug": unique_slug("tracks", slugify(N.primary_artist(row["artist"]) + " " + str(row["title"]))[:190]),   # colonne de 220 : un titre-fleuve faisait échouer tout un pays
             "artist_id": artist_id,
             "featuring": feat[:255] if feat else None,
             "release_date": str(row["release_date"])[:10] if row.get("release_date") else None,

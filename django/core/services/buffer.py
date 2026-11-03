@@ -377,7 +377,10 @@ def capacity(http: HttpClient | None = None) -> tuple[int, int] | None:
 def failed(result: str) -> bool:
     """Vrai si un envoi du compte rendu de schedule() n'a pas abouti (refus, limite, image manquante…)."""
     parts = [p.strip() for p in (result or "").split(",") if p.strip()]
-    return not parts or any(not p.endswith("programmé") for p in parts)
+    # refus voulus (quota du jour, meilleurs posts seulement, reprise refusée sur TikTok) : pas un échec de la nuit
+    # (03/11/2026 : ils déclenchaient « 1 à 3 problèmes cette nuit » presque chaque jour)
+    voulus = ("réservé aux meilleurs posts", "par jour au plus", "reprise d'un autre compte", "non recommandée", "déjà envoyé")
+    return not parts or any(not p.endswith("programmé") and not any(v in p for v in voulus) for p in parts)
 
 
 def schedule(post: dict, due_at: datetime | None = None, force: bool = False, http: HttpClient | None = None) -> str:

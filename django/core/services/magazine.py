@@ -95,7 +95,9 @@ def publish(today=None, f: dict | None = None) -> str:
     if not art:
         return "Cauri Hebdo : pas assez de titres cette semaine"
     image = FeedImporter()._thumbnail(art["image"], guid) if art.get("image") else None
-    db.insert("news", {"title": art["title"], "slug": f"cauri-hebdo-{year}-semaine-{week:02d}",  # adresse stable : ne dépend pas du n°1 "summary": art["summary"],
+    # adresse stable : ne dépend pas du n°1 ; le résumé était avalé par ce commentaire (Hebdo manqué le 01/11/2026)
+    db.insert("news", {"title": art["title"], "slug": f"cauri-hebdo-{year}-semaine-{week:02d}",
+                       "summary": art.get("summary") or art["title"],
                        "body": art["body"], "category": "classement", "country_id": None, "source_name": "Cauri Charts",
                        "source_url": None, "image_path": image, "origin": "manual", "external_guid": guid,
                        "status": "published", "published_at": now_utc()})

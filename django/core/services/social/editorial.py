@@ -100,7 +100,13 @@ def render(name: str, slides: list, cover: dict | None = None) -> list:
     return out
 
 
+class DejaFait(Exception):
+    """Le post de ce thème existe déjà pour ce jour (nuit relancée) : on ne le refait pas, on ne le renvoie pas."""
+
+
 def save_post(theme: str, day: str, title: str, caption: str, hashtags: str, slides: list, facts: dict) -> dict:
+    if db.value("SELECT 1 FROM social_posts WHERE slot_date = ? AND theme = ? AND status <> 'draft'", [day, theme]):
+        raise DejaFait(f"{theme} du {day} déjà fait")   # 02/11/2026 : la relance de 14 h recréait les posts -> uq_post_slot
     storage.publish_media_files("social", [s["file"] for s in slides] + [s["tiktok"] for s in slides])
     db.run("DELETE FROM social_posts WHERE slot_date = ? AND theme = ? AND status = 'draft'", [day, theme])
     pid = db.insert("social_posts", {"slot_date": day, "theme": theme, "title": title[:160], "caption": caption, "hashtags": hashtags[:300],

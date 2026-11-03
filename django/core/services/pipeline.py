@@ -28,6 +28,9 @@ from core.services import buffer, telegram
 from core.services.social.generator import PostGenerator, purge_blob, purge_orphans
 
 
+from core.services.social.editorial import DejaFait  # noqa: E402
+
+
 class StepFailed(Exception):
     """Étape faite en partie (ex. post généré mais refusé par Buffer) : l'échec remonte, le compte rendu est gardé."""
 
@@ -243,6 +246,8 @@ class DailyPipeline:
         except StepFailed as exc:
             log_write("pipeline", "error", f"{name} : {exc}")
             lines, ok = [str(x) for x in exc.lines] + [f"ERREUR : {exc}"], False
+        except DejaFait as exc:   # nuit relancée : le post existe déjà, ce n'est pas un problème
+            lines, ok = [f"déjà fait : {exc}"], True
         except Exception as exc:  # noqa: BLE001
             log_write("pipeline", "error", f"{name} : {exc}")
             lines, ok = [f"ERREUR : {exc}"], False

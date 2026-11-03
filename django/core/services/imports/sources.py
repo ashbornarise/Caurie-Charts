@@ -54,7 +54,16 @@ class AppleMusicChartSource:
         return True
 
     def fetch(self, code: str):
-        resp = self.http.request("GET", self.URL.format(code.lower(), self.limit))
+        # 3 tentatives espacées : le flux d'Apple dépasse souvent le délai (un pays perdu presque chaque nuit, 03/11/2026)
+        import time
+        for essai in range(3):
+            try:
+                resp = self.http.request("GET", self.URL.format(code.lower(), self.limit))
+                break
+            except PlatformException:
+                if essai == 2:
+                    raise
+                time.sleep(8 * (essai + 1))
         if resp["status"] in (400, 404, 500):
             return None  # pays non couvert par Apple Music
         data = _json(resp)
