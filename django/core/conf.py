@@ -96,6 +96,8 @@ def _all() -> dict:
                 {"name": "RFI Musique", "url": "https://www.rfi.fr/fr/musique/rss", "lang": "fr"},
                 {"name": "NotJustOk", "url": "https://notjustok.com/category/news/feed/", "lang": "en", "music_only": True},
                 {"name": "AmeyawDebrah", "url": "https://www.ameyawdebrah.com/feed/", "lang": "en", "music_only": True},
+                # Togo : actualité générale, on n'en garde que la musique (03/11/2026, proposé par le fondateur)
+                {"name": "Actu Lomé", "url": "https://actulome.com/feed/", "lang": "fr", "music_only": True},
             ],
             "per_feed": 10, "max_age_days": 3, "keep": 90,   # 3 jours (03/11/2026) : de l'actualité, pas des archives
             "image": {"width": 720, "height": 405, "max_bytes": 6_000_000},
