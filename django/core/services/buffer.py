@@ -230,10 +230,12 @@ PAYS_HASHTAGS = [(re.compile(p, re.I), h) for p, h in (
 def tiktok_refus(post: dict) -> str | None:
     """Raison de ne pas envoyer ce post sur TikTok, ou None."""
     theme = str(post.get("theme") or "")
+    if theme.startswith(PRIORITAIRES):
+        # classement officiel et posts choisis à la main dans le Studio : jamais bloqués, même une reprise d'un autre
+        # compte (03/11/2026 : « si moi je veux partager, ça part ») ; la règle ci-dessous ne vise que l'automatique
+        return None
     if REPRISE.search(post.get("caption") or ""):
         return "tiktok : vidéo reprise d'un autre compte (non recommandée par TikTok)"
-    if theme.startswith(PRIORITAIRES):
-        return None   # classement officiel et posts choisis à la main dans le Studio (actu chaude…) : jamais bloqués (24/10/2026)
     if theme.startswith(("monde", "flash", "ecoutes_monde")):
         try:
             fiches = json.loads(post.get("facts") or "{}").get("fiches") or []

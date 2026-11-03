@@ -10,8 +10,15 @@ def _post(theme="matin", caption="N°1 au Bénin cette semaine", fiches=None):
 
 
 def test_video_reprise_refusee(monkeypatch):
+    # automatique : une reprise d'un autre compte ne part pas sur TikTok
     monkeypatch.setattr(buffer.db, "value", lambda *a, **k: 0)
-    assert "reprise" in buffer.tiktok_refus(_post("format-studio-9", "Source : @santrinos_raphael sur TikTok"))
+    assert "reprise" in buffer.tiktok_refus(_post("monde-soir-2", "Source : @santrinos_raphael sur TikTok", [{"artiste": "Burna Boy"}]))
+
+
+def test_studio_jamais_bloque(monkeypatch):
+    # choisi à la main dans le Studio : ça part, même une reprise (décision du fondateur, 03/11/2026)
+    monkeypatch.setattr(buffer.db, "value", lambda *a, **k: 0)
+    assert buffer.tiktok_refus(_post("format-studio-9", "Source : @santrinos_raphael sur TikTok")) is None
 
 
 def test_sujet_mondial_refuse_sujet_africain_garde(monkeypatch):
