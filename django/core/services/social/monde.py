@@ -157,6 +157,13 @@ def collecte(heures: int = 36, artistes: list | None = None) -> list:
             return []
     with ThreadPoolExecutor(8) as ex:
         items = [it for lot in ex.map(un, FEEDS + _flux_stars(artistes)) for it in lot]
+    try:   # pages d'actu suivies sur X et Instagram (03/11/2026), relevées une fois par jour par Apify
+        from core.services import veille_reseaux
+        for ligne in veille_reseaux.releve():
+            log_write("monde", "info", ligne)
+        items += veille_reseaux.items(heures)
+    except Exception as exc:  # noqa: BLE001 — la veille ne doit jamais bloquer l'édition
+        log_write("monde", "warning", f"veille réseaux : {exc}")
     # Google Actualités : le vrai média est en fin de titre (« … - Le Parisien »)
     for it in items:
         if it["source"] == "Google Actualités" and " - " in it["title"]:
