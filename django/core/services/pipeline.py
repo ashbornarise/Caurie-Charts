@@ -68,7 +68,7 @@ class DailyPipeline:
     # Nuit coupée en deux tâches parallèles (03/11/2026, elle approchait la coupure des 120 min) :
     #   principal : relevés, classement, posts, statistiques, contrôles, ménage (les posts restent APRÈS les relevés du jour)
     #   catalogue : découverte, profils, pays, Deezer, chaînes et clips YouTube, photos, distinctions, actu des artistes
-    CATALOGUE = ("10a.", "10b.", "10c.", "10d.", "10e.", "10f.", "10g.", "10h.", "10k.", "10l.")
+    CATALOGUE = ("10a.", "10b.", "10c.", "10d.", "10e.", "10f.", "10g.", "10h.", "10k.", "10l.", "10n.")
 
     def run(self, force_weekly: bool = False, force_posts: bool = False, youtube_searches: int = 10,
             partie: str | None = None) -> list:
@@ -217,6 +217,12 @@ class DailyPipeline:
             from core.services import distinctions
             return distinctions.run()
         self._step("10k. Distinctions du mois (classements mensuels publiés)", awards, 120)
+
+        if weekday == 7:
+            def doublons():   # titres en double, une fois par semaine (durées YouTube pour ne pas fusionner deux versions)
+                from core.services import doublons as D
+                return D.nettoie()
+            self._step("10n. Titres en double (fusion)", doublons, 300)
 
         def releases():
             from core.services import artist_news
