@@ -251,7 +251,7 @@ class FeedImporter:
             report.append(f"{removed} anciennes actualités importées retirées")
         return report
 
-    def _store(self, feed: dict, item: dict, max_age_days: int):
+    def _store(self, feed: dict, item: dict, max_age_days: int):  # noqa: C901
         guid = hashlib.sha256((feed["url"] + "|" + item["guid"]).encode()).hexdigest()[:64]
         if db.value("SELECT 1 FROM news WHERE external_guid = ?", [guid]):
             return None
@@ -263,6 +263,8 @@ class FeedImporter:
         text = (item["title"] + " " + item["summary"]).lower()
         if feed.get("music_only") and not is_about_music(text):
             return None
+        if not detect_country(text) and not _cite_nos_artistes(text):
+            return None   # hors de notre terrain (techno de Détroit, soul britannique… 03/11/2026) : pas pour « À la une »
         image_url = item.get("image")
         if not image_url:
             page = self.fetch(item["url"])
@@ -318,3 +320,14 @@ class FeedImporter:
                     f.unlink()
             db.run("DELETE FROM news WHERE id = ?", [row["id"]])
         return len(old)
+
+
+
+def _cite_nos_artistes(texte: str) -> bool:
+    """Le texte cite-t-il un artiste suivi (nom de 5 lettres au moins, mot entier) ou une star africaine de la veille ?"""
+    import re
+    import unicodedata
+    from core.services.social import monde
+    t = "".join(c for c in unicodedata.normalize("NFD", texte.lower()) if unicodedata.category(c) != "Mn")
+    noms = {n for n in monde.nos_artistes() | {x.lower() for x in monde.AFRICAINS} if len(n) >= 5}
+    return any(re.search(r"\b" + re.escape(n) + r"\b", t) for n in noms)
