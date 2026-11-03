@@ -211,6 +211,8 @@ class FallbackClient:
     def ask(self, system: str, prompt: str, max_tokens: int = 1500, web_searches: int = 0) -> dict:
         errors = []
         for c in self.clients:
+            if web_searches and isinstance(c, DeepSeekClient):
+                continue   # DeepSeek ne cherche pas sur le web : une demande avec recherche va directement à Gemini
             try:
                 return c.ask(system, prompt, max_tokens, web_searches)
             except PlatformException as exc:
@@ -227,8 +229,10 @@ def make():
         client = ClaudeClient(http)
     else:
         pair = [GeminiClient(http), GroqClient(http)]
-        # OpenRouter (modèles gratuits) en dernier recours, quel que soit le fournisseur principal
-        client = FallbackClient((pair[::-1] if provider == "groq" else pair) + [OpenRouterClient(http)])
+        # DeepSeek d'abord pour l'écriture (03/11/2026) : le crédit Gemini reste aux recherches Google (revue du classement,
+        # pays, comptes officiels), que DeepSeek ne sait pas faire. Solde épuisé ou panne : Gemini, Groq, puis OpenRouter.
+        tete = [DeepSeekClient(http)] if provider == "gemini" else []
+        client = FallbackClient(tete + (pair[::-1] if provider == "groq" else pair) + [OpenRouterClient(http)])
     return client if client.is_available() else None
 
 
