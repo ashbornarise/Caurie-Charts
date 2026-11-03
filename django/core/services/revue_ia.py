@@ -52,7 +52,7 @@ def juger(pays: str, debut: date, titres: list, http: HttpClient) -> list:
         "(achat de vues, re-upload, compilation, live ou vidéo qui n'est pas le titre) ; sinon « attente ». "
         "Termine par une ligne JSON : "
         '{"decisions": [{"id": 0, "decision": "valider|exclure|attente", "certitude": "haute|moyenne|faible", '
-        '"raison": "une phrase en français, factuelle"}]}', http, reflexion="low")
+        '"raison": "une phrase en français, factuelle"}]}', http, reflexion="low", part=4.0)   # mardi : la revue du classement peut prendre jusqu'à 4 parts du jour (le crédit du mois reste de 5 $)
     if not meta.get("webSearchQueries"):
         return []
     from core.services import ai

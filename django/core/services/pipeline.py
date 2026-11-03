@@ -217,6 +217,11 @@ class DailyPipeline:
             return [analytics.collect_post_metrics()]
         self._step("10i. Statistiques des publications (vues, portée, réactions)", stats)
 
+        def jetons():   # jetons qui expirent (Meta, GitHub, TikTok) : e-mail 10 jours avant (03/11/2026)
+            from core.services import jetons as J
+            return J.verifier()
+        self._step("10m. Jetons d'accès (expiration)", jetons, 60)
+
         def control():
             from core.services import agents
             return agents.run_all()
