@@ -45,6 +45,10 @@ jobs:
     needs: guard
     if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        partie: [principal, catalogue]   # deux tâches en parallèle (03/11/2026)
     timeout-minutes: 180   # la nuit dure 75 à 111 min (03/11/2026) : marge avant la coupure
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -96,19 +100,22 @@ jobs:
         uses: actions/cache@v4
         with:
           path: storage/cache
-          key: cauri-cache-${{ github.run_id }}
-          restore-keys: cauri-cache-
+          key: cauri-cache-${{ matrix.partie }}-${{ github.run_id }}
+          restore-keys: |
+            cauri-cache-${{ matrix.partie }}-
+            cauri-cache-
       - name: Chaîne quotidienne
         working-directory: django
-        run: python manage.py daily ${{ github.event.inputs.args }}
+        run: python manage.py daily --partie=${{ matrix.partie }} ${{ github.event.inputs.args }}
       - name: Conservation des données personnelles
+        if: matrix.partie == 'principal'
         working-directory: django
         run: python manage.py purge
       - name: Journaux
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: journaux-${{ github.run_id }}
+          name: journaux-${{ matrix.partie }}-${{ github.run_id }}
           path: storage/logs/
           retention-days: 14
           if-no-files-found: ignore

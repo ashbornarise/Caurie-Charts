@@ -65,7 +65,14 @@ class DailyPipeline:
         self.out = out
         self.report: list = []
 
-    def run(self, force_weekly: bool = False, force_posts: bool = False, youtube_searches: int = 10) -> list:
+    # Nuit coupée en deux tâches parallèles (03/11/2026, elle approchait la coupure des 120 min) :
+    #   principal : relevés, classement, posts, statistiques, contrôles, ménage (les posts restent APRÈS les relevés du jour)
+    #   catalogue : découverte, profils, pays, Deezer, chaînes et clips YouTube, photos, distinctions, actu des artistes
+    CATALOGUE = ("10a.", "10b.", "10c.", "10d.", "10e.", "10f.", "10g.", "10h.", "10k.", "10l.")
+
+    def run(self, force_weekly: bool = False, force_posts: bool = False, youtube_searches: int = 10,
+            partie: str | None = None) -> list:
+        self.partie = partie
         imp = ImportService()
         http = HttpClient(60)
         platform_sources = [k for k in imp.sources() if k not in COMPUTED]
@@ -259,6 +266,9 @@ class DailyPipeline:
         return self.report
 
     def _step(self, name: str, fn, seconds: int | None = None) -> None:
+        partie = getattr(self, "partie", None)
+        if partie and (name.startswith(self.CATALOGUE) != (partie == "catalogue")):
+            return   # étape de l'autre tâche de la nuit
         start = time.time()
         self._say(f"▶ {name}" + (f" (budget {seconds // 60} min {seconds % 60:02d} s)" if seconds else ""))
         if seconds:

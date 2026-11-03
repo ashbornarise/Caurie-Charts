@@ -20,13 +20,14 @@ class Command(BaseCommand):
         p.add_argument("--weekly", action="store_true")
         p.add_argument("--posts", action="store_true")
         p.add_argument("--youtube", type=int, default=6)
+        p.add_argument("--partie", choices=["principal", "catalogue"], help="une des deux tâches parallèles de la nuit")
 
     def handle(self, *args, **o):
         def task():
             from core.services import health
             pipeline = DailyPipeline(out)
             try:
-                report = pipeline.run(o["weekly"], o["posts"], o["youtube"])
+                report = pipeline.run(o["weekly"], o["posts"], o["youtube"], o.get("partie"))
             except Exception as exc:
                 # Arrêt complet : le rapport part quand même, avec les étapes déjà faites
                 out(health.send(pipeline.report, f"{type(exc).__name__} : {exc}"))
@@ -34,7 +35,8 @@ class Command(BaseCommand):
             failed = [r for r in report if not r["ok"]]
             out("")
             out(f"Terminé : {len(report)} étapes, {len(failed)} en erreur" + (f" ({', '.join(r['step'] for r in failed)})" if failed else ""))
-            out(health.send(report))
+            if o.get("partie") != "catalogue" or failed:   # la tâche catalogue n'écrit que s'il y a un problème
+                out(health.send(report))
             if failed:
                 # Sur GitHub : avertissement visible sur la page de la chaîne (le passage reste « réussi » pour ne pas
                 # relancer toute la nuit ; le rattrapage du matin s'occupe des posts non publiés)

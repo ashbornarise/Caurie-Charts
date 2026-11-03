@@ -150,10 +150,13 @@ def logout(request):
 def _derniere_nuit() -> dict | None:
     """La dernière nuit : durée, étapes en échec avec leurs messages (gardés depuis le 03/11/2026)."""
     import json
-    r = db.one("SELECT ran_at, seconds, failed, steps FROM pipeline_runs ORDER BY id DESC LIMIT 1")
-    if not r:
+    # les deux tâches parallèles de la nuit (principal, catalogue) : leurs bilans réunis
+    rs = db.all("""SELECT ran_at, seconds, failed, steps FROM pipeline_runs
+                   WHERE ran_at >= (SELECT MAX(ran_at) FROM pipeline_runs) - INTERVAL '4 hours' ORDER BY id""")
+    if not rs:
         return None
-    etapes = json.loads(r["steps"] or "[]")
+    r = {"ran_at": rs[-1]["ran_at"], "seconds": max(int(x["seconds"] or 0) for x in rs), "failed": sum(int(x["failed"] or 0) for x in rs)}
+    etapes = [e for x in rs for e in json.loads(x["steps"] or "[]")]
     return {"quand": str(r["ran_at"])[:16], "minutes": round(int(r["seconds"] or 0) / 60), "echecs": int(r["failed"] or 0),
             "details": [{"etape": e[0], "ok": e[1], "messages": e[3] if len(e) > 3 else []} for e in etapes
                         if not e[1] or (len(e) > 3 and e[3])]}
