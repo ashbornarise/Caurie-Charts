@@ -1063,7 +1063,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     $$('#feuille-reseaux .puce').forEach(b => b.classList.toggle('actif', choisis.includes(b.dataset.r)));
     feuille(true); chargeTiktok();
   }
-  async function envoyerVraiment(notifier) {
+  async function envoyerVraiment(notifier, forcer) {
     const b = $('#btn-envoyer'); b.disabled = true;
     try {
       // TikTok : réglages de l'écran (erreur lisible si un choix obligatoire manque) ; « j'ajoute ma musique » = brouillon
@@ -1076,7 +1076,7 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       }
       const k = await post('/job/' + jobEnCours + '/envoyer', {accroche: $('#r-accroche').value, legende_fr: $('#r-fr').value,
         legende_en: $('#r-en').value, credit: $('#r-credit').value, artiste: (etatJob.params || {}).artiste || '',
-        notifier, reseaux: reseauxChoisis(), tiktok});
+        notifier, reseaux: reseauxChoisis(), tiktok, forcer: !!forcer});
       vibre(); etatJob.statut = 'envoye'; resultat(etatJob);
       const noms = {instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok'};
       const recus = (k.recus || []).map(r => noms[r] || r).concat(reseauxChoisis().includes('telegram') ? ['Telegram'] : []).join(', ');
@@ -1084,7 +1084,16 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
         ? 'Envoyée ! ' + recus + '. Instagram et TikTok t’envoient une notification pour ajouter ta musique.'
         : 'Envoyée sur ' + recus + ' (dans 2 minutes).')
         + ((k.refus || []).length ? ' Refusé : ' + k.refus.join(' · ') : ''), !(k.refus || []).length);
-    } catch (e) { message('#msg-suivi', e.message, false); b.disabled = false; }
+    } catch (e) {
+      message('#msg-suivi', e.message, false); b.disabled = false;
+      // ancien post supprimé à la main : on confirme et la vidéo repart (05/11/2026)
+      if (e.message.includes('déjà partie sur TikTok')) {
+        const f = document.createElement('button'); f.className = 'btn'; f.style.marginTop = '10px';
+        f.textContent = 'Republier quand même';
+        f.onclick = () => { vibre(); f.remove(); envoyerVraiment(notifier, true); };
+        $('#msg-suivi').appendChild(f);
+      }
+    }
   }
 
   // ---------------- écran Photos

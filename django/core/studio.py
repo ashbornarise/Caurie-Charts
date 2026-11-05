@@ -316,9 +316,14 @@ def reseaux_choisis(c: dict) -> list | None:
 def theme_libre(job_id: int, quand) -> str:
     """format-studio-<n°>, puis -2, -3… pour chaque republication du même jour (un post par jour et par thème)."""
     base = f"format-studio-{job_id}"
-    n = int(db.value("SELECT COUNT(*) FROM social_posts WHERE slot_date = ? AND (theme = ? OR theme LIKE ?)",
-                     [quand.date().isoformat(), base, base + "-%"]) or 0)
-    return base if n == 0 else f"{base}-{n + 1}"
+    pris = {r["theme"] for r in db.all("SELECT theme FROM social_posts WHERE slot_date = ? AND (theme = ? OR theme LIKE ?)",
+                                       [quand.date().isoformat(), base, base + "-%"])}
+    if base not in pris:
+        return base
+    n = 2   # 05/11/2026 : premier numéro libre (compter les posts donnait un thème déjà pris après une suppression)
+    while f"{base}-{n}" in pris:
+        n += 1
+    return f"{base}-{n}"
 
 
 def _job_public(j: dict) -> dict:
@@ -492,11 +497,12 @@ def _envoyer(request, ident):
     deja_tiktok = bool(db.value("""SELECT 1 FROM audit_log a JOIN social_posts p ON a.entity_id = CAST(p.id AS TEXT)
                                    WHERE a.action = 'buffer.post' AND a.reason LIKE 'post-%-tiktok%'
                                    AND p.facts LIKE ? LIMIT 1""", [f'%"studio_job": {j["id"]},%']))
-    if deja_tiktok and (reseaux is None or "tiktok" in reseaux):
-        reseaux = [r for r in (reseaux or list(PLATEFORMES_POST)) if r != "tiktok"]
-        tiktok_direct = False
-        if not reseaux:
-            return _json({"erreur": "cette vidéo est déjà partie sur TikTok : pas de doublon"}, 409)
+    # 05/11/2026 : si le fondateur a supprimé l'ancien post, il confirme (« forcer ») et la vidéo repart, TikTok compris
+    if deja_tiktok and (reseaux is None or "tiktok" in reseaux) and not c.get("forcer"):
+        return _json({"erreur": "Cette vidéo est déjà partie sur TikTok. Si tu as supprimé l'ancien post, "
+                                "touche « Republier quand même ».", "deja_tiktok": True}, 409)
+    if c.get("forcer"):
+        deja_tiktok = False
     if tiktok_direct:   # TikTok part par sa propre API avec les réglages de l'écran ; Buffer ne s'en occupe plus
         reseaux = [r for r in (reseaux or ["instagram", "facebook", "tiktok", "telegram"]) if r != "tiktok"]
     faits = {"kind": "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
