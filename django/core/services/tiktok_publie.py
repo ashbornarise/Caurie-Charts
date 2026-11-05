@@ -15,7 +15,7 @@ from core.services.platforms import PlatformException
 
 API = "https://open.tiktokapis.com/v2"
 MORCEAU = 10 * 1024 * 1024
-PETIT = 5 * 1024 * 1024
+ENTIER = 64 * 1024 * 1024   # jusqu'à 64 Mo, TikTok accepte la vidéo en un seul morceau
 
 
 def jeton() -> str:
@@ -64,10 +64,11 @@ def createur() -> dict:
 
 
 def _source(taille: int) -> dict:
-    if taille < PETIT:
+    # 05/11/2026 : entre 10 et 20 Mo, on annonçait des morceaux de 10 Mo pour un seul envoi -> « The chunk size is
+    # invalid ». Règle de TikTok : un seul morceau = toute la vidéo ; sinon morceaux de 5 à 64 Mo, le dernier absorbe le reste.
+    if taille <= ENTIER:
         return {"source": "FILE_UPLOAD", "video_size": taille, "chunk_size": taille, "total_chunk_count": 1}
-    morceau = min(MORCEAU, taille)
-    return {"source": "FILE_UPLOAD", "video_size": taille, "chunk_size": morceau, "total_chunk_count": max(1, taille // morceau)}
+    return {"source": "FILE_UPLOAD", "video_size": taille, "chunk_size": MORCEAU, "total_chunk_count": taille // MORCEAU}
 
 
 def _envoie(upload_url: str, video: bytes, src: dict) -> None:
