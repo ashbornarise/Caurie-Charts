@@ -111,6 +111,7 @@
       c.classList.toggle('est-droite', k > courant);
     });
     var c = cartes[courant];
+    if (!flow.querySelector('[data-flow-titre]')) return;   // sans barre de lecture (retirée le 06/11/2026)
     flow.querySelector('[data-flow-titre]').textContent = c.dataset.titre;
     flow.querySelector('[data-flow-artiste]').textContent = c.dataset.artiste;
     flow.querySelector('[data-flow-rang]').textContent = 'N°' + c.dataset.rang;
@@ -131,10 +132,10 @@
     return courant;
   }
   function lance() { arrete(); if (!enPause) minuterie = setInterval(function () { centre(parRang(1), true); }, 4000); }
-  flow.querySelector('[data-flow-prec]').addEventListener('click', function () { centre(parRang(-1), true); lance(); });
-  flow.querySelector('[data-flow-suiv]').addEventListener('click', function () { centre(parRang(1), true); lance(); });
+  if (flow.querySelector('[data-flow-prec]')) flow.querySelector('[data-flow-prec]').addEventListener('click', function () { centre(parRang(-1), true); lance(); });
+  if (flow.querySelector('[data-flow-suiv]')) flow.querySelector('[data-flow-suiv]').addEventListener('click', function () { centre(parRang(1), true); lance(); });
   var bp = flow.querySelector('[data-flow-pause]');
-  bp.addEventListener('click', function () { enPause = !enPause; bp.classList.toggle('est-pause', enPause); if (enPause) { arrete(); } else { lance(); } });
+  if (bp) bp.addEventListener('click', function () { enPause = !enPause; bp.classList.toggle('est-pause', enPause); if (enPause) { arrete(); } else { lance(); } });
   cartes.forEach(function (c, k) {
     c.addEventListener('click', function (ev) { if (k !== courant) { ev.preventDefault(); centre(k, true); lance(); } });
   });

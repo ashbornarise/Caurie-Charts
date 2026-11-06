@@ -1183,3 +1183,65 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .page-liste__carte--img > span { min-width: 0; }
 .page-liste__nom { display: flex; align-items: center; gap: 8px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
 .page-liste__carte small { color: var(--muted); font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+
+/* ===== « Les N°1 qui durent » : les règnes (06/11/2026) ===== */
+.regnes { margin: 8px 0 30px; padding: 22px; border-radius: 26px; background: linear-gradient(180deg, #F6F1FF 0%, #EEF6FF 100%);
+    border: 1px solid rgba(122,60,245,.18); }
+.regnes__tete { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 20px; margin-bottom: 16px; }
+.regnes__sur { margin: 0; font-size: .72rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #7A3CF5; }
+.regnes__tete h2 { margin: 2px 0 0; font-family: var(--serif); font-size: clamp(1.4rem, 3vw, 1.9rem); }
+.regnes__legende { margin: 0; display: flex; align-items: center; gap: 6px; font-size: .78rem; color: var(--muted); }
+.regnes__pastille { width: 14px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #A57BFF, #7A3CF5); flex: none; }
+
+.regnes__record { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 16px 20px 16px 16px;
+    margin-bottom: 16px; border-radius: 22px; text-decoration: none; color: #fff; position: relative; overflow: hidden;
+    background: radial-gradient(420px 200px at 90% 0%, rgba(255,201,77,.35), transparent 70%), linear-gradient(135deg, #1B1150, #5B2BD6);
+    box-shadow: 0 24px 48px -30px rgba(27,17,80,.9); transition: transform .25s ease; }
+.regnes__record:hover { transform: translateY(-2px); }
+.regnes__record-img { position: relative; width: 112px; height: 112px; flex: none; }
+.regnes__record-img img { width: 100%; height: 100%; border-radius: 18px; object-fit: cover; box-shadow: 0 14px 30px -12px rgba(0,0,0,.7); }
+.regnes__couronne { position: absolute; top: -14px; left: -10px; width: 38px; height: 38px; transform: rotate(-18deg);
+    fill: #FFC94D; stroke: #8A5A00; stroke-width: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,.4)); }
+.regnes__record-corps { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.regnes__record-sur { font-size: .7rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #FFC94D; }
+.regnes__record-titre { font-family: var(--serif); font-size: clamp(1.25rem, 2.6vw, 1.7rem); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.regnes__record-artiste { font-size: .9rem; opacity: .85; }
+.regnes__frise { display: flex; gap: 5px; margin-top: 8px; }
+.regnes__frise i { width: 22px; height: 8px; border-radius: 4px; background: #FFC94D; box-shadow: 0 0 10px rgba(255,201,77,.6); }
+.regnes__record-chiffre { text-align: center; line-height: 1; padding-left: 8px; }
+.regnes__record-chiffre b { display: block; font-family: var(--serif); font-size: clamp(2.6rem, 6vw, 3.6rem); color: #FFC94D; }
+.regnes__record-chiffre small { display: block; max-width: 9ch; margin-top: 4px; font-size: .72rem; opacity: .85; }
+@media (max-width: 560px) {
+    .regnes { padding: 16px; }
+    .regnes__record { grid-template-columns: auto minmax(0, 1fr); }
+    .regnes__record-img { width: 84px; height: 84px; }
+    .regnes__record-chiffre { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; padding: 0; text-align: left; }
+    .regnes__record-chiffre small { max-width: none; }
+}
+
+.regnes__grille { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.regne { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 18px; background: #fff;
+    border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); box-shadow: 0 10px 24px -20px rgba(40,90,160,.8); transition: transform .2s ease, border-color .2s ease; }
+.regne:hover { transform: translateY(-2px); border-color: #A57BFF; }
+.regne--long { border-color: rgba(122,60,245,.55); background: linear-gradient(180deg, #fff 0%, #F7F2FF 100%); }
+.regne__lien { display: flex; gap: 12px; align-items: center; text-decoration: none; color: var(--ink); min-width: 0; }
+.regne__img { position: relative; width: 64px; height: 64px; flex: none; }
+.regne__img img, .regne__img .cover__initials { width: 100%; height: 100%; border-radius: 12px; object-fit: cover; display: grid; place-items: center; background: #EAF5FF; }
+.regne__drapeau { position: absolute; right: -6px; bottom: -6px; padding: 3px; border-radius: 6px; background: #fff; line-height: 0; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+.regne__corps { min-width: 0; display: flex; flex-direction: column; }
+.regne__pays { font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #7A3CF5; }
+.regne__titre { font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.regne__artiste { font-size: .84rem; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.regne__jauge { display: flex; align-items: center; gap: 10px; }
+.regne__barres { flex: 1; display: flex; gap: 4px; }
+.regne__barres i { flex: 1; height: 8px; border-radius: 4px; background: #E7E3F5; }
+.regne__barres i.on { background: linear-gradient(90deg, #A57BFF, #7A3CF5); }
+.regne--long .regne__barres i.on { box-shadow: 0 0 8px rgba(122,60,245,.45); }
+.regne__nb { flex: none; font-size: .8rem; color: var(--ink-2); }
+.regne__nb b { font-family: var(--serif); font-size: 1.15rem; color: #5B2BD6; }
+.regne__depuis { margin: 0; font-size: .74rem; color: var(--muted); }
+.regne__depuis a { color: #5B2BD6; }
+@media (prefers-reduced-motion: reduce) { .regne, .regnes__record { transition: none; } }
+.regne__img .regne__drapeau img { width: 22px !important; height: auto !important; border-radius: 3px; object-fit: contain; background: none; display: block; }
+.regne__depuis { display: flex; justify-content: space-between; gap: 8px; }
+.regne__depuis a { text-decoration: none; font-weight: 700; }

@@ -16,7 +16,7 @@
         {%- set lien = path('artiste/' ~ e.artist_slug) if is_artist else path('titre/' ~ e.track_slug) -%}
         <li class="acc-flow__carte" data-titre="{{ nom }}" data-artiste="{{ '' if is_artist else e.artist_name }}"
             data-rang="{{ (e.position or e.rank)|int }}" data-cover="{{ cover }}" data-lien="{{ lien }}">
-            <a href="{{ lien }}" tabindex="-1" aria-hidden="true">
+            <a href="{{ lien }}" aria-label="{{ (e.position or e.rank)|int }}. {{ nom }}{{ ' — ' ~ e.artist_name if not is_artist }}">
                 <span class="acc-flow__img">{% if cover %}<img src="{{ cover }}" alt="" width="320" height="320"{{ ' fetchpriority="high"' if (e.position or e.rank)|int == 1 else ' loading="lazy"' }}>{% else %}<span class="cover__initials">{{ initials(nom) }}</span>{% endif %}
                     <span class="acc-flow__num">{{ tr("N°1") if (e.position or e.rank)|int == 1 else (e.position or e.rank)|int }}</span></span>
                 <span class="acc-flow__nom"><b>{{ nom }}</b>{% if not is_artist %}<small>{{ e.artist_name }}</small>{% endif %}</span>
@@ -24,15 +24,5 @@
         </li>
         {% endfor %}
     </ul>
-    <div class="acc-flow__lecteur">
-        <button type="button" class="acc-flow__btn" data-flow-prec aria-label="{{ tr("Titre précédent") }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6 5 12l6 6M19 6l-6 6 6 6"/></svg></button>
-        <button type="button" class="acc-flow__btn" data-flow-pause aria-label="{{ tr("Pause") }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
-        <button type="button" class="acc-flow__btn" data-flow-suiv aria-label="{{ tr("Titre suivant") }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 6 6 6-6 6M5 6l6 6-6 6"/></svg></button>
-        <a class="acc-flow__courant" data-flow-lien href="#">
-            <img data-flow-img src="" alt="" width="40" height="40">
-            <span><b data-flow-titre></b><small data-flow-artiste></small></span>
-            <span class="acc-flow__rangpuce" data-flow-rang></span>
-        </a>
-    </div>
 </div>
 {%- endif -%}

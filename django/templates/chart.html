@@ -99,25 +99,62 @@
 {% else %}
 {#- Défilé des pochettes en haut du classement officiel (06/11/2026) -#}
 {% if view == 'official' and entries and chartCode != 'icon' %}{{ partial('partials/top-flow', rows=entries, entries=entries) }}{% endif %}
+{#- « Les N°1 qui durent », refait le 06/11/2026 : le record de Cauri Charts en vedette (pochette, couronne, frise des
+    semaines), puis une carte par pays : pochette, drapeau, titre, et une jauge de règne graduée en semaines. -#}
 {% if numerosUn and numerosUn.actuels %}
-<section class="numeros-un" aria-labelledby="numeros-un-titre">
-    <h2 id="numeros-un-titre">{{ t('chart.numeros_un') }}</h2>
-    {% set rec = numerosUn.record %}
+{%- set rec = numerosUn.record -%}
+{%- set plus_long = [rec.semaines if rec else 1] + (numerosUn.actuels|map(attribute='semaines')|list) -%}
+{%- set echelle = [plus_long|max, 4]|max -%}
+<section class="regnes" aria-labelledby="regnes-titre">
+    <header class="regnes__tete">
+        <div>
+            <p class="regnes__sur">{{ tr("Ils tiennent le sommet") }}</p>
+            <h2 id="regnes-titre">{{ t('chart.numeros_un') }}</h2>
+        </div>
+        <p class="regnes__legende"><span class="regnes__pastille"></span>{{ tr("= une semaine consécutive à la 1re place du classement officiel") }}</p>
+    </header>
+
     {% if rec %}
-    <p class="numeros-un__record"><span class="eyebrow">{{ t('chart.record') }}</span>
-        <strong>{% if rec.track_slug %}<a href="{{ path('titre/' ~ rec.track_slug) }}">{{ rec.title }}</a>{% else %}{{ rec.title }}{% endif %}</strong>
-        · {{ rec.artist_name }} · {{ flag(rec.code, 14) if rec.code != 'WA' }}{{ country_name(rec.code) if rec.code != 'WA' else t('chart.region_short') }}
-        — <strong>{{ t('chart.weeks_at_one', {'n': rec.semaines}) }}</strong></p>
+    {%- set rec_img = rec.cover_url or rec.artist_image -%}
+    <a class="regnes__record" href="{{ path('titre/' ~ rec.track_slug) if rec.track_slug else '#' }}">
+        <span class="regnes__record-img">
+            {% if rec_img %}<img src="{{ rec_img }}" alt="" width="200" height="200" loading="lazy">{% endif %}
+            <svg class="regnes__couronne" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></svg>
+        </span>
+        <span class="regnes__record-corps">
+            <span class="regnes__record-sur">{{ t('chart.record') }}</span>
+            <span class="regnes__record-titre">{{ rec.title }}</span>
+            <span class="regnes__record-artiste">{{ rec.artist_name }} · {% if rec.code != 'WA' %}{{ flag(rec.code, 14) }} {{ country_name(rec.code) }}{% else %}{{ t('chart.region_short') }}{% endif %}</span>
+            <span class="regnes__frise" aria-hidden="true">{% for k in range(rec.semaines) %}<i></i>{% endfor %}</span>
+        </span>
+        <span class="regnes__record-chiffre"><b>{{ rec.semaines }}</b><small>{{ tr("semaines au sommet") }}</small></span>
+    </a>
     {% endif %}
-    <ol class="numeros-un__liste">
+
+    <ul class="regnes__grille">
         {% for a in numerosUn.actuels %}
-        <li><span class="numeros-un__pays">{{ flag(a.code, 14) }}{{ country_name(a.code) }}</span>
-            <span class="numeros-un__titre">{% if a.track_slug %}<a href="{{ path('titre/' ~ a.track_slug) }}">{{ a.title }}</a>{% else %}{{ a.title }}{% endif %}
-                <small>{{ a.artist_name }}</small></span>
-            <span class="numeros-un__semaines">{{ t('chart.weeks_at_one', {'n': a.semaines}) }}</span></li>
+        {%- set img = a.cover_url or a.artist_image -%}
+        {%- set long = a.semaines >= 3 -%}
+        <li class="regne{{ ' regne--long' if long }}">
+            <a class="regne__lien" href="{{ path('titre/' ~ a.track_slug) if a.track_slug else chart_path(a.code, 'prime') }}">
+                <span class="regne__img">
+                    {% if img %}<img src="{{ img }}" alt="" width="96" height="96" loading="lazy">{% else %}<span class="cover__initials">{{ initials(a.title) }}</span>{% endif %}
+                    <span class="regne__drapeau">{{ flag(a.code, 18) }}</span>
+                </span>
+                <span class="regne__corps">
+                    <span class="regne__pays">{{ country_name(a.code) }}</span>
+                    <span class="regne__titre">{{ a.title }}</span>
+                    <span class="regne__artiste">{{ a.artist_name }}</span>
+                </span>
+            </a>
+            <div class="regne__jauge" role="img" aria-label="{{ t('chart.weeks_at_one', {'n': a.semaines}) }}">
+                <span class="regne__barres">{% for k in range(echelle) %}<i class="{{ 'on' if k < a.semaines }}"></i>{% endfor %}</span>
+                <span class="regne__nb"><b>{{ a.semaines }}</b> {{ tr("sem.") }}</span>
+            </div>
+            <p class="regne__depuis"><span>{{ tr("Depuis le") }} {{ fmt_date(a.depuis, false) }}</span><a href="{{ chart_path(a.code, 'prime') }}">{{ tr("Classement") }} →</a></p>
+        </li>
         {% endfor %}
-    </ol>
-    <p class="fineprint">{{ t('chart.numeros_un_note') }}</p>
+    </ul>
 </section>
 {% endif %}
 <section>

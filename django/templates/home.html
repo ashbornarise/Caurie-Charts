@@ -33,29 +33,6 @@
         </div>
         {% if rows %}
         {{ partial('partials/top-flow', rows=rows, entries=entries) }}
-        {%- set one = rows[0] -%}
-        {%- set one_artist = one.track_id is none -%}
-        {%- set one_cover = one.cover_url or one.artist_image -%}
-        <div class="acc-top">
-            <a class="acc-one" href="{{ path('artiste/' ~ one.artist_slug) if one_artist else path('titre/' ~ one.track_slug) }}">
-                <span class="acc-one__cover">
-                    {% if one_cover %}<img src="{{ one_cover }}" alt="" width="480" height="480" fetchpriority="high">
-                    {% else %}<span class="cover__initials">{{ initials(one.title or one.artist_name) }}</span>{% endif %}
-                </span>
-                <span class="acc-one__body">
-                    <span class="acc-one__badge">{{ tr("N°1") }}</span>
-                    <span class="acc-one__title">{{ one.artist_name if one_artist else one.title }}</span>
-                    {% if not one_artist %}<span class="acc-one__artist">{% if one.artist_country %}{{ flag(one.artist_country, 14) }} {% endif %}{{ one.artist_name }}</span>{% endif %}
-                    {% set sp = spotify_auditeurs(one.artist_slug) %}{% if sp %}<span class="sp-aud">{{ fmt_court(sp) }} {{ tr("auditeurs Spotify par mois") }}</span>{% endif %}
-                </span>
-            </a>
-            <ol class="chart-list chart-list--compact acc-list" start="2">
-                {% for e in rows[1:10] %}
-                    {% if entries %}{{ partial('partials/entry', e=e, compact=true, showCountry=regional) }}
-                    {% else %}{{ partial('partials/live-entry', e=e, compact=true, showSourceCountry=true) }}{% endif %}
-                {% endfor %}
-            </ol>
-        </div>
         <div class="acc-actions">
             {% if entries %}
             <a class="button" href="{{ chart_path(code, chartCode, periodType, run.period_key) }}">{{ t('home.full_chart') }} →</a>

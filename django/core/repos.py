@@ -415,7 +415,7 @@ def numeros_un() -> dict:
     """Les N°1 qui durent (fondateur, 27/10/2026) : pour chaque pays, le N°1 du dernier classement officiel publié et
     son nombre de semaines consécutives au sommet ; et le record de Cauri Charts (plus longue série, tous pays)."""
     rows = db.all("""SELECT r.country_id, c.code, r.period_start, e.track_id, t.title, t.slug AS track_slug,
-                            a.name AS artist_name, a.slug AS artist_slug
+                            a.name AS artist_name, a.slug AS artist_slug, t.cover_url, COALESCE(a.image_hd_url, a.image_url) AS artist_image
                      FROM chart_runs r JOIN chart_types ct ON ct.id = r.chart_type_id AND ct.code IN ('prime', 'prime-wa')
                      LEFT JOIN countries c ON c.id = r.country_id
                      JOIN chart_entries e ON e.chart_run_id = r.id AND e.position = 1
