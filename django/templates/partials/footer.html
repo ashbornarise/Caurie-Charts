@@ -8,9 +8,9 @@
                 <img class="pied__logo" src="{{ asset('img/brand/logo.svg') }}" alt="{{ brand() }}" width="120" height="53" loading="lazy">
                 <p>{{ t('footer.about', {'brand': brand()}) }}</p>
                 <ul class="pied__reseaux" aria-label="{{ tr("Nos réseaux") }}">
-                    <li><a href="https://www.instagram.com/cauricharts" target="_blank" rel="noopener" aria-label="Instagram"><img src="{{ asset(\'img/reseaux/instagram.png\') }}" alt="" width="26" height="26" loading="lazy"></a></li>
-                    <li><a href="https://www.tiktok.com/@caurichartsofficial" target="_blank" rel="noopener" aria-label="TikTok"><img src="{{ asset(\'img/reseaux/tiktok.png\') }}" alt="" width="26" height="26" loading="lazy"></a></li>
-                    <li><a href="https://www.facebook.com/profile.php?id=61594631234765" target="_blank" rel="noopener" aria-label="Facebook"><img src="{{ asset(\'img/reseaux/facebook.png\') }}" alt="" width="26" height="26" loading="lazy"></a></li>
+                    <li><a href="https://www.instagram.com/cauricharts" target="_blank" rel="noopener" aria-label="Instagram"><img src="{{ asset('img/reseaux/instagram.png') }}" alt="" width="26" height="26" loading="lazy"></a></li>
+                    <li><a href="https://www.tiktok.com/@caurichartsofficial" target="_blank" rel="noopener" aria-label="TikTok"><img src="{{ asset('img/reseaux/tiktok.png') }}" alt="" width="26" height="26" loading="lazy"></a></li>
+                    <li><a href="https://www.facebook.com/profile.php?id=61594631234765" target="_blank" rel="noopener" aria-label="Facebook"><img src="{{ asset('img/reseaux/facebook.png') }}" alt="" width="26" height="26" loading="lazy"></a></li>
                     {% if config('app.telegram_url') %}<li><a href="{{ config('app.telegram_url') }}" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg></a></li>{% endif %}
                 </ul>
             </div>
