@@ -115,6 +115,7 @@ class Flags:
     DIVERSITY_CAPPED = "diversity_capped"
     DIVERSITY_FALLBACK = "diversity_fallback"
     COUNTRY_CAPPED = "country_capped"
+    ARTIST_CAPPED = "artist_capped"
     BLOCKING = [SPIKE, DECLARATION_MISMATCH, YOUTUBE_RATIO]
 
     @classmethod
@@ -311,7 +312,26 @@ class ChartRanker:
         ordered = self.apply_diversity(sorted(self.sans_anciens(self.eligible(items), ref), key=self.sort_key))
         if country_cap:
             ordered = self.cap_per_country(ordered, size, country_cap)
-        return self._finalize(ordered[:size], previous or {}, "track_id")
+        return self._finalize(self.cap_artist(ordered, size)[:size], previous or {}, "track_id")
+
+    def cap_artist(self, ordered: list, size: int) -> list:
+        """Au plus `artist_cap` titres d'un même artiste dans le Top (formule v3, décision du fondateur du 06/11/2026 :
+        Himra occupait 4 des 10 places en Côte d'Ivoire). Les titres en trop descendent juste après le Top, dans leur
+        ordre (marqués artist_capped). Sans artist_cap dans la formule (versions 1 et 2) : aucun plafond."""
+        cap = int(self.formula.get("artist_cap") or 0)
+        if cap <= 0:
+            return ordered
+        head, rest, count = [], [], {}
+        for item in ordered:
+            a = item.get("artist_id")
+            if len(head) < size and count.get(a, 0) < cap:
+                head.append(item)
+                count[a] = count.get(a, 0) + 1
+            elif len(head) < size:
+                rest.append({**item, "flags": list(item.get("flags") or []) + [Flags.ARTIST_CAPPED]})
+            else:
+                rest.append(item)
+        return head + rest
 
     @staticmethod
     def cap_per_country(ordered: list, size: int, cap: int) -> list:
@@ -360,7 +380,7 @@ class ChartRanker:
                 continue
             candidates.append({**item, "growth_pct": php_round(growth, 2)})
         candidates.sort(key=lambda a: (-a["growth_pct"], -a["score"], a["track_id"]))
-        return self._finalize(candidates[:size], previous or {}, "track_id")
+        return self._finalize(self.cap_artist(candidates, size)[:size], previous or {}, "track_id")
 
     def fresh(self, items: list, week_end: str, size: int, previous: dict | None = None) -> list:
         max_age = int(self.formula["fresh"]["max_age_days"])
@@ -371,7 +391,7 @@ class ChartRanker:
             released = _d(i["release_date"]) if i.get("release_date") else None
             return (released is not None and limit < released <= end) or bool(i.get("is_emerging"))
         candidates = sorted([i for i in self.eligible(items) if ok(i)], key=self.sort_key)
-        return self._finalize(candidates[:size], previous or {}, "track_id")
+        return self._finalize(self.cap_artist(candidates, size)[:size], previous or {}, "track_id")
 
     def icon(self, items: list, size: int, previous: dict | None = None) -> list:
         artists: dict = {}
@@ -390,7 +410,7 @@ class ChartRanker:
         return self._finalize(lst[:size], previous or {}, "artist_id")
 
     def cumulative(self, items: list, size: int, previous: dict | None = None) -> list:
-        return self._finalize(sorted(self.eligible(items), key=self.sort_key)[:size], previous or {}, "track_id")
+        return self._finalize(self.cap_artist(sorted(self.eligible(items), key=self.sort_key), size)[:size], previous or {}, "track_id")
 
     @staticmethod
     def regional_points(country_charts: dict, points_for: int = 10) -> list:
@@ -411,7 +431,7 @@ class ChartRanker:
         items.sort(key=lambda a: (-a["score"], -a["sources_count"], a["track_id"]))
         if country_cap:
             items = self.cap_per_country(items, size, country_cap)
-        return self._finalize(items[:size], previous or {}, "track_id")
+        return self._finalize(self.cap_artist(items, size)[:size], previous or {}, "track_id")
 
     @staticmethod
     def _finalize(lst: list, previous: dict, key: str) -> list:
