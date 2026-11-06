@@ -97,7 +97,8 @@ def publier(video_url: str, titre: str, reglages: dict, brouillon: bool = False)
     else:
         if not reglages.get("privacy_level"):
             raise PlatformException("TikTok : choisissez qui peut voir la vidéo")
-        info = {"title": titre[:2200], "privacy_level": reglages["privacy_level"]}
+        info = {"title": titre[:2200], "privacy_level": reglages["privacy_level"],
+                "video_cover_timestamp_ms": int(reglages.get("couverture_ms") or 1500)}   # couverture : l'image titrée
         for k in ("disable_comment", "disable_duet", "disable_stitch", "brand_organic_toggle", "brand_content_toggle"):
             info[k] = bool(reglages.get(k))
         d = _post("/post/publish/video/init/", {"post_info": info, "source_info": src}, jet)

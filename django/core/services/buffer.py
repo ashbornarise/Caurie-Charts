@@ -156,6 +156,24 @@ def images(post: dict, service: str) -> list:
     return [f"{base}/media/social/{f}" for f in files if f][:MAX_IMAGES.get(service, 10)]
 
 
+def couverture_ms(post: dict) -> int:
+    """Instant de la vidéo pris comme couverture (06/11/2026) : 1,5 s par défaut, l'image du titre et de l'artiste
+    incrustés (c'est aussi la vignette du Studio) ; « couverture_ms » dans les faits du post pour un autre choix."""
+    try:
+        return max(0, int(json.loads(post.get("facts") or "{}").get("couverture_ms", 1500)))
+    except (ValueError, TypeError):
+        return 1500
+
+
+def couverture_url(post: dict) -> str | None:
+    """Image de couverture d'une vidéo : la vignette enregistrée avec le post (image_square), quand elle existe."""
+    from core import storage
+    base, img = storage.blob_public_url(), post.get("image_square")
+    # seulement les vignettes du Studio (image 9:16 tirée de la vidéo) : un visuel 4:5 serait refusé comme couverture de Reel
+    ok = base and img and str(img).startswith("studio-") and str(img).lower().endswith((".jpg", ".jpeg", ".png"))
+    return f"{base}/media/social/{img}" if ok else None
+
+
 def video_url(post: dict, service: str = "") -> str | None:
     """Adresse publique de la vidéo ; pour TikTok, sa copie 1080 x 1920 (« -tt ») quand elle existe."""
     from core import storage
@@ -326,6 +344,8 @@ def payload(post: dict, channel: dict, due_at: datetime | None, reel: bool = Fal
         if not video:
             raise PlatformException("pas de vidéo pour ce post")
         assets = [{"video": {"url": video}}]
+        if service in ("instagram", "tiktok"):   # couverture choisie, plutôt que la 1re image (souvent noire)
+            assets[0]["video"]["metadata"] = {"thumbnailOffset": couverture_ms(post)}
     else:
         pics = images(post, service)
         if not pics:

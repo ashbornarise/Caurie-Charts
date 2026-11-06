@@ -99,7 +99,11 @@ def instagram(post: dict, reel: bool, publier: bool = True) -> str:
         video = buffer.video_url(post)
         if not video:
             raise PlatformException("pas de vidéo pour ce post")
-        cid = _conteneur({"media_type": "REELS", "video_url": video, "caption": legende, "share_to_feed": "true"}, collab)
+        params = {"media_type": "REELS", "video_url": video, "caption": legende, "share_to_feed": "true"}
+        # couverture (06/11/2026) : la vignette du post si elle existe, sinon l'image à 1,5 s (titre incrusté)
+        cover = buffer.couverture_url(post)
+        params.update({"cover_url": cover} if cover else {"thumb_offset": str(buffer.couverture_ms(post))})
+        cid = _conteneur(params, collab)
     else:
         photos = buffer.images(post, "instagram")
         if not photos:
