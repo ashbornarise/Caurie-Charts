@@ -32,29 +32,67 @@
             {{ partial('partials/period-tabs', periodType=periodType, periods=['week', 'month', 'year', 'all'], link=tab_link) }}
         </div>
         {% if rows %}
-        {%- set one = rows[0] -%}
-        {%- set one_artist = one.track_id is none -%}
-        {%- set one_cover = one.cover_url or one.artist_image -%}
-        <div class="acc-top">
-            <a class="acc-one" href="{{ path('artiste/' ~ one.artist_slug) if one_artist else path('titre/' ~ one.track_slug) }}">
-                <span class="acc-one__cover">
-                    {% if one_cover %}<img src="{{ one_cover }}" alt="" width="480" height="480" fetchpriority="high">
-                    {% else %}<span class="cover__initials">{{ initials(one.title or one.artist_name) }}</span>{% endif %}
-                </span>
-                <span class="acc-one__body">
-                    <span class="acc-one__badge">{{ tr("N°1") }}</span>
-                    <span class="acc-one__title">{{ one.artist_name if one_artist else one.title }}</span>
-                    {% if not one_artist %}<span class="acc-one__artist">{% if one.artist_country %}{{ flag(one.artist_country, 14) }} {% endif %}{{ one.artist_name }}</span>{% endif %}
-                    {% set sp = spotify_auditeurs(one.artist_slug) %}{% if sp %}<span class="sp-aud">{{ fmt_court(sp) }} {{ tr("auditeurs Spotify par mois") }}</span>{% endif %}
-                </span>
-            </a>
-            <ol class="chart-list chart-list--compact acc-list" start="2">
-                {% for e in rows[1:10] %}
-                    {% if entries %}{{ partial('partials/entry', e=e, compact=true, showCountry=regional) }}
-                    {% else %}{{ partial('partials/live-entry', e=e, compact=true, showSourceCountry=true) }}{% endif %}
+        {#- Refonte du 06/11/2026 : en tête, un défilé des pochettes (la carte du milieu en grand, un lecteur en verre
+            dessous) ; puis le Top en vignettes façon YouTube (clip officiel, sinon pochette), rang et mouvement sur l'image. -#}
+        {%- set top10 = rows[:10] -%}
+        {%- set clips = clips_youtube(top10|map(attribute='track_id')|list) -%}
+        <div class="acc-flow" data-flow>
+            <ul class="acc-flow__piste" data-flow-piste>
+                {% for e in top10 %}
+                {%- set is_artist = e.track_id is none or e.is_artist -%}
+                {%- set nom = e.artist_name if is_artist else e.title -%}
+                {%- set cover = e.cover_url or e.artist_image -%}
+                <li class="acc-flow__carte" data-titre="{{ nom }}" data-artiste="{{ '' if is_artist else e.artist_name }}" data-rang="{{ (e.position or e.rank)|int }}"
+                    data-cover="{{ cover or '' }}" data-lien="{{ path('artiste/' ~ e.artist_slug) if is_artist else path('titre/' ~ e.track_slug) }}">
+                    <a href="{{ path('artiste/' ~ e.artist_slug) if is_artist else path('titre/' ~ e.track_slug) }}" tabindex="-1" aria-hidden="true">
+                        <span class="acc-flow__img">{% if cover %}<img src="{{ cover }}" alt="" width="320" height="320"{{ ' fetchpriority="high"' if loop.first else ' loading="lazy"' }}>{% else %}<span class="cover__initials">{{ initials(nom) }}</span>{% endif %}</span>
+                        <span class="acc-flow__nom"><b>{{ nom }}</b>{% if not is_artist %}<small>{{ e.artist_name }}</small>{% endif %}</span>
+                    </a>
+                </li>
                 {% endfor %}
-            </ol>
+            </ul>
+            <div class="acc-flow__lecteur">
+                <button type="button" class="acc-flow__btn" data-flow-prec aria-label="{{ tr("Titre précédent") }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6 5 12l6 6M19 6l-6 6 6 6"/></svg></button>
+                <button type="button" class="acc-flow__btn acc-flow__btn--pause" data-flow-pause aria-label="{{ tr("Pause") }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
+                <button type="button" class="acc-flow__btn" data-flow-suiv aria-label="{{ tr("Titre suivant") }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 6 6 6-6 6M5 6l6 6-6 6"/></svg></button>
+                <a class="acc-flow__courant" data-flow-lien href="#">
+                    <img data-flow-img src="" alt="" width="40" height="40">
+                    <span><b data-flow-titre></b><small data-flow-artiste></small></span>
+                    <span class="acc-flow__rangpuce" data-flow-rang></span>
+                </a>
+            </div>
         </div>
+
+        <ol class="acc-yt">
+            {% for e in top10 %}
+            {%- set is_artist = e.track_id is none or e.is_artist -%}
+            {%- set nom = e.artist_name if is_artist else e.title -%}
+            {%- set href = path('artiste/' ~ e.artist_slug) if is_artist else path('titre/' ~ e.track_slug) -%}
+            {%- set cover = e.cover_url or e.artist_image -%}
+            {%- set yt = clips.get(e.track_id|int) if e.track_id else none -%}
+            {%- set rang = (e.position or e.rank)|int -%}
+            <li class="acc-yt__item{{ ' acc-yt__item--un' if rang == 1 }}">
+                <a class="acc-yt__vignette" href="{{ href }}">
+                    {% if yt %}<img src="https://i.ytimg.com/vi/{{ yt }}/hqdefault.jpg" alt="" width="480" height="360" loading="lazy">
+                    {% elif cover %}<img class="acc-yt__fond" src="{{ cover }}" alt="" width="240" height="240" loading="lazy"><img class="acc-yt__pochette" src="{{ cover }}" alt="" width="240" height="240" loading="lazy">
+                    {% else %}<span class="cover__initials">{{ initials(nom) }}</span>{% endif %}
+                    <span class="acc-yt__rang">{{ tr("N°1") if rang == 1 else rang }}</span>
+                    {% if entries %}{%- set m = movement(e) -%}
+                    <span class="acc-yt__move acc-yt__move--{{ m.type }}">{{ {'up': '▲ ' ~ m.value, 'down': '▼ ' ~ m.value, 'same': '=', 'new': t('move.new_short'), 're': t('move.re_short')}[m.type] }}</span>{% endif %}
+                    {% if yt %}<span class="acc-yt__play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>{% endif %}
+                </a>
+                <div class="acc-yt__infos">
+                    <a class="acc-yt__titre" href="{{ href }}">{{ nom }}</a>
+                    {% if not is_artist %}<a class="acc-yt__artiste" href="{{ path('artiste/' ~ e.artist_slug) }}">{% if e.artist_country %}{{ flag(e.artist_country, 12) }} {% endif %}{{ e.artist_name }}{% if e.featuring %} · feat. {{ e.featuring }}{% endif %}</a>{% endif %}
+                    <span class="acc-yt__meta">
+                        {%- set sp = spotify_auditeurs(e.artist_slug) -%}
+                        {% if sp %}<span class="sp-aud">{{ fmt_court(sp) }} {{ tr("auditeurs Spotify") }}</span>{% endif %}
+                        {% if entries and e.weeks_on_chart %}<span>{{ e.weeks_on_chart|int }} {{ tr("sem. au Top") }}</span>{% endif %}
+                    </span>
+                </div>
+            </li>
+            {% endfor %}
+        </ol>
         <div class="acc-actions">
             {% if entries %}
             <a class="button" href="{{ chart_path(code, chartCode, periodType, run.period_key) }}">{{ t('home.full_chart') }} →</a>

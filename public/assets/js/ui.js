@@ -94,3 +94,57 @@
       .then(function () { b.disabled = false; });
   });
 })();
+
+/* Défilé des pochettes de l'accueil (06/11/2026) : la carte au centre en grand, le lecteur affiche le titre ; avance seul
+   toutes les 4 secondes (arrêt au survol, au toucher, avec le bouton pause, ou si l'utilisateur réduit les animations) */
+(function () {
+  var flow = document.querySelector('[data-flow]');
+  if (!flow) return;
+  var piste = flow.querySelector('[data-flow-piste]'), cartes = Array.prototype.slice.call(piste.children);
+  if (!cartes.length) return;
+  var courant = 0, minuterie = null, enPause = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function affiche(i) {
+    courant = (i + cartes.length) % cartes.length;
+    cartes.forEach(function (c, k) {
+      c.classList.toggle('est-centre', k === courant);
+      c.classList.toggle('est-gauche', k < courant);
+      c.classList.toggle('est-droite', k > courant);
+    });
+    var c = cartes[courant];
+    flow.querySelector('[data-flow-titre]').textContent = c.dataset.titre;
+    flow.querySelector('[data-flow-artiste]').textContent = c.dataset.artiste;
+    flow.querySelector('[data-flow-rang]').textContent = 'N°' + c.dataset.rang;
+    flow.querySelector('[data-flow-lien]').href = c.dataset.lien;
+    var img = flow.querySelector('[data-flow-img]');
+    if (c.dataset.cover) { img.src = c.dataset.cover; img.hidden = false; } else { img.hidden = true; }
+  }
+  function centre(i, doux) {
+    affiche(i);
+    var c = cartes[courant];
+    piste.scrollTo({left: c.offsetLeft - (piste.clientWidth - c.offsetWidth) / 2, behavior: doux ? 'smooth' : 'auto'});
+  }
+  function arrete() { if (minuterie) { clearInterval(minuterie); minuterie = null; } }
+  function lance() { arrete(); if (!enPause) minuterie = setInterval(function () { centre(courant + 1, true); }, 4000); }
+  flow.querySelector('[data-flow-prec]').addEventListener('click', function () { centre(courant - 1, true); lance(); });
+  flow.querySelector('[data-flow-suiv]').addEventListener('click', function () { centre(courant + 1, true); lance(); });
+  var bp = flow.querySelector('[data-flow-pause]');
+  bp.addEventListener('click', function () { enPause = !enPause; bp.classList.toggle('est-pause', enPause); if (enPause) { arrete(); } else { lance(); } });
+  cartes.forEach(function (c, k) {
+    c.addEventListener('click', function (ev) { if (k !== courant) { ev.preventDefault(); centre(k, true); lance(); } });
+  });
+  // défilement au doigt : la carte la plus proche du centre devient la carte courante
+  var att = null;
+  piste.addEventListener('scroll', function () {
+    clearTimeout(att);
+    att = setTimeout(function () {
+      var mid = piste.scrollLeft + piste.clientWidth / 2, best = 0, d = Infinity;
+      cartes.forEach(function (c, k) { var x = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid); if (x < d) { d = x; best = k; } });
+      if (best !== courant) affiche(best);
+    }, 90);
+  }, {passive: true});
+  flow.addEventListener('mouseenter', arrete);
+  flow.addEventListener('mouseleave', lance);
+  piste.addEventListener('touchstart', arrete, {passive: true});
+  centre(0, false);
+  lance();
+})();
