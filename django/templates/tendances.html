@@ -1,0 +1,24 @@
+{#- Tendances (06/11/2026) : artistes et titres les plus présents dans les relevés des plateformes -#}
+<section class="wrap page-liste">
+    <p class="eyebrow">{{ tr("Tendances") }}</p>
+    <h1>{{ tr("Ce qui monte en ce moment") }}</h1>
+    <p class="lead">{{ tr("Les artistes et les titres qui montent sur les plateformes en Afrique de l’Ouest.") }}</p>
+    <h2>{{ tr("Titres") }}</h2>
+    <ul class="page-liste__grille">
+        {% for x in titres %}
+        <li><a class="page-liste__carte page-liste__carte--img" href="{{ path('titre/' ~ x.slug) }}">
+            {% if x.cover_url %}<img src="{{ x.cover_url }}" alt="" width="56" height="56" loading="lazy">{% endif %}
+            <span><span class="page-liste__nom">{{ x.title }}</span><small>{% if x.pays %}{{ flag(x.pays, 12) }} {% endif %}{{ x.artist_name }}</small></span>
+        </a></li>
+        {% endfor %}
+    </ul>
+    <h2>{{ tr("Artistes") }}</h2>
+    <ul class="page-liste__grille">
+        {% for x in artistes %}
+        <li><a class="page-liste__carte page-liste__carte--img" href="{{ path('artiste/' ~ x.slug) }}">
+            {% if x.image %}<img class="rond" src="{{ x.image }}" alt="" width="56" height="56" loading="lazy">{% endif %}
+            <span><span class="page-liste__nom">{{ x.name }}</span>{% if x.pays %}<small>{{ flag(x.pays, 12) }} {{ country_name(x.pays) }}</small>{% endif %}</span>
+        </a></li>
+        {% endfor %}
+    </ul>
+</section>

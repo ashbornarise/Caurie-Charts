@@ -1,7 +1,7 @@
 {#- Ligne d'un classement des plateformes (vue en direct ou vue d'une plateforme). -#}
 {%- set SOURCES = live_sources() -%}
 {%- set is_artist = e.is_artist -%}
-{%- set cover = (e.artist_image or e.cover_url) if is_artist else (e.cover_url or e.artist_image) -%}
+{%- set cover = (e.artist_image or e.cover_url) if is_artist else (e.cover_url or e.artist_image or (yt_vignette(e.track_id) if e.track_id else '')) -%}
 <li class="entry entry--live{{ ' entry--top' if e.rank == 1 }}{{ ' entry--compact' if compact }}">
     {% if e.rank == 1 %}
     <span class="particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>

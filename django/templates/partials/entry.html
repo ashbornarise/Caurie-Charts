@@ -10,9 +10,11 @@
     <span class="particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
     {% endif %}
     <span class="entry__rank">{{ e.position|int }}</span>
-    <span class="cover" aria-hidden="true">
-        {% if e.cover_url %}
-            <img src="{{ e.cover_url }}" alt="" width="56" height="56" loading="lazy">
+    {#- 06/11/2026 : chaque titre avec une image (pochette, sinon photo de l'artiste, sinon image du clip officiel) -#}
+    {%- set cover = e.cover_url or e.artist_image or (yt_vignette(e.track_id) if e.track_id else '') -%}
+    <span class="cover{{ ' cover--round' if is_artist }}" aria-hidden="true">
+        {% if cover %}
+            <img src="{{ cover }}" alt="" width="56" height="56" loading="lazy">
         {% else %}
             <span class="cover__initials">{{ initials(name) }}</span>
         {% endif %}

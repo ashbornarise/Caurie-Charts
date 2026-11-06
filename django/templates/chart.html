@@ -88,6 +88,7 @@
     {% elif not live.rows %}
         <p class="empty">{{ t('chart.live_empty') }}</p>
     {% else %}
+        {{ partial('partials/top-flow', rows=live.rows, entries=none) }}
         <ol class="chart-list chart-list--long">
             {% for e in live.rows %}
                 {{ partial('partials/live-entry', e=e, showSourceCountry=(regional or view == 'live')) }}
@@ -96,6 +97,8 @@
     {% endif %}
 </section>
 {% else %}
+{#- Défilé des pochettes en haut du classement officiel (06/11/2026) -#}
+{% if view == 'official' and entries and chartCode != 'icon' %}{{ partial('partials/top-flow', rows=entries, entries=entries) }}{% endif %}
 {% if numerosUn and numerosUn.actuels %}
 <section class="numeros-un" aria-labelledby="numeros-un-titre">
     <h2 id="numeros-un-titre">{{ t('chart.numeros_un') }}</h2>

@@ -1161,3 +1161,25 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
     .acc-yt__item:not(.acc-yt__item--un) .acc-yt__rang { left: 6px; bottom: 6px; padding: 2px 7px; font-size: .85rem; }
     .acc-yt__item:not(.acc-yt__item--un) .acc-yt__move { right: 6px; bottom: 6px; padding: 2px 6px; }
 }
+
+/* Défilé : numéro du rang sur chaque pochette, N°1 en violet (06/11/2026) */
+.acc-flow__img { position: relative; }
+.acc-flow__num { position: absolute; left: 8px; top: 8px; padding: 3px 9px; border-radius: 10px; font: 800 .85rem/1.2 var(--serif);
+    color: #fff; background: rgba(11,7,34,.8); }
+.acc-flow__carte[data-rang="1"] .acc-flow__num { background: linear-gradient(135deg, #A57BFF, #7A3CF5); }
+
+/* Pages « Tous les pays » et « Tendances » (06/11/2026) */
+.page-liste { padding-block: 24px 40px; }
+.page-liste h2 { margin: 28px 0 12px; }
+.page-liste__grille { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.page-liste__carte { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 16px; background: #fff; text-decoration: none; color: var(--ink);
+    border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); box-shadow: 0 10px 24px -20px rgba(40,90,160,.7); transition: transform .2s ease, border-color .2s ease; height: 100%; }
+.page-liste__carte:hover { transform: translateY(-2px); border-color: #7A3CF5; }
+.page-liste__carte--wa { background: linear-gradient(135deg, #1B1150, #5B2BD6); color: #fff; }
+.page-liste__carte--wa small { color: rgba(255,255,255,.8) !important; }
+.page-liste__carte--img { flex-direction: row; align-items: center; gap: 12px; }
+.page-liste__carte--img img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; flex: none; }
+.page-liste__carte--img img.rond { border-radius: 50%; }
+.page-liste__carte--img > span { min-width: 0; }
+.page-liste__nom { display: flex; align-items: center; gap: 8px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.page-liste__carte small { color: var(--muted); font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }

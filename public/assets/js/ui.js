@@ -124,9 +124,15 @@
     piste.scrollTo({left: c.offsetLeft - (piste.clientWidth - c.offsetWidth) / 2, behavior: doux ? 'smooth' : 'auto'});
   }
   function arrete() { if (minuterie) { clearInterval(minuterie); minuterie = null; } }
-  function lance() { arrete(); if (!enPause) minuterie = setInterval(function () { centre(courant + 1, true); }, 4000); }
-  flow.querySelector('[data-flow-prec]').addEventListener('click', function () { centre(courant - 1, true); lance(); });
-  flow.querySelector('[data-flow-suiv]').addEventListener('click', function () { centre(courant + 1, true); lance(); });
+  // avance par rang (1, 2, 3…) : le N°1 est au centre, les autres alternent à gauche et à droite
+  function parRang(delta) {
+    var n = cartes.length, r = +cartes[courant].dataset.rang, cible = ((r - 1 + delta) % n + n) % n + 1;
+    for (var k = 0; k < n; k++) { if (+cartes[k].dataset.rang === cible) return k; }
+    return courant;
+  }
+  function lance() { arrete(); if (!enPause) minuterie = setInterval(function () { centre(parRang(1), true); }, 4000); }
+  flow.querySelector('[data-flow-prec]').addEventListener('click', function () { centre(parRang(-1), true); lance(); });
+  flow.querySelector('[data-flow-suiv]').addEventListener('click', function () { centre(parRang(1), true); lance(); });
   var bp = flow.querySelector('[data-flow-pause]');
   bp.addEventListener('click', function () { enPause = !enPause; bp.classList.toggle('est-pause', enPause); if (enPause) { arrete(); } else { lance(); } });
   cartes.forEach(function (c, k) {
@@ -145,6 +151,8 @@
   flow.addEventListener('mouseenter', arrete);
   flow.addEventListener('mouseleave', lance);
   piste.addEventListener('touchstart', arrete, {passive: true});
-  centre(0, false);
+  var un = 0;
+  cartes.forEach(function (c, k) { if (c.dataset.rang === '1') un = k; });
+  centre(un, false);
   lance();
 })();

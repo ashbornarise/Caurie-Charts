@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from django.urls import path, re_path
 
 from core import studio
-from core import views, views_claim, views_cron, views_relais, views_show, views_widget, views_tiktok, views_newsletter
+from core import views, views_claim, views_cron, views_relais, views_show, views_widget, views_tiktok, views_newsletter, views_pages
 from core.backoffice import analytics_views, show_admin, team
 from core.backoffice import views as admin
 
@@ -89,6 +89,8 @@ urlpatterns = [
     path("envoie-ta-video", views.fan_video),
     path("api/relais/profils", views_relais.profils),
     path("api/vu", views.vu),
+    path("pays", views_pages.pays),
+    path("tendances", views_pages.tendances),
     path("api/newsletter", views_newsletter.inscrire),
     path("newsletter/confirmer/<str:jeton>", views_newsletter.confirmer),
     path("newsletter/desinscription/<str:jeton>", views_newsletter.desinscrire),

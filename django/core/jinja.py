@@ -57,7 +57,7 @@ def environment(**options) -> Environment:
         "is_group_label": helpers.is_group_label, "chart_path": helpers.chart_path, "rank_chart_svg": helpers.rank_chart_svg,
         "flag": helpers.flag, "news_image": helpers.news_image, "legal": helpers.legal, "platform_name": helpers.platform_name, "url_with": helpers.url_with,
         "spotify_url": helpers.spotify_url, "period_slug": helpers.period_slug, "rawurlencode": helpers.rawurlencode,
-        "ucfirst": helpers.ucfirst, "dict": dict, "from_json": helpers.from_json, "to_json": helpers.to_json, "php_str": helpers.php_str, "add_days": helpers.add_days, "number_format": helpers.number_format, "php_round": _php_round, "today": lambda: clock.today().isoformat(), "nl2br": helpers.nl2br, "paragraphs": helpers.paragraphs, "url_host": helpers.url_host, "share_url": helpers.share_url, "Markup": Markup, "live_sources": _live_sources, "spotify_auditeurs": _spotify_auditeurs, "clips_youtube": _clips_youtube, "fmt_court": _fmt_court, "now_year": lambda: clock.today().year, "trim": lambda s: str(s or "").strip(),
+        "ucfirst": helpers.ucfirst, "dict": dict, "from_json": helpers.from_json, "to_json": helpers.to_json, "php_str": helpers.php_str, "add_days": helpers.add_days, "number_format": helpers.number_format, "php_round": _php_round, "today": lambda: clock.today().isoformat(), "nl2br": helpers.nl2br, "paragraphs": helpers.paragraphs, "url_host": helpers.url_host, "share_url": helpers.share_url, "Markup": Markup, "live_sources": _live_sources, "spotify_auditeurs": _spotify_auditeurs, "clips_youtube": _clips_youtube, "yt_vignette": lambda tid: (lambda v: f"https://i.ytimg.com/vi/{v}/hqdefault.jpg" if v else "")(_clips_youtube([tid]).get(int(tid)) if tid else None), "fmt_court": _fmt_court, "now_year": lambda: clock.today().year, "trim": lambda s: str(s or "").strip(),
         "enumerate": enumerate, "len": len, "min": min, "max": max, "int": int, "str": str, "round": round,
         "sorted": sorted, "list": list, "range": range, "zip": zip, "abs": abs, "float": float,
     })
@@ -87,8 +87,8 @@ def _clips_youtube(track_ids) -> dict:
         from core import db
         return {int(r["track_id"]): r["external_id"] for r in db.all(
             f"""SELECT DISTINCT ON (track_id) track_id, external_id FROM track_platform_ids
-                WHERE platform = 'youtube' AND is_official = 1 AND track_id IN ({','.join(['?'] * len(ids))})
-                ORDER BY track_id, published_at NULLS LAST""", ids)}
+                WHERE platform = 'youtube' AND track_id IN ({','.join(['?'] * len(ids))})
+                ORDER BY track_id, is_official DESC, published_at NULLS LAST""", ids)}
     except Exception:  # noqa: BLE001 — sans vignette plutôt qu'une page cassée
         return {}
 

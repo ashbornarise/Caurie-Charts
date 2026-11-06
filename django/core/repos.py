@@ -118,7 +118,8 @@ def published_runs(country_id, chart_code: str, period_type: str, limit: int = 6
 def entries(run_id: int, limit: int | None = None) -> list[dict]:
     rows = db.all(
         """SELECT e.*, t.title, t.slug AS track_slug, t.featuring, t.cover_url, t.release_date,
-                  a.name AS artist_name, a.slug AS artist_slug, a.label_owner, ac.code AS artist_country
+                  a.name AS artist_name, a.slug AS artist_slug, a.label_owner, ac.code AS artist_country,
+                  COALESCE(a.image_hd_url, a.image_url) AS artist_image
            FROM chart_entries e
            LEFT JOIN tracks t ON t.id = e.track_id
            LEFT JOIN artists a ON a.id = COALESCE(e.artist_id, t.artist_id)

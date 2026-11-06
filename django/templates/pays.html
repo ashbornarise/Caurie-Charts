@@ -1,0 +1,16 @@
+{#- Tous les pays (06/11/2026) : drapeau, N°1 officiel de la dernière semaine, lien vers le classement -#}
+<section class="wrap page-liste">
+    <p class="eyebrow">{{ tr("Classements") }}</p>
+    <h1>{{ tr("Tous les pays") }}</h1>
+    <p class="lead">{{ tr("Les classements de la musique des 16 pays d’Afrique de l’Ouest.") }}</p>
+    <ul class="page-liste__grille">
+        <li><a class="page-liste__carte page-liste__carte--wa" href="{{ path('classements/afrique-de-l-ouest') }}">
+            <span class="page-liste__nom">{{ country_name('WA') }}</span><small>{{ tr("Top 20 de la région") }}</small></a></li>
+        {% for c in countries %}{% set un = n1.get(c.code) %}
+        <li><a class="page-liste__carte" href="{{ chart_path(c.code, 'prime') }}">
+            <span class="page-liste__nom">{{ flag(c.code, 22) }} {{ country_name(c.code) }}</span>
+            {% if un %}<small>{{ tr("N°1") }} · {{ un.title }} — {{ un.artist_name }}</small>{% else %}<small>{{ tr("Classement en direct") }}</small>{% endif %}
+        </a></li>
+        {% endfor %}
+    </ul>
+</section>

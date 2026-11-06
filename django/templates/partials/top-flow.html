@@ -1,0 +1,38 @@
+{#- Défilé des pochettes du Top 10 (06/11/2026, revu le même jour à la demande du fondateur) : le N°1 au centre, bordé
+    des autres titres de chaque côté (2, 4, 6… à gauche ; 3, 5, 7… à droite), un lecteur en verre dessous ; avance par
+    rang. Chaque titre a une image : sa pochette, sinon la photo de l'artiste, sinon l'image de son clip officiel.
+    rows : entrées du classement (officiel ou en direct). Utilisé par l'accueil et la page des classements. -#}
+{%- set top10 = rows[:10] -%}
+{%- if top10 -%}
+{%- set clips = clips_youtube(top10|map(attribute='track_id')|list) -%}
+{%- set ordre = (top10[1::2]|reverse|list) + [top10[0]] + (top10[2::2]|list) -%}
+<div class="acc-flow" data-flow>
+    <ul class="acc-flow__piste" data-flow-piste>
+        {% for e in ordre %}
+        {%- set is_artist = e.track_id is none or e.is_artist -%}
+        {%- set nom = e.artist_name if is_artist else e.title -%}
+        {%- set yt = clips.get(e.track_id|int) if e.track_id else none -%}
+        {%- set cover = e.cover_url or e.artist_image or (('https://i.ytimg.com/vi/' ~ yt ~ '/hqdefault.jpg') if yt else '') -%}
+        {%- set lien = path('artiste/' ~ e.artist_slug) if is_artist else path('titre/' ~ e.track_slug) -%}
+        <li class="acc-flow__carte" data-titre="{{ nom }}" data-artiste="{{ '' if is_artist else e.artist_name }}"
+            data-rang="{{ (e.position or e.rank)|int }}" data-cover="{{ cover }}" data-lien="{{ lien }}">
+            <a href="{{ lien }}" tabindex="-1" aria-hidden="true">
+                <span class="acc-flow__img">{% if cover %}<img src="{{ cover }}" alt="" width="320" height="320"{{ ' fetchpriority="high"' if (e.position or e.rank)|int == 1 else ' loading="lazy"' }}>{% else %}<span class="cover__initials">{{ initials(nom) }}</span>{% endif %}
+                    <span class="acc-flow__num">{{ tr("N°1") if (e.position or e.rank)|int == 1 else (e.position or e.rank)|int }}</span></span>
+                <span class="acc-flow__nom"><b>{{ nom }}</b>{% if not is_artist %}<small>{{ e.artist_name }}</small>{% endif %}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    <div class="acc-flow__lecteur">
+        <button type="button" class="acc-flow__btn" data-flow-prec aria-label="{{ tr("Titre précédent") }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6 5 12l6 6M19 6l-6 6 6 6"/></svg></button>
+        <button type="button" class="acc-flow__btn" data-flow-pause aria-label="{{ tr("Pause") }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
+        <button type="button" class="acc-flow__btn" data-flow-suiv aria-label="{{ tr("Titre suivant") }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 6 6 6-6 6M5 6l6 6-6 6"/></svg></button>
+        <a class="acc-flow__courant" data-flow-lien href="#">
+            <img data-flow-img src="" alt="" width="40" height="40">
+            <span><b data-flow-titre></b><small data-flow-artiste></small></span>
+            <span class="acc-flow__rangpuce" data-flow-rang></span>
+        </a>
+    </div>
+</div>
+{%- endif -%}
