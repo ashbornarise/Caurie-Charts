@@ -193,3 +193,85 @@ D'après les recommandations pour le projet télévisé en Côte d'Ivoire :
 | Boomplay seul | ≈ 0,05 $ |
 | IA (vérifications Google, textes) | Gemini 5 $ et DeepSeek 5 $ par 30 jours, plafonnés chaque jour |
 | YouTube, Apple, Deezer, Shazam | Gratuits (quota YouTube quotidien partagé entre deux clés) |
+
+---
+
+## 13. Solidité de la méthode : vérification sur nos données (6 novembre 2026)
+
+Réponse point par point à une relecture critique de ce document. Chaque constat est mesuré sur nos données réelles.
+
+### 13.1 Équilibre de la formule : YouTube domine
+
+Sur les **240 titres des Top 10 publiés** des semaines 43 et 44, **YouTube représente 92,7 % des points** et Apple Music 7,3 %. Aucune déclaration n'y figure, et Boomplay n'est relevé que depuis la semaine 45. YouTube est la source principale de 169 titres sur 240.
+
+**Pourquoi :** les unités ne sont pas comparables.
+- Tenir la 1re place d'Apple Music tous les jours de la semaine rapporte 100 × 150 = **15 000 points**, soit l'équivalent de 30 000 vues YouTube de plus dans la semaine.
+- Un tube ivoirien en gagne 700 000.
+
+Nos classements officiels sont donc, en pratique, **des classements YouTube corrigés à la marge par Apple Music**. Les exceptions sont les pays sans clips suivis : Sierra Leone, Guinée-Bissau et Mauritanie, où Apple pèse plus de 90 %.
+
+**Piste étudiée : formule normalisée.** Dans chaque pays et chaque semaine, chaque source compte pour sa **part du total de la source**, puis les sources sont pondérées explicitement, par exemple 50 % YouTube et 50 % plateformes d'écoute. Les poids sont redistribués quand une source manque dans un pays. Simulation sur la semaine 44, avant les règles de classement :
+
+| Pays | Titres communs aux deux Top 10 | Ce qui change |
+|---|---|---|
+| Côte d'Ivoire | 8 sur 10 | Himra remonte (fort aussi sur Apple), Dydy Yeman passe 2e |
+| Nigeria | 9 sur 10 | Quelques échanges de places |
+| Togo | 10 sur 10 | Aucun changement (pas de classement Apple au Togo) |
+
+Les tops bougent peu, parce que les vrais tubes sont forts partout. Mais la contribution de chaque source devient **explicite et défendable** : « YouTube compte pour moitié, le streaming pour moitié ». **Décision du fondateur à prendre** sur les poids, puis formule v4 avec une date d'effet.
+
+### 13.2 Couverture pays par pays
+
+Nombre de sources indépendantes relevées sur 7 jours. Les sources calculées sont à part.
+
+| Sources indépendantes | Pays |
+|---|---|
+| 5 | Nigeria, Sénégal |
+| 4 | Côte d'Ivoire, Ghana |
+| 3 | Bénin |
+| 2 | Burkina Faso, Mali, Niger, Sierra Leone, Togo |
+| 1 | Mauritanie, Cap-Vert, Guinée, Guinée-Bissau, Liberia, Gambie |
+
+**L'indice de fiabilité pénalise volontairement les pays moins couverts** : il mesure **la quantité de données disponibles, pas la musique du pays**. Sa formule complète est publique (section 8 et page Méthode). La phrase à publier : « une note faible signifie que les plateformes publient peu de données pour ce pays, pas que sa musique est moins écoutée ».
+
+### 13.3 Les seuils sont des alertes, pas des preuves de fraude
+
+Depuis le 28 septembre, sur les scores hebdomadaires :
+
+| Type d'alerte | Nombre |
+|---|---|
+| Pics soudains | 196 |
+| Rapport j'aime / vues inhabituel | 91 |
+| Variations négatives | 5 |
+
+**Contrôles :** 28 titres examinés par la revue Google. **27 ont été réintégrés** et **1 seul exclu**. 255 alertes n'ont jamais été examinées : la revue ne vise que les titres qui entrent dans un Top.
+
+**À faire :**
+1. Renommer « garde-fous anti-fraude » en **« alertes pour vérification »**.
+2. Publier chaque mois le bilan : examinés, réintégrés, exclus.
+3. Pour le Buzz, n'afficher que des titres vérifiés.
+
+Le rapport j'aime / vues déclenche surtout de fausses alertes : il varie selon le public et le format du clip. Son seuil est à revoir.
+
+### 13.4 Déclarations d'artistes
+
+Le dispositif existe, mais **il n'a servi qu'une fois** : **1 déclaration reçue, refusée**. Il n'a aucun poids aujourd'hui dans les classements.
+
+Avant de le mettre en avant, il faut définir :
+- les pièces acceptées ;
+- la période comparée ;
+- qui valide ;
+- la protection des captures (accès réservé à l'admin, suppression après décision) ;
+- la règle quand aucune donnée publique ne permet de comparer, qui doit être : pas de prise en compte.
+
+### 13.5 Stabilité : il est trop tôt pour parler de tendances
+
+Titres gardés d'une semaine à l'autre dans le Top 10 :
+
+| Stabilité | Pays et chiffres |
+|---|---|
+| Stables | Bénin (9, 9, 8), Sénégal (8, 8, 7), Nigeria (6 à 8, et un seul N°1 en 6 semaines) |
+| Mouvants | Ghana (3 à 4 ces dernières semaines), Mali (3 à 5) |
+| Très instables | Guinée-Bissau, Mauritanie, Cap-Vert (0 à 4), pays à une seule source |
+
+**Formulation juste à adopter :** les classements sont **« une photographie hebdomadaire des données observées »**. Avec 5 semaines d'historique, une formule v3 entrée en vigueur cette semaine et Boomplay tout juste ajouté, **nous ne revendiquons ni tendance de fond, ni représentativité complète du marché**. Ce sera possible après 12 semaines de données stables.
