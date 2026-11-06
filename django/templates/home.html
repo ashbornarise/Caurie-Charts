@@ -42,7 +42,7 @@
                     {% else %}<span class="cover__initials">{{ initials(one.title or one.artist_name) }}</span>{% endif %}
                 </span>
                 <span class="acc-one__body">
-                    <span class="acc-one__badge">N°1</span>
+                    <span class="acc-one__badge">{{ tr("N°1") }}</span>
                     <span class="acc-one__title">{{ one.artist_name if one_artist else one.title }}</span>
                     {% if not one_artist %}<span class="acc-one__artist">{% if one.artist_country %}{{ flag(one.artist_country, 14) }} {% endif %}{{ one.artist_name }}</span>{% endif %}
                     {% set sp = spotify_auditeurs(one.artist_slug) %}{% if sp %}<span class="sp-aud">{{ fmt_court(sp) }} {{ tr("auditeurs Spotify par mois") }}</span>{% endif %}

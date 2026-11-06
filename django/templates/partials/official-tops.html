@@ -14,7 +14,7 @@
             <p class="official__country">{{ flag(c.code, 18) }}{{ country_name(c.code) }}</p>
             <a class="official__one" href="{{ path('artiste/' ~ one.artist_slug) }}">
                 <span class="official__photo">{% if one.image %}<img src="{{ one.image }}" alt="" loading="lazy" width="320" height="320">{% else %}<span class="cover__initials">{{ initials(one.artist_name) }}</span>{% endif %}</span>
-                <span class="official__badge">N°1</span>
+                <span class="official__badge">{{ tr("N°1") }}</span>
                 <span class="official__title">{{ one.title }}</span>
                 <span class="official__artist">{{ one.artist_name }}</span>
                 {% if one.views %}<span class="official__views">+{{ fmt_number(one.views) }} vues cette semaine</span>{% endif %}
