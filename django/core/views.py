@@ -28,12 +28,10 @@ def region() -> dict:
 
 
 def use_locale(request, country: dict | None = None) -> None:
-    """Langue : choix explicite du visiteur, sinon langue du pays affiché, sinon langue par défaut."""
-    chosen = request.session.get("locale") if request.COOKIES.get("cauri_sid") else None
-    if isinstance(chosen, str) and chosen in conf.get("app.locales"):
-        set_locale(chosen)
-    elif country:
-        set_locale(country["locale"])
+    """Langue (06/11/2026) : elle suit l'adresse — /en/… en anglais, sinon en français —, choisie automatiquement par
+    le navigateur à la première visite (assets/js/langue.js). Plus de langue par pays ni par session : une même
+    adresse doit donner la même page à tous, pour le cache."""
+    set_locale("en" if getattr(request, "cauri_en", False) else conf.get("app.locale", "fr"))
 
 
 def flash(request, kind: str, message: str) -> None:
@@ -458,12 +456,12 @@ def fan_video(request):
 
 
 def set_locale_view(request, loc: str):
-    if loc in conf.get("app.locales"):
-        request.session["locale"] = loc
+    """Ancien lien de changement de langue : renvoie vers la même page dans l'autre langue (adresse /en/…)."""
     back = req_str(request, "retour", "/")
     if not back.startswith("/") or back.startswith("//"):
         back = "/"  # retour interne uniquement (pas de redirection ouverte)
-    return redirect(back)
+    back = back[3:] or "/" if back == "/en" or back.startswith("/en/") else back
+    return redirect("/en" + back if loc == "en" else back)
 
 
 # ---------------------------------------------------------------- actualités

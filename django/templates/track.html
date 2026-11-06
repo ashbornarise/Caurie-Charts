@@ -68,12 +68,12 @@
         <h2 class="section-title">{{ t('track.listen') }}</h2>
         {% if spotify %}
         <p class="spotify-figure">
-            <span class="source source--spotify"><span class="source__name">Spotify</span></span>
+            <span class="source source--spotify"><span class="source__name">{{ tr("Spotify") }}</span></span>
             <strong>{{ fmt_number(spotify.streams|int) }}</strong> {{ t('track.spotify_streams', {'start': fmt_date(spotify.start, false), 'end': fmt_date(spotify.end, false)}) }}
         </p>
         {% endif %}
         <ul class="platform-links">
-            <li><a class="platform-links__spotify" href="{{ spotify_url(track.artist_spotify, track.artist_name, track.title) }}" rel="noopener nofollow" target="_blank">Spotify</a></li>
+            <li><a class="platform-links__spotify" href="{{ spotify_url(track.artist_spotify, track.artist_name, track.title) }}" rel="noopener nofollow" target="_blank">{{ tr("Spotify") }}</a></li>
             {% for l in links if l.platform != 'spotify' %}
                 <li><a href="{{ l.url }}" rel="noopener nofollow" target="_blank">{{ platform_name(l.platform) }}</a></li>
             {% endfor %}

@@ -13,7 +13,7 @@
 
     <form class="form" method="post" action="{{ path('declarer') }}" enctype="multipart/form-data" novalidate>
         {{ csrf_field() }}
-        <div class="hp" aria-hidden="true"><label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <div class="hp" aria-hidden="true"><label>{{ tr("Site web") }} <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
         <fieldset>
             <legend>{{ t('submit.section_track') }}</legend>
             {{ partial('partials/field', name='artist', label=t('submit.artist'), attrs='maxlength="150"', old=old, errors=errors) }}

@@ -8,12 +8,12 @@
                 <p>{{ t('footer.about', {'brand': brand()}) }}</p>
             </div>
             <div class="pied__suivre">
-                <p class="pied__titre">Suivez la référence de la musique ouest-africaine</p>
+                <p class="pied__titre">{{ tr("Suivez la référence de la musique ouest-africaine") }}</p>
                 <ul class="pied__reseaux">
-                    <li><a href="https://www.instagram.com/cauricharts" target="_blank" rel="noopener">Instagram</a></li>
-                    <li><a href="https://www.tiktok.com/@caurichartsofficial" target="_blank" rel="noopener">TikTok</a></li>
-                    <li><a href="https://www.facebook.com/profile.php?id=61594631234765" target="_blank" rel="noopener">Facebook</a></li>
-                    {% if config('app.telegram_url') %}<li><a href="{{ config('app.telegram_url') }}" target="_blank" rel="noopener">Telegram</a></li>{% endif %}
+                    <li><a href="https://www.instagram.com/cauricharts" target="_blank" rel="noopener">{{ tr("Instagram") }}</a></li>
+                    <li><a href="https://www.tiktok.com/@caurichartsofficial" target="_blank" rel="noopener">{{ tr("TikTok") }}</a></li>
+                    <li><a href="https://www.facebook.com/profile.php?id=61594631234765" target="_blank" rel="noopener">{{ tr("Facebook") }}</a></li>
+                    {% if config('app.telegram_url') %}<li><a href="{{ config('app.telegram_url') }}" target="_blank" rel="noopener">{{ tr("Telegram") }}</a></li>{% endif %}
                 </ul>
             </div>
         </div>
@@ -26,36 +26,36 @@
         {% endif %}
 
         <div class="pied__cols">
-            <nav aria-label="Classements">
-                <h2>Classements</h2>
+            <nav aria-label="{{ tr("Classements") }}">
+                <h2>{{ tr("Classements") }}</h2>
                 <ul>
-                    <li><a href="{{ path('classements/afrique-de-l-ouest') }}">Top 20 Afrique de l’Ouest</a></li>
-                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'buzz'}) }}">Ça monte</a></li>
-                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'fresh'}) }}">Nouveautés</a></li>
-                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'icon'}) }}">Top artistes</a></li>
-                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'legend'}) }}">Classiques</a></li>
-                    <li><a href="{{ path('les-plus-ecoutes-dans-le-monde') }}">Les plus écoutés sur Spotify</a></li>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest') }}">{{ tr("Top 20 Afrique de l’Ouest") }}</a></li>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'buzz'}) }}">{{ tr("Ça monte") }}</a></li>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'fresh'}) }}">{{ tr("Nouveautés") }}</a></li>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'icon'}) }}">{{ tr("Top artistes") }}</a></li>
+                    <li><a href="{{ path('classements/afrique-de-l-ouest', {'classement': 'legend'}) }}">{{ tr("Classiques") }}</a></li>
+                    <li><a href="{{ path('les-plus-ecoutes-dans-le-monde') }}">{{ tr("Les plus écoutés sur Spotify") }}</a></li>
                 </ul>
             </nav>
-            <nav aria-label="Le média">
-                <h2>Le média</h2>
+            <nav aria-label="{{ tr("Le média") }}">
+                <h2>{{ tr("Le média") }}</h2>
                 <ul>
-                    <li><a href="{{ path('actu-artistes') }}">L’actu des artistes</a></li>
-                    <li><a href="{{ path('actualites') }}">Actualités</a></li>
-                    <li><a href="{{ path('cauri-matin') }}">Cauri Matin</a></li>
-                    <li><a href="{{ path('cauri-hebdo') }}">Cauri Hebdo</a></li>
-                    <li><a href="{{ path('cauri-monde') }}">Cauri Monde</a></li>
-                    <li><a href="{{ path('presse') }}">Espace presse</a></li>
+                    <li><a href="{{ path('actu-artistes') }}">{{ tr("L’actu des artistes") }}</a></li>
+                    <li><a href="{{ path('actualites') }}">{{ tr("Actualités") }}</a></li>
+                    <li><a href="{{ path('cauri-matin') }}">{{ tr("Cauri Matin") }}</a></li>
+                    <li><a href="{{ path('cauri-hebdo') }}">{{ tr("Cauri Hebdo") }}</a></li>
+                    <li><a href="{{ path('cauri-monde') }}">{{ tr("Cauri Monde") }}</a></li>
+                    <li><a href="{{ path('presse') }}">{{ tr("Espace presse") }}</a></li>
                 </ul>
             </nav>
-            <nav aria-label="Artistes et pros">
-                <h2>Artistes et pros</h2>
+            <nav aria-label="{{ tr("Artistes et pros") }}">
+                <h2>{{ tr("Artistes et pros") }}</h2>
                 <ul>
                     <li><a href="{{ path('declarer') }}">{{ t('nav.submit') }}</a></li>
-                    <li><a href="{{ path('envoie-ta-video') }}">Envoie ta vidéo de concert</a></li>
-                    <li><a href="{{ path('integrer') }}">Intégrer le classement</a></li>
-                    <li><a href="{{ path('partenaires') }}">Partenaires</a></li>
-                    <li><a href="{{ path('la-machine') }}">La machine Cauri Charts</a></li>
+                    <li><a href="{{ path('envoie-ta-video') }}">{{ tr("Envoie ta vidéo de concert") }}</a></li>
+                    <li><a href="{{ path('integrer') }}">{{ tr("Intégrer le classement") }}</a></li>
+                    <li><a href="{{ path('partenaires') }}">{{ tr("Partenaires") }}</a></li>
+                    <li><a href="{{ path('la-machine') }}">{{ tr("La machine Cauri Charts") }}</a></li>
                 </ul>
             </nav>
             <nav aria-label="{{ brand() }}">
@@ -63,15 +63,15 @@
                 <ul>
                     <li><a href="{{ path('a-propos') }}">{{ t('nav.about') }}</a></li>
                     <li><a href="{{ path('methodologie') }}">{{ t('nav.methodology') }}</a></li>
-                    <li><a href="{{ path('methodologie') }}#fiabilite">Indice de fiabilité</a></li>
+                    <li><a href="{{ path('methodologie') }}#fiabilite">{{ tr("Indice de fiabilité") }}</a></li>
                     <li><a href="{{ path('contact') }}">{{ t('nav.contact') }}</a></li>
-                    <li><a href="{{ path('langue/' ~ other_locale, {'retour': current}) }}" hreflang="{{ other_locale }}">{{ t('footer.switch_locale') }}</a></li>
+                    <li class="pied__langues"><a hreflang="fr" href="{{ current }}" data-langue="fr"{% if locale() == 'fr' %} aria-current="true"{% endif %}>{{ tr("Français") }}</a> · <a hreflang="en" href="/en{{ '' if current == '/' else current }}" data-langue="en"{% if locale() == 'en' %} aria-current="true"{% endif %}>{{ tr("English") }}</a></li>
                 </ul>
             </nav>
         </div>
 
         {% if footer and (footer.artists or footer.tracks) %}
-        <p class="pied__tendances"><span>Tendances</span>
+        <p class="pied__tendances"><span>{{ tr("Tendances") }}</span>
             {% for a in footer.artists %}<a href="{{ path('artiste/' ~ a.slug) }}">{{ a.name }}</a>{% endfor %}
             {% for tr in footer.tracks %}<a href="{{ path('titre/' ~ tr.slug) }}">{{ tr.title }}</a>{% endfor %}
         </p>

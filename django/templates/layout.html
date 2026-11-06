@@ -7,12 +7,17 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ meta.title }}</title>
+    <title>{{ meta.title|tr }}</title>
     <meta name="description" content="{{ meta.description }}">
     <link rel="canonical" href="{{ meta.url }}">
+    {#- Une adresse par langue (06/11/2026) : français sans préfixe, anglais sous /en -#}
+    <link rel="alternate" hreflang="fr" href="{{ config('app.url') }}{{ current }}">
+    <link rel="alternate" hreflang="en" href="{{ config('app.url') }}/en{{ '' if current == '/' else current }}">
+    <link rel="alternate" hreflang="x-default" href="{{ config('app.url') }}{{ current }}">
+    <script src="{{ asset('js/langue.js') }}"></script>
     {% if robots %}<meta name="robots" content="{{ robots }}">{% endif %}
     <meta property="og:site_name" content="{{ brand() }}">
-    <meta property="og:title" content="{{ meta.title }}">
+    <meta property="og:title" content="{{ meta.title|tr }}">
     <meta property="og:description" content="{{ meta.description }}">
     <meta property="og:type" content="{{ meta.type }}">
     <meta property="og:url" content="{{ meta.url }}">
@@ -50,10 +55,12 @@
         <nav class="site-nav" id="site-nav" aria-label="{{ t('nav.main') }}">
             <a href="{{ chart_path('WA', 'prime-wa') }}" {{ Markup('aria-current="page"') if current.startswith('/classements') }}>{{ t('nav.charts') }}</a>
             {% if config('show.public') %}<a href="{{ path('show') }}" {{ Markup('aria-current="page"') if current == '/show' }}>{{ t('nav.show') }}</a>{% endif %}
-            <a href="{{ path('actu-artistes') }}" {{ Markup('aria-current="page"') if current == '/actu-artistes' }}>Actu</a>
+            <a href="{{ path('actu-artistes') }}" {{ Markup('aria-current="page"') if current == '/actu-artistes' }}>{{ tr("Actu") }}</a>
             <a href="{{ path('methodologie') }}" {{ Markup('aria-current="page"') if current == '/methodologie' }}>{{ t('nav.methodology') }}</a>
             <a href="{{ path('a-propos') }}" {{ Markup('aria-current="page"') if current == '/a-propos' }}>{{ t('nav.about') }}</a>
         </nav>
+        {%- if locale() == 'en' %}<a class="langue-bascule" hreflang="fr" href="{{ current }}" data-langue="fr" title="{{ tr("Version française") }}">{{ tr("FR") }}</a>
+        {%- else %}<a class="langue-bascule" hreflang="en" href="/en{{ '' if current == '/' else current }}" data-langue="en" title="{{ tr("English version") }}">{{ tr("EN") }}</a>{% endif %}
         <a class="site-nav__cta header-cta" href="{{ path('declarer') }}">{{ t('nav.submit') }}</a>
     </div>
 </header>

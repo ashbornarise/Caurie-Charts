@@ -12,11 +12,11 @@
     </nav>
     <nav class="chips" aria-label="{{ t('chart.choose') }}">
         {% for c, def in config('charts').items() if def.public and not def.regional %}{% set target = 'prime-wa' if regional and c == 'prime' else c %}
-            <a class="chip" href="{{ chart_path('WA' if regional else code, target) }}" {{ Markup('aria-current="page"') if target == chartCode }}>{{ def.name }}</a>
+            <a class="chip" href="{{ chart_path('WA' if regional else code, target) }}" {{ Markup('aria-current="page"') if target == chartCode }}>{{ def.name|tr }}</a>
         {% endfor %}
     </nav>
     <p class="eyebrow">{% if regional %}{% for c in countries %}{{ flag(c.code, 14) }}{% endfor %}{% endif %}{{ flag(code, 16) }}{{ country_name(code) }}</p>
-    <h1 class="chart-hero__title">{{ chart.name }}</h1>
+    <h1 class="chart-hero__title">{{ chart.name|tr }}</h1>
     <p class="chart-hero__lead">{{ t('chart.description.' ~ chartCode, {'country': country_name(code)}) }}</p>
 
     {% if view != 'official' and is_prime %}
@@ -52,12 +52,14 @@
     {% endif %}
     {% if reliability %}
     <p class="reliability reliability--{{ {'élevée': 'high', 'moyenne': 'mid'}.get(reliability.level, 'low') }}">
-        <span class="reliability__score">Fiabilité {{ reliability.score }}/100 · {{ reliability.level }}</span>
-        {{ reliability.text }}
-        <small>{{ reliability.sources }} plateforme{{ 's' if reliability.sources > 1 }} relevée{{ 's' if reliability.sources > 1 }},
+        <span class="reliability__score">{{ tr("Fiabilité") }} {{ reliability.score }}/100 · {{ reliability.level|tr }}</span>
+        {{ reliability.text|tr }}
+        <small>{% if locale() == 'en' %}{{ reliability.sources }} platform{{ 's' if reliability.sources > 1 }} tracked,
+            {{ reliability.days }} day{{ 's' if reliability.days > 1 }} out of 7{% if reliability.top %},
+            {{ reliability.corroborated }} of the Top {{ reliability.top }} songs seen on two or more sources{% endif %}.{% else %}{{ reliability.sources }} plateforme{{ 's' if reliability.sources > 1 }} relevée{{ 's' if reliability.sources > 1 }},
             {{ reliability.days }} jour{{ 's' if reliability.days > 1 }} sur 7{% if reliability.top %},
-            {{ reliability.corroborated }} titre{{ 's' if reliability.corroborated > 1 }} du Top sur {{ reliability.top }} vu{{ 's' if reliability.corroborated > 1 }} sur deux sources ou plus{% endif %}.
-            <a href="{{ path('methodologie') }}#fiabilite">Comment c’est calculé</a></small>
+            {{ reliability.corroborated }} titre{{ 's' if reliability.corroborated > 1 }} du Top sur {{ reliability.top }} vu{{ 's' if reliability.corroborated > 1 }} sur deux sources ou plus{% endif %}.{% endif %}
+            <a href="{{ path('methodologie') }}#fiabilite">{{ tr("Comment c’est calculé") }}</a></small>
     </p>
     {% endif %}
 </section>

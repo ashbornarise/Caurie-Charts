@@ -11,7 +11,7 @@
 <header class="cw__head">
     <a class="cw__brand" href="{{ home }}?{{ utm }}" target="_blank" rel="noopener">
         <img src="{{ asset('img/brand/monogram.svg') }}" alt="" width="28" height="28">
-        <span><strong>{{ data.name }}</strong><small>{{ 'Classement officiel ' ~ brand() if data.official else 'Tendances des plateformes' }}{{ ' · ' ~ fmt_date(data.until) if data.until }}</small></span>
+        <span><strong>{{ data.name }}</strong><small>{{ tr('Classement officiel :b', b=brand()) if data.official else tr('Tendances des plateformes') }}{{ ' · ' ~ fmt_date(data.until) if data.until }}</small></span>
     </a>
 </header>
 {% if data.rows %}
@@ -27,7 +27,7 @@
     {% endfor %}
 </ol>
 {% else %}
-<p class="cw__empty">Classement en cours de préparation.</p>
+<p class="cw__empty">{{ tr("Classement en cours de préparation.") }}</p>
 {% endif %}
 <footer class="cw__foot"><a href="{{ home }}?{{ utm }}" target="_blank" rel="noopener">Classement complet sur {{ brand() }} →</a></footer>
 </body>

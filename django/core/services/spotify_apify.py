@@ -22,7 +22,8 @@ ACTEUR_PLAYLISTS = "s-r~free-spotify-playlist-intelligence"
 PLAFOND_MOIS = 4.50
 PRIX_PLAYLIST = 0.01
 PRIX_ARTISTE = 0.002          # réellement facturé (0,27 $ pour 130 artistes le 28/10/2026) : ~1,1 $ par mois
-MAX_ARTISTES = 250            # par semaine (tous les tops depuis le 02/11/2026) : ~0,50 $, ~2 $ par mois
+MAX_ARTISTES = 330            # par semaine : tous les tops, puis le roulement (06/11/2026) : ~0,66 $, ~2,6 $ par mois
+RELEVE_JOURS = 28             # roulement : chaque artiste actif relevé au moins une fois toutes les 4 semaines
 # Playlists éditoriales suivies (Spotify ne publie de Top 50 par pays que pour le Nigeria dans notre zone)
 PLAYLISTS = {"37i9dQZEVXbKY7jLzlJ11V": "Top 50 - Nigeria"}
 
@@ -91,6 +92,14 @@ def selection(limite: int = MAX_ARTISTES) -> list:
            JOIN artists a ON a.id = t.artist_id AND a.status = 'active'
            WHERE w.week_start >= CURRENT_DATE - 14 GROUP BY t.artist_id ORDER BY s DESC LIMIT 60""")]
     ids += [r["id"] for r in db.all("SELECT id FROM artists WHERE lower(name) = ANY(?)", [[b.lower() for b in BUZZ]])]
+    # 06/11/2026 (« tous les artistes doivent avoir leurs auditeurs ») : ensuite, par roulement, les artistes actifs vus
+    # dans un classement de plateforme ce mois-ci, jamais relevés d'abord, puis les relevés les plus anciens
+    ids += [r["id"] for r in db.all(f"""SELECT a.id, MAX(s.releve_le) AS dernier FROM artists a
+           LEFT JOIN spotify_artistes s ON s.artist_id = a.id AND s.auditeurs IS NOT NULL
+           WHERE a.status = 'active' AND EXISTS (SELECT 1 FROM tracks t JOIN chart_observations o ON o.track_id = t.id
+                                                 WHERE t.artist_id = a.id AND o.observed_on >= CURRENT_DATE - 30)
+           GROUP BY a.id HAVING MAX(s.releve_le) IS NULL OR MAX(s.releve_le) < CURRENT_DATE - {RELEVE_JOURS}
+           ORDER BY MAX(s.releve_le) NULLS FIRST, a.id LIMIT {int(limite) * 2}""")]
     return list(dict.fromkeys(int(i) for i in ids))[:limite]
 
 

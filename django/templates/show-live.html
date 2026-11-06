@@ -6,16 +6,16 @@
          data-jump="{{ jump }}" data-rehearsal="{{ '1' if rehearsal else '0' }}" data-assets="/assets/show/" data-flags="/assets/img/flags/"></div>
     <aside class="sp-side">
         {% if rehearsal %}
-        <p class="sp-banner">Répétition générale : le show démarre dès l’ouverture de cette page, comme si le direct commençait maintenant.
-            Les vrais classements du moment sont utilisés. Utilisez la régie pour sauter, accélérer ou revenir en arrière.</p>
+        <p class="sp-banner">{{ tr("Répétition générale : le show démarre dès l’ouverture de cette page, comme si le direct commençait maintenant.
+            Les vrais classements du moment sont utilisés. Utilisez la régie pour sauter, accélérer ou revenir en arrière.") }}</p>
         {% endif %}
         <p class="eyebrow">{{ icon('radio', 16) }} {{ 'Répétition' if rehearsal else 'En direct' }}</p>
-        <h1>The Monthly Show</h1>
-        <p>Les N°1 de l’Afrique de l’Ouest révélés en direct. Commentez et pronostiquez sur nos réseaux :</p>
+        <h1>{{ tr("The Monthly Show") }}</h1>
+        <p>{{ tr("Les N°1 de l’Afrique de l’Ouest révélés en direct. Commentez et pronostiquez sur nos réseaux :") }}</p>
         <div class="sp-chaines">
             {% for c in show.channels %}<a href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name }}</a>{% endfor %}
         </div>
-        {% if rehearsal %}<div id="sp-regie" aria-label="Régie"></div>{% endif %}
+        {% if rehearsal %}<div id="sp-regie" aria-label="{{ tr("Régie") }}"></div>{% endif %}
     </aside>
 </div>
 </div>

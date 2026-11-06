@@ -7,8 +7,10 @@ from core.services.platforms import PlatformException
 
 def test_decoupage_selon_les_regles():
     assert T._source(4_194_304) == {"source": "FILE_UPLOAD", "video_size": 4_194_304, "chunk_size": 4_194_304, "total_chunk_count": 1}
-    s = T._source(50_000_123)
-    assert s["chunk_size"] == 10 * 1024 * 1024 and s["total_chunk_count"] == 50_000_123 // (10 * 1024 * 1024)
+    # 05/11/2026 : jusqu'à 64 Mo, un seul morceau (« The chunk size is invalid » sinon) ; au-delà, morceaux de 10 Mo
+    assert T._source(50_000_123)["total_chunk_count"] == 1
+    s = T._source(80_000_123)
+    assert s["chunk_size"] == 10 * 1024 * 1024 and s["total_chunk_count"] == 80_000_123 // (10 * 1024 * 1024)
 
 
 class Rep:

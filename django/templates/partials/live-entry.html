@@ -24,7 +24,7 @@
             {% if e.artist_country %}<span class="entry__country" title="{{ country_name(e.artist_country) }}">{{ flag(e.artist_country, 12) }}</span>{% endif %}
             <a href="{{ path('artiste/' ~ e.artist_slug) }}">{{ e.artist_name }}</a>{% if e.featuring %} <span class="feat">feat. {{ e.featuring }}</span>{% endif %}
         </span>
-        {% set spa = spotify_auditeurs(e.artist_slug) %}{% if spa %}<span class="sp-aud" title="Auditeurs mensuels de l’artiste sur Spotify (information, hors calcul du classement)">{{ fmt_court(spa) }} auditeurs Spotify</span>{% endif %}
+        {% set spa = spotify_auditeurs(e.artist_slug) %}{% if spa %}<span class="sp-aud" title="{{ tr("Auditeurs mensuels de l’artiste sur Spotify (information, hors calcul du classement)") }}">{{ fmt_court(spa) }} {{ tr("auditeurs Spotify") }}</span>{% endif %}
         {% endif %}
         {% if not compact %}
         <ul class="sources" aria-label="{{ t('chart.sources_label') }}">
@@ -38,7 +38,7 @@
             <li>
                 <a class="source source--spotify source--link" href="{{ spotify_url(e.artist_spotify, e.artist_name, none if is_artist else e.title) }}" target="_blank" rel="noopener nofollow"
                    title="{{ t('chart.spotify_declared_long', {'n': fmt_number(sp.streams|int), 'start': fmt_date(sp.start, false), 'end': fmt_date(sp.end, false)}) if sp else t('chart.spotify_listen') }}">
-                    <span class="source__name">Spotify</span>
+                    <span class="source__name">{{ tr("Spotify") }}</span>
                     <span class="source__value">{{ t('chart.spotify_declared', {'n': fmt_number(sp.streams|int)}) if sp else '↗' }}</span>
                 </a>
             </li>

@@ -78,10 +78,20 @@ class CauriMiddleware:
         if ASPIRATEUR.search(ua) and not request.path.startswith("/robots.txt"):
             from django.http import HttpResponse
             return HttpResponse("", status=403)   # aspirateur qui ignore robots.txt : refusé sans toucher à la base
+        # Site en anglais (06/11/2026) : chaque page existe aussi sous /en/… ; une adresse par langue, donc compatible avec
+        # le cache de Vercel (une langue choisie par cookie aurait servi la même page à tout le monde)
+        en = request.path_info == "/en" or request.path_info.startswith("/en/")
+        request.cauri_en = en
+        if en:
+            reste = request.path_info[3:] or "/"
+            request.path_info = reste
+            request.path = reste
         token = current_request.set(request)
-        set_locale(conf.get("app.locale", "fr"))
+        set_locale("en" if en else conf.get("app.locale", "fr"))
         try:
             response = self.get_response(request)
+            if en:
+                en_liens(response)
             from core.services.analytics import count_view
             count_view(request, response)  # vues anonymes, agrégées, sans cookie
         finally:
@@ -107,6 +117,34 @@ class CauriMiddleware:
             resp["Cache-Control"] = "no-store"
             return resp
         return None
+
+
+# Adresses internes qui n'ont pas de version anglaise (fichiers, API, outils du fondateur)
+_SANS_EN = r"(?!(?:en(?:/|\b)|assets/|static/|media/|api/|admin|studio|robots\.txt|sitemap|favicon|langue/|apercu/|og/|sw\.js|manifest|/))"
+_LIEN = re.compile(r'((?:href|action)=")(/' + _SANS_EN + r')')
+_ABS = None
+
+
+def en_liens(response) -> None:
+    """Version anglaise : les liens internes de la page gardent le préfixe /en (et la redirection éventuelle)."""
+    global _ABS
+    loc = response.get("Location") if response.has_header("Location") else None
+    if loc and loc.startswith("/") and not loc.startswith("//") and not re.match(r"/(en(/|$)|admin|studio|api/)", loc):
+        response["Location"] = "/en" + loc
+    if "text/html" not in response.get("Content-Type", "") or getattr(response, "streaming", False):
+        return
+    if _ABS is None:
+        base = re.escape(conf.get("app.url"))
+        _ABS = re.compile(r'((?:href|content)=")(' + base + r')(/' + _SANS_EN + r')')
+    html = response.content.decode("utf-8", errors="replace")
+    for h in ("fr", "x-default"):   # liens vers la version française : intacts
+        html = html.replace(f'hreflang="{h}" href="', f'hreflang="{h}" hrefFIXE="')
+    html = _LIEN.sub(r"\1/en\2", html)
+    html = _ABS.sub(r"\1\2/en\3", html)
+    html = html.replace('hrefFIXE="', 'href="')
+    response.content = html.encode("utf-8")
+    if response.has_header("Content-Length"):
+        response["Content-Length"] = str(len(response.content))
 
 
 class EdgeVaryMiddleware:

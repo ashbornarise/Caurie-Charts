@@ -983,3 +983,9 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .acc-chart:hover, .acc-n1:hover { border-color: #6FAEE6; }
 .acc-fin__card--violet { border-color: rgba(139, 82, 255, .55); }
 .acc-chart .entry--top { border: 1.5px solid rgba(139, 82, 255, .55); }
+
+/* Bascule de langue FR / EN dans l'en-tête (06/11/2026) */
+.langue-bascule{margin-left:auto;margin-right:10px;font:700 12px/1 system-ui,sans-serif;letter-spacing:.06em;padding:7px 9px;border-radius:999px;
+  border:1px solid var(--ciel-bord,rgba(120,180,235,.6));color:inherit;text-decoration:none}
+.langue-bascule:hover{background:rgba(120,180,235,.12)}
+.pied__langues a[aria-current]{font-weight:700}

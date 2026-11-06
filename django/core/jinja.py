@@ -9,7 +9,7 @@ from markupsafe import Markup
 from core import clock
 from core import conf, helpers
 from core.env import get as env_get
-from core.i18n import locale, t
+from core.i18n import locale, t, tr, tr_filtre
 from core.icons import icon
 
 current_request: ContextVar = ContextVar("current_request", default=None)
@@ -48,7 +48,7 @@ def environment(**options) -> Environment:
     env = Environment(**options, undefined=SoftUndefined, trim_blocks=False, lstrip_blocks=False,
                       extensions=["jinja2.ext.do", "jinja2.ext.loopcontrols"])
     env.globals.update({
-        "t": t, "locale": locale, "config": conf.get, "icon": icon, "env": lambda k: env_get(k, "") or "", "partial": partial, "csrf_field": csrf_field,
+        "t": t, "tr": tr, "locale": locale, "config": conf.get, "icon": icon, "env": lambda k: env_get(k, "") or "", "partial": partial, "csrf_field": csrf_field,
         "request_path": request_path, "request_uri": request_uri,
         "e": helpers.e, "url": helpers.url, "path": helpers.path, "asset": helpers.asset, "brand": helpers.brand,
         "fmt_number": helpers.fmt_number, "fmt_date": helpers.fmt_date, "month_name": helpers.month_name,
@@ -62,6 +62,7 @@ def environment(**options) -> Environment:
         "sorted": sorted, "list": list, "range": range, "zip": zip, "abs": abs, "float": float,
     })
     _env = env
+    env.filters["tr"] = tr_filtre   # textes produits par le code : {{ x|tr }} (06/11/2026)
     return env
 
 
@@ -69,6 +70,8 @@ def _fmt_court(n) -> str:
     """1 234 567 → « 1,2 M » ; 45 300 → « 45 k » (chiffres des cartes)."""
     n = int(n or 0)
     if n >= 1_000_000:
+        if locale() == "en":
+            return f"{n / 1_000_000:.1f}".replace(".0", "") + "M"
         return f"{n / 1_000_000:.1f}".replace(".", ",").replace(",0", "") + " M"
     if n >= 10_000:
         return f"{round(n / 1000)} k"

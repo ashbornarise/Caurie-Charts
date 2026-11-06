@@ -17,11 +17,11 @@
         {% endfor %}
     {% endif %}
     {% if slides|length > 1 %}
-        <h2>Le numéro en images</h2>
+        <h2>{{ tr("Le numéro en images") }}</h2>
         <div class="edition-slides">
             {% for sl in slides[1:] %}<a href="{{ sl }}" target="_blank" rel="noopener"><img src="{{ sl }}" alt="Page {{ loop.index + 1 }}" width="1080" height="1350" loading="lazy"></a>{% endfor %}
         </div>
-        <p class="fineprint">Le même numéro est publié sur Instagram, TikTok et Facebook : suivez @cauricharts.</p>
+        <p class="fineprint">{{ tr("Le même numéro est publié sur Instagram, TikTok et Facebook : suivez @cauricharts.") }}</p>
     {% endif %}
     {% if item.source_url %}
         <p class="fineprint">{{ t('news.source') }} : <a href="{{ item.source_url }}" rel="noopener nofollow" target="_blank">{{ item.source_name or url_host(item.source_url) }}</a></p>

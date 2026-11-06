@@ -3,10 +3,10 @@
 <section class="wrap official" aria-labelledby="official-title">
     <div class="official__head">
         <div>
-            <p class="eyebrow">Classement officiel · semaine du {{ fmt_date(tops[0].period_start, false) }} au {{ fmt_date(tops[0].period_end) }}</p>
-            <h2 id="official-title">Les N°1 officiels de la semaine</h2>
+            <p class="eyebrow">{{ tr("Classement officiel · semaine du :d au :f", d=fmt_date(tops[0].period_start, false), f=fmt_date(tops[0].period_end)) }}</p>
+            <h2 id="official-title">{{ tr("Les N°1 officiels de la semaine") }}</h2>
         </div>
-        <a class="link-arrow" href="{{ path('methodologie') }}">Méthode publique</a>
+        <a class="link-arrow" href="{{ path('methodologie') }}">{{ tr("Méthode publique") }}</a>
     </div>
     <div class="official__grid">
         {% for c in tops %}{% set one = c.rows[0] %}
@@ -30,6 +30,6 @@
         </article>
         {% endfor %}
     </div>
-    <p class="official__note">Les autres pays rejoignent le classement officiel dès que nous suivons au moins 8 de leurs artistes. Chiffres : nouvelles vues YouTube de la semaine.</p>
+    <p class="official__note">{{ tr("Les autres pays rejoignent le classement officiel dès que nous suivons au moins 8 de leurs artistes. Chiffres : nouvelles vues YouTube de la semaine.") }}</p>
 </section>
 {% endif %}

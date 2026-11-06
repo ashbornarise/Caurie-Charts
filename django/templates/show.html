@@ -5,7 +5,7 @@
 <section class="show-hero wrap">
     <span class="show-live"><i></i>{{ t('show.badge') }}</span>
     <p class="kicker">{{ t('show.kicker') }}</p>
-    <h1>THE <span class="show-grad">MONTHLY SHOW</span></h1>
+    <h1>{{ tr("THE") }} <span class="show-grad">{{ tr("MONTHLY SHOW") }}</span></h1>
     <p class="lead">{{ t('show.lead', month=month) }}</p>
     <p class="show-date">{{ when }}</p>
     <div class="show-cd" data-start="{{ start_iso }}" aria-live="off">
@@ -59,7 +59,7 @@
     <h2 class="show-center">{{ t('show.form_title') }}</h2>
     <form class="form show-form show-verre" method="post" action="{{ path('show') }}#rappel" novalidate>
         {{ csrf_field() }}
-        <div class="hp" aria-hidden="true"><label>Site web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <div class="hp" aria-hidden="true"><label>{{ tr("Site web") }} <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
         {{ partial('partials/field', name='name', label=t('show.form_name'), attrs='autocomplete="given-name" maxlength="100"', old=old, errors=errors) }}
         {{ partial('partials/field', name='email', label=t('form.email'), type='email', attrs='autocomplete="email" maxlength="190"', old=old, errors=errors) }}
         {{ partial('partials/field', name='country', label=t('show.form_country'), type='select', options=country_options, required=false, old=old, errors=errors) }}
@@ -77,7 +77,7 @@
     <h2>{{ t('show.where_title') }}</h2>
     <div class="show-chaines">
         {% for c in show.channels %}<a class="show-verre" href="{{ c.url }}" target="_blank" rel="noopener">{{ c.name }}<small>{{ c.handle }}</small></a>{% endfor %}
-        <a class="show-verre" href="{{ path('show') }}">cauricharts.com<small>/show</small></a>
+        <a class="show-verre" href="{{ path('show') }}">{{ tr("cauricharts.com") }}<small>{{ tr("/show") }}</small></a>
     </div>
 </section>
 </div>
