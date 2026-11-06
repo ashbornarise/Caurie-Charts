@@ -13,11 +13,11 @@ from django.template.loader import get_template
 from core import clock
 from core import conf, db, repos, storage
 from core.helpers import PERIOD_SLUGS, brand, chart_path, country_name, news_image, path, period_label, url
-from core.i18n import locale, set_locale, t
+from core.i18n import locale, set_locale, t, tr
 from core.services import insights, live_chart
 
 # Pages de contenu placées dans la grille à deux colonnes (avec l'encadré latéral)
-WITH_ASIDE = {"methodology", "about", "contact", "claim", "submit", "legal", "news", "news-item", "artist", "track", "partners-page"}
+WITH_ASIDE = {"methodology", "contact", "claim", "submit", "legal", "news", "news-item", "artist", "track", "partners-page"}
 
 
 # ---------------------------------------------------------------- outils communs
@@ -348,8 +348,29 @@ def methodology(request):
 
 
 def about(request):
+    """À propos (refonte du 06/11/2026) : un document complet, avec des chiffres réels lus en base et nos vrais visuels."""
     use_locale(request)
-    return render(request, "about", {"meta": {"title": t("about.title") + " · " + brand()}})
+    from core import storage
+    try:
+        chiffres = db.one("""SELECT (SELECT COUNT(*) FROM artists WHERE status = 'active') AS artistes,
+                                    (SELECT COUNT(*) FROM tracks) AS titres,
+                                    (SELECT COUNT(*) FROM chart_runs WHERE status = 'published') AS classements,
+                                    (SELECT COUNT(*) FROM social_posts WHERE status IN ('approved', 'published')) AS posts,
+                                    (SELECT COUNT(DISTINCT track_platform_id) FROM snapshots WHERE captured_on >= CURRENT_DATE - 2) AS clips""") or {}
+        base = storage.blob_public_url()
+        # le dernier visuel publié de chaque famille de posts : ce que nous publions vraiment
+        familles = ("format-officiel", "format-top", "format-studio", "monde", "hebdo", "matin", "versus")
+        galerie = []
+        for f in familles:
+            r = db.one("""SELECT image_square, title, theme FROM social_posts WHERE theme LIKE ? AND image_square IS NOT NULL
+                          AND status IN ('approved', 'published') ORDER BY id DESC LIMIT 1""", [f + "%"])
+            if r:
+                galerie.append({"src": f"{base}/media/social/{r['image_square']}", "titre": r["title"], "famille": f})
+    except Exception:  # noqa: BLE001 — la page reste lisible sans chiffres
+        chiffres, galerie = {}, []
+    return render(request, "about", {"chiffres": chiffres, "galerie": galerie,
+                                     "meta": {"title": t("about.title") + " · " + brand(),
+                                              "description": tr("Cauri Charts, la référence de la musique ouest-africaine : mission, méthode, sources, coulisses, partenariats.")}})
 
 
 LEGAL_PAGES = {"mentions-legales": "mentions", "confidentialite": "confidentialite", "cookies": "cookies", "conditions": "conditions"}

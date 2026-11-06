@@ -1245,3 +1245,59 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .regne__img .regne__drapeau img { width: 22px !important; height: auto !important; border-radius: 3px; object-fit: contain; background: none; display: block; }
 .regne__depuis { display: flex; justify-content: space-between; gap: 8px; }
 .regne__depuis a { text-decoration: none; font-weight: 700; }
+
+/* ===== À propos : un document complet (06/11/2026) ===== */
+.apropos { padding: 0 0 40px; }
+.apropos__une { position: relative; overflow: hidden; margin: 18px 0 34px; padding: clamp(28px, 5vw, 56px) clamp(20px, 5vw, 56px); border-radius: 28px; color: #fff;
+    background: radial-gradient(700px 320px at 85% 0%, rgba(122,60,245,.55), transparent 65%), radial-gradient(600px 300px at 0% 100%, rgba(29,155,240,.3), transparent 60%),
+                linear-gradient(180deg, #120B33, #1B1150); }
+.apropos__logo { height: 56px; width: auto; margin-bottom: 18px; }
+.apropos__sur { margin: 0; font-size: .74rem; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: #C9B6FF; }
+.apropos__une h1 { margin: 8px 0 14px; font-family: var(--serif); font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.05; max-width: 18ch; text-wrap: balance; color: #fff; }
+.apropos__lead { margin: 0 0 26px; max-width: 62ch; font-size: 1.08rem; color: rgba(233,230,255,.85); }
+.apropos__chiffres { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; max-width: 900px; }
+.apropos__chiffres li { padding: 14px 16px; border-radius: 16px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); }
+.apropos__chiffres b { display: block; font-family: var(--serif); font-size: 1.8rem; color: #fff; }
+.apropos__chiffres span { font-size: .8rem; color: rgba(233,230,255,.75); }
+
+.apropos__corps { display: grid; grid-template-columns: 1fr; gap: 28px; }
+@media (min-width: 980px) { .apropos__corps { grid-template-columns: 230px minmax(0, 1fr); gap: 46px; } }
+.apropos__sommaire { align-self: start; padding: 16px 18px; border-radius: 18px; background: #fff; border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); }
+@media (min-width: 980px) { .apropos__sommaire { position: sticky; top: 92px; } }
+.apropos__sommaire p { margin: 0 0 8px; font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #7A3CF5; }
+.apropos__sommaire ol { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: .9rem; }
+.apropos__sommaire a { color: var(--ink-2); text-decoration: none; }
+.apropos__sommaire a:hover { color: #5B2BD6; text-decoration: underline; }
+
+.apropos__texte { min-width: 0; max-width: 820px; }
+.apropos__texte section { scroll-margin-top: 92px; padding: 0 0 30px; margin-bottom: 30px; border-bottom: 1px solid var(--ciel-ligne, rgba(120,180,235,.3)); }
+.apropos__texte section:last-child { border-bottom: 0; }
+.apropos__texte h2 { margin: 0 0 12px; font-family: var(--serif); font-size: clamp(1.5rem, 3vw, 2rem); }
+.apropos__texte p { line-height: 1.7; color: var(--ink-2); max-width: 70ch; }
+.apropos__encart { margin-top: 18px; padding: 18px 20px; border-radius: 18px; background: linear-gradient(135deg, #F6F1FF, #EEF6FF); border-left: 4px solid #7A3CF5; }
+.apropos__encart h3 { margin: 0 0 6px; font-size: 1rem; }
+.apropos__encart p { margin: 0; }
+.apropos__cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 16px 0; }
+.apropos__carte { padding: 16px 18px; border-radius: 18px; background: #fff; border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); box-shadow: 0 10px 24px -22px rgba(40,90,160,.8); }
+.apropos__carte h3 { margin: 0 0 6px; font-size: 1rem; color: #1B1150; }
+.apropos__carte p { margin: 0; font-size: .9rem; line-height: 1.55; }
+.apropos__calendrier { padding: 12px 16px; border-radius: 14px; background: #F7FAFF; }
+.apropos__liste { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 8px; color: var(--ink-2); line-height: 1.6; }
+.apropos__sources { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.apropos__sources li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); }
+.apropos__sources img { width: 40px; height: 40px; object-fit: contain; border-radius: 10px; flex: none; }
+.apropos__sources strong { display: block; }
+.apropos__sources small { color: var(--muted); font-size: .8rem; }
+.apropos__galerie { list-style: none; margin: 16px 0 0; padding: 0 0 6px; display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; }
+.apropos__galerie li { flex: 0 0 min(220px, 60%); scroll-snap-align: start; }
+.apropos__galerie img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 16px; box-shadow: 0 14px 30px -20px rgba(27,17,80,.8); }
+.apropos__pays { display: flex; flex-wrap: wrap; gap: 6px; }
+.apropos__pays a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #fff; text-decoration: none; color: var(--ink);
+    border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); font-size: .88rem; }
+.apropos__pays a:hover { border-color: #7A3CF5; }
+.apropos__reseaux { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.apropos__reseaux a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 8px; border-radius: 999px; background: #fff; text-decoration: none;
+    color: var(--ink); font-weight: 600; border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); }
+.apropos__reseaux img { width: 28px; height: 28px; border-radius: 8px; }
+.apropos { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.apropos__cartes--deux { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }

@@ -1,12 +1,145 @@
-<article class="prose">
-    <p class="eyebrow">{{ t('about.eyebrow') }}</p>
-    <h1>{{ t('about.title') }}</h1>
-    <p class="lead">{{ t('about.lead', {'brand': brand()}) }}</p>
-    <h2>{{ t('about.name_title') }}</h2>
-    <p>{{ t('about.name_text') }}</p>
-    <h2>{{ t('about.countries_title') }}</h2>
-    <p>{{ t('about.countries_text') }}</p>
-    <h2>{{ t('about.group_title') }}</h2>
-    <p>{{ t('about.group_text', {'brand': brand(), 'label': config('app.group_label.name')}) }}</p>
-    <p><a class="button" href="{{ path('contact') }}">{{ t('about.contact') }}</a></p>
+{#- À propos (refonte du 06/11/2026) : un document complet sur Cauri Charts, avec sommaire. Chiffres lus en base,
+    visuels réellement publiés. Rien d'inventé : chaque affirmation correspond à ce qui tourne aujourd'hui. -#}
+<article class="apropos">
+    <header class="apropos__une">
+        <img class="apropos__logo" src="{{ asset('img/brand/logo-white.svg') }}" alt="{{ brand() }}" width="200" height="88">
+        <p class="apropos__sur">{{ t('about.eyebrow') }}</p>
+        <h1>{{ tr("La référence de la musique ouest-africaine") }}</h1>
+        <p class="apropos__lead">{{ tr("Cauri Charts mesure ce que l’Afrique de l’Ouest écoute vraiment. Chaque semaine, nous publions des classements par pays et pour toute la région, calculés à partir des données publiques des plateformes, selon une méthode publique que chacun peut vérifier.") }}</p>
+        <ul class="apropos__chiffres">
+            <li><b>16</b><span>{{ tr("pays couverts") }}</span></li>
+            {% if chiffres.artistes %}<li><b>{{ fmt_number(chiffres.artistes) }}</b><span>{{ tr("artistes suivis") }}</span></li>{% endif %}
+            {% if chiffres.titres %}<li><b>{{ fmt_number(chiffres.titres) }}</b><span>{{ tr("titres en base") }}</span></li>{% endif %}
+            <li><b>6</b><span>{{ tr("plateformes relevées") }}</span></li>
+            {% if chiffres.classements %}<li><b>{{ fmt_number(chiffres.classements) }}</b><span>{{ tr("classements publiés") }}</span></li>{% endif %}
+            {% if chiffres.posts %}<li><b>{{ fmt_number(chiffres.posts) }}</b><span>{{ tr("visuels publiés") }}</span></li>{% endif %}
+        </ul>
+    </header>
+
+    <div class="apropos__corps">
+        <nav class="apropos__sommaire" aria-label="{{ tr("Sommaire") }}">
+            <p>{{ tr("Sommaire") }}</p>
+            <ol>
+                <li><a href="#mission">{{ tr("Notre mission") }}</a></li>
+                <li><a href="#publications">{{ tr("Ce que nous publions") }}</a></li>
+                <li><a href="#methode">{{ tr("La méthode en bref") }}</a></li>
+                <li><a href="#sources">{{ tr("Nos sources") }}</a></li>
+                <li><a href="#coulisses">{{ tr("Dans les coulisses") }}</a></li>
+                <li><a href="#pays">{{ tr("Les 16 pays") }}</a></li>
+                <li><a href="#declarer">{{ tr("Déclarer ses chiffres") }}</a></li>
+                <li><a href="#partenaires">{{ tr("Devenir partenaire") }}</a></li>
+                <li><a href="#independance">{{ tr("Indépendance") }}</a></li>
+                <li><a href="#contact">{{ tr("Nous suivre et nous écrire") }}</a></li>
+            </ol>
+        </nav>
+
+        <div class="apropos__texte">
+            <section id="mission">
+                <h2>{{ tr("Notre mission") }}</h2>
+                <p>{{ tr("La musique d’Afrique de l’Ouest est parmi les plus écoutées du continent, mais personne ne la mesurait de façon régulière, pays par pays, avec une méthode ouverte. Cauri Charts est né pour combler ce manque : donner aux artistes, aux labels, aux médias et au public une mesure fiable de ce qui est vraiment écouté.") }}</p>
+                <p>{{ tr("Nos classements sont une photographie hebdomadaire des données observées sur les plateformes. Nous ne prétendons pas mesurer toute la consommation musicale (radio, concerts, ventes physiques) : nous mesurons ce qui est observable, nous le disons, et nous expliquons chaque résultat.") }}</p>
+                <div class="apropos__encart">
+                    <h3>{{ t('about.name_title') }}</h3>
+                    <p>{{ t('about.name_text') }} {{ tr("Un classement Cauri, c’est ce qui a de la valeur, cette semaine, pour le public.") }}</p>
+                </div>
+            </section>
+
+            <section id="publications">
+                <h2>{{ tr("Ce que nous publions") }}</h2>
+                <div class="apropos__cartes">
+                    <div class="apropos__carte"><h3>{{ tr("Les classements officiels") }}</h3><p>{{ tr("Chaque mardi, pour chaque pays : le Prime Chart (les titres qui ont le plus de succès), le Buzz Chart (les plus fortes progressions, titres vérifiés), le Fresh Chart (les sorties de moins de 8 semaines), l’Icon Chart (les artistes) et le Legend Chart (le cumul). Plus le Top 20 de toute l’Afrique de l’Ouest.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Le classement en direct") }}</h3><p>{{ tr("Mis à jour chaque nuit et à la mi-journée à partir de toutes les plateformes relevées, pour suivre les sorties et les fluctuations sans attendre le mardi.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Le média") }}</h3><p>{{ tr("Cauri Matin, Cauri Hebdo et Cauri Monde, l’actu des artistes et les nouveaux clips, en français et en anglais, sur le site et sur Instagram, TikTok, Facebook et Telegram.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Le Show mensuel") }}</h3><p>{{ tr("Chaque mois, la remise des distinctions aux artistes qui ont marqué les classements.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("La newsletter du mardi") }}</h3><p>{{ tr("Les N°1 officiels de chaque pays et le Top 5 de la région, dès leur publication, gratuitement.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Le classement à intégrer") }}</h3><p>{{ tr("Médias et sites peuvent afficher nos classements chez eux, toujours à jour.") }} <a href="{{ path('integrer') }}">{{ tr("Intégrer le classement") }}</a></p></div>
+                </div>
+                <p class="apropos__calendrier"><strong>{{ tr("Le calendrier :") }}</strong> {{ tr("la semaine de mesure va du lundi au dimanche ; les données sont relevées chaque nuit et à la mi-journée ; les classements officiels sortent le mardi, avec la newsletter.") }}</p>
+            </section>
+
+            <section id="methode">
+                <h2>{{ tr("La méthode en bref") }}</h2>
+                <ul class="apropos__liste">
+                    <li>{{ tr("Une formule publique et datée : chaque changement porte un numéro de version et une date d’effet, et les classements déjà publiés ne sont jamais recalculés.") }}</li>
+                    <li>{{ tr("Un équilibre entre vidéo et écoute : YouTube compte pour moitié, les plateformes d’écoute pour l’autre moitié.") }}</li>
+                    <li>{{ tr("Des règles pour la lisibilité : trois titres au plus par artiste dans un Top, et deux sources au moins pour entrer dans le Top 5.") }}</li>
+                    <li>{{ tr("Des alertes pour vérification : une progression soudaine ou un chiffre inhabituel fait examiner le titre avant publication ; une alerte n’est pas une sanction.") }}</li>
+                    <li>{{ tr("Un indice de fiabilité sur 100, affiché sur chaque classement : il dit sur combien de données repose le classement du pays.") }}</li>
+                </ul>
+                <a class="link-arrow" href="{{ path('methodologie') }}">{{ tr("Lire la méthodologie complète") }}</a>
+            </section>
+
+            <section id="sources">
+                <h2>{{ tr("Nos sources") }}</h2>
+                <p>{{ tr("Nous relevons les données publiques de six plateformes. Chacune a un rôle précis :") }}</p>
+                <ul class="apropos__sources">
+                    {% for cle, nom, role in [('youtube', 'YouTube', tr('vues des clips officiels, chaque jour')), ('apple-music', 'Apple Music', tr('classements par pays, chaque jour')),
+                                              ('boomplay', 'Boomplay', tr('Top 100 par pays, chaque semaine')), ('deezer', 'Deezer', tr('classements, popularité et nouvelles sorties')),
+                                              ('shazam', 'Shazam', tr('titres les plus recherchés')), ('spotify', 'Spotify', tr('auditeurs mensuels des artistes, affichés'))] %}
+                    <li><img src="{{ asset('img/plateformes/' ~ cle ~ '.png') }}" alt="" width="40" height="40" loading="lazy"><span><strong>{{ nom }}</strong><small>{{ role }}</small></span></li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <section id="coulisses">
+                <h2>{{ tr("Dans les coulisses") }}</h2>
+                <p>{{ tr("Chaque nuit, notre chaîne de traitement relève les plateformes, rapproche les titres, repère les doublons, vérifie le pays de chaque artiste et calcule les scores. Le mardi, les classements partent automatiquement.") }}</p>
+                <p>{{ tr("Cauri Studio est notre atelier de création : il découpe le refrain des clips officiels en vidéos verticales, met en images les annonces, met en valeur les artistes avec dix modèles de visuels, et tient une banque de photos d’artistes vérifiées. Voici ce que nous avons publié récemment :") }}</p>
+                {% if galerie %}
+                <ul class="apropos__galerie">
+                    {% for g in galerie %}<li><img src="{{ g.src }}" alt="{{ g.titre }}" width="300" height="375" loading="lazy"></li>{% endfor %}
+                </ul>
+                {% endif %}
+            </section>
+
+            <section id="pays">
+                <h2>{{ tr("Les 16 pays") }}</h2>
+                <p>{{ tr("Un pays a son classement officiel dès que nous y suivons au moins huit artistes ; seuls les artistes du pays y figurent. Le Togo est notre pays pilote.") }}</p>
+                <nav class="apropos__pays" aria-label="{{ tr("Les 16 pays") }}">
+                    {% for c in countries %}<a href="{{ chart_path(c.code, 'prime') }}">{{ flag(c.code, 16) }} {{ country_name(c.code) }}</a>{% endfor %}
+                </nav>
+            </section>
+
+            <section id="declarer">
+                <h2>{{ tr("Déclarer ses chiffres") }}</h2>
+                <p>{{ tr("Certaines plateformes ne publient pas leurs chiffres. Artistes et labels peuvent les déclarer. Les critères :") }}</p>
+                <ol class="apropos__liste apropos__liste--num">
+                    <li>{{ tr("une capture de l’espace artiste (Spotify for Artists, Audiomack, Boomplay…) qui montre la période et le nombre d’écoutes ;") }}</li>
+                    <li>{{ tr("une période déjà terminée, de trois mois au plus, et les mêmes chiffres dans le formulaire ;") }}</li>
+                    <li>{{ tr("une vérification par notre équipe avant tout calcul ; une déclaration n’est comptée que si une donnée publique la recoupe, et elle est écartée si elle s’en écarte de plus de 30 % ;") }}</li>
+                    <li>{{ tr("la capture n’est jamais publiée et vos coordonnées ne servent qu’à ce suivi.") }}</li>
+                </ol>
+                <a class="button" href="{{ path('declarer') }}">{{ t('nav.submit') }}</a>
+            </section>
+
+            <section id="partenaires">
+                <h2>{{ tr("Devenir partenaire") }}</h2>
+                <p>{{ tr("Nous cherchons des partenaires qui partagent notre exigence de transparence : labels, médias, marques, salles de concert, plateformes et institutions de la musique.") }}</p>
+                <div class="apropos__cartes apropos__cartes--deux">
+                    <div class="apropos__carte"><h3>{{ tr("Partenaire officiel") }}</h3><p>{{ tr("Votre nom associé aux classements, au Show mensuel et à nos publications.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Partenaire média") }}</h3><p>{{ tr("Nos classements et nos analyses dans vos programmes, avec la mention de la source.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Plateforme") }}</h3><p>{{ tr("Vos données agrégées pour une mesure plus complète de l’écoute.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Institution") }}</h3><p>{{ tr("Des indicateurs lisibles et vérifiables sur la consommation musicale de votre pays.") }}</p></div>
+                </div>
+                <p>{{ tr("Un partenariat ne donne jamais d’influence sur un classement.") }} <a href="{{ path('contact') }}">{{ tr("Nous contacter") }}</a> · <a href="{{ path('partenaires') }}">{{ tr("Nos partenaires") }}</a></p>
+            </section>
+
+            <section id="independance">
+                <h2>{{ tr("Indépendance") }}</h2>
+                <p>{{ t('about.group_text', {'brand': brand(), 'label': config('app.group_label.name')}) }}</p>
+                <p>{{ tr("Personne, chez Cauri Charts, ne peut déplacer un titre à la main. Aucune place ne s’achète, et aucun artiste, label, média ou annonceur ne peut modifier un classement.") }}</p>
+            </section>
+
+            <section id="contact">
+                <h2>{{ tr("Nous suivre et nous écrire") }}</h2>
+                <ul class="apropos__reseaux">
+                    <li><a href="https://www.instagram.com/cauricharts" target="_blank" rel="noopener"><img src="{{ asset('img/reseaux/instagram.png') }}" alt="" width="28" height="28" loading="lazy"> Instagram</a></li>
+                    <li><a href="https://www.tiktok.com/@caurichartsofficial" target="_blank" rel="noopener"><img src="{{ asset('img/reseaux/tiktok.png') }}" alt="" width="28" height="28" loading="lazy"> TikTok</a></li>
+                    <li><a href="https://www.facebook.com/profile.php?id=61594631234765" target="_blank" rel="noopener"><img src="{{ asset('img/reseaux/facebook.png') }}" alt="" width="28" height="28" loading="lazy"> Facebook</a></li>
+                    {% if config('app.telegram_url') %}<li><a href="{{ config('app.telegram_url') }}" target="_blank" rel="noopener"><img src="{{ asset('img/reseaux/telegram.png') }}" alt="" width="28" height="28" loading="lazy"> Telegram</a></li>{% endif %}
+                </ul>
+                <p>{{ tr("Une question, une correction, un partenariat :") }} <strong>contact@cauricharts.com</strong> · <a href="{{ path('contact') }}">{{ t('about.contact') }}</a></p>
+            </section>
+        </div>
+    </div>
 </article>
