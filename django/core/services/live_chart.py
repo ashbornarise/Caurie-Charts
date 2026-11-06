@@ -172,6 +172,10 @@ def _compute(country_id, source, limit, mode, top_size, period) -> dict:
         from core.services.charts import ChartRanker
         items = ChartRanker.cap_per_country([{**t, "country": t.get("artist_country")} for t in items], top_size,
                                             int(conf.get("charts.prime-wa.country_cap")))
+    if mode == "prime" and source is None:
+        # Au plus 3 titres par artiste dans le Top, comme le classement officiel (formule v3, 06/11/2026)
+        from core.services.charts import ChartRanker, formula_effective_for
+        items = ChartRanker(formula_effective_for(clock.today().isoformat())).cap_artist(items, top_size)
 
     if mode == "buzz":
         top_size = min(top_size, len(items) // 2)
