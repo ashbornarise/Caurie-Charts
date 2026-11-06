@@ -43,24 +43,30 @@ class YouTubeChannelSync:
         # 1. Chaînes connues d'abord : c'est là que sortent les nouveaux sons des artistes suivis. Les 15 dernières vidéos
         # de chaque chaîne (1 unité) sont lues en parallèle ; toutes les chaînes chaque jour (Joachin Migos « DESTIN »
         # manqué le 31/10/2026 : 18 chaînes relues sur 478 en 48 h, l'étape s'épuisait avant d'y arriver).
-        known = db.all(f"""SELECT id, name, youtube_channel_id, submission_country_id FROM artists
+        # 06/11/2026 : une 2e chaîne officielle possible (VEVO, label) : Didi B publie ses clips sur DidiBVEVO, le reste sur « Didi B »
+        db.run("ALTER TABLE artists ADD COLUMN IF NOT EXISTS youtube_channel_2 VARCHAR(40) NULL")
+        known = db.all(f"""SELECT id, name, youtube_channel_id, youtube_channel_2, submission_country_id FROM artists
                            WHERE status <> 'out_of_scope' AND youtube_channel_id IS NOT NULL
                              AND (channel_checked_at IS NULL OR channel_checked_at < LOCALTIMESTAMP - INTERVAL '20 hours')
                            ORDER BY status = 'active' DESC, channel_checked_at NULLS FIRST
                            LIMIT {max(0, int(refresh))}""")
         refreshed = 0
         for lot in [known[i:i + 40] for i in range(0, len(known), 40)]:
-            if budget.over() or not YouTubeQuota.spend(len(lot)):
+            chaines = [ch for a in lot for ch in (a["youtube_channel_id"], a.get("youtube_channel_2")) if ch]
+            if budget.over() or not YouTubeQuota.spend(len(chaines)):
                 break  # temps ou quota épuisé : la suite la nuit prochaine
-            pages = self._uploads_paralleles([a["youtube_channel_id"] for a in lot], key)
+            pages = self._uploads_paralleles(chaines, key)
             for a in lot:
                 videos = pages.get(a["youtube_channel_id"])
                 if videos is None:
                     continue  # lecture ratée : la chaîne reste prioritaire pour la prochaine fois
-                c, n = self._sync_channel(int(a["id"]), a["name"], a["youtube_channel_id"], int(a["submission_country_id"]), key, 1,
-                                          videos=videos)
+                for ch, vids in ((a["youtube_channel_id"], videos), (a.get("youtube_channel_2"), pages.get(a.get("youtube_channel_2") or ""))):
+                    if not ch or vids is None:
+                        continue
+                    c, n = self._sync_channel(int(a["id"]), a["name"], ch, int(a["submission_country_id"]), key, 1, videos=vids)
+                    clips, created = clips + c, created + n
                 db.update("artists", {"channel_checked_at": now_utc()}, "id = :id", {"id": a["id"]})
-                clips, created, refreshed = clips + c, created + n, refreshed + 1
+                refreshed += 1
 
         # 2. Chaînes à trouver : artistes confirmés d'abord (Togo, Bénin en tête), puis présents dans les classements
         todo = db.all(f"""SELECT a.id, a.name, a.status, a.submission_country_id FROM artists a JOIN countries c ON c.id = a.submission_country_id
