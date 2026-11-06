@@ -75,11 +75,12 @@
     }
 
     // Clips YouTube : une image et un bouton ; le lecteur ne se charge qu'au clic (ou si déjà autorisé)
-    function playVideo(box) {
+    // 06/11/2026 : lecture automatique seulement au clic du visiteur, jamais au chargement de la page
+    function playVideo(box, auClic) {
         var id = box.getAttribute('data-yt-id');
         if (!/^[A-Za-z0-9_-]{6,20}$/.test(id)) { return; }
         var frame = document.createElement('iframe');
-        frame.src = 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0';
+        frame.src = 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=' + (auClic === true ? 1 : 0) + '&rel=0';
         frame.title = box.getAttribute('data-yt-title') || 'YouTube';
         frame.allow = 'accelerometer; autoplay; encrypted-media; picture-in-picture';
         frame.allowFullscreen = true;
@@ -145,7 +146,7 @@
     document.querySelectorAll('[data-yt-play]').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
             e.preventDefault();
-            playVideo(btn.closest('[data-yt-id]'));
+            playVideo(btn.closest('[data-yt-id]'), true);
         });
     });
 

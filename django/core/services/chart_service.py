@@ -107,7 +107,64 @@ class ChartService:
                     _json(result["flags"]), result["review_status"], formula["version"], now])
             items.append({**result, "track_id": tid, "artist_id": int(t["artist_id"]), "prev_score": th["prev"],
                           "release_date": t["release_date"], "is_emerging": bool(t["is_emerging"])})
+        if formula.get("normalisation"):
+            self._normalise(items, formula, cid, period)
         return items
+
+    # Sources de la formule normalisée (v4) : YouTube d'un côté, les classements d'écoute de l'autre
+    STREAMING = ("apple_music", "boomplay", "audiomack", "declaration")
+
+    @staticmethod
+    def _valeurs(breakdown: dict) -> dict:
+        """Valeur brute de chaque source pour un titre : progression des vues YouTube (positive), points de position
+        moyens dans chaque classement d'écoute, écoutes déclarées validées."""
+        v = {}
+        yt = float((breakdown.get("youtube") or {}).get("delta") or 0)
+        if yt > 0:
+            v["youtube"] = yt
+        for k, d in breakdown.items():
+            if k.startswith("chart:"):
+                v[k[6:]] = v.get(k[6:], 0) + float(d.get("delta") or 0)
+            elif k.startswith("declaration:"):
+                v["declaration"] = v.get("declaration", 0) + float(d.get("delta") or 0)
+        return v
+
+    def _normalise(self, items: list, formula: dict, cid: int, period: Period) -> None:
+        """Formule v4 (décision du fondateur du 06/11/2026, à partir de la semaine 46) : dans le pays et la semaine,
+        chaque source compte pour la part du titre dans le total de la source ; YouTube pèse 50 %, le streaming 50 %,
+        partagés à parts égales entre les sources d'écoute relevées (Apple et Boomplay : 25 % chacune ; une seule : 50 %).
+        Une source sans aucune donnée pour le pays cette semaine n'est pas comptée (ses poids vont aux autres) ; un titre
+        n'a zéro pour une source que si elle a bien été relevée et qu'il n'y figure pas. Le score brut reste enregistré
+        (alertes, progressions du Buzz) ; le score normalisé sert à classer."""
+        poids = formula["normalisation"]
+        valeurs = {i["track_id"]: self._valeurs(i.get("breakdown") or {}) for i in items}
+        totaux: dict = {}
+        for v in valeurs.values():
+            for k, x in v.items():
+                totaux[k] = totaux.get(k, 0) + x
+        relevees = {k for k, t in totaux.items() if t > 0}
+        ecoute = [k for k in self.STREAMING if k in relevees]
+        w = {}
+        if "youtube" in relevees:
+            w["youtube"] = float(poids.get("youtube", 0.5))
+        for k in ecoute:
+            w[k] = float(poids.get("streaming", 0.5)) / len(ecoute)
+        somme = sum(w.values()) or 1
+        w = {k: x / somme for k, x in w.items()}   # sources absentes : leur poids revient aux sources relevées
+        prev = {int(r["track_id"]): r["breakdown"] for r in db.all(
+            "SELECT track_id, breakdown FROM weekly_scores WHERE country_id = ? AND week_start = ?", [cid, _minus_days(period.start, 7)])}
+        for i in items:
+            v = valeurs[i["track_id"]]
+            parts = {k: round(w[k] * v.get(k, 0) / totaux[k] * 10000, 2) for k in w}
+            score = round(sum(parts.values()), 2)
+            ancien = json.loads(prev.get(i["track_id"]) or "{}") if prev.get(i["track_id"]) else {}
+            ancien = ancien if isinstance(ancien, dict) else {}
+            i["score_brut"], i["prev_brut"] = i["score"], i["prev_score"]
+            i["prev_score"] = float((ancien.get("_v4") or {}).get("score") or 0)
+            i["score"] = score
+            i["breakdown"] = {**(i.get("breakdown") or {}), "_v4": {"score": score, "parts": parts, "poids": {k: round(x, 4) for k, x in w.items()}}}
+            db.run("UPDATE weekly_scores SET breakdown = ? WHERE track_id = ? AND week_start = ?",
+                   [_json(i["breakdown"]), i["track_id"], period.start])
 
     def _platform_deltas(self, cid: int, period: Period) -> dict:
         """Variation de la semaine : dernier relevé de la semaine moins le dernier relevé d'avant."""

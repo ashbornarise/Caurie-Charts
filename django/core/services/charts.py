@@ -302,7 +302,9 @@ class ChartRanker:
         for i in items:
             sortie = str(i.get("release_date") or "")[:10]
             ancien = bool(sortie) and sortie < limite
-            regain = float(i.get("prev_score") or 0) > 0 and float(i["score"]) >= 1.5 * float(i["prev_score"])
+            # v4 : la progression se mesure sur le score brut (même échelle d'une semaine à l'autre)
+            sc, pv = float(i.get("score_brut", i["score"])), float(i.get("prev_brut", i.get("prev_score")) or 0)
+            regain = pv > 0 and sc >= 1.5 * pv
             if not ancien or regain:
                 garde.append(i)
         return garde
@@ -372,10 +374,14 @@ class ChartRanker:
     def buzz(self, items: list, prime_track_ids: list, size: int, previous: dict | None = None) -> list:
         cfg, candidates = self.formula["buzz"], []
         for item in self.eligible(items):
-            prev = float(_prev(item))
-            if item["track_id"] in prime_track_ids or prev <= 0 or item["score"] < cfg["min_score"]:
+            # v4 : progression et seuil sur le score brut, comparable d'une semaine à l'autre ; v1 à v3 : brut = score
+            prev = float(item.get("prev_brut", _prev(item)) or 0)
+            brut = float(item.get("score_brut", item["score"]))
+            if item["track_id"] in prime_track_ids or prev <= 0 or brut < cfg["min_score"]:
                 continue
-            growth = (item["score"] - prev) / prev * 100
+            if self.formula.get("buzz_verifies") and item.get("review_status") == "pending":
+                continue   # v4 : un titre signalé et pas encore examiné attend la vérification avant d'entrer au Buzz
+            growth = (brut - prev) / prev * 100
             if growth <= cfg["min_growth_pct"]:
                 continue
             candidates.append({**item, "growth_pct": php_round(growth, 2)})

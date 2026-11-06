@@ -68,7 +68,7 @@ class DailyPipeline:
     # Nuit coupée en deux tâches parallèles (03/11/2026, elle approchait la coupure des 120 min) :
     #   principal : relevés, classement, posts, statistiques, contrôles, ménage (les posts restent APRÈS les relevés du jour)
     #   catalogue : découverte, profils, pays, Deezer, chaînes et clips YouTube, photos, distinctions, actu des artistes
-    CATALOGUE = ("10a.", "10b.", "10c.", "10d.", "10e.", "10f.", "10g.", "10h.", "10k.", "10l.", "10n.")
+    CATALOGUE = ("10a.", "10b.", "10c.", "10d.", "10e.", "10f.", "10g.", "10h.", "10k.", "10l.", "10n.", "10o.")
 
     def run(self, force_weekly: bool = False, force_posts: bool = False, youtube_searches: int = 10,
             partie: str | None = None) -> list:
@@ -228,6 +228,11 @@ class DailyPipeline:
             from core.services import artist_news
             return [artist_news.collect_youtube(), artist_news.collect_releases(150)]
         self._step("10l. Actu des artistes (nouveaux clips YouTube, sorties Deezer)", releases, 150)
+
+        def sorties():   # 06/11/2026 : chaque titre des albums, EP et singles parus ces 14 jours, créé dès sa sortie
+            from core.services.imports import sorties as S
+            return S.releve()
+        self._step("10o. Nouvelles sorties Deezer (titres créés dès la sortie)", sorties, 600)
 
         def stats():
             from core.services import analytics

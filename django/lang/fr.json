@@ -184,7 +184,7 @@
     "track.spotify_cta_link": "Déclarer mes écoutes",
     "methodology.title": "Méthodologie",
     "methodology.eyebrow": "Méthodologie",
-    "methodology.meta_description": "Sources, formule de score, règles anti-fraude et indépendance : comment sont construits les classements.",
+    "methodology.meta_description": "Sources, formule de score, alertes pour vérification et indépendance : comment sont construits les classements.",
     "methodology.heading": "Comment sont construits les classements :brand",
     "methodology.intro": ":brand classe la musique d'Afrique de l'Ouest à partir de chiffres d'écoute. Chaque semaine, nous mesurons combien un titre a été écouté ou visionné du lundi au dimanche, nous additionnons ces chiffres selon une formule publique, et nous publions le résultat le mardi.",
     "methodology.sources_title": "D'où viennent les chiffres",
@@ -207,8 +207,8 @@
     "methodology.charts_title": "Les classements",
     "methodology.country_rule": "Un artiste est classé dans le pays où il soumet sa musique. Le pays où il est le plus écouté s'affiche à part, sur sa fiche. Clip, audio officiel, versions lyrics et lives d'un même titre comptent ensemble.",
     "methodology.calendar": "Période de suivi : du lundi 00 h au dimanche 23 h 59, heure de Lomé. Calcul le lundi, vérification, publication le mardi. Les classements mensuels sortent le premier mardi du mois suivant.",
-    "methodology.checks_title": "Ce que nous vérifions",
-    "methodology.checks_text": "Un titre dont les chiffres explosent sans explication (plus de :factor fois sa médiane des quatre dernières semaines) est examiné avant publication. Une déclaration qui s'écarte de plus de :tolerance % des données publiques est vérifiée. Un rapport anormal entre vues et mentions « j'aime » déclenche un contrôle. Une donnée qu'on ne peut pas vérifier ne compte pas. Les titres exclus pour anomalie sont listés ci-dessous avec la raison.",
+    "methodology.checks_title": "Alertes pour vérification",
+    "methodology.checks_text": "Nos seuils déclenchent des alertes, pas des sanctions : une alerte ne prouve pas une fraude, elle demande une vérification. Une progression soudaine (plus de :factor fois la médiane des quatre dernières semaines), un rapport inhabituel entre vues et mentions « j'aime » (qui peut aussi venir d'un public ou d'un format particulier) ou une déclaration qui s'écarte de plus de :tolerance % des données publiques font examiner le titre. Après examen, il est réintégré ou exclu ; une donnée qu'on ne peut pas vérifier ne compte pas. Chaque mois, nous publions le bilan : alertes détectées, titres examinés, réintégrés et exclus.",
     "methodology.position_title": "Notre position",
     "methodology.position_text": ":brand fait partie de Novaluz Group, qui inclut le label :label. Les artistes de ce label sont signalés par un badge et soumis exactement aux mêmes règles. Personne, chez :brand, ne peut déplacer un titre à la main.",
     "methodology.contest_title": "Une erreur ? Un désaccord ?",
@@ -700,5 +700,7 @@
     "show.mail_subject": "Ton rappel : le Cauri Charts Monthly Show",
     "show.mail_body": "Bonjour :name,\n\nC'est noté : on te rappelle le direct du Cauri Charts Monthly Show, :date.\n\nAu programme : les N°1 :month dans toute l'Afrique de l'Ouest, révélés en direct, la roulette des pays, tes pronostics à l'écran et le BIG 5.\n\nAjoute-le à ton agenda : :ics\nToutes les infos : :link\n\nSi tu n'es pas à l'origine de cette inscription, ignore simplement cet e-mail.",
     "show.ics_description": "Les N°1 de l'Afrique de l'Ouest révélés en direct.",
-    "chart.live_insufficient": "Pas encore assez de données pour classer :country : nous suivons :n artiste(s) du pays, il en faut au moins :min pour un classement crédible. Plutôt que de remplir ce Top avec des artistes d'autres pays ou le même artiste répété, nous attendons d'avoir assez de sources. Vous êtes artiste ou label de ce pays ? Déclarez votre musique."
+    "chart.live_insufficient": "Pas encore assez de données pour classer :country : nous suivons :n artiste(s) du pays, il en faut au moins :min pour un classement crédible. Plutôt que de remplir ce Top avec des artistes d'autres pays ou le même artiste répété, nous attendons d'avoir assez de sources. Vous êtes artiste ou label de ce pays ? Déclarez votre musique.",
+    "methodology.normalisation": "Depuis la formule v4 (semaine 46), chaque source compte pour la part du titre dans le total de la source, dans le pays et pour la semaine : YouTube pèse :yt %, les plateformes d'écoute :st %, partagés à parts égales entre celles qui sont relevées dans le pays (Apple Music et Boomplay : 25 % chacune ; une seule : 50 %). Une source sans donnée pour le pays n'est pas comptée comme un zéro : son poids revient aux autres. Un titre n'a zéro pour une source que si elle a bien été relevée et qu'il n'y figure pas.",
+    "methodology.buzz_verifies": "Buzz Chart : seuls les titres vérifiés sont classés. Un titre signalé et pas encore examiné reste en attente, puis entre au classement s'il est réintégré."
 }

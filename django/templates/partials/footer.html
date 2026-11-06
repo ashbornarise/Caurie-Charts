@@ -77,8 +77,21 @@
         </p>
         {% endif %}
 
+        {#- Plateformes suivies (06/11/2026) : celles qui comptent dans le classement, puis celles qui le complètent -#}
+        <div class="pied__sources">
+            <p class="pied__sources-titre">{{ tr("Nos sources") }}</p>
+            <ul>
+                {% for cle, nom, role in [('youtube', 'YouTube', tr('vues des clips officiels')), ('apple-music', 'Apple Music', tr('classements par pays')),
+                                          ('boomplay', 'Boomplay', tr('classements par pays')), ('deezer', 'Deezer', tr('classements et popularité')),
+                                          ('shazam', 'Shazam', tr('titres les plus recherchés')), ('spotify', 'Spotify', tr('auditeurs mensuels, affichés'))] %}
+                <li><img src="{{ asset('img/plateformes/' ~ cle ~ '.png') }}" alt="" width="28" height="28" loading="lazy"><span><strong>{{ nom }}</strong><small>{{ role }}</small></span></li>
+                {% endfor %}
+            </ul>
+            <a class="link-arrow" href="{{ path('methodologie') }}">{{ tr("Comment chaque source compte") }}</a>
+        </div>
+
         <div class="pied__bas">
-            <p>&copy; {{ now_year() }} {{ brand() }}. {{ t('footer.legal') }} {{ t('footer.no_tracking') }} Sources : Apple Music, Deezer, Shazam, YouTube.</p>
+            <p>&copy; {{ now_year() }} {{ brand() }}. {{ t('footer.legal') }} {{ t('footer.no_tracking') }}</p>
             <ul>
                 <li><a href="{{ path('mentions-legales') }}">{{ t('legal.mentions') }}</a></li>
                 <li><a href="{{ path('confidentialite') }}">{{ t('legal.confidentialite') }}</a></li>

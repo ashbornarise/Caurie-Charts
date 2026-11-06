@@ -996,3 +996,15 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 @media (max-width: 760px) {
     .site-header__inner { grid-template-columns: 1fr auto auto; }
 }
+
+/* Pied de page : tendances alignées (pas de « · » en début de ligne) et plateformes suivies avec leurs logos (06/11/2026) */
+.pied__tendances { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.pied__tendances a + a::before { content: none; }
+.pied__tendances span { margin-right: 4px; }
+.pied__sources { margin: 26px 0 0; padding: 18px 20px; border-radius: 20px; background: rgba(255,255,255,.7); border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); }
+.pied__sources-titre { margin: 0 0 12px; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.pied__sources ul { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px 18px; }
+.pied__sources li { display: flex; align-items: center; gap: 10px; }
+.pied__sources img { width: 28px; height: 28px; object-fit: contain; border-radius: 7px; flex: none; }
+.pied__sources strong { display: block; font-size: .88rem; color: var(--ink); }
+.pied__sources small { display: block; font-size: .74rem; color: var(--muted); line-height: 1.3; }

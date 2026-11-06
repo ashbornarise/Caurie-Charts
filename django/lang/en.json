@@ -184,7 +184,7 @@
     "track.spotify_cta_link": "Declare my streams",
     "methodology.title": "Methodology",
     "methodology.eyebrow": "Methodology",
-    "methodology.meta_description": "Sources, scoring formula, anti-fraud rules and independence: how the charts are built.",
+    "methodology.meta_description": "Sources, scoring formula, alerts for review and independence: how the charts are built.",
     "methodology.heading": "How :brand charts are built",
     "methodology.intro": ":brand ranks West African music from listening figures. Each week we measure how many times a song was played or viewed from Monday to Sunday, add these figures with a public formula, and publish the result on Tuesday.",
     "methodology.sources_title": "Where the figures come from",
@@ -207,8 +207,8 @@
     "methodology.charts_title": "The charts",
     "methodology.country_rule": "An artist is ranked in the country where they submit their music. The country where they are most played is shown separately on their page. Video, official audio, lyric and live versions of a song count together.",
     "methodology.calendar": "Tracking week: Monday 00:00 to Sunday 23:59, Lomé time. Computed on Monday, reviewed, published on Tuesday. Monthly charts come out on the first Tuesday of the following month.",
-    "methodology.checks_title": "What we check",
-    "methodology.checks_text": "A song whose figures jump without explanation (more than :factor times its median of the last four weeks) is reviewed before publication. A declaration more than :tolerance% away from public data is checked. An abnormal ratio between views and likes triggers a review. Data that cannot be verified does not count. Songs removed for anomalies are listed below with the reason.",
+    "methodology.checks_title": "Alerts for review",
+    "methodology.checks_text": "Our thresholds trigger alerts, not penalties: an alert does not prove fraud, it calls for a check. A sudden jump (more than :factor times the median of the last four weeks), an unusual ratio between views and likes (which can also come from a particular audience or format) or a declaration more than :tolerance% away from public data sends the song to review. After review it is reinstated or removed; data that cannot be verified does not count. Every month we publish the record: alerts raised, songs reviewed, reinstated and removed.",
     "methodology.position_title": "Our position",
     "methodology.position_text": ":brand is part of Novaluz Group, which includes the :label label. That label's artists carry a badge and follow exactly the same rules. Nobody at :brand can move a song by hand.",
     "methodology.contest_title": "Spotted an error? Disagree?",
@@ -439,5 +439,7 @@
     "show.mail_subject": "Your reminder: the Cauri Charts Monthly Show",
     "show.mail_body": "Hello :name,\n\nYou're on the list: we'll remind you of the Cauri Charts Monthly Show, :date.\n\nOn the programme: the :month number ones across West Africa revealed live, the country roulette, your predictions on screen and the BIG 5.\n\nAdd it to your calendar: :ics\nAll the details: :link\n\nIf you didn't sign up, simply ignore this e-mail.",
     "show.ics_description": "West Africa's number ones revealed live.",
-    "chart.live_insufficient": "Not enough data yet to rank :country: we follow :n artist(s) from this country and need at least :min for a credible chart. Rather than fill this Top with artists from other countries or the same artist repeated, we are waiting for more sources. Artist or label from this country? Submit your music."
+    "chart.live_insufficient": "Not enough data yet to rank :country: we follow :n artist(s) from this country and need at least :min for a credible chart. Rather than fill this Top with artists from other countries or the same artist repeated, we are waiting for more sources. Artist or label from this country? Submit your music.",
+    "methodology.normalisation": "Since formula v4 (week 46), each source counts as the song's share of that source's total, in the country and for the week: YouTube weighs :yt%, listening platforms :st%, split equally between those tracked in the country (Apple Music and Boomplay: 25% each; only one: 50%). A source with no data for the country is not counted as zero: its weight goes to the others. A song scores zero for a source only if that source was tracked and the song is not in it.",
+    "methodology.buzz_verifies": "Buzz Chart: only reviewed songs are ranked. A flagged song not yet reviewed stays on hold, then enters the chart if reinstated."
 }

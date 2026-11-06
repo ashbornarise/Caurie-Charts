@@ -1,0 +1,23 @@
+name: Mi-journée (sorties et classements du jour)
+on:
+  schedule:
+    - cron: "30 12 * * *"   # chaque jour 12 h 30 UTC : nouvelles sorties Deezer, Apple Music, Deezer, Shazam (06/11/2026)
+  workflow_dispatch:
+jobs:
+  midi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      TZ: Africa/Lome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - name: Relever
+        working-directory: django
+        run: python manage.py midi
