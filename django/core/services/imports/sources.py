@@ -173,6 +173,64 @@ class AudiomackChartSource:
         raise PlatformException("Audiomack : accès API à obtenir, utiliser l'import CSV en attendant.")
 
 
+class BoomplayChartSource:
+    """« Top 100 <pays> » hebdomadaire de Boomplay (06/11/2026), par l'outil Apify omkar-cloud/boomplay-scraper :
+    une playlist entière = 1 résultat facturé (0,001 $), soit moins de 0,10 $ par mois pour les 11 pays couverts.
+    Boomplay met ses Top 100 à jour une fois par semaine : relevé seulement si le dernier date de plus de 6 jours.
+    Pour les autres pays (Cap-Vert, Gambie, Guinée-Bissau, Liberia, Mauritanie), Boomplay renvoie le Top Nigeria : écartés."""
+    PLAYLISTS = {"TG": 47181807, "BJ": 47181812, "GH": 856746, "CI": 2676201, "SN": 2676204, "NG": 850210,
+                 "BF": 47179124, "NE": 55529745, "SL": 47181794, "GN": 55527108, "ML": 47181811}
+    ACTEUR = "omkar-cloud~boomplay-scraper"
+    PRIX = 0.001
+
+    def __init__(self):
+        self._lot = None
+
+    def key(self):
+        return "boomplay"
+
+    def is_available(self):
+        from core import env
+        return bool(env.get("APIFY_TOKEN", ""))
+
+    @staticmethod
+    def a_jour(code: str) -> bool:
+        return bool(db.value("""SELECT 1 FROM chart_observations o JOIN countries c ON c.id = o.country_id
+                                WHERE o.source = 'boomplay' AND c.code = ? AND o.observed_on > CURRENT_DATE - 6 LIMIT 1""", [code]))
+
+    def _tout(self) -> dict:
+        """Tous les pays à relever en un seul passage Apify (11 playlists = 0,011 $)."""
+        if self._lot is None:
+            from core.services import spotify_apify
+            codes = [c for c in self.PLAYLISTS if not self.a_jour(c)]
+            self._lot = {}
+            if codes:
+                lignes = spotify_apify._lance(self.ACTEUR, {"urls": [f"playlist:{self.PLAYLISTS[c]}" for c in codes],
+                                                           "queries": [], "maxResults": 100}, self.PRIX * len(codes))
+                par_id = {int(p.get("id") or 0): p for p in lignes if p.get("record_type") == "playlist"}
+                self._lot = {c: par_id.get(self.PLAYLISTS[c]) for c in codes}
+        return self._lot
+
+    def fetch(self, code: str):
+        code = code.upper()
+        if code not in self.PLAYLISTS or self.a_jour(code):
+            return None   # pas de Top Boomplay pour ce pays, ou celui de la semaine est déjà relevé
+        p = self._tout().get(code)
+        if not p or not p.get("tracks"):
+            raise PlatformException(f"Boomplay {code} : playlist vide ou illisible")
+        return self.parse(p)
+
+    @staticmethod
+    def parse(p: dict) -> dict:
+        rows = []
+        for i, t in enumerate(p.get("tracks") or []):
+            artiste = t.get("artist") or {}
+            rows.append({"position": int(t.get("position") or i + 1), "title": str(t.get("name") or "").strip(),
+                         "artist": str(artiste.get("name") or "").strip(), "external_id": str(t.get("id") or ""),
+                         "url": t.get("link"), "image": (t.get("album") or {}).get("image")})
+        return {"observed_on": _today(), "rows": [r for r in rows if r["title"] and r["artist"]]}
+
+
 _SPLIT_CLEAN = re.compile(r"\s*[\(\[][^\)\]]*(official|officiel|clip|video|vidéo|audio|lyric|visuali[sz]er|live|prod\.?|dir\.?|by )[^\)\]]*[\)\]]", re.I)
 _QUOTES = " \t\"'“”«»"
 

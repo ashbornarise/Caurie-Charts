@@ -5,7 +5,8 @@ import time
 from core import db, env
 from core.services.imports import chart_importer
 from core.services.imports.matching import YouTubeMatcher
-from core.services.imports.sources import (AppleMusicChartSource, AudiomackChartSource, DeezerChartSource, DeezerPopularitySource,
+from core.services.imports.sources import (AppleMusicChartSource, AudiomackChartSource, BoomplayChartSource, DeezerChartSource,
+                                           DeezerPopularitySource,
                                            ShazamChartSource, YouTubeDiscoverySource, YouTubeTrendingSource, YouTubeViewsSource)
 from core.services.platforms import (HttpClient, PlatformException, QuotaStore, YouTubeClient, YouTubeQuota, log_write)
 
@@ -24,6 +25,7 @@ class ImportService:
             "deezer": DeezerChartSource(self.http),
             "youtube_trending": YouTubeTrendingSource(self.http, key),
             "shazam": ShazamChartSource(self.http),
+            "boomplay": BoomplayChartSource(),   # Top 100 hebdomadaire par pays, via Apify (06/11/2026)
             "youtube_discovery": YouTubeDiscoverySource(self.http, key),
             # Calculés à partir des artistes suivis : rendent visibles les pays sans classement de plateforme
             "deezer_popularity": DeezerPopularitySource(self.http),

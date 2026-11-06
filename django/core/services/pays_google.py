@@ -95,6 +95,9 @@ def verifier(lots: int = 4, taille: int = TAILLE, appliquer: bool = True, http: 
                            "base_country = COALESCE(?, base_country) WHERE id = ?",
                            [nouveau_statut, ouest.get(nouveau_pays) if nouveau_pays in ouest else None,
                             pays if nouveau_statut == "out_of_scope" else None, a["id"]])
+                if pays in ouest and certitude == "haute":
+                    # 06/11/2026 : Himra et Didi B restaient sans pays (base_country vide) alors que Google les sait Ivoiriens
+                    db.run("UPDATE artists SET base_country = ? WHERE id = ? AND base_country IS NULL", [pays, a["id"]])
                     db.run("""INSERT INTO pays_verifs (artist_id, nom, pays_google, certitude, ancien_pays, ancien_statut, nouveau_pays, nouveau_statut)
                               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                            [a["id"], a["name"], pays, certitude, a["pays"], a["status"], nouveau_pays, nouveau_statut])
