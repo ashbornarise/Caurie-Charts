@@ -989,3 +989,10 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
   border:1px solid var(--ciel-bord,rgba(120,180,235,.6));color:inherit;text-decoration:none}
 .langue-bascule:hover{background:rgba(120,180,235,.12)}
 .pied__langues a[aria-current]{font-weight:700}
+
+/* En-tête à 4 colonnes depuis la bascule FR / EN (06/11/2026) : logo, menu, langue, bouton */
+.site-header__inner { grid-template-columns: auto 1fr auto auto; }
+.langue-bascule { margin: 0; justify-self: end; }
+@media (max-width: 760px) {
+    .site-header__inner { grid-template-columns: 1fr auto auto; }
+}
