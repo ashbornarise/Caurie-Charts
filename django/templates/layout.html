@@ -1,7 +1,7 @@
 {%- set current = request_path() -%}
 {%- set other_locale = 'en' if locale() == 'fr' else 'fr' -%}
 {%- set tracking = config('app.tracking') -%}
-{%- set ask_consent = tracking.ga_id != '' or tracking.meta_pixel_id != '' -%}
+{%- set ask_consent = tracking.ga_id != '' or tracking.meta_pixel_id != '' or tracking.youtube_embeds or tracking.spotify_playlist != '' -%}
 <!doctype html>
 <html lang="{{ locale() }}">
 <head>

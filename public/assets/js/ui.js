@@ -74,3 +74,23 @@
         });
     }
 })();
+
+/* Newsletter du pied de page (06/11/2026) : envoi en arrière-plan, les pages étant en cache */
+(function () {
+  var f = document.querySelector('[data-newsletter]');
+  if (!f) return;
+  f.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var msg = f.querySelector('.pied__lettre-msg'), b = f.querySelector('button');
+    b.disabled = true;
+    fetch('/api/newsletter', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: f.email.value, langue: f.langue.value, site: f.site.value})})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        msg.textContent = d.statut === 'ok' ? msg.dataset.ok : d.statut === 'deja' ? msg.dataset.deja : msg.dataset.err;
+        if (d.statut === 'ok') f.email.value = '';
+      })
+      .catch(function () { msg.textContent = msg.dataset.err; })
+      .then(function () { b.disabled = false; });
+  });
+})();

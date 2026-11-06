@@ -1,21 +1,36 @@
 {#- Bas de page (refonte du 02/11/2026) : carte de marque en verre, pays en pastilles, 4 colonnes, tendances en une ligne
     (liens internes utiles au référencement), mentions légales. Sur téléphone : 2 colonnes au lieu de 7 empilées. -#}
-<footer class="site-footer pied">
+<footer class="site-footer pied pied--nuit">
     <div class="wrap">
-        <div class="pied__haut">
+        {#- Refonte du 06/11/2026 : fond bleu nuit et violet (on sait qu'on est en bas du site), la newsletter en tête -#}
+        <div class="pied__une">
             <div class="pied__marque">
                 <img class="pied__logo" src="{{ asset('img/brand/logo.svg') }}" alt="{{ brand() }}" width="120" height="53" loading="lazy">
                 <p>{{ t('footer.about', {'brand': brand()}) }}</p>
-            </div>
-            <div class="pied__suivre">
-                <p class="pied__titre">{{ tr("Suivez la référence de la musique ouest-africaine") }}</p>
-                <ul class="pied__reseaux">
-                    <li><a href="https://www.instagram.com/cauricharts" target="_blank" rel="noopener">{{ tr("Instagram") }}</a></li>
-                    <li><a href="https://www.tiktok.com/@caurichartsofficial" target="_blank" rel="noopener">{{ tr("TikTok") }}</a></li>
-                    <li><a href="https://www.facebook.com/profile.php?id=61594631234765" target="_blank" rel="noopener">{{ tr("Facebook") }}</a></li>
-                    {% if config('app.telegram_url') %}<li><a href="{{ config('app.telegram_url') }}" target="_blank" rel="noopener">{{ tr("Telegram") }}</a></li>{% endif %}
+                <ul class="pied__reseaux" aria-label="{{ tr("Nos réseaux") }}">
+                    <li><a href="https://www.instagram.com/cauricharts" target="_blank" rel="noopener" aria-label="Instagram"><img src="{{ asset(\'img/reseaux/instagram.png\') }}" alt="" width="26" height="26" loading="lazy"></a></li>
+                    <li><a href="https://www.tiktok.com/@caurichartsofficial" target="_blank" rel="noopener" aria-label="TikTok"><img src="{{ asset(\'img/reseaux/tiktok.png\') }}" alt="" width="26" height="26" loading="lazy"></a></li>
+                    <li><a href="https://www.facebook.com/profile.php?id=61594631234765" target="_blank" rel="noopener" aria-label="Facebook"><img src="{{ asset(\'img/reseaux/facebook.png\') }}" alt="" width="26" height="26" loading="lazy"></a></li>
+                    {% if config('app.telegram_url') %}<li><a href="{{ config('app.telegram_url') }}" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4 3 11l6 2 2 6 3-4 5 4z"/><path d="m9 13 8-6"/></svg></a></li>{% endif %}
                 </ul>
             </div>
+            <form class="pied__lettre" data-newsletter novalidate>
+                <p class="pied__lettre-sur">{{ tr("Newsletter · chaque mardi") }}</p>
+                <h2>{{ tr("Les N°1 de l’Afrique de l’Ouest, dans votre boîte mail") }}</h2>
+                <p>{{ tr("Le classement officiel de chaque pays et le Top 5 de la région, dès leur publication. Gratuit, sans publicité, désinscription en un clic.") }}</p>
+                <div class="pied__lettre-champ">
+                    <label class="visually-hidden" for="nl-email">{{ tr("Votre adresse e-mail") }}</label>
+                    <input id="nl-email" type="email" name="email" required autocomplete="email" placeholder="{{ tr("Votre adresse e-mail") }}">
+                    <input type="text" name="site" tabindex="-1" autocomplete="off" class="visually-hidden" aria-hidden="true">
+                    <input type="hidden" name="langue" value="{{ locale() }}">
+                    <button type="submit">{{ tr("Je m’inscris") }}</button>
+                </div>
+                <p class="pied__lettre-msg" role="status" aria-live="polite"
+                   data-ok="{{ tr("C’est presque fini : confirmez votre inscription dans l’e-mail que nous venons de vous envoyer.") }}"
+                   data-deja="{{ tr("Cette adresse est déjà inscrite. Merci !") }}"
+                   data-err="{{ tr("Adresse invalide ou trop d’essais : vérifiez et réessayez.") }}"></p>
+                <small>{{ tr("En vous inscrivant, vous acceptez de recevoir notre newsletter.") }} <a href="{{ path('confidentialite') }}">{{ tr("Confidentialité") }}</a></small>
+            </form>
         </div>
 
         {% if countries %}

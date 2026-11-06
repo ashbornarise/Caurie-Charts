@@ -40,6 +40,11 @@ jobs:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}       # newsletter du mardi (06/11/2026)
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -61,6 +66,7 @@ jobs:
               python manage.py publish_chart --week=$(date -u -d "$k weeks ago" +%G-W%V) --auto --sans-envois || true
             done
             python manage.py publish_chart --week=$(date -u -d "7 days ago" +%G-W%V) --auto
+            python manage.py newsletter_envoi || true   # la lettre du mardi aux abonnés confirmés (06/11/2026)
             exit 0
           fi
           ARGS="--week=${{ inputs.week }}"

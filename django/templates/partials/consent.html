@@ -1,24 +1,49 @@
-{#- Bandeau de consentement : affiché seulement si Google Analytics ou Meta Pixel est configuré. -#}
-{%- set tr = config('app.tracking') -%}
-<div id="consent" class="consent" role="dialog" aria-labelledby="consent-title" aria-describedby="consent-text" hidden>
+{#- Fenêtre de consentement (refonte du 06/11/2026) : au centre de l'écran, finalités et liste des partenaires détaillées.
+    Affichée dès qu'un service tiers peut déposer des cookies (vidéos YouTube, lecteur Spotify, mesure d'audience, publicité). -#}
+{%- set suivi = config('app.tracking') -%}
+<div id="consent" class="consent consent--fenetre" role="dialog" aria-modal="true" aria-labelledby="consent-title" aria-describedby="consent-text" hidden>
     <div class="consent__inner">
-        <h2 id="consent-title" class="consent__title">{{ t('consent.title') }}</h2>
-        <p id="consent-text">{{ t('consent.text', {'brand': brand()}) }} <a href="{{ path('cookies') }}">{{ t('consent.more') }}</a></p>
+        <p class="consent__sur">{{ brand() }}</p>
+        <h2 id="consent-title" class="consent__title">{{ tr("Votre vie privée compte pour nous") }}</h2>
+        <p id="consent-text">{{ tr("Nous et nos partenaires pouvons déposer des cookies ou lire des informations sur votre appareil. « J’accepte » active les services ci-dessous ; « Tout refuser » les désactive : le site reste entièrement utilisable, seules les vidéos et lecteurs intégrés demanderont un clic. Vous pouvez changer d’avis à tout moment avec le lien « Gérer les cookies » en bas de chaque page.") }}</p>
+
+        <h3 class="consent__soustitre">{{ tr("Nous et nos partenaires utilisons des données pour :") }}</h3>
+        <ul class="consent__finalites">
+            <li>{{ tr("faire fonctionner le site et protéger ses formulaires (toujours actif) ;") }}</li>
+            {% if suivi.youtube_embeds or suivi.spotify_playlist %}<li>{{ tr("lire les clips et les playlists intégrés (YouTube, Spotify) ;") }}</li>{% endif %}
+            {% if suivi.ga_id %}<li>{{ tr("mesurer l’audience et améliorer nos pages (statistiques) ;") }}</li>{% endif %}
+            {% if suivi.meta_pixel_id %}<li>{{ tr("mesurer l’efficacité de nos publicités sur les réseaux sociaux.") }}</li>{% endif %}
+        </ul>
+
+        <details class="consent__partenaires">
+            <summary>{{ tr("Liste des partenaires") }}</summary>
+            <table>
+                <thead><tr><th scope="col">{{ tr("Partenaire") }}</th><th scope="col">{{ tr("Rôle") }}</th><th scope="col">{{ tr("Consentement") }}</th></tr></thead>
+                <tbody>
+                    <tr><td>Vercel</td><td>{{ tr("Hébergement du site") }}</td><td>{{ tr("Nécessaire") }}</td></tr>
+                    {% if suivi.youtube_embeds %}<tr><td>YouTube (Google)</td><td>{{ tr("Lecture des clips officiels") }}</td><td>{{ tr("Vidéos") }}</td></tr>{% endif %}
+                    {% if suivi.spotify_playlist %}<tr><td>Spotify</td><td>{{ tr("Lecteur de playlist") }}</td><td>{{ tr("Vidéos") }}</td></tr>{% endif %}
+                    {% if suivi.ga_id %}<tr><td>Google Analytics</td><td>{{ tr("Statistiques de visite") }}</td><td>{{ tr("Statistiques") }}</td></tr>{% endif %}
+                    {% if suivi.meta_pixel_id %}<tr><td>Meta (Facebook, Instagram)</td><td>{{ tr("Mesure des publicités") }}</td><td>{{ tr("Publicité") }}</td></tr>{% endif %}
+                </tbody>
+            </table>
+            <p><a href="{{ path('cookies') }}">{{ t('consent.more') }}</a></p>
+        </details>
 
         <div class="consent__panel" data-consent-panel hidden>
             <label class="consent__option consent__option--locked">
                 <input type="checkbox" checked disabled>
                 <span><strong>{{ t('consent.cat_necessary') }}</strong> {{ t('consent.cat_necessary_text') }}</span>
             </label>
-            {% if tr.ga_id %}
+            {% if suivi.ga_id %}
             <label class="consent__option"><input type="checkbox" name="analytics">
                 <span><strong>{{ t('consent.cat_analytics') }}</strong> {{ t('consent.cat_analytics_text') }}</span></label>
             {% endif %}
-            {% if tr.meta_pixel_id %}
+            {% if suivi.meta_pixel_id %}
             <label class="consent__option"><input type="checkbox" name="ads">
                 <span><strong>{{ t('consent.cat_ads') }}</strong> {{ t('consent.cat_ads_text') }}</span></label>
             {% endif %}
-            {% if tr.youtube_embeds %}
+            {% if suivi.youtube_embeds or suivi.spotify_playlist %}
             <label class="consent__option"><input type="checkbox" name="media">
                 <span><strong>{{ t('consent.cat_media') }}</strong> {{ t('consent.cat_media_text') }}</span></label>
             {% endif %}
@@ -26,9 +51,9 @@
         </div>
 
         <div class="consent__actions">
-            <button class="button button--ghost" type="button" data-consent-refuse>{{ t('consent.refuse') }}</button>
-            <button class="button button--ghost" type="button" data-consent-custom aria-expanded="false">{{ t('consent.customize') }}</button>
-            <button class="button button--ghost" type="button" data-consent-accept>{{ t('consent.accept') }}</button>
+            <button class="consent__lien" type="button" data-consent-custom aria-expanded="false">{{ tr("Choisir les finalités") }}</button>
+            <button class="consent__bouton consent__bouton--second" type="button" data-consent-refuse>{{ tr("Tout refuser") }}</button>
+            <button class="consent__bouton" type="button" data-consent-accept>{{ tr("J’accepte") }}</button>
         </div>
     </div>
 </div>
