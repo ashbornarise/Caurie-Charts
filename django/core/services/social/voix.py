@@ -62,7 +62,17 @@ def accroche(post: dict) -> dict | None:
     client = ai.make()
     if not client:
         return None
-    infos = f"Titre interne : {post.get('title')}\nTexte du post :\n{str(post.get('caption') or '')[:1500]}"
+    # 07/11/2026 (demande du fondateur) : l'IA lit tout ce qui est écrit sur le post avant d'écrire l'accroche —
+    # la légende, et le texte des visuels (gros titre de chaque diapositive, titres des actus présentées)
+    try:
+        diapos = json.loads(post.get("carousel") or "[]") or []
+    except (ValueError, TypeError):
+        diapos = []
+    sur_image = [str(d.get("label") or "").strip() for d in diapos if isinstance(d, dict) and d.get("label")]
+    sur_image += [str(x.get("titre") or "").strip() for x in (faits.get("fiches") or []) if isinstance(x, dict) and x.get("titre")]
+    infos = (f"Titre interne : {post.get('title')}\n"
+             + (f"Texte écrit sur les visuels du post : {' | '.join(dict.fromkeys(t for t in sur_image if t))[:600]}\n" if sur_image else "")
+             + f"Légende du post :\n{str(post.get('caption') or '')[:1500]}")
     try:
         r = client.ask(VOIX, infos + "\n\nÉcris le TITRE de ce post selon les règles, en français et en anglais. "
                        'Réponds seulement en JSON : {"fr": "...", "en": "..."}', max_tokens=300)
