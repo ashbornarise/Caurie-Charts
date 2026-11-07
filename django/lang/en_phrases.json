@@ -944,5 +944,12 @@
  "vendredi": "Friday",
  "À égalité : le score, puis le nombre de sources, puis la progression, puis le score de la semaine précédente.": "If tied: the score, then the number of sources, then the progression, then the previous week’s score.",
  "Écart de plus de :n % avec les données publiques": "Discrepancy of more than :n % with public data",
- "Écoutes déclarées par les artistes et labels, avec preuve": "Streams declared by artists and labels, with proof"
+ "Écoutes déclarées par les artistes et labels, avec preuve": "Streams declared by artists and labels, with proof",
+ "Les écoutes Spotify par pays, que Spotify ne publie pas pour la région : nous comptons le compteur mondial de chaque titre.": "Spotify plays by country, which Spotify does not publish for the region: we use the global count of each track.",
+ "L’écoute est partagée à parts égales entre les plateformes relevées dans le pays : Apple Music, Boomplay et Spotify (un tiers chacune quand les trois sont relevées). Pour Spotify, ce sont les écoutes gagnées par le titre pendant la semaine.": "The play count is shared equally between the platforms tracked in the country: Apple Music, Boomplay and Spotify (one‑third each when all three are tracked). For Spotify, these are the plays earned by the track during the week.",
+ "Relevé, dans le score à partir du 13 novembre": "Recorded, in the score from 13 November",
+ "Spotify ne publie pas d’écoutes par pays pour l’Afrique de l’Ouest : nous relevons chaque jour le compteur mondial de chaque titre de nos artistes (albums, singles, featurings), comme pour les vues YouTube, et la différence d’une semaine à l’autre donne les écoutes de la semaine. Audiomack est prévu dans la formule mais n’est pas encore relevé.": "Spotify does not publish plays by country for West Africa: we record each day the global count of every track by our artists (albums, singles, featurings), as we do for YouTube views, and the week‑on‑week difference gives the plays for the week. Audiomack is included in the formula but has not yet been recorded.",
+ "Un titre dont les écoutes Spotify ne sont pas relevées n’a pas zéro : pour lui, Spotify ne compte pas et son poids revient à ses autres sources.": "A track whose Spotify plays are not recorded does not have a zero count: for it, Spotify does not count and its weight is allocated to its other sources.",
+ "Écoutes de chaque titre (compteur mondial) et auditeurs des artistes": "Plays of each track (global count) and listeners of the artists",
+ "écoutes de chaque titre et auditeurs des artistes": "plays of each track and listeners of the artists"
 }

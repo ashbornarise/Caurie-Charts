@@ -75,7 +75,7 @@
                 <ul class="apropos__sources">
                     {% for cle, nom, role in [('youtube', 'YouTube', tr('vues des clips officiels, chaque jour')), ('apple-music', 'Apple Music', tr('classements par pays, chaque jour')),
                                               ('boomplay', 'Boomplay', tr('Top 100 par pays, chaque semaine')), ('deezer', 'Deezer', tr('classements, popularité et nouvelles sorties')),
-                                              ('shazam', 'Shazam', tr('titres les plus recherchés')), ('spotify', 'Spotify', tr('auditeurs mensuels des artistes, affichés'))] %}
+                                              ('shazam', 'Shazam', tr('titres les plus recherchés')), ('spotify', 'Spotify', tr('écoutes de chaque titre et auditeurs des artistes'))] %}
                     <li><img src="{{ asset('img/plateformes/' ~ cle ~ '.png') }}" alt="" width="40" height="40" loading="lazy"><span><strong>{{ nom }}</strong><small>{{ role }}</small></span></li>
                     {% endfor %}
                 </ul>

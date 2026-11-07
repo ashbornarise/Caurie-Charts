@@ -1346,3 +1346,5 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .methode__b1 { flex: 2; background: #3FA9F5; } .methode__b2 { flex: 1; background: #7A3CF5; } .methode__b3 { flex: 1; background: #9B7AE9; }
 .methode__note { margin: 12px 0 0; font-size: .86rem; }
 .methode__h3 { margin: 18px 0 8px; font-size: 1.05rem; }
+.methode__barre--4 .methode__b1 { flex: 3; } .methode__barre--4 .methode__b2, .methode__barre--4 .methode__b3, .methode__barre--4 .methode__b4 { flex: 1; }
+.methode__b4 { flex: 1; background: #1DB954; }

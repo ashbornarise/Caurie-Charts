@@ -109,11 +109,39 @@ class ChartService:
             items.append({**result, "track_id": tid, "artist_id": int(t["artist_id"]), "prev_score": th["prev"],
                           "release_date": t["release_date"], "is_emerging": bool(t["is_emerging"])})
         if formula.get("normalisation"):
+            if (formula.get("normalisation") or {}).get("spotify"):
+                # v5 (07/11/2026) : écoutes Spotify de la semaine (compteur mondial de chaque titre), source d'écoute de
+                # plus ; le score brut (alertes, Buzz) n'en tient pas compte
+                ecoutes, couverts = self._spotify_deltas(cid, period)
+                for i in items:
+                    i["spotify_couvert"] = i["track_id"] in couverts
+                    if ecoutes.get(i["track_id"]):
+                        i["breakdown"] = {**(i.get("breakdown") or {}), "spotify": {"delta": ecoutes[i["track_id"]]}}
             self._normalise(items, formula, cid, period)
         return items
 
+    def _spotify_deltas(self, cid: int, period: Period) -> dict:
+        """Écoutes Spotify gagnées pendant la semaine : dernier compteur de la semaine moins le dernier d'avant (toutes les
+        versions d'un titre additionnées). Sans relevé avant la semaine, rien n'est compté : jamais d'extrapolation."""
+        rows = db.all(
+            """SELECT tpi.track_id,
+                (SELECT plays FROM snapshots s WHERE s.track_platform_id = tpi.id AND s.captured_on BETWEEN ? AND ? ORDER BY s.captured_on DESC LIMIT 1) AS fin,
+                (SELECT plays FROM snapshots s WHERE s.track_platform_id = tpi.id AND s.captured_on < ? ORDER BY s.captured_on DESC LIMIT 1) AS debut
+               FROM track_platform_ids tpi JOIN tracks t ON t.id = tpi.track_id JOIN artists a ON a.id = t.artist_id
+               WHERE a.submission_country_id = ? AND tpi.platform = 'spotify'""",
+            [period.start, period.end, period.start, cid])
+        out: dict = {}
+        couverts = set()
+        for r in rows:
+            if r["fin"] is None or r["debut"] is None:
+                continue
+            couverts.add(int(r["track_id"]))   # écoutes relevées au début et à la fin de la semaine
+            if int(r["fin"]) > int(r["debut"]):
+                out[int(r["track_id"])] = out.get(int(r["track_id"]), 0) + int(r["fin"]) - int(r["debut"])
+        return out, couverts
+
     # Sources de la formule normalisée (v4) : YouTube d'un côté, les classements d'écoute de l'autre
-    STREAMING = ("apple_music", "boomplay", "audiomack", "declaration")
+    STREAMING = ("apple_music", "boomplay", "spotify", "audiomack", "declaration")
 
     @staticmethod
     def _valeurs(breakdown: dict) -> dict:
@@ -123,6 +151,9 @@ class ChartService:
         yt = float((breakdown.get("youtube") or {}).get("delta") or 0)
         if yt > 0:
             v["youtube"] = yt
+        sp = float((breakdown.get("spotify") or {}).get("delta") or 0)
+        if sp > 0:
+            v["spotify"] = sp
         for k, d in breakdown.items():
             if k.startswith("chart:"):
                 v[k[6:]] = v.get(k[6:], 0) + float(d.get("delta") or 0)
@@ -153,17 +184,24 @@ class ChartService:
         somme = sum(w.values()) or 1
         w = {k: x / somme for k, x in w.items()}   # sources absentes : leur poids revient aux sources relevées
         prev = {int(r["track_id"]): r["breakdown"] for r in db.all(
-            "SELECT track_id, breakdown FROM weekly_scores WHERE country_id = ? AND week_start = ?", [cid, _minus_days(period.start, 7)])}
+            "SELECT track_id, breakdown FROM weekly_scores WHERE country_id = ? AND week_start = ?", [cid, Period.week_of(period.start).previous().start])}
         for i in items:
             v = valeurs[i["track_id"]]
-            parts = {k: round(w[k] * v.get(k, 0) / totaux[k] * 10000, 2) for k in w}
+            wi = w
+            if "spotify" in w and not i.get("spotify_couvert", True):
+                # v5 : écoutes Spotify du titre non relevées cette semaine (artiste absent des sources) : Spotify ne compte
+                # pas pour lui, son poids revient à ses autres sources (jamais un zéro faute de relevé)
+                reste = {k: x for k, x in w.items() if k != "spotify"}
+                total_reste = sum(reste.values()) or 1
+                wi = {k: x / total_reste for k, x in reste.items()}
+            parts = {k: round(wi[k] * v.get(k, 0) / totaux[k] * 10000, 2) for k in wi}
             score = round(sum(parts.values()), 2)
             ancien = json.loads(prev.get(i["track_id"]) or "{}") if prev.get(i["track_id"]) else {}
             ancien = ancien if isinstance(ancien, dict) else {}
             i["score_brut"], i["prev_brut"] = i["score"], i["prev_score"]
             i["prev_score"] = float((ancien.get("_v4") or {}).get("score") or 0)
             i["score"] = score
-            i["breakdown"] = {**(i.get("breakdown") or {}), "_v4": {"score": score, "parts": parts, "poids": {k: round(x, 4) for k, x in w.items()}}}
+            i["breakdown"] = {**(i.get("breakdown") or {}), "_v4": {"score": score, "parts": parts, "poids": {k: round(x, 4) for k, x in wi.items()}}}
             db.run("UPDATE weekly_scores SET breakdown = ? WHERE track_id = ? AND week_start = ?",
                    [_json(i["breakdown"]), i["track_id"], period.start])
 
@@ -224,14 +262,25 @@ class ChartService:
         return out
 
     def _score_history(self, cid: int, week_start: str, weeks: int) -> dict:
-        start, previous_week = _minus_days(week_start, 7 * weeks), _minus_days(week_start, 7)
+        """Scores bruts des semaines précédentes. 07/11/2026 (semaine du vendredi au jeudi, avec une semaine de transition
+        de 4 jours) : la semaine précédente n'est plus toujours 7 jours avant, et chaque score est ramené à la durée de
+        la semaine calculée, pour que pics et progressions (Buzz) comparent des durées égales."""
+        courante = Period.week_of(week_start)
+        duree = lambda p: (_d(p.end) - _d(p.start)).days + 1
+        semaines, p = [], courante
+        for _ in range(max(1, int(weeks))):
+            p = p.previous()
+            semaines.append(p)
+        previous_week = semaines[0].start
+        facteurs = {w.start: duree(courante) / duree(w) for w in semaines}
         out: dict = {}
         for r in db.all("SELECT track_id, week_start, score FROM weekly_scores WHERE country_id = ? AND week_start >= ? AND week_start < ? ORDER BY week_start DESC",
-                        [cid, start, week_start]):
+                        [cid, semaines[-1].start, week_start]):
+            score = float(r["score"]) * facteurs.get(str(r["week_start"])[:10], 1.0)
             h = out.setdefault(int(r["track_id"]), {"prev": 0.0, "list": []})
-            h["list"].append(float(r["score"]))
-            if r["week_start"] == previous_week:
-                h["prev"] = float(r["score"])
+            h["list"].append(score)
+            if str(r["week_start"])[:10] == previous_week:
+                h["prev"] = score
         return out
 
     def _published_weeks(self, cid: int, start: str, end: str) -> list:
@@ -350,7 +399,7 @@ class ChartService:
                    (SELECT p.score FROM weekly_scores p WHERE p.track_id = ws.track_id AND p.week_start = ?) AS prev_score
                 FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id JOIN artists a ON a.id = t.artist_id
                 WHERE ws.week_start = ? AND ws.country_id IN ({', '.join(['?'] * len(published))}) AND ws.review_status <> 'excluded'""",
-            [_minus_days(week.start, 7), week.start] + published)
+            [week.previous().start, week.start] + published)
         items = [{"track_id": int(r["track_id"]), "artist_id": int(r["artist_id"]), "score": float(r["score"]),
                   "sources_count": int(r["sources_count"]), "prev_score": float(r["prev_score"] or 0), "release_date": r["release_date"],
                   "is_emerging": False, "flags": [], "review_status": "ok", "country": r["country"],

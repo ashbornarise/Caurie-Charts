@@ -72,3 +72,44 @@ def test_fresh_seuil_minimum():
     items = [{"track_id": 1, "artist_id": 1, "score": 12.5, "sources_count": 1, "flags": [], "review_status": "ok", "release_date": "2026-10-20"},
              {"track_id": 2, "artist_id": 2, "score": 900, "sources_count": 1, "flags": [], "review_status": "ok", "release_date": "2026-10-20"}]
     assert [e["track_id"] for e in ChartRanker(f).fresh(items, "2026-11-08", 10)] == [2]
+
+
+# Formule v5 (07/11/2026) : les écoutes Spotify de la semaine entrent dans l'écoute, à parts égales avec Apple et Boomplay
+F5 = {"normalisation": {"youtube": 0.5, "streaming": 0.5, "spotify": True}}
+
+
+def _item5(tid, yt=0, apple=0, sp=0, couvert=True):
+    i = _item(tid, yt=yt, apple=apple)
+    if sp:
+        i["breakdown"]["spotify"] = {"delta": sp}
+    i["spotify_couvert"] = couvert
+    return i
+
+
+def test_v5_spotify_compte_dans_l_ecoute(monkeypatch):
+    monkeypatch.setattr(CS.db, "all", lambda *a, **k: [])
+    monkeypatch.setattr(CS.db, "run", lambda *a, **k: None)
+    items = [_item5(1, yt=1000, apple=50, sp=30000), _item5(2, yt=1000, apple=50, sp=10000)]
+    CS.ChartService.__new__(CS.ChartService)._normalise(items, F5, 4, Period.week_of("2026-11-18"))
+    r = {i["track_id"]: i for i in items}
+    assert r[1]["breakdown"]["_v4"]["poids"] == {"youtube": 0.5, "apple_music": 0.25, "spotify": 0.25}
+    assert r[1]["score"] == 2500 + 1250 + 1875 and r[2]["score"] == 2500 + 1250 + 625
+
+
+def test_v5_titre_sans_releve_spotify_n_a_pas_zero(monkeypatch):
+    monkeypatch.setattr(CS.db, "all", lambda *a, **k: [])
+    monkeypatch.setattr(CS.db, "run", lambda *a, **k: None)
+    items = [_item5(1, yt=1000, apple=50, sp=30000), _item5(2, yt=1000, apple=50, couvert=False)]
+    CS.ChartService.__new__(CS.ChartService)._normalise(items, F5, 4, Period.week_of("2026-11-18"))
+    r = {i["track_id"]: i for i in items}
+    assert "spotify" not in r[2]["breakdown"]["_v4"]["poids"]
+    assert round(r[2]["breakdown"]["_v4"]["poids"]["youtube"], 3) == 0.667
+    assert r[2]["score"] == round(2 / 3 * 5000 + 1 / 3 * 5000, 2)
+
+
+def test_historique_ramene_a_la_duree_de_la_semaine(monkeypatch):
+    # S47 (7 jours) après la semaine de transition S46 (4 jours) : le score de S46 compte pour 7/4
+    lignes = [{"track_id": 1, "week_start": "2026-11-09", "score": 400.0}]
+    monkeypatch.setattr(CS.db, "all", lambda *a, **k: lignes)
+    h = CS.ChartService.__new__(CS.ChartService)._score_history(4, "2026-11-13", 4)
+    assert h[1]["prev"] == 700.0

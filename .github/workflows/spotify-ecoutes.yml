@@ -1,0 +1,37 @@
+name: Écoutes Spotify des titres
+# 07/11/2026 : écoutes Spotify de chaque titre des artistes suivis (Kworb, gratuit), comptées dans le classement depuis la
+# formule v5. Chaque soir ; le jeudi, Apify complète pour les artistes absents de Kworb (dernier relevé avant la fin de la
+# semaine, qui se termine le jeudi à minuit).
+on:
+  schedule:
+    - cron: "40 21 * * *"
+  workflow_dispatch:
+    inputs:
+      apify:
+        description: "Compléter avec Apify"
+        required: false
+        type: boolean
+        default: false
+jobs:
+  ecoutes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - name: Relever
+        working-directory: django
+        run: |
+          if [ "$(date -u +%u)" = "4" ] || [ "${{ inputs.apify }}" = "true" ]; then
+            python manage.py spotify_ecoutes --apify
+          else
+            python manage.py spotify_ecoutes
+          fi
