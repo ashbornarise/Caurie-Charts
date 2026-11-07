@@ -283,7 +283,7 @@ def telecharge_passage(video_id: str, debut: float, fin: float, dossier: str) ->
     """Seulement le passage (coupe exacte, ≤ 1080p)."""
     out = os.path.join(dossier, f"{video_id}-passage.mp4")
     cmd = [sys.executable, "-m", "yt_dlp", "--js-runtimes", "node", "--no-playlist", "-q", "--no-warnings",
-           "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080]", "--merge-output-format", "mp4",
+           "-f", "bv*+ba/b", "-S", "res:1080,br", "--merge-output-format", "mp4",
            "--download-sections", f"*{debut:.2f}-{fin:.2f}", "--force-keyframes-at-cuts",
            "-o", out, f"https://www.youtube.com/watch?v={video_id}"]
     try:

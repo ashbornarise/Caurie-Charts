@@ -97,7 +97,9 @@ def telecharge(lien: str, dossier: str) -> tuple[str, dict]:
     """(fichier mp4 avec le son, infos yt-dlp) ; lève RuntimeError avec un message clair en français."""
     sortie = os.path.join(dossier, "source.%(ext)s")
     cmd = [sys.executable, "-m", "yt_dlp", "--js-runtimes", "node", "--no-playlist", "--no-warnings",
-           "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/bv*[height<=1080]+ba/b",
+           # 07/11/2026 : « res » = le plus petit côté ; [height<=1080] excluait le 1080p VERTICAL (1080 x 1920) et le Studio
+           # prenait le 540 x 960 des reels
+           "-f", "bv*+ba/b", "-S", "res:1080,br",
            "--merge-output-format", "mp4", "--write-info-json", "-o", sortie, lien]
     if re.search(r"tiktok\.com", lien, re.I):
         # TikTok refuse les serveurs (« Unexpected response from webpage request ») : on se présente comme Chrome (curl_cffi)
@@ -389,7 +391,9 @@ def bandes(source: str, debut: float, duree: float) -> str | None:
     W0, H0 = int(largeur.group(1)), int(largeur.group(2))
     if h >= H0 * .94 and w >= W0 * .94:      # pas de vraie bande
         return None
-    if h < H0 * .4 or w < W0 * .4:           # détection douteuse (scène très sombre)
+    # détection douteuse (scène très sombre)… sauf une vraie vidéo horizontale posée dans un cadre vertical : 16:9 dans du
+    # 9:16 n'occupe que 32 % de la hauteur (07/11/2026 : le reel Sethlo n° 296 est parti avec ses bandes noires)
+    if (h < H0 * .4 or w < W0 * .4) and not (1.3 <= w / max(1, h) <= 2.5 and w >= W0 * .9):
         return None
     return f"{w}:{h}:{x}:{y}"
 

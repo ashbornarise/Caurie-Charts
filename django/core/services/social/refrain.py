@@ -48,7 +48,7 @@ def telecharge(video_id: str, dossier: str) -> str | None:
     """Clip en 1080p au plus (mp4), dans un dossier temporaire."""
     out = os.path.join(dossier, f"{video_id}.mp4")
     cmd = [sys.executable, "-m", "yt_dlp", "--js-runtimes", "node", "--no-playlist", "-q", "--no-warnings",
-           "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080]", "--merge-output-format", "mp4",
+           "-f", "bv*+ba/b", "-S", "res:1080,br", "--merge-output-format", "mp4",
            "-o", out, f"https://www.youtube.com/watch?v={video_id}"]
     try:
         subprocess.run(cmd, capture_output=True, text=True, timeout=900, check=True)
