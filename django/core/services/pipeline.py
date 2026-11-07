@@ -68,7 +68,7 @@ class DailyPipeline:
     # Nuit coupée en deux tâches parallèles (03/11/2026, elle approchait la coupure des 120 min) :
     #   principal : relevés, classement, posts, statistiques, contrôles, ménage (les posts restent APRÈS les relevés du jour)
     #   catalogue : découverte, profils, pays, Deezer, chaînes et clips YouTube, photos, distinctions, actu des artistes
-    CATALOGUE = ("10a.", "10b.", "10c.", "10d.", "10e.", "10f.", "10g.", "10h.", "10k.", "10l.", "10n.", "10o.")
+    CATALOGUE = ("10a.", "10b.", "10c.", "10d.", "10e.", "10f.", "10g.", "10h.", "10k.", "10l.", "10n.", "10o.", "10p.", "10q.")
 
     def run(self, force_weekly: bool = False, force_posts: bool = False, youtube_searches: int = 10,
             partie: str | None = None) -> list:
@@ -233,6 +233,13 @@ class DailyPipeline:
             from core.services.imports import sorties as S
             return S.releve()
         self._step("10o. Nouvelles sorties Deezer (titres créés dès la sortie)", sorties, 600)
+
+        def catalogue():   # 07/11/2026 : tout le catalogue Deezer de chaque artiste, repassé tous les 30 jours
+            from core.services.imports import sorties as S
+            return S.catalogue(60)
+        self._step("10p. Catalogue complet des artistes (Deezer)", catalogue, 900)
+        # 07/11/2026 : tout l'historique des chaînes officielles (pas seulement les 15 dernières vidéos)
+        self._step("10q. Historique complet des chaînes YouTube", lambda: YouTubeChannelSync(http).historique(40), 600)
 
         def stats():
             from core.services import analytics

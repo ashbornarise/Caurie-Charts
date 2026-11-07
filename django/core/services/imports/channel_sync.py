@@ -99,6 +99,31 @@ class YouTubeChannelSync:
                 f"{clips} vidéos rattachées à des titres, {created} titres ajoutés au catalogue",
                 f"Quota YouTube restant : {YouTubeQuota.remaining()}"]
 
+    def historique(self, limite: int = 40, pages: int = 10) -> list:
+        """Tout l'historique des chaînes officielles (07/11/2026, demande du fondateur : « suivre tous les sons de nos
+        artistes ») : la relecture quotidienne ne voit que les 15 dernières vidéos ; ici, une fois par artiste puis tous
+        les 90 jours, jusqu'à 500 vidéos par chaîne (principale et 2e chaîne). 1 unité de quota par page de 50."""
+        key = env.get("YOUTUBE_API_KEY", "")
+        if not key:
+            return ["clé YouTube absente"]
+        db.run("ALTER TABLE artists ADD COLUMN IF NOT EXISTS historique_le TIMESTAMPTZ NULL")
+        lot = db.all(f"""SELECT id, name, youtube_channel_id, youtube_channel_2, submission_country_id FROM artists
+                         WHERE status = 'active' AND youtube_channel_id IS NOT NULL AND submission_country_id IS NOT NULL
+                           AND (historique_le IS NULL OR historique_le < NOW() - INTERVAL '90 days')
+                         ORDER BY historique_le NULLS FIRST, COALESCE(youtube_subscribers, 0) DESC LIMIT {int(limite)}""")
+        artistes = clips = created = 0
+        for a in lot:
+            chaines = [ch for ch in (a["youtube_channel_id"], a.get("youtube_channel_2")) if ch]
+            if budget.over() or YouTubeQuota.remaining() < YouTubeQuota.RESERVE + pages * len(chaines)                     or not YouTubeQuota.spend(pages * len(chaines)):
+                break  # temps ou quota épuisé : la suite la nuit prochaine
+            for ch in chaines:
+                c, n = self._sync_channel(int(a["id"]), a["name"], ch, int(a["submission_country_id"]), key, pages)
+                clips, created = clips + c, created + n
+            db.run("UPDATE artists SET historique_le = NOW() WHERE id = ?", [a["id"]])
+            artistes += 1
+        return [f"Historique YouTube : {artistes} artiste(s) relus en entier, {clips} vidéos rattachées, {created} titres ajoutés",
+                f"Quota YouTube restant : {YouTubeQuota.remaining()}"]
+
     @staticmethod
     def same_name(channel_title: str, name: str) -> bool:
         """Chaîne officielle : nom identique (ou « Nom - Topic », « NomVEVO », « Nom Officiel »)."""
