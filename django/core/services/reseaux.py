@@ -134,8 +134,17 @@ def chercher(lots: int = 4, taille: int = TAILLE, http: HttpClient | None = None
             lignes.append(str(exc))
             break
         if not reponses:
-            lignes.append("aucune réponse sourcée pour ce lot : la suite au prochain passage")
-            break
+            import time
+            time.sleep(20)   # modèles gratuits saturés par moments : un second essai
+            try:
+                reponses = _demande(lot, http)
+            except PlatformException:
+                reponses = {}
+        if not reponses:
+            # lot remis à dans 3 jours, pour passer aux suivants plutôt que de bloquer
+            db.run("UPDATE artists SET reseaux_le = NOW() - INTERVAL '27 days' WHERE id = ANY(?)", [[a["id"] for a in lot]])
+            lignes.append("un lot sans réponse sourcée : remis à dans 3 jours")
+            continue
         for i, a in enumerate(lot):
             r = reponses.get(i + 1) or {}
             db.run("UPDATE artists SET reseaux_le = NOW() WHERE id = ?", [a["id"]])
