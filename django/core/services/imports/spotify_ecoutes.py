@@ -8,8 +8,9 @@ les vues YouTube), et la différence d'une semaine à l'autre donne les écoutes
 Deux sources :
   1. kworb()  : kworb.net, gratuit, mis à jour chaque jour. Tous les titres de l'artiste (albums, singles, featurings)
                 avec le total d'écoutes. Couvre surtout les artistes déjà bien écoutés (22 sur 40 à l'essai).
-  2. apify()  : pour les artistes absents de Kworb, l'outil omkar-cloud/spotify-play-count-scraper (1 $ les 1 000
-                titres) sur la discographie complète, dans le plafond Apify partagé (spotify_apify.PLAFOND_MOIS).
+  2. apify()  : pour les artistes absents de Kworb (les trois quarts), l'outil topapi/spotify-scraper en « une ligne
+                par titre » sur la discographie complète (0,074 $ les 1 000 titres, essai du 07/11 : 207 titres pour
+                2 artistes, ~0,015 $), dans le plafond Apify partagé (spotify_apify.PLAFOND_MOIS).
 Chaque compteur est gardé dans snapshots (plateforme « spotify », un relevé par jour) : historique complet.
 """
 import html
@@ -27,9 +28,11 @@ KWORB = "https://kworb.net/spotify/artist/{}_songs.html"
 LIGNE = re.compile(r'<tr><td class="text"><div>(\*\s*)?<a href="https://open\.spotify\.com/track/([A-Za-z0-9]{22})"[^>]*>(.*?)</a></div></td>'
                    r'<td>([\d,]+)</td><td>([\d,\-]*)</td></tr>')
 MAJ = re.compile(r"Last updated:\s*(\d{4})/(\d{2})/(\d{2})")
-ACTEUR = "omkar-cloud~spotify-play-count-scraper"
-PRIX_TITRE = 0.001
-MAX_TITRES_APIFY = 300        # par artiste : les titres d'un compte « Topic » ou d'une compilation peuvent être des milliers
+ACTEUR = "topapi~spotify-scraper"
+PRIX_TITRE = 0.000074
+PRIX_LANCEMENT = 0.003
+PAR_LOT = 8                   # artistes par passage (réponse en moins de 5 minutes)
+MAX_SORTIES = 200             # sorties par artiste (les plus récentes d'abord)
 
 
 def colonnes() -> None:
@@ -141,37 +144,45 @@ def kworb(limite: int = 800, pause: float = 0.8) -> list:
             f"{absents} artiste(s) absents de Kworb (relevés par Apify)"]
 
 
-def apify(limite: int = 40, jours: int = 7) -> list:
+def apify(limite: int = 600, jours: int = 6) -> list:
     """Artistes absents de Kworb : discographie complète par Apify, au plus une fois tous les JOURS jours, sous le plafond."""
     from core.services import spotify_apify as SA
     from core.services.platforms import PlatformException
     colonnes()
     lot = db.all(f"""SELECT a.id, a.name, a.spotify_id, a.submission_country_id, a.ecoutes_spotify_le IS NOT NULL AS deja FROM artists a
                      WHERE a.status = 'active' AND a.spotify_id IS NOT NULL AND a.submission_country_id IS NOT NULL AND a.kworb = 'non'
-                       AND (a.ecoutes_spotify_le IS NULL OR a.ecoutes_spotify_le <= CURRENT_DATE - {int(jours)})
-                     ORDER BY EXISTS (SELECT 1 FROM tracks t JOIN weekly_scores w ON w.track_id = t.id
-                                      WHERE t.artist_id = a.id AND w.week_start >= CURRENT_DATE - 14) DESC,
-                              a.ecoutes_spotify_le NULLS FIRST, a.id
+                       -- plafond Apify (07/11/2026) : chaque semaine les artistes en course dans nos classements (un score
+                       -- ces 14 derniers jours), chaque mois les autres
+                       AND (a.ecoutes_spotify_le IS NULL OR a.ecoutes_spotify_le <= CURRENT_DATE - CASE WHEN EXISTS (
+                              SELECT 1 FROM tracks t JOIN weekly_scores w ON w.track_id = t.id
+                              WHERE t.artist_id = a.id AND w.week_start >= CURRENT_DATE - 14 AND w.score > 0) THEN {int(jours)} ELSE 28 END)
+                     ORDER BY a.ecoutes_spotify_le NULLS FIRST,
+                              EXISTS (SELECT 1 FROM tracks t JOIN weekly_scores w ON w.track_id = t.id
+                                      WHERE t.artist_id = a.id AND w.week_start >= CURRENT_DATE - 14 AND w.score > 0) DESC, a.id
                      LIMIT {int(limite)}""")
     lus = titres = nouveaux = 0
-    for a in lot:
-        estime = PRIX_TITRE * 60   # coût réservé avant le passage ; la facture réelle suit le nombre de titres
+    for i in range(0, len(lot), PAR_LOT):
+        paquet = lot[i:i + PAR_LOT]
+        estime = PRIX_LANCEMENT + PRIX_TITRE * 60 * len(paquet)   # réservé avant le passage ; la facture suit le nombre de titres
         try:
-            res = SA._lance(ACTEUR, {"urls": [f"https://open.spotify.com/artist/{a['spotify_id']}"], "artistReleaseTypes": "all",
-                                     "maxResultsPerUrl": MAX_TITRES_APIFY}, estime)
+            res = SA._lance(ACTEUR, {"urls": [f"https://open.spotify.com/artist/{a['spotify_id']}" for a in paquet],
+                                     "trackRows": True, "maxAlbumsPerArtist": MAX_SORTIES, "includeSingles": True,
+                                     "maxResults": 0, "compact": True, "scrapePreviewUrls": False}, estime)
         except PlatformException as exc:
             return [f"Écoutes Spotify (Apify) : {lus} artistes, {titres} titres · arrêt : {exc}"]
-        SA._compte(max(0.0, PRIX_TITRE * len(res) - estime))   # complément : facturé au titre
-        lignes = []
+        SA._compte(max(0.0, PRIX_LANCEMENT + PRIX_TITRE * len(res or []) - estime))
+        par_artiste: dict = {}
         for x in res or []:
-            tid = str(x.get("track_id") or x.get("id") or "").split(":")[-1].split("/")[-1][:22]
-            noms = " ".join(str(n.get("name") if isinstance(n, dict) else n) for n in (x.get("artists") or []))
-            principal = N.artist_key(noms.split(" ")[0] if not x.get("artists") else str((x["artists"][0] or {}).get("name") if isinstance(x["artists"][0], dict) else x["artists"][0]))
-            featuring = principal != N.artist_key(a["name"])
-            total = _entier(x.get("play_count") or x.get("playcount") or x.get("plays") or x.get("streams"))
-            if len(tid) == 22:
-                lignes.append((tid, str(x.get("track_name") or x.get("name") or x.get("title") or "").strip(), total, 0, featuring))
-        r, c = enregistrer(a, lignes, date.today().isoformat())
-        db.run("UPDATE artists SET ecoutes_spotify_le = CURRENT_DATE WHERE id = ?", [a["id"]])
-        lus, titres, nouveaux = lus + 1, titres + r, nouveaux + c
+            source = str(x.get("sourceUri") or x.get("input") or "").split(":")[-1].split("/")[-1][:22]
+            par_artiste.setdefault(source, []).append(x)
+        for a in paquet:
+            lignes = []
+            for x in par_artiste.get(a["spotify_id"], []):
+                tid = str(x.get("id") or "")[:22]
+                featuring = N.artist_key(str(x.get("artistName") or "")) != N.artist_key(a["name"])
+                if len(tid) == 22:
+                    lignes.append((tid, str(x.get("name") or "").strip(), _entier(x.get("playCount")), 0, featuring))
+            r, c = enregistrer(a, lignes, date.today().isoformat())
+            db.run("UPDATE artists SET ecoutes_spotify_le = CURRENT_DATE WHERE id = ?", [a["id"]])
+            lus, titres, nouveaux = lus + 1, titres + r, nouveaux + c
     return [f"Écoutes Spotify (Apify) : {lus} artistes, {titres} titres relevés, {nouveaux} titres ajoutés · {SA.depense():.2f} $ ce mois"]
