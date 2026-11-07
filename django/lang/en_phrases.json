@@ -871,7 +871,6 @@
  "Le départage": "Tie‑breaker",
  "Le lendemain, une seconde vérification repasse sur les titres restés en doute.": "The following day, a second verification checks the tracks that remained in doubt.",
  "Le pays de chaque artiste est vérifié par une recherche Google contrôlée ; seule une certitude « haute » est retenue. Le classement d’un pays ne contient que des artistes de ce pays, et un artiste en attente de vérification n’entre dans aucun classement.": "Each artist’s country is verified through a controlled Google search; only a “high” certainty is accepted. A country chart contains only artists from that country, and an artist awaiting verification does not appear in any chart.",
- "Le score s’exprime sur 10 000 : 250 points, c’est 2,5 % de l’audience mesurée du pays cette semaine-là.": "The score is expressed out of 10 000: 250 points equals 2.5 % of the measured audience of the country for that week.",
  "Le vendredi, le classement de la semaine est calculé, les titres signalés sont vérifiés, puis tout est publié automatiquement le soir, avec la newsletter.": "On Friday, the weekly chart is calculated, flagged tracks are verified, then everything is automatically published in the evening, with the newsletter.",
  "Les alertes pour vérification": "Verification alerts",
  "Les artistes : la somme des scores de leurs titres.": "Artists: the sum of the scores of their tracks.",
@@ -904,7 +903,6 @@
  "Part des titres du Top vus sur au moins deux sources": "Proportion of Top tracks viewed on at least two sources",
  "Pic soudain": "Sudden spike",
  "Plus de :n fois la moyenne des :w semaines précédentes": "More than :n times the average of the previous :w weeks",
- "Pour entrer dans le Top :top, un titre doit apparaître sur au moins :n sources. Sinon, il est placé juste après.": "To enter the Top :top, a track must appear on at least :n sources. Otherwise, it is placed just after.",
  "Quand Apple Music et Boomplay sont tous deux relevés dans le pays, chacun compte pour la moitié de l’écoute ; si une seule plateforme d’écoute est relevée, elle porte toute l’écoute.": "When both Apple Music and Boomplay are recorded in the country, each counts for half of the listening share; if only one streaming platform is recorded, it accounts for the entire listening share.",
  "Rapport « j’aime » / vues YouTube inhabituel": "Unusual \"like\" / YouTube views ratio",
  "Sam.": "Sat.",
@@ -969,5 +967,7 @@
  "YouTube : vues gagnées dans la semaine par le clip officiel. Apple et Boomplay : points de position (101 moins la place, en moyenne sur la semaine), additionnés sur les pays où le titre est classé. Spotify : écoutes gagnées dans la semaine (à partir du 13 novembre).": "YouTube: views gained during the week by the official video. Apple and Boomplay: position points (101 minus the position, averaged over the week), added up over the countries where the track charts. Spotify: plays gained during the week (from 13 November).",
  "Cette semaine n’est pas finie : les scores changent chaque nuit jusqu’à la publication du vendredi soir.": "This week is not over yet: scores change every night until Friday evening’s publication.",
  "Période": "Period",
- "Du :a au :b": ":a – :b"
+ "Du :a au :b": ":a – :b",
+ "Le score est un indice sur 10 000 points que les titres du pays se partagent chaque semaine : 250 points, c’est 2,5 % de l’indice de la semaine (et non 2,5 % des auditeurs du pays).": "The score is an index of 10,000 points shared each week by the country’s tracks: 250 points is 2.5% of that week’s index (not 2.5% of the country’s listeners).",
+ "Le Top :top est réservé aux titres qui comptent sur au moins :n sources du score. S’il n’y en a pas assez, les places restantes reviennent aux meilleurs titres à une source.": "The Top :top is reserved for tracks that count on at least :n score sources. If there are not enough, the remaining places go to the best single-source tracks."
 }

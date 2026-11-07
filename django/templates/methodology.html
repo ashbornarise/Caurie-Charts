@@ -126,7 +126,7 @@
                     {% if formula.normalisation.sans_clip %}<li>{{ tr("Un titre sans aucun clip officiel (titre d’album, single sorti en audio) n’a pas zéro sur YouTube : pour lui, YouTube ne compte pas et il est classé sur ses plateformes d’écoute. Un titre qui a un clip est toujours mesuré sur ses vues, même faibles.") }}</li>{% endif %}
                     {% else %}<li>{{ tr("Quand Apple Music et Boomplay sont tous deux relevés dans le pays, chacun compte pour la moitié de l’écoute ; si une seule plateforme d’écoute est relevée, elle porte toute l’écoute.") }}</li>{% endif %}
                     <li>{{ tr("Une source absente d’un pays n’est pas comptée comme un zéro : son poids revient aux autres sources. Un titre n’a zéro pour une source que si elle a bien été relevée et qu’il n’y figure pas.") }}</li>
-                    <li>{{ tr("Le score s’exprime sur 10 000 : 250 points, c’est 2,5 % de l’audience mesurée du pays cette semaine-là.") }}</li>
+                    <li>{{ tr("Le score est un indice sur 10 000 points que les titres du pays se partagent chaque semaine : 250 points, c’est 2,5 % de l’indice de la semaine (et non 2,5 % des auditeurs du pays).") }}</li>
                     <li>{{ tr("Les déclarations validées s’ajoutent à l’écoute, seulement après contrôle.") }}</li>
                 </ul>
                 {% else %}
@@ -142,7 +142,7 @@
                 <h2>{{ tr("Les règles de classement") }}</h2>
                 <div class="apropos__cartes">
                     {% if formula.artist_cap %}<div class="apropos__carte"><h3>{{ tr("Trois titres au plus par artiste") }}</h3><p>{{ tr("Dans chaque Top de titres, un artiste a au plus :n titres. Les suivants descendent juste après le Top.", n=formula.artist_cap) }}</p></div>{% endif %}
-                    <div class="apropos__carte"><h3>{{ tr("Deux sources pour le Top 5") }}</h3><p>{{ tr("Pour entrer dans le Top :top, un titre doit apparaître sur au moins :n sources. Sinon, il est placé juste après.", top=formula.diversity.top, n=formula.diversity.min_sources) }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Deux sources pour le Top 5") }}</h3><p>{{ tr("Le Top :top est réservé aux titres qui comptent sur au moins :n sources du score. S’il n’y en a pas assez, les places restantes reviennent aux meilleurs titres à une source.", top=formula.diversity.top, n=formula.diversity.min_sources) }}</p></div>
                     <div class="apropos__carte"><h3>{{ tr("Les titres anciens") }}</h3><p>{{ tr("Un titre sorti il y a plus d’un an quitte les Tops, sauf vrai regain : un score au moins 1,5 fois supérieur à celui de la semaine précédente.") }}</p></div>
                     <div class="apropos__carte"><h3>{{ tr("Le départage") }}</h3><p>{{ tr("À égalité : le score, puis le nombre de sources, puis la progression, puis le score de la semaine précédente.") }}</p></div>
                     <div class="apropos__carte"><h3>{{ tr("Toute la région") }}</h3><p>{{ tr("Dans le Top :size de l’Afrique de l’Ouest, un pays a au plus :cap titres.", size=config('charts.prime-wa.size'), cap=config('charts.prime-wa.country_cap')) }}</p></div>
