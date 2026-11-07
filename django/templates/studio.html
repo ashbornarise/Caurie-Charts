@@ -383,6 +383,12 @@ code{background:#F2F7FD;color:#3E1A9E}
       <div class="reseaux"><span>Instagram</span><span>Facebook</span><span>TikTok</span><span>Telegram</span></div>
       <div class="carte texte" id="carte-textes">
         <label>Accroche<input id="r-accroche"></label>
+        <div class="etiq" style="margin-top:6px">Légende <span style="text-transform:none;font-weight:600;color:var(--faible)">· tu choisis</span></div>
+        <div class="formats" id="r-mode" style="margin-bottom:10px">
+          <button type="button" class="format actif" data-mode="complete">Complète</button>
+          <button type="button" class="format" data-mode="courte">Courte</button>
+          <button type="button" class="format" data-mode="aucune">Aucune</button>
+        </div>
         <label>Légende en français<textarea id="r-fr"></textarea></label>
         <label>Légende en anglais<textarea id="r-en"></textarea></label>
         <label>Crédit<input id="r-credit"></label>
@@ -595,7 +601,8 @@ code{background:#F2F7FD;color:#3E1A9E}
 <div class="feuille" id="feuille" role="dialog" aria-modal="true" aria-labelledby="feuille-titre">
   <span class="poignee"></span>
   <h2 id="feuille-titre">Comment l’envoyer ?</h2>
-  <div class="puces" id="feuille-reseaux" style="margin:-4px 0 14px">
+  <div class="etiq" style="margin:2px 0 8px">1 · Sur quels réseaux <span style="text-transform:none;font-weight:600;color:var(--faible)">· touche pour retirer</span></div>
+  <div class="puces" id="feuille-reseaux" style="margin:0 0 16px">
     <button class="puce actif" data-r="instagram">Instagram</button><button class="puce actif" data-r="facebook">Facebook</button>
     <button class="puce actif" data-r="tiktok">TikTok</button><button class="puce actif" data-r="telegram">Telegram</button>
   </div>
@@ -621,6 +628,7 @@ code{background:#F2F7FD;color:#3E1A9E}
       </div>
     </div>
   </div>
+  <div class="etiq" style="margin:2px 0 8px">2 · Comment publier</div>
   <button class="choix" id="choix-auto">
     <span class="pastille vert-p"><svg class="i"><use href="#i-envoi"/></svg></span>
     <span><b>Publier partout maintenant</b><small>Instagram, Facebook, TikTok et Telegram dans 2 minutes, avec le son de la vidéo.</small></span>
@@ -993,6 +1001,9 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     $('#carte-etapes').style.display = 'none'; $('#resultat').style.display = '';
     $('#video').src = j.video; if (j.vignette) $('#video').poster = j.vignette;
     $('#r-accroche').value = j.params.accroche || ''; $('#r-fr').value = j.params.legende_fr || '';
+    // choix de la légende (07/11/2026) : complète, courte (1re phrase) ou aucune (accroche seule)
+    $$('#r-mode .format').forEach(b => b.onclick = () => { vibre(); $$('#r-mode .format').forEach(x => x.classList.toggle('actif', x === b));
+      $('#r-fr').closest('label').style.display = $('#r-en').closest('label').style.display = b.dataset.mode === 'aucune' ? 'none' : ''; });
     $('#r-en').value = j.params.legende_en || ''; $('#r-credit').value = j.params.credit || '';
     $('#r-ig').value = ''; $('#r-tt').value = '';
     if (j.params.artiste) get('/artiste-profil?nom=' + encodeURIComponent(j.params.artiste)).then(d => {
@@ -1018,8 +1029,9 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
   const VIS = {PUBLIC_TO_EVERYONE: 'Tout le monde', MUTUAL_FOLLOW_FRIENDS: 'Amis (abonnés mutuels)', FOLLOWER_OF_CREATOR: 'Mes abonnés', SELF_ONLY: 'Moi uniquement'};
   async function chargeTiktok() {
     const b = $('#tt-bloc'), err = $('#tt-erreur');
-    b.style.display = $$('#feuille-reseaux .puce.actif').some(x => x.dataset.r === 'tiktok') ? '' : 'none';
-    if (ttPret || b.style.display === 'none') return;
+    const avecTiktok = $$('#feuille-reseaux .puce.actif').some(x => x.dataset.r === 'tiktok');
+    b.style.display = avecTiktok && TT_AUDITE ? '' : 'none';
+    if (ttPret || !avecTiktok) return;
     try {
       const d = await get('/tiktok-createur');
       if (d.erreur || !d.createur) throw new Error(d.erreur || 'TikTok indisponible');
@@ -1030,7 +1042,10 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       [['#tt-com', c.comment_disabled], ['#tt-duo', c.duet_disabled], ['#tt-col', c.stitch_disabled]].forEach(([id, off]) => {
         $(id).checked = false; $(id).disabled = !!off; if (off) $(id).parentElement.title = 'Désactivé dans les réglages du compte TikTok'; });
       err.style.display = 'none'; $('#tt-champs').style.display = '';
-    } catch (e) { err.textContent = e.message + ' — TikTok passera par la notification habituelle.'; err.style.display = ''; $('#tt-champs').style.display = 'none'; }
+      // 07/11/2026 : tant que TikTok n'a pas audité l'application, ces réglages ne servent pas (Buffer publie) : masqués
+      if (!TT_AUDITE) b.style.display = 'none';
+    } catch (e) { err.textContent = e.message + ' — TikTok passera par la notification habituelle.'; err.style.display = ''; $('#tt-champs').style.display = 'none';
+      if (!TT_AUDITE) b.style.display = 'none'; }
   }
   $('#tt-mode').onchange = () => { $('#tt-direct').style.display = $('#tt-mode').value === 'direct' ? '' : 'none'; };
   $('#tt-commercial').onchange = () => { $('#tt-marques').style.display = $('#tt-commercial').checked ? '' : 'none'; majConsent(); };
@@ -1076,7 +1091,8 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
       }
       const k = await post('/job/' + jobEnCours + '/envoyer', {accroche: $('#r-accroche').value, legende_fr: $('#r-fr').value,
         legende_en: $('#r-en').value, credit: $('#r-credit').value, artiste: (etatJob.params || {}).artiste || '',
-        notifier, reseaux: reseauxChoisis(), tiktok, forcer: !!forcer});
+        notifier, reseaux: reseauxChoisis(), tiktok, forcer: !!forcer,
+        legende_mode: (document.querySelector('#r-mode .format.actif') || {}).dataset ? document.querySelector('#r-mode .format.actif').dataset.mode : 'complete'});
       vibre(); etatJob.statut = 'envoye'; resultat(etatJob);
       const noms = {instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok'};
       const recus = (k.recus || []).map(r => noms[r] || r).concat(reseauxChoisis().includes('telegram') ? ['Telegram'] : []).join(', ');

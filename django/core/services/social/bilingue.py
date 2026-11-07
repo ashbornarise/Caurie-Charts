@@ -11,10 +11,13 @@ from core import db
 from core.services.platforms import log_write
 
 DRAPEAU_EN = "🇬🇧"
-LIEN = "Lien en bio · Link in bio : cauricharts.com"
+# 07/11/2026 : « Lien en bio » remplacé (0 clic sur le lien en 30 jours sur Instagram) par un appel à commenter ;
+# l'appel à s'abonner tournant (cta) suit, avec en tête « Abonne-toi pour les N°1 chaque mardi »
+LIEN = "💬 Ton avis en commentaire · Drop your take in the comments"
 
 # 20 messages d'appel à l'abonnement : un différent à chaque post, déterministe (même post = même message)
 _CTA = [
+    "🔔 Abonne-toi pour les N°1 chaque mardi · Follow for the No. 1s every Tuesday",
     "👉 Abonne-toi pour ne rien rater · Follow for more",
     "👉 Du contenu musical frais chaque jour — abonne-toi · Fresh music daily — follow us",
     "👉 Si tu aimes la musique, tu es chez toi — abonne-toi · Love music? You're home — follow",
@@ -128,6 +131,14 @@ def legende(post: dict, lien: str | None = None, limite: int = 2200) -> str:
         faits = {}
     if faits.get("illustration_ia"):
         fr = f"{titre}\n\n{mention_illustration(_sans_lien(post.get('caption')))}"
+    # 07/11/2026 : légende choisie par le fondateur dans le Studio — « aucune » : l'accroche et les hashtags seulement ;
+    # « courte » : l'accroche, sa phrase, l'accroche anglaise, sans les appels ni la traduction complète
+    if faits.get("legende") == "aucune":
+        return "\n\n".join(p for p in (titre, tags) if p)
+    if faits.get("legende") == "courte":
+        anglais = en(post, 400)
+        titre_en = (acc or {}).get("en") or (anglais or {}).get("title") or ""
+        return "\n\n".join(p for p in (fr, f"{DRAPEAU_EN} {titre_en}" if titre_en else "", tags) if p)
     place = limite - len(lien) - len(tags) - _CTA_MAX - 42          # séparateurs, drapeau, appel à s'abonner et marge
     if len(fr) > place // 2:
         coupe = fr[: place // 2]

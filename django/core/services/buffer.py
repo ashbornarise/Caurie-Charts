@@ -236,7 +236,19 @@ def instagram_ok(post: dict) -> bool:
 # vidéos du Studio exclues du fil « Pour toi » (contenu repris d'un autre compte). TikTok devient le réseau de l'Afrique :
 # sujets africains seulement, jamais une vidéo reprise, 3 par jour au plus, aux heures de pointe ouest-africaines.
 TIKTOK_PAR_JOUR = 3
-TIKTOK_HEURES = ((12, 14), (18, 22))   # GMT
+TIKTOK_HEURES = ((12, 14), (18, 22), (22, 23))   # GMT ; 22-23 h GMT = 23 h-minuit à Paris, pic d'audience (décision du 07/11/2026)
+# Rap et musique urbaine francophones que suit le public TikTok (France 33 % des vues ; « Ninho revient sur une agression »
+# 512 vues) : acceptés sur TikTok comme les sujets africains (décision du fondateur, 07/11/2026). Le reste du monde reste refusé.
+FRANCOPHONES = {"ninho", "gims", "maitre gims", "dadju", "tiakola", "aya nakamura", "sdm", "gazo", "niska", "damso",
+                "booba", "pnl", "werenoi", "jul", "tayc", "naps", "soolking", "leto", "hamza", "koba lad", "rsko", "zola",
+                "franglish", "joe dwet file", "bramsito", "kalash criminel", "kaaris", "ronisia", "theodort", "plk",
+                "nekfeu", "orelsan", "vegedream", "ninho x", "gradur", "keblack", "naza", "imen es", "lefa", "dosseh"}
+
+
+def francophone(fiche: dict) -> bool:
+    import unicodedata
+    a = unicodedata.normalize("NFKD", str(fiche.get("artiste") or "")).encode("ascii", "ignore").decode().lower().strip()
+    return bool(a) and a in FRANCOPHONES
 REPRISE = re.compile(r"source\s*:\s*@\S+\s+sur\s+(tiktok|instagram)", re.I)
 PAYS_HASHTAGS = [(re.compile(p, re.I), h) for p, h in (
     (r"b[ée]nin", "#Benin #229"), (r"\btogo", "#Togo #228"), (r"c[ôo]te d.ivoire|abidjan|ivoirien", "#CoteDIvoire #225"),
@@ -260,8 +272,8 @@ def tiktok_refus(post: dict) -> str | None:
         except ValueError:
             fiches = []
         from core.services.social.monde import africain
-        if not fiches or not africain(fiches[0]):
-            return "tiktok : sujet mondial (TikTok réservé à l'Afrique)"
+        if not fiches or not (africain(fiches[0]) or francophone(fiches[0])):
+            return "tiktok : sujet mondial (TikTok réservé à l'Afrique et au rap francophone)"
     if video_seule(post):
         return None   # vidéos (clips, interviews) prioritaires sur TikTok : hors limite (24/10/2026), la limite vise les photos
     deja =int(db.value("""SELECT COUNT(DISTINCT substring(reason from 'post-(\\d+)-')) FROM audit_log

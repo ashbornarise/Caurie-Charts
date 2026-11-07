@@ -313,6 +313,12 @@ def reseaux_choisis(c: dict) -> list | None:
     return None if set(r) == set(PLATEFORMES_POST) else r
 
 
+def premiere_phrase(texte: str) -> str:
+    """Légende courte (07/11/2026) : la première phrase seulement."""
+    t = (texte or "").strip()
+    return re.split(r"(?<=[.!?…])\s", t, maxsplit=1)[0] if t else ""
+
+
 def theme_libre(job_id: int, quand) -> str:
     """format-studio-<n°>, puis -2, -3… pour chaque republication du même jour (un post par jour et par thème)."""
     base = f"format-studio-{job_id}"
@@ -483,6 +489,12 @@ def _envoyer(request, ident):
     en = str(c.get("legende_en") or p.get("legende_en") or "").strip()
     credit = str(c.get("credit") or p.get("credit") or "").strip()
     artiste = str(c.get("artiste") or p.get("artiste") or "").strip()
+    # 07/11/2026 : le fondateur choisit la légende — complète, courte (la 1re phrase) ou aucune (l'accroche seule)
+    mode = str(c.get("legende_mode") or "complete")
+    if mode == "aucune":
+        fr, en = "", ""
+    elif mode == "courte":
+        fr, en = premiere_phrase(fr), premiere_phrase(en)
     legende = fr + (f"\n\n🎥 Source : {credit}" if credit else "")
     tags = "#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine"
     maintenant = datetime.now(timezone.utc)
@@ -506,7 +518,8 @@ def _envoyer(request, ident):
     if tiktok_direct:   # TikTok part par sa propre API avec les réglages de l'écran ; Buffer ne s'en occupe plus
         reseaux = [r for r in (reseaux or ["instagram", "facebook", "tiktok", "telegram"]) if r != "tiktok"]
     faits = {"kind": "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
-             "source": j["lien"], "notifier": bool(c.get("notifier")), "reseaux": reseaux, "artiste": artiste}
+             "source": j["lien"], "notifier": bool(c.get("notifier")), "reseaux": reseaux, "artiste": artiste,
+             "legende": mode}
     if en:
         faits["en"] = {"title": accroche, "caption": en + (f"\n\n🎥 Source: {credit}" if credit else "")}
     pid = db.insert("social_posts", {"slot_date": maintenant.date().isoformat(), "theme": theme_libre(j["id"], maintenant),

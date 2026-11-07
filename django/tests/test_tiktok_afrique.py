@@ -53,3 +53,16 @@ def test_video_hors_limite(monkeypatch):
     monkeypatch.setattr(buffer.db, "value", lambda *a, **k: 3)
     clip = {**_post("format-clip-1"), "video": "clip.mp4", "facts": json.dumps({"kind": "format-clip"})}
     assert buffer.tiktok_refus(clip) is None
+
+
+def test_creneau_de_fin_de_soiree():
+    # 07/11/2026 : 22-23 h GMT (23 h-minuit à Paris), pic d'audience TikTok
+    soiree = datetime(2026, 11, 7, 22, 15, tzinfo=timezone.utc)
+    assert buffer.heure_tiktok(soiree) == soiree
+
+
+def test_rap_francophone_accepte(monkeypatch):
+    monkeypatch.setattr(buffer.db, "value", lambda *a, **k: 0)
+    assert buffer.tiktok_refus(_post("monde-soir-2", "Ninho", [{"artiste": "Ninho"}])) is None
+    assert buffer.tiktok_refus(_post("monde-soir-2", "Dadju", [{"artiste": "Dadju"}])) is None
+    assert "mondial" in buffer.tiktok_refus(_post("monde-soir-2", "Taylor Swift", [{"artiste": "Taylor Swift"}]))

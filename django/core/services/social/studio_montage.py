@@ -220,7 +220,7 @@ Rends un objet JSON, rien d'autre :
 {"etiquette": "2 ou 3 mots en majuscules (ex. MOMENT VIRAL, EN CONCERT, EN STUDIO, BACKSTAGE)",
  "accroche": "le TITRE selon les règles : l'info directe, les noms d'abord, 70 caractères maximum, sans point final ; jamais une description de ce qu'on voit (vêtements, décor)",
  "artiste": "nom de l'artiste principal si certain, sinon chaîne vide",
- "legende_fr": "2 ou 3 phrases courtes en français : le contexte, ce qui rend ce moment important, puis une vraie question au public",
+ "legende_fr": "en français, de la longueur de la légende d'origine (une ligne si le créateur a écrit une ligne, rien de plus qu'une phrase s'il n'a rien écrit, 3 phrases au plus sinon) : le contexte, ce qui rend ce moment important, puis une vraie question au public",
  "legende_en": "la même légende en anglais"}"""
 
 

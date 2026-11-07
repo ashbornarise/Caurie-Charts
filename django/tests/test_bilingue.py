@@ -11,7 +11,8 @@ def test_sans_traduction_le_post_part_en_francais(monkeypatch):
     monkeypatch.setattr(bilingue, "en", lambda post, budget: None)
     t = bilingue.legende(_post(3))
     assert t.startswith("Titre du post") and bilingue.DRAPEAU_EN not in t
-    assert t.endswith("#CauriCharts #Test") and t.count("cauricharts.com") == 1   # un seul lien, bilingue
+    # 07/11/2026 : plus de « lien en bio » (0 clic) ; un appel à commenter, une seule fois
+    assert t.endswith("#CauriCharts #Test") and t.count(bilingue.LIEN) == 1 and "Lien en bio" not in t
 
 
 def test_anglais_ajoute_et_hashtags_jamais_coupes(monkeypatch):
