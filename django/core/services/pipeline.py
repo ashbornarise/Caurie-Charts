@@ -68,7 +68,7 @@ class DailyPipeline:
     # Nuit coupée en deux tâches parallèles (03/11/2026, elle approchait la coupure des 120 min) :
     #   principal : relevés, classement, posts, statistiques, contrôles, ménage (les posts restent APRÈS les relevés du jour)
     #   catalogue : découverte, profils, pays, Deezer, chaînes et clips YouTube, photos, distinctions, actu des artistes
-    CATALOGUE = ("10a.", "10b.", "10c.", "10d.", "10e.", "10f.", "10g.", "10h.", "10k.", "10l.", "10n.", "10o.", "10p.", "10q.")
+    CATALOGUE = ("10a.", "10b.", "10c.", "10d.", "10e.", "10f.", "10g.", "10h.", "10k.", "10l.", "10n.", "10o.", "10p.", "10q.", "10r.", "10s.")
 
     def run(self, force_weekly: bool = False, force_posts: bool = False, youtube_searches: int = 10,
             partie: str | None = None) -> list:
@@ -241,6 +241,12 @@ class DailyPipeline:
         self._step("10p. Catalogue complet des artistes (Deezer)", catalogue, 900)
         # 07/11/2026 : tout l'historique des chaînes officielles (pas seulement les 15 dernières vidéos)
         self._step("10q. Historique complet des chaînes YouTube", lambda: YouTubeChannelSync(http).historique(40), 600)
+        # 07/11/2026 : chaînes manquantes sur la 2e clé YouTube, puis réseaux par Gemini + Google (YouTube, Instagram, TikTok)
+        self._step("10r. Chaînes YouTube manquantes (2e clé)", lambda: YouTubeChannelSync(http).chaines_cle2(120), 900)
+        def reseaux_ia():
+            from core.services import reseaux
+            return reseaux.chercher(2)
+        self._step("10s. Réseaux des artistes (Gemini + Google)", reseaux_ia, 600)
 
         def stats():
             from core.services import analytics

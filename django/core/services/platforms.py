@@ -90,8 +90,10 @@ def pacific_day() -> str:
 
 
 class YouTubeQuota:
-    """Quota YouTube partagé par tous les modules ; une réserve est gardée pour le relevé des vues."""
+    """Quota YouTube partagé par tous les modules ; une réserve est gardée pour le relevé des vues.
+    API : compteur utilisé (« youtube » pour la clé principale ; « youtube2 » pendant les passages sur la 2e clé)."""
     RESERVE = 300
+    API: str | None = None
 
     @staticmethod
     def daily() -> int:
@@ -100,15 +102,16 @@ class YouTubeQuota:
     @classmethod
     def spend(cls, units: int, essential: bool = False) -> bool:
         store, day = QuotaStore(), pacific_day()
-        left = cls.daily() - store.used(YouTubeClient.API, day)
+        api = cls.API or YouTubeClient.API
+        left = cls.daily() - store.used(api, day)
         if left - units < (0 if essential else cls.RESERVE):
             return False
-        store.add(YouTubeClient.API, day, units)
+        store.add(api, day, units)
         return True
 
     @classmethod
     def remaining(cls) -> int:
-        return max(0, cls.daily() - QuotaStore().used(YouTubeClient.API, pacific_day()))
+        return max(0, cls.daily() - QuotaStore().used(cls.API or YouTubeClient.API, pacific_day()))
 
 
 class ManualPlatformClient:

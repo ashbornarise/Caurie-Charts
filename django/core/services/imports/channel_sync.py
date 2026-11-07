@@ -35,8 +35,23 @@ class YouTubeChannelSync:
         self.http = http
         self.searches_left = self.SEARCHES
 
-    def run(self, new_channels: int = 40, refresh: int = 600) -> list:
-        key = env.get("YOUTUBE_API_KEY", "")
+    def chaines_cle2(self, limite: int = 120, garde: int = 2500) -> list:
+        """Chaînes manquantes cherchées sur la 2e clé YouTube (07/11/2026 : 868 artistes actifs sans chaîne ; la 2e clé,
+        10 000 unités par jour, ne servait qu'en secours). Garde GARDE unités pour le relais des vues et Cauri Monde."""
+        key2 = env.get("YOUTUBE_API_KEY_2", "")
+        if not key2:
+            return ["2e clé YouTube absente"]
+        YouTubeQuota.API = "youtube2"
+        try:
+            self.SEARCHES = max(0, (YouTubeQuota.remaining() - garde) // 110)
+            if not self.SEARCHES:
+                return [f"2e clé YouTube : quota du jour déjà utilisé ({YouTubeQuota.remaining()} restant)"]
+            return self.run(new_channels=limite, refresh=0, key=key2, stats=False)
+        finally:
+            YouTubeQuota.API = None
+
+    def run(self, new_channels: int = 40, refresh: int = 600, key: str | None = None, stats: bool = True) -> list:
+        key = key or env.get("YOUTUBE_API_KEY", "")
         if not key:
             return ["clé YouTube absente"]
         found = clips = created = 0
@@ -93,7 +108,7 @@ class YouTubeChannelSync:
                 c, n = self._sync_channel(int(a["id"]), a["name"], channel, int(a["submission_country_id"]), key, 2)
                 clips, created = clips + c, created + n
 
-        stats = refresh_channel_stats()
+        stats = refresh_channel_stats() if stats else 0
         return [f"{found} nouvelles chaînes trouvées sur {len(todo)} recherchées", f"{refreshed} chaînes relues",
                 f"abonnés et vues totales relevés pour {stats} chaînes",
                 f"{clips} vidéos rattachées à des titres, {created} titres ajoutés au catalogue",
