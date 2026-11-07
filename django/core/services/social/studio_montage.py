@@ -550,8 +550,9 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
                f":enable='between(t,{flash_t},{flash_t + 0.08})'[v4];")
 
     # ── finition : fps, couleur, fondus entrée/sortie ──
-    # léger débruitage puis netteté (29/10/2026) : TikTok recompresse vers ~0,5 Mb/s ; une image propre y garde ses détails
-    filtre += (f"[v4]hqdn3d=1.2:1.2:5:5,unsharp=5:5:0.45:5:5:0,fps=30,format=yuv420p,fade=t=in:d=0.25,"
+    # netteté seule (07/11/2026) : le débruitage temporel (hqdn3d 5:5) lissait le mouvement ; mesuré sur la source du
+    # reel Sethlo (n° 296), netteté 302 avec l'ancien réglage, 334 sans débruitage (source brute : 202)
+    filtre += (f"[v4]unsharp=5:5:0.5:5:5:0,fps=30,format=yuv420p,fade=t=in:d=0.25,"
                f"fade=t=out:st={max(0, duree - 0.4):.2f}:d=0.4[v]")
 
     from core.services.social.encodage import AUDIO_HQ, FIN, VIDEO_HQ

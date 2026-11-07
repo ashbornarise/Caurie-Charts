@@ -10,7 +10,8 @@ import subprocess
 
 TELEGRAM_MAX = 19 * 1024 * 1024
 
-VIDEO_HQ = ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-maxrate", "12M", "-bufsize", "24M",
+# 07/11/2026 : CRF 16 et preset slow (fichier plus riche pour la recompression des plateformes), jusqu'à 16 Mb/s
+VIDEO_HQ = ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-maxrate", "16M", "-bufsize", "32M",
             "-profile:v", "high", "-level", "4.2", "-pix_fmt", "yuv420p", "-r", "30", "-g", "60", "-keyint_min", "60"]
 AUDIO_HQ = ["-c:a", "aac", "-b:a", "192k", "-ar", "48000"]
 FIN = ["-movflags", "+faststart"]
