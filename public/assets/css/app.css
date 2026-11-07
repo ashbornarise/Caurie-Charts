@@ -1301,3 +1301,26 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .apropos__reseaux img { width: 28px; height: 28px; border-radius: 8px; }
 .apropos { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .apropos__cartes--deux { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+
+/* Page « Tous les artistes » (07/11/2026) */
+.artistes__pays { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 14px; }
+.artistes__pays a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #fff; color: var(--ink);
+    text-decoration: none; font-size: .86rem; border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); }
+.artistes__pays a small { color: var(--muted); font-size: .74rem; }
+.artistes__pays a[aria-current] { background: linear-gradient(135deg, #A57BFF, #7A3CF5); color: #fff; border-color: transparent; }
+.artistes__pays a[aria-current] small { color: rgba(255,255,255,.8); }
+.artistes__outils { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
+.artistes__outils input[type=search] { flex: 1 1 220px; min-width: 0; padding: 11px 16px; border-radius: 999px; border: 1px solid var(--ciel-bord, rgba(120,180,235,.6)); background: #fff; }
+.artistes__outils select { padding: 11px 14px; border-radius: 999px; border: 1px solid var(--ciel-bord, rgba(120,180,235,.6)); background: #fff; }
+.artistes__outils button { padding: 11px 20px; border: 0; border-radius: 999px; color: #fff; font-weight: 700; background: linear-gradient(135deg, #A57BFF, #7A3CF5); cursor: pointer; }
+.artistes__grille { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.artiste-carte { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 10px; border-radius: 18px; background: #fff;
+    text-decoration: none; color: var(--ink); border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); height: 100%; transition: transform .2s ease, border-color .2s ease; }
+.artiste-carte:hover { transform: translateY(-2px); border-color: #7A3CF5; }
+.artiste-carte__photo { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; background: #EAF5FF; display: grid; place-items: center; margin-bottom: 6px; }
+.artiste-carte__photo img { width: 100%; height: 100%; object-fit: cover; }
+.artiste-carte__nom { font-weight: 700; line-height: 1.2; }
+.artiste-carte__pays, .artiste-carte__yt { font-size: .78rem; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+.artistes__pages { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 24px 0 0; }
+.artistes__pages a { font-weight: 700; color: #5B2BD6; text-decoration: none; }
+.page-liste__plus { display: inline-block; margin: 6px 0 0 4px; font-size: .82rem; font-weight: 700; color: #5B2BD6; text-decoration: none; }

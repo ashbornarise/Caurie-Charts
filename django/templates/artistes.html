@@ -1,0 +1,56 @@
+{#- Tous les artistes (07/11/2026) : filtre par pays, recherche, tri, pagination ; une adresse par vue -#}
+{%- macro lien(p=none, t=none, pg=none, qq=none) -%}
+{%- set d = {} -%}
+{%- set vp = pays if p is none else p -%}{%- if vp %}{% do d.update({'pays': vp}) %}{% endif -%}
+{%- set vt = tri if t is none else t -%}{%- if vt and vt != 'populaires' %}{% do d.update({'tri': vt}) %}{% endif -%}
+{%- set vq = q if qq is none else qq -%}{%- if vq %}{% do d.update({'q': vq}) %}{% endif -%}
+{%- if pg and pg > 1 %}{% do d.update({'page': pg}) %}{% endif -%}
+{{ path('artistes', d) }}
+{%- endmacro -%}
+<section class="wrap page-liste artistes">
+    <p class="eyebrow">{{ tr("Artistes") }}</p>
+    <h1>{{ tr("Tous les artistes") }}{% if pays %} · {{ flag(pays|upper, 24) }} {{ country_name(pays|upper) }}{% endif %}</h1>
+    <p class="lead">{{ tr("Tous les artistes suivis par Cauri Charts dans les 16 pays d’Afrique de l’Ouest.") }} <strong>{{ fmt_number(total) }}</strong> {{ tr("artistes") }}.</p>
+
+    <nav class="artistes__pays" aria-label="{{ tr("Pays") }}">
+        <a href="{{ lien(p='', pg=1) }}"{% if not pays %} aria-current="true"{% endif %}>{{ tr("Tous") }}</a>
+        {% for c in countries %}{% set k = c.code|lower %}
+        <a href="{{ lien(p=k, pg=1) }}"{% if pays == k %} aria-current="true"{% endif %}>{{ flag(c.code, 14) }} {{ country_name(c.code) }}<small>{{ compte.get(c.code, 0) }}</small></a>
+        {% endfor %}
+    </nav>
+
+    <form class="artistes__outils" method="get" action="{{ path('artistes') }}" role="search">
+        {% if pays %}<input type="hidden" name="pays" value="{{ pays }}">{% endif %}
+        <label class="visually-hidden" for="art-q">{{ tr("Chercher un artiste") }}</label>
+        <input id="art-q" type="search" name="q" value="{{ q }}" placeholder="{{ tr("Chercher un artiste") }}">
+        <label class="visually-hidden" for="art-tri">{{ tr("Trier") }}</label>
+        <select id="art-tri" name="tri" data-auto-submit>
+            {% for v, l in [('populaires', tr('Les plus suivis')), ('spotify', tr('Auditeurs Spotify')), ('youtube', tr('Abonnés YouTube')), ('nom', tr('Nom (A → Z)'))] %}
+            <option value="{{ v }}"{{ ' selected' if tri == v }}>{{ l }}</option>{% endfor %}
+        </select>
+        <button type="submit">{{ tr("Chercher") }}</button>
+    </form>
+
+    {% if liste %}
+    <ul class="artistes__grille">
+        {% for a in liste %}
+        <li><a class="artiste-carte" href="{{ path('artiste/' ~ a.slug) }}">
+            <span class="artiste-carte__photo">{% if a.image %}<img src="{{ a.image }}" alt="" width="160" height="160" loading="lazy">{% else %}<span class="cover__initials">{{ initials(a.name) }}</span>{% endif %}</span>
+            <span class="artiste-carte__nom">{{ a.name }}</span>
+            <span class="artiste-carte__pays">{{ flag(a.pays, 12) }} {{ country_name(a.pays) }}</span>
+            {% if a.auditeurs %}<span class="sp-aud">{{ fmt_court(a.auditeurs) }} {{ tr("auditeurs Spotify") }}</span>
+            {% elif a.youtube_subscribers %}<span class="artiste-carte__yt">{{ fmt_court(a.youtube_subscribers) }} {{ tr("abonnés YouTube") }}</span>{% endif %}
+        </a></li>
+        {% endfor %}
+    </ul>
+    {% if pages > 1 %}
+    <nav class="artistes__pages" aria-label="{{ tr("Pages") }}">
+        {% if page > 1 %}<a href="{{ lien(pg=page - 1) }}">← {{ tr("Précédent") }}</a>{% endif %}
+        <span>{{ tr("Page") }} {{ page }} / {{ pages }}</span>
+        {% if page < pages %}<a href="{{ lien(pg=page + 1) }}">{{ tr("Suivant") }} →</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <p class="empty">{{ tr("Aucun artiste ne correspond à cette recherche.") }}</p>
+    {% endif %}
+</section>

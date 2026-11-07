@@ -91,6 +91,7 @@ urlpatterns = [
     path("api/vu", views.vu),
     path("pays", views_pages.pays),
     path("tendances", views_pages.tendances),
+    path("artistes", views_pages.artistes),
     path("api/newsletter", views_newsletter.inscrire),
     path("newsletter/confirmer/<str:jeton>", views_newsletter.confirmer),
     path("newsletter/desinscription/<str:jeton>", views_newsletter.desinscrire),

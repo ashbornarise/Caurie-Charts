@@ -157,3 +157,6 @@
   centre(un, false);
   lance();
 })();
+
+/* Listes : un menu de tri envoie le formulaire dès qu'on le change (07/11/2026) */
+document.querySelectorAll('select[data-auto-submit]').forEach(function (s) { s.addEventListener('change', function () { s.form.submit(); }); });

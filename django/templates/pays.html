@@ -10,7 +10,7 @@
         <li><a class="page-liste__carte" href="{{ chart_path(c.code, 'prime') }}">
             <span class="page-liste__nom">{{ flag(c.code, 22) }} {{ country_name(c.code) }}</span>
             {% if un %}<small>{{ tr("N°1") }} · {{ un.title }} — {{ un.artist_name }}</small>{% else %}<small>{{ tr("Classement en direct") }}</small>{% endif %}
-        </a></li>
+        </a><a class="page-liste__plus" href="{{ path('artistes', {'pays': c.code|lower}) }}">{{ tr("Ses artistes") }} →</a></li>
         {% endfor %}
     </ul>
 </section>

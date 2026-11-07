@@ -37,7 +37,7 @@ def a_verifier(limite: int) -> list:
                       WHERE a.status IN ('active', 'pending') AND a.pays_google_le IS NULL
                         AND EXISTS (SELECT 1 FROM tracks t JOIN chart_observations o ON o.track_id = t.id
                                     WHERE t.artist_id = a.id AND o.observed_on >= CURRENT_DATE - 30)
-                      ORDER BY a.status = 'active' DESC, vus DESC, a.id LIMIT {int(limite)}""")
+                      ORDER BY a.status = 'pending' DESC, vus DESC, a.id LIMIT {int(limite)}""")   # 07/11/2026 : les artistes en attente d'abord (650 bloqués hors des classements, dont TRK.)
 
 
 def _demande(lot: list, http: HttpClient) -> dict:
