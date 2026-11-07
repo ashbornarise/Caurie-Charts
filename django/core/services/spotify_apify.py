@@ -41,8 +41,32 @@ def _mois() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-01")   # api_quota.day est une date : le 1er du mois
 
 
+_REEL: dict = {}
+
+
+def depense_reelle() -> float | None:
+    """Usage réel du compte Apify sur le cycle en cours (07/11/2026 : 2,92 $ réels pour 1,96 $ comptés chez nous, la facture
+    comprend aussi le temps de calcul). Lu au plus toutes les 10 minutes ; None si l'API ne répond pas."""
+    import time
+    if _REEL and time.time() - _REEL["t"] < 600:
+        return _REEL["v"]
+    jeton = env.get("APIFY_TOKEN", "")
+    if not jeton:
+        return None
+    try:
+        r = requests.get("https://api.apify.com/v2/users/me/limits", params={"token": jeton}, timeout=20)
+        v = float(((r.json().get("data") or {}).get("current") or {}).get("monthlyUsageUsd"))
+    except (requests.RequestException, ValueError, TypeError):
+        return None
+    _REEL.update(t=time.time(), v=v)
+    return v
+
+
 def depense() -> float:
-    return int(db.value("SELECT units_used FROM api_quota WHERE api = 'cout-apify' AND day = ?", [_mois()]) or 0) / 1e6
+    """Dépense du mois : le plus élevé de notre compteur et de l'usage réel du compte Apify."""
+    interne = int(db.value("SELECT units_used FROM api_quota WHERE api = 'cout-apify' AND day = ?", [_mois()]) or 0) / 1e6
+    reel = depense_reelle()
+    return max(interne, reel) if reel is not None else interne
 
 
 def _compte(dollars: float) -> None:
