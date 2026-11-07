@@ -95,6 +95,18 @@ def _openrouter(prompt: str) -> str:
     return ""
 
 
+def _meme_artiste(titre_chaine: str, nom: str) -> bool:
+    """Le nom de la chaîne doit être celui de l'artiste (« Nom », « Nom Officiel », « NomVEVO », « Nom Music »…).
+    07/11/2026 : une vidéo portant un titre de l'artiste ne suffit plus : Phyno avait reçu la chaîne de Vessel Chordrick
+    (featuring commun, numéro décalé dans la réponse du moteur)."""
+    from core.services.imports import normalizer as N
+    from core.services.imports.channel_sync import YouTubeChannelSync
+    if YouTubeChannelSync.same_name(titre_chaine, nom):
+        return True
+    t, n = N.text(titre_chaine).replace(" ", ""), N.text(nom).replace(" ", "")
+    return len(n) >= 4 and t.startswith(n) and len(t) - len(n) <= 10
+
+
 def _chaine(lien: str, key: str, http_get) -> tuple[str | None, str]:
     """Identifiant UC… et nom de la chaîne à partir d'un lien ou d'un @nom (1 unité de quota)."""
     lien = str(lien or "").strip()
@@ -153,7 +165,7 @@ def chercher(lots: int = 4, taille: int = TAILLE, http: HttpClient | None = None
                 cid, titre = _chaine(r["youtube"], key, get)
                 deja = cid and db.value("SELECT name FROM artists WHERE (youtube_channel_id = ? OR youtube_channel_2 = ?) AND id <> ?",
                                         [cid, cid, a["id"]])
-                if cid and not deja and not PAS_OFFICIEL.search(titre) and (sync.same_name(titre, a["name"]) or sync.confirms(cid, a["id"], key)):
+                if cid and not deja and not PAS_OFFICIEL.search(titre) and _meme_artiste(titre, a["name"]):
                     db.run("UPDATE artists SET youtube_channel_id = ?, channel_checked_at = NOW() WHERE id = ? AND youtube_channel_id IS NULL", [cid, a["id"]])
                     if YouTubeQuota.spend(2):
                         try:
