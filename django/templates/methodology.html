@@ -123,6 +123,7 @@
                 <ul class="apropos__liste">
                     {% if sp_score %}<li>{{ tr("L’écoute est partagée à parts égales entre les plateformes relevées dans le pays : Apple Music, Boomplay et Spotify (un tiers chacune quand les trois sont relevées). Pour Spotify, ce sont les écoutes gagnées par le titre pendant la semaine.") }}</li>
                     <li>{{ tr("Un titre dont les écoutes Spotify ne sont pas relevées n’a pas zéro : pour lui, Spotify ne compte pas et son poids revient à ses autres sources.") }}</li>
+                    {% if formula.normalisation.sans_clip %}<li>{{ tr("Un titre sans aucun clip officiel (titre d’album, single sorti en audio) n’a pas zéro sur YouTube : pour lui, YouTube ne compte pas et il est classé sur ses plateformes d’écoute. Un titre qui a un clip est toujours mesuré sur ses vues, même faibles.") }}</li>{% endif %}
                     {% else %}<li>{{ tr("Quand Apple Music et Boomplay sont tous deux relevés dans le pays, chacun compte pour la moitié de l’écoute ; si une seule plateforme d’écoute est relevée, elle porte toute l’écoute.") }}</li>{% endif %}
                     <li>{{ tr("Une source absente d’un pays n’est pas comptée comme un zéro : son poids revient aux autres sources. Un titre n’a zéro pour une source que si elle a bien été relevée et qu’il n’y figure pas.") }}</li>
                     <li>{{ tr("Le score s’exprime sur 10 000 : 250 points, c’est 2,5 % de l’audience mesurée du pays cette semaine-là.") }}</li>

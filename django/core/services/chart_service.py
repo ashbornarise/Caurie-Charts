@@ -109,6 +109,15 @@ class ChartService:
             items.append({**result, "track_id": tid, "artist_id": int(t["artist_id"]), "prev_score": th["prev"],
                           "release_date": t["release_date"], "is_emerging": bool(t["is_emerging"])})
         if formula.get("normalisation"):
+            if (formula.get("normalisation") or {}).get("sans_clip"):
+                # v5 (07/11/2026, remarque du fondateur : un album qui marche sur les plateformes d'écoute sans clip était
+                # amputé de moitié) : un titre sans aucun clip officiel n'a pas zéro sur YouTube, YouTube ne compte pas
+                clips = {int(r["track_id"]) for r in db.all(
+                    """SELECT DISTINCT tpi.track_id FROM track_platform_ids tpi JOIN tracks t ON t.id = tpi.track_id
+                       JOIN artists a ON a.id = t.artist_id
+                       WHERE a.submission_country_id = ? AND tpi.platform = 'youtube' AND tpi.is_official = 1""", [cid])}
+                for i in items:
+                    i["youtube_couvert"] = i["track_id"] in clips
             if (formula.get("normalisation") or {}).get("spotify"):
                 # v5 (07/11/2026) : écoutes Spotify de la semaine (compteur mondial de chaque titre), source d'écoute de
                 # plus ; le score brut (alertes, Buzz) n'en tient pas compte
@@ -188,10 +197,12 @@ class ChartService:
         for i in items:
             v = valeurs[i["track_id"]]
             wi = w
-            if "spotify" in w and not i.get("spotify_couvert", True):
-                # v5 : écoutes Spotify du titre non relevées cette semaine (artiste absent des sources) : Spotify ne compte
-                # pas pour lui, son poids revient à ses autres sources (jamais un zéro faute de relevé)
-                reste = {k: x for k, x in w.items() if k != "spotify"}
+            # v5 : une source qui n'existe pas pour ce titre n'est pas un zéro : écoutes Spotify non relevées (artiste absent
+            # des sources), ou aucun clip officiel sur YouTube. Son poids revient aux autres sources du titre.
+            absentes = {k for k, couvert in (("spotify", i.get("spotify_couvert", True)), ("youtube", i.get("youtube_couvert", True)))
+                        if k in w and not couvert}
+            if absentes and len(absentes) < len(w):
+                reste = {k: x for k, x in w.items() if k not in absentes}
                 total_reste = sum(reste.values()) or 1
                 wi = {k: x / total_reste for k, x in reste.items()}
             parts = {k: round(wi[k] * v.get(k, 0) / totaux[k] * 10000, 2) for k in wi}

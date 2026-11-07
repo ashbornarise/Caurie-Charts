@@ -113,3 +113,18 @@ def test_historique_ramene_a_la_duree_de_la_semaine(monkeypatch):
     monkeypatch.setattr(CS.db, "all", lambda *a, **k: lignes)
     h = CS.ChartService.__new__(CS.ChartService)._score_history(4, "2026-11-13", 4)
     assert h[1]["prev"] == 700.0
+
+
+def test_v5_titre_sans_clip_n_est_pas_ampute(monkeypatch):
+    # 07/11/2026 : un titre d'album sans clip officiel est classé sur ses plateformes d'écoute seulement
+    monkeypatch.setattr(CS.db, "all", lambda *a, **k: [])
+    monkeypatch.setattr(CS.db, "run", lambda *a, **k: None)
+    F = {"normalisation": {"youtube": 0.5, "streaming": 0.5, "sans_clip": True}}
+    avec = _item(1, yt=1000, apple=50)
+    sans = _item(2, apple=50)
+    sans["youtube_couvert"] = False
+    items = [avec, sans]
+    CS.ChartService.__new__(CS.ChartService)._normalise(items, F, 4, Period.week_of("2026-11-18"))
+    r = {i["track_id"]: i for i in items}
+    assert r[2]["breakdown"]["_v4"]["poids"] == {"apple_music": 1.0}
+    assert r[2]["score"] == 5000 and r[1]["score"] == 5000 + 2500
