@@ -29,7 +29,7 @@
             </li>
             {% endfor %}
         </ul>
-        {% if next %}<p class="aside-card__foot">{{ t('aside.next', {'date': fmt_date(next, false)}) }}</p>{% endif %}
+        {% if next %}<p class="aside-card__foot">{{ t('aside.next', {'date': jour_date(next)}) }}</p>{% endif %}
     </section>
     {% endif %}
 

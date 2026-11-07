@@ -87,6 +87,14 @@ def fmt_date(value, with_year: bool = True) -> str:
     return f"{_EN_MONTHS[d.month - 1]} {d.day}" + (f", {d.year}" if with_year else "")
 
 
+def jour_date(value) -> str:
+    """« vendredi 13 nov. » / « Friday Nov 13 » : le prochain classement change de jour à la bascule du 13/11/2026."""
+    d = _to_date(value)
+    fr = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+    en = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    return ((fr if locale() == "fr" else en)[d.weekday()]) + " " + fmt_date(d, False)
+
+
 def month_name(month: int) -> str:
     fr = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
     en = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]

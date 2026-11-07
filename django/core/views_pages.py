@@ -84,3 +84,67 @@ def artistes(request):
                                         "tri": tri, "compte": compte, "robots": "noindex" if q or page > 1 else None,
                                         "meta": {"title": titre + " · Cauri Charts",
                                                  "description": tr("Tous les artistes suivis par Cauri Charts dans les 16 pays d’Afrique de l’Ouest.")}})
+
+
+TITRES_PAR_PAGE = 100
+
+
+def complet(request):
+    """Classement complet d'un pays (07/11/2026, demande du fondateur : « la liste entière, sans restriction pour aucun
+    artiste, tout est montré ») : tous les titres notés dans la semaine, par score, sans les règles des tops officiels
+    (3 titres par artiste, 2 sources pour le Top 5, titres anciens, taille du top). Seuls les titres exclus après
+    vérification n'y sont pas. /classement-complet?pays=ci&semaine=2026-W45&page=2"""
+    import json
+    from core import clock
+    from core.services.charts import Period
+    from core.views import req_str
+    use_locale(request)
+    codes = {c["code"].lower(): c for c in repos.countries()}
+    pays = req_str(request, "pays").lower()
+    pays = pays if pays in codes else "tg"
+    cid = int(db.value("SELECT id FROM countries WHERE code = ?", [pays.upper()]))
+    semaines = [str(r["week_start"])[:10] for r in db.all(
+        "SELECT DISTINCT week_start FROM weekly_scores WHERE country_id = ? ORDER BY week_start DESC LIMIT 12", [cid])]
+    choix = req_str(request, "semaine")
+    periodes = [Period.week_of(w) for w in semaines]
+    periode = next((p for p in periodes if p.key == choix), periodes[0] if periodes else None)
+    try:
+        page = max(1, int(req_str(request, "page", "1") or 1))
+    except ValueError:
+        page = 1
+    liste, total = [], 0
+    if periode:
+        from core.services.charts import formula_effective_for
+        # le score de la formule en vigueur cette semaine-là : normalisé (v4 et plus) ou brut (avant le 9 novembre)
+        score = ("COALESCE(CAST(CAST(w.breakdown AS jsonb)->'_v4'->>'score' AS DOUBLE PRECISION), w.score)"
+                 if formula_effective_for(periode.start).get("normalisation") else "w.score")
+        base = """FROM weekly_scores w JOIN tracks t ON t.id = w.track_id JOIN artists a ON a.id = t.artist_id
+                  WHERE w.country_id = ? AND w.week_start = ? AND w.review_status <> 'excluded' AND w.score > 0"""
+        params = [cid, periode.start]
+        total = int(db.value("SELECT COUNT(*) " + base, params) or 0)
+        pages = max(1, -(-total // TITRES_PAR_PAGE))
+        page = min(page, pages)
+        lignes = db.all(f"""SELECT t.title, t.slug, t.cover_url, t.release_date, a.name AS artiste, a.slug AS artiste_slug,
+                                   COALESCE(a.image_hd_url, a.image_url) AS photo, w.breakdown, w.review_status, w.sources_count,
+                                   {score} AS points {base}
+                            ORDER BY points DESC, w.sources_count DESC, t.id
+                            LIMIT {TITRES_PAR_PAGE} OFFSET {(page - 1) * TITRES_PAR_PAGE}""", params)
+        for n, r in enumerate(lignes, (page - 1) * TITRES_PAR_PAGE + 1):
+            try:
+                b = json.loads(r["breakdown"] or "{}")
+            except ValueError:
+                b = {}
+            b = b if isinstance(b, dict) else {}
+            val = lambda k: float((b.get(k) or {}).get("delta") or 0)
+            liste.append({**r, "rang": n, "vues": int(val("youtube")), "apple": val("chart:apple_music"),
+                          "boomplay": val("chart:boomplay"), "spotify": int(val("spotify"))})
+    else:
+        pages = 1
+    from core.helpers import country_name
+    en_cours = bool(periode and periode.end >= clock.today().isoformat())
+    titre = tr("Classement complet") + " · " + country_name(pays.upper())
+    return render(request, "complet", {
+        "liste": liste, "total": total, "page": page, "pages": pages, "pays": pays, "periode": periode,
+        "periodes": periodes, "en_cours": en_cours, "robots": "noindex" if page > 1 else None,
+        "meta": {"title": titre + " · Cauri Charts",
+                 "description": tr("Tous les titres mesurés dans le pays cette semaine, par score, sans limite par artiste.")}})

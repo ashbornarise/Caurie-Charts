@@ -172,10 +172,11 @@
             {% endfor %}
         </ol>
         <div class="chart-actions">
-            <a class="button button--ghost" href="{{ share_url(run.id, 'square') }}" download>{{ t('share.square') }}</a>
-            <a class="button button--ghost" href="{{ share_url(run.id, 'story') }}" download>{{ t('share.story') }}</a>
+            {% if not regional %}<a class="button chart-actions__complet" href="{{ path('classement-complet', {'pays': code|lower}) }}"><svg class="chart-actions__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>{{ tr("Voir la liste complète") }}</a>{% endif %}
+            <a class="button button--ghost" href="{{ share_url(run.id, 'square') }}" download><svg class="chart-actions__ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M4 15l4-4 4 4 3-3 5 5"/></svg>{{ t('share.square') }}</a>
+            <a class="button button--ghost" href="{{ share_url(run.id, 'story') }}" download><svg class="chart-actions__ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>{{ t('share.story') }}</a>
         </div>
-        <p class="fineprint">{{ t('chart.fineprint', {'version': run.methodology_version, 'formula': run.formula_version}) }}
+        <p class="fineprint chart-fineprint">{{ t('chart.fineprint', {'version': run.methodology_version, 'formula': run.formula_version}) }}
             <a href="{{ path('methodologie') }}">{{ t('nav.methodology') }}</a> ·
             <a href="{{ path('contact', {'type': 'contestation'}) }}">{{ t('chart.contest') }}</a>
         </p>

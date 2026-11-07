@@ -92,6 +92,7 @@ urlpatterns = [
     path("pays", views_pages.pays),
     path("tendances", views_pages.tendances),
     path("artistes", views_pages.artistes),
+    path("classement-complet", views_pages.complet),
     path("api/newsletter", views_newsletter.inscrire),
     path("newsletter/confirmer/<str:jeton>", views_newsletter.confirmer),
     path("newsletter/desinscription/<str:jeton>", views_newsletter.desinscrire),

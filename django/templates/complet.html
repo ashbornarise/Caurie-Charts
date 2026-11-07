@@ -1,0 +1,72 @@
+{#- Classement complet d'un pays (07/11/2026) : tous les titres notés de la semaine, sans les règles des tops officiels -#}
+{%- macro lien(p=none, s=none, pg=none) -%}
+{%- set d = {'pays': pays if p is none else p} -%}
+{%- set vs = (periode.key if periode else '') if s is none else s -%}{%- if vs %}{% do d.update({'semaine': vs}) %}{% endif -%}
+{%- if pg and pg > 1 %}{% do d.update({'page': pg}) %}{% endif -%}
+{{ path('classement-complet', d) }}
+{%- endmacro -%}
+<section class="wrap page-liste complet">
+    <p class="eyebrow">{{ tr("Classement complet") }}</p>
+    <h1>{{ flag(pays|upper, 24) }} {{ country_name(pays|upper) }}</h1>
+    <p class="lead">{{ tr("Tous les titres mesurés dans le pays, classés par score, sans limite par artiste ni taille de top.") }}
+        {% if periode %}<strong>{{ fmt_number(total) }}</strong> {{ tr("titres") }}.{% endif %}</p>
+    <p class="complet__note">{{ tr("Ce n’est pas le classement officiel : ici, aucune des règles des tops ne s’applique (trois titres au plus par artiste, deux sources pour le Top 5, titres anciens). Seuls les titres exclus après vérification n’apparaissent pas.") }}
+        <a href="{{ chart_path(pays|upper, 'prime') }}">{{ tr("Voir le classement officiel") }}</a> · <a href="{{ path('methodologie') }}#score">{{ tr("Comment est calculé le score") }}</a></p>
+
+    <nav class="artistes__pays" aria-label="{{ tr("Pays") }}">
+        {% for c in countries %}{% set k = c.code|lower %}
+        <a href="{{ lien(p=k, s='', pg=1) }}"{% if pays == k %} aria-current="true"{% endif %}>{{ flag(c.code, 14) }} {{ country_name(c.code) }}</a>
+        {% endfor %}
+    </nav>
+
+    {% if periodes %}
+    <form class="artistes__outils" method="get" action="{{ path('classement-complet') }}">
+        <input type="hidden" name="pays" value="{{ pays }}">
+        <label for="cp-semaine">{{ tr("Semaine") }}</label>
+        <select id="cp-semaine" name="semaine" data-auto-submit>
+            {% for p in periodes %}<option value="{{ p.key }}"{{ ' selected' if periode and p.key == periode.key }}>{{ fmt_date(p.start, false) }} – {{ fmt_date(p.end, false) }}</option>{% endfor %}
+        </select>
+        <button type="submit">{{ tr("Afficher") }}</button>
+    </form>
+    {% if en_cours %}<p class="complet__note">{{ tr("Semaine en cours : les scores bougent chaque nuit jusqu’à la publication.") }}</p>{% endif %}
+    {% endif %}
+
+    {% if liste %}
+    <div class="complet__tableau">
+        <table class="data-table">
+            <thead><tr>
+                <th scope="col">#</th><th scope="col">{{ tr("Titre") }}</th><th scope="col" class="num">{{ tr("Score") }}</th>
+                <th scope="col" class="num">YouTube</th><th scope="col" class="num">Apple</th><th scope="col" class="num">Boomplay</th><th scope="col" class="num">Spotify</th>
+            </tr></thead>
+            <tbody>
+            {% for e in liste %}
+                <tr>
+                    <td class="complet__rang">{{ e.rang }}</td>
+                    <td><span class="complet__titre">
+                        {% set img = e.cover_url or e.photo %}
+                        <span class="cover" aria-hidden="true">{% if img %}<img src="{{ img }}" alt="" width="40" height="40" loading="lazy">{% else %}<span class="cover__initials">{{ initials(e.title) }}</span>{% endif %}</span>
+                        <span><a href="{{ path('titre/' ~ e.slug) }}">{{ e.title }}</a><br><a class="complet__artiste" href="{{ path('artiste/' ~ e.artiste_slug) }}">{{ e.artiste }}</a>
+                        {% if e.review_status == 'pending' %} <span class="complet__badge">{{ tr("en vérification") }}</span>{% endif %}</span>
+                    </span></td>
+                    <td class="num"><strong>{{ fmt_number(e.points|round|int) }}</strong></td>
+                    <td class="num">{{ ('+' ~ fmt_court(e.vues)) if e.vues > 0 else '—' }}</td>
+                    <td class="num">{{ fmt_number(e.apple|round|int) if e.apple > 0 else '—' }}</td>
+                    <td class="num">{{ fmt_number(e.boomplay|round|int) if e.boomplay > 0 else '—' }}</td>
+                    <td class="num">{{ ('+' ~ fmt_court(e.spotify)) if e.spotify > 0 else '—' }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="complet__note">{{ tr("YouTube : vues gagnées dans la semaine par le clip officiel. Apple et Boomplay : points de position (101 moins la place, en moyenne sur la semaine), additionnés sur les pays où le titre est classé. Spotify : écoutes gagnées dans la semaine (à partir du 13 novembre).") }}</p>
+    {% if pages > 1 %}
+    <nav class="artistes__pages" aria-label="{{ tr("Pages") }}">
+        {% if page > 1 %}<a href="{{ lien(pg=page - 1) }}">← {{ tr("Précédent") }}</a>{% endif %}
+        <span>{{ tr("Page") }} {{ page }} / {{ pages }}</span>
+        {% if page < pages %}<a href="{{ lien(pg=page + 1) }}">{{ tr("Suivant") }} →</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <p class="empty">{{ tr("Aucun titre mesuré pour ce pays cette semaine.") }}</p>
+    {% endif %}
+</section>

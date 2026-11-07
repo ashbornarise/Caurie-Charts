@@ -1348,3 +1348,73 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .methode__h3 { margin: 18px 0 8px; font-size: 1.05rem; }
 .methode__barre--4 .methode__b1 { flex: 3; } .methode__barre--4 .methode__b2, .methode__barre--4 .methode__b3, .methode__barre--4 .methode__b4 { flex: 1; }
 .methode__b4 { flex: 1; background: #1DB954; }
+
+/* Classement complet (07/11/2026) */
+.complet__note { max-width: 75ch; font-size: .9rem; color: var(--muted); }
+.complet__tableau { overflow-x: auto; margin: 14px 0; }
+.complet__tableau .data-table { min-width: 640px; }
+.complet__tableau td.num, .complet__tableau th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.complet__rang { font-family: var(--serif); font-weight: 800; color: #5B2BD6; width: 3ch; }
+.complet__titre { display: flex; align-items: center; gap: 10px; }
+.complet__titre .cover { width: 40px; height: 40px; flex: none; }
+.complet__titre .cover img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; }
+.complet__artiste { font-size: .82rem; color: var(--muted); }
+.complet__badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .7rem; font-weight: 700; color: #8a5a00; background: #FFF4D6; }
+
+/* Période et choix de la semaine (07/11/2026, demande du fondateur : « revoir le design du bouton ») : piste claire
+   arrondie, onglet actif en dégradé ; menu des semaines en pastille, flèche dessinée en CSS */
+.tabs { gap: 4px; padding: 4px; border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); border-radius: 999px;
+        background: linear-gradient(135deg, #F3F8FF, #F6F1FF); overflow: visible; }
+.tabs__item { padding: 8px 18px; border-radius: 999px; color: #2B2160; transition: background .15s, color .15s; }
+.tabs__item + .tabs__item { border-left: 0; }
+.tabs__item:hover { background: rgba(122,60,245,.08); }
+.tabs__item[aria-current="page"] { color: #fff; background: linear-gradient(135deg, #3FA9F5, #7A3CF5); box-shadow: 0 6px 16px -8px rgba(91,43,214,.7); }
+.history { position: relative; }
+.history::after { content: ""; position: absolute; right: 18px; top: 50%; width: 8px; height: 8px; margin-top: -6px;
+                  border-right: 2px solid #5B2BD6; border-bottom: 2px solid #5B2BD6; transform: rotate(45deg); pointer-events: none; }
+.history select { -webkit-appearance: none; appearance: none; padding: 10px 46px 10px 18px; border: 1px solid var(--ciel-bord, rgba(120,180,235,.45));
+                  border-radius: 999px; background: linear-gradient(135deg, #FFFFFF, #F6F1FF); color: #1B1150; font-weight: 600;
+                  font-size: .95rem; cursor: pointer; box-shadow: 0 8px 20px -16px rgba(40,90,160,.8); }
+.history select:hover { border-color: #7A3CF5; }
+.history select:focus { outline: none; }
+.history select:focus-visible { outline: 3px solid rgba(122,60,245,.35); outline-offset: 2px; }
+
+/* Choix du pays et du classement (07/11/2026) : même langage que les onglets de période — pastilles claires en verre,
+   choix actif en dégradé bleu ciel → violet, texte sans empattement (plus lisible que la serif grasse d'avant) */
+.country-switch { gap: 6px; padding: 6px; border-radius: 22px; background: linear-gradient(135deg, #F3F8FF, #F6F1FF);
+                  border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); }
+.country-switch a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid transparent;
+                    border-radius: 999px; font-family: inherit; font-weight: 700; font-size: .86rem; letter-spacing: .02em;
+                    color: #2B2160; background: rgba(255,255,255,.75); transition: background .15s, border-color .15s; }
+.country-switch a img, .country-switch a svg { border-radius: 3px; }
+.country-switch a:hover { border-color: rgba(122,60,245,.35); background: #fff; }
+.country-switch a[aria-current="page"] { color: #fff; border-color: transparent; background: linear-gradient(135deg, #3FA9F5, #7A3CF5);
+                                         box-shadow: 0 6px 16px -8px rgba(91,43,214,.7); }
+.chip { padding: 8px 16px; border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); font-weight: 600; color: #2B2160;
+        background: linear-gradient(135deg, #FFFFFF, #F6F1FF); transition: border-color .15s, background .15s; }
+.chip:hover { border-color: #7A3CF5; }
+.chip[aria-current="page"] { color: #fff; border-color: transparent; background: linear-gradient(135deg, #3FA9F5, #7A3CF5);
+                             box-shadow: 0 6px 16px -8px rgba(91,43,214,.7); }
+
+/* Bas du classement (07/11/2026) : actions en pastilles avec icônes au trait, ligne de méthode discrète,
+   encart « Un classement vérifiable » en verre clair (plus de cadre noir) */
+.chart-actions { gap: 10px; align-items: center; }
+.chart-actions .button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px;
+                         border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); background: linear-gradient(135deg, #FFFFFF, #F3F8FF);
+                         color: #1B1150; font-weight: 600; box-shadow: 0 8px 20px -18px rgba(40,90,160,.9); }
+.chart-actions .button:hover { border-color: #7A3CF5; background: #fff; color: #5B2BD6; transform: translateY(-1px); }
+.chart-actions .chart-actions__complet { color: #fff; border-color: transparent; background: linear-gradient(135deg, #3FA9F5, #7A3CF5);
+                                         box-shadow: 0 10px 22px -12px rgba(91,43,214,.8); }
+.chart-actions .chart-actions__complet:hover { color: #fff; background: linear-gradient(135deg, #2F98E6, #6A2EE6); }
+.chart-actions__ico { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.chart-fineprint { padding: 10px 14px; border-radius: 12px; background: #F7FAFF; color: var(--muted); font-size: .85rem; }
+.chart-fineprint a { color: #5B2BD6; }
+.method-block { position: relative; overflow: hidden; padding: 26px 28px; border: 1px solid rgba(122,60,245,.18); border-left: 0;
+                border-radius: 22px; background: linear-gradient(135deg, #EEF6FF, #F6F1FF); }
+.method-block::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 6px; background: linear-gradient(180deg, #3FA9F5, #7A3CF5); }
+.method-block::after { content: ""; position: absolute; right: -60px; top: -60px; width: 200px; height: 200px; border-radius: 50%;
+                       background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.9), rgba(122,60,245,.18) 55%, transparent 72%); pointer-events: none; }
+.method-block__title { margin: 0 0 8px; color: #1B1150; }
+.method-block p { color: var(--ink-2); line-height: 1.7; }
+.method-block .link-arrow { display: inline-flex; margin-top: 4px; padding: 9px 18px; border-radius: 999px; text-decoration: none; color: #fff;
+                            background: linear-gradient(135deg, #3FA9F5, #7A3CF5); box-shadow: 0 10px 22px -12px rgba(91,43,214,.8); }

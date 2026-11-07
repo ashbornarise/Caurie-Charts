@@ -3,7 +3,7 @@ a mis tout le site en erreur 500 ; aucun test n'affichait une page complète).""
 import pytest
 from django.test import Client
 
-PAGES = ["/", "/a-propos", "/methodologie", "/classements/afrique-de-l-ouest", "/cookies", "/contact", "/pays", "/tendances", "/artistes", "/artistes?pays=tg&tri=spotify", "/artistes?q=did", "/classements/ci/prime"]
+PAGES = ["/", "/a-propos", "/methodologie", "/classements/afrique-de-l-ouest", "/cookies", "/contact", "/pays", "/tendances", "/artistes", "/artistes?pays=tg&tri=spotify", "/artistes?q=did", "/classements/ci/prime", "/classement-complet", "/classement-complet?pays=ci", "/classement-complet?pays=ci&semaine=2026-W44&page=2"]
 
 
 @pytest.mark.parametrize("page", PAGES)
