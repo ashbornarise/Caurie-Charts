@@ -6,6 +6,7 @@
             <h2 id="hot-artists-title">{{ t('home.hot_title') }}</h2>
             <p class="partners__lead">{{ t('home.hot_lead') }}</p>
         </div>
+        <a class="link-arrow" href="{{ path('artistes') }}">{{ tr("Voir tous les artistes") }}</a>
     </div>
     <ul class="hot-artists__grid">
         {% for a in artists %}
