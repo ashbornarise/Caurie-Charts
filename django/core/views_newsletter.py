@@ -45,6 +45,7 @@ def confirmer(request, jeton: str):
     return _page(request, tr("Inscription confirmée"), tr("Merci ! Vous recevrez chaque vendredi les N°1 officiels de l’Afrique de l’Ouest."))
 
 
+@csrf_exempt   # désinscription en un clic : la messagerie envoie un POST sans jeton CSRF (List-Unsubscribe-Post)
 def desinscrire(request, jeton: str):
     use_locale(request)
     newsletter.desinscrire(jeton)

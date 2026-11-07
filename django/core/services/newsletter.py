@@ -130,7 +130,7 @@ def envoyer(limite: int = 500) -> list:
         stop = f"{_base()}{'/en' if a['langue'] == 'en' else ''}/newsletter/desinscription/{a['jeton']}"
         pied = ("Unsubscribe" if a["langue"] == "en" else "Se désinscrire") + " : " + stop
         html_a = html + f'<p style="font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#777;text-align:center"><a href="{stop}" style="color:#777">{pied.split(" : ")[0]}</a></p>'
-        if mail.send_html(a["email"], sujet, texte + "\n\n" + pied, html_a):
+        if mail.send_html(a["email"], sujet, texte + "\n\n" + pied, html_a, desinscription=stop):
             db.run("UPDATE newsletter SET derniere_lettre = CURRENT_DATE WHERE id = ?", [a["id"]])
             envoyes += 1
         time.sleep(1)   # le SMTP de l'hébergeur limite le débit

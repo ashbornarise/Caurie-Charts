@@ -53,7 +53,7 @@
     "period.year": "Year",
     "period.all": "All time",
     "period.year_n": "Year :year",
-    "period.week_of": "Week of :start to :end",
+    "period.week_of": ":start – :end",
     "period.provisional": "year to date",
     "move.up": "Up :n place(s)",
     "move.down": "Down :n place(s)",

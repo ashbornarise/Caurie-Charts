@@ -22,13 +22,13 @@
     {% if periodes %}
     <form class="artistes__outils" method="get" action="{{ path('classement-complet') }}">
         <input type="hidden" name="pays" value="{{ pays }}">
-        <label for="cp-semaine">{{ tr("Semaine") }}</label>
+        <label for="cp-semaine">{{ tr("Période") }}</label>
         <select id="cp-semaine" name="semaine" data-auto-submit>
-            {% for p in periodes %}<option value="{{ p.key }}"{{ ' selected' if periode and p.key == periode.key }}>{{ fmt_date(p.start, false) }} – {{ fmt_date(p.end, false) }}</option>{% endfor %}
+            {% for p in periodes %}<option value="{{ p.key }}"{{ ' selected' if periode and p.key == periode.key }}>{{ tr('Du :a au :b', a=fmt_date(p.start, false), b=fmt_date(p.end, false)) }}</option>{% endfor %}
         </select>
         <button type="submit">{{ tr("Afficher") }}</button>
     </form>
-    {% if en_cours %}<p class="complet__note">{{ tr("Semaine en cours : les scores bougent chaque nuit jusqu’à la publication.") }}</p>{% endif %}
+    {% if en_cours %}<p class="complet__note">{{ tr("Cette semaine n’est pas finie : les scores changent chaque nuit jusqu’à la publication du vendredi soir.") }}</p>{% endif %}
     {% endif %}
 
     {% if liste %}

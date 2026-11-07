@@ -53,7 +53,7 @@
     "period.year": "Année",
     "period.all": "Tout temps",
     "period.year_n": "Année :year",
-    "period.week_of": "Semaine du :start au :end",
+    "period.week_of": "Du :start au :end",
     "period.provisional": "cumul provisoire",
     "move.up": "Monte de :n place(s)",
     "move.down": "Descend de :n place(s)",

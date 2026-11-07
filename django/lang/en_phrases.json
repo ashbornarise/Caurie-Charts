@@ -966,5 +966,8 @@
  "en vérification": "under review",
  "Aucun titre mesuré pour ce pays cette semaine.": "No track measured for this country this week.",
  "Tous les titres mesurés dans le pays cette semaine, par score, sans limite par artiste.": "Every track measured in the country this week, by score, with no limit per artist.",
- "YouTube : vues gagnées dans la semaine par le clip officiel. Apple et Boomplay : points de position (101 moins la place, en moyenne sur la semaine), additionnés sur les pays où le titre est classé. Spotify : écoutes gagnées dans la semaine (à partir du 13 novembre).": "YouTube: views gained during the week by the official video. Apple and Boomplay: position points (101 minus the position, averaged over the week), added up over the countries where the track charts. Spotify: plays gained during the week (from 13 November)."
+ "YouTube : vues gagnées dans la semaine par le clip officiel. Apple et Boomplay : points de position (101 moins la place, en moyenne sur la semaine), additionnés sur les pays où le titre est classé. Spotify : écoutes gagnées dans la semaine (à partir du 13 novembre).": "YouTube: views gained during the week by the official video. Apple and Boomplay: position points (101 minus the position, averaged over the week), added up over the countries where the track charts. Spotify: plays gained during the week (from 13 November).",
+ "Cette semaine n’est pas finie : les scores changent chaque nuit jusqu’à la publication du vendredi soir.": "This week is not over yet: scores change every night until Friday evening’s publication.",
+ "Période": "Period",
+ "Du :a au :b": ":a – :b"
 }

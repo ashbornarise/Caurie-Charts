@@ -83,7 +83,7 @@ _EN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oc
 def fmt_date(value, with_year: bool = True) -> str:
     d = _to_date(value)
     if locale() == "fr":
-        return f"{d.day} {_FR_MONTHS[d.month - 1]}" + (f" {d.year}" if with_year else "")
+        return f"{'1er' if d.day == 1 else d.day} {_FR_MONTHS[d.month - 1]}" + (f" {d.year}" if with_year else "")
     return f"{_EN_MONTHS[d.month - 1]} {d.day}" + (f", {d.year}" if with_year else "")
 
 
