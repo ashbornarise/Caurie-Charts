@@ -159,7 +159,12 @@
 {% endif %}
 <section>
     {% if not entries %}
+        {% if periodType == 'month' %}
+        {#- 07/11/2026 : un mois n'existe qu'une fois toutes ses semaines publiées (le message parlait d'un « pays ») -#}
+        <p class="empty">{{ tr("Le classement du mois paraît à la fin du mois, quand toutes ses semaines sont publiées. Octobre est incomplet : nos classements officiels ont commencé mi-octobre. Le premier mois complet sera novembre, publié début décembre. En attendant, consultez le classement de la semaine.") }}</p>
+        {% else %}
         <p class="empty">{{ t('chart.empty_legend') if chartCode == 'legend' else t('chart.empty') }}</p>
+        {% endif %}
     {% else %}
         <ol class="chart-list">
             {% for e in entries %}

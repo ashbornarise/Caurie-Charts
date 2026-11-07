@@ -48,7 +48,8 @@ class ChartService:
         results = {"prime": prime}
         prime_ids = [e["track_id"] for e in prime]
         if charts["buzz"]["computed"]:
-            results["buzz"] = ranker.buzz(items, prime_ids, self._size("buzz", size), self._history("buzz", cid, "week", period.start))
+            results["buzz"] = ranker.buzz(items, prime_ids, self._size("buzz", size), self._history("buzz", cid, "week", period.start),
+                                          ref=period.end)
         if charts["fresh"]["computed"]:
             results["fresh"] = ranker.fresh(items, period.end, self._size("fresh", size), self._history("fresh", cid, "week", period.start))
         if charts["icon"]["computed"]:

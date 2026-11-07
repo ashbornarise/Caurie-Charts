@@ -55,3 +55,20 @@ def test_buzz_titres_verifies_seulement():
              {"track_id": 2, "artist_id": 2, "score": 9, "score_brut": 250, "prev_brut": 100, "prev_score": 5,
               "sources_count": 2, "flags": [], "review_status": "ok"}]
     assert [e["track_id"] for e in ChartRanker(f).buzz(items, [], 10)] == [2]
+
+
+def test_buzz_sans_titres_anciens():
+    # 07/11/2026 : « Dati the wood » (2014) était au Buzz du Togo ; seuls les titres de moins d'un an y entrent
+    f = {"buzz": {"min_growth_pct": 50, "min_score": 0, "max_age_days": 365}, "diversity": {"top": 0, "min_sources": 1}}
+    items = [{"track_id": 1, "artist_id": 1, "score": 300, "prev_score": 100, "sources_count": 2, "flags": [],
+              "review_status": "ok", "release_date": "2014-10-25"},
+             {"track_id": 2, "artist_id": 2, "score": 300, "prev_score": 100, "sources_count": 2, "flags": [],
+              "review_status": "ok", "release_date": "2026-09-20"}]
+    assert [e["track_id"] for e in ChartRanker(f).buzz(items, [], 10, ref="2026-11-08")] == [2]
+
+
+def test_fresh_seuil_minimum():
+    f = {"fresh": {"max_age_days": 56, "min_score": 500}, "diversity": {"top": 0, "min_sources": 1}}
+    items = [{"track_id": 1, "artist_id": 1, "score": 12.5, "sources_count": 1, "flags": [], "review_status": "ok", "release_date": "2026-10-20"},
+             {"track_id": 2, "artist_id": 2, "score": 900, "sources_count": 1, "flags": [], "review_status": "ok", "release_date": "2026-10-20"}]
+    assert [e["track_id"] for e in ChartRanker(f).fresh(items, "2026-11-08", 10)] == [2]

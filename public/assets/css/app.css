@@ -1324,3 +1324,5 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .artistes__pages { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 24px 0 0; }
 .artistes__pages a { font-weight: 700; color: #5B2BD6; text-decoration: none; }
 .page-liste__plus { display: inline-block; margin: 6px 0 0 4px; font-size: .82rem; font-weight: 700; color: #5B2BD6; text-decoration: none; }
+
+.figure--score strong { color: #5B2BD6; }

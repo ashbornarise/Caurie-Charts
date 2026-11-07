@@ -44,8 +44,10 @@
         </ul>
         {% endif %}
     </span>
-    {% if not compact and ((e.streams or 0) > 0 or (e.views or 0) > 0) %}
+    {% if not compact and ((e.streams or 0) > 0 or (e.views or 0) > 0 or (e.score and not is_artist)) %}
     <span class="entry__figures">
+        {#- 07/11/2026 : le score Cauri du titre, celui qui décide du rang -#}
+        {% if e.score and not is_artist %}<span class="figure figure--score" title="{{ tr("Score Cauri de la semaine : c’est lui qui décide du rang (méthode publique)") }}"><strong>{{ fmt_number(e.score|round|int) }}</strong> {{ tr("pts") }}</span>{% endif %}
         {% if e.streams > 0 %}
         <span class="figure figure--main" title="{{ t('chart.streams_long') }}"><strong>{{ fmt_number(e.streams) }}</strong> {{ t('chart.streams') }}</span>
         {% endif %}

@@ -371,7 +371,7 @@ class ChartRanker:
             result.append(item)
         return result
 
-    def buzz(self, items: list, prime_track_ids: list, size: int, previous: dict | None = None) -> list:
+    def buzz(self, items: list, prime_track_ids: list, size: int, previous: dict | None = None, ref: str | None = None) -> list:
         cfg, candidates = self.formula["buzz"], []
         for item in self.eligible(items):
             # v4 : progression et seuil sur le score brut, comparable d'une semaine à l'autre ; v1 à v3 : brut = score
@@ -381,6 +381,9 @@ class ChartRanker:
                 continue
             if self.formula.get("buzz_verifies") and item.get("review_status") == "pending":
                 continue   # v4 : un titre signalé et pas encore examiné attend la vérification avant d'entrer au Buzz
+            age_max = int(cfg.get("max_age_days") or 0)
+            if age_max and item.get("release_date") and str(item["release_date"])[:10] < (_d(ref or str(date.today())) - timedelta(days=age_max)).isoformat():
+                continue   # 07/11/2026 : le Buzz ne classe que des titres de moins d'un an (« Dati the wood », 2014, y était)
             growth = (brut - prev) / prev * 100
             if growth <= cfg["min_growth_pct"]:
                 continue
@@ -396,7 +399,8 @@ class ChartRanker:
         def ok(i):
             released = _d(i["release_date"]) if i.get("release_date") else None
             return (released is not None and limit < released <= end) or bool(i.get("is_emerging"))
-        candidates = sorted([i for i in self.eligible(items) if ok(i)], key=self.sort_key)
+        seuil = float(self.formula["fresh"].get("min_score") or 0)   # 07/11/2026 : plus de nouveautés à 25 vues
+        candidates = sorted([i for i in self.eligible(items) if ok(i) and float(i.get("score_brut", i["score"])) >= seuil], key=self.sort_key)
         return self._finalize(self.cap_artist(candidates, size)[:size], previous or {}, "track_id")
 
     def icon(self, items: list, size: int, previous: dict | None = None) -> list:
