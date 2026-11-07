@@ -54,15 +54,45 @@ def _demande(lot: list, http: HttpClient) -> dict:
               "sinon « moyenne » ou « basse ». N'invente rien : en cas de doute, mets null. Termine ta réponse par un bloc JSON : "
               '[{"n": numéro, "youtube": "lien ou null", "certitude_youtube": "haute|moyenne|basse", "instagram": "nom sans @ ou null", '
               '"certitude_instagram": "...", "tiktok": "nom sans @ ou null", "certitude_tiktok": "..."}]')
-    texte, meta = _gemini(prompt, http, "low", 0.5)   # tâche secondaire : la moitié du budget du jour au plus
-    if not meta.get("groundingChunks"):
-        return {}
+    try:
+        texte, meta = _gemini(prompt, http, "low", 0.5)   # tâche secondaire : la moitié du budget du jour au plus
+        if not meta.get("groundingChunks"):
+            return {}
+    except PlatformException:
+        # Budget Gemini du jour atteint : OpenRouter avec sa recherche web (07/11/2026, demande du fondateur). Sans
+        # recherche, ses modèles inventent (essai : « @PhilipayneOfficiel » n'existe pas) : on exige des sources citées.
+        texte = _openrouter(prompt)
+        if not texte:
+            return {}
     blocs = re.findall(r"\[\s*\{.*?\}\s*\]", texte, re.S)
     try:
         liste = json.loads(blocs[-1]) if blocs else []
     except ValueError:
         liste = []
     return {int(x["n"]): x for x in liste if isinstance(x, dict) and str(x.get("n", "")).isdigit()}
+
+
+OPENROUTER_MODELES = ("nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free")
+
+
+def _openrouter(prompt: str) -> str:
+    """Réponse d'un modèle gratuit d'OpenRouter avec recherche web (quelques millièmes de dollar), seulement si des
+    sources sont citées ; chaîne vide sinon."""
+    import requests
+    cle = env.get("OPENROUTER_API_KEY", "")
+    if not cle:
+        return ""
+    for modele in OPENROUTER_MODELES:
+        try:
+            r = requests.post("https://openrouter.ai/api/v1/chat/completions", headers={"Authorization": "Bearer " + cle},
+                              json={"model": modele, "messages": [{"role": "user", "content": prompt}],
+                                    "plugins": [{"id": "web", "max_results": 8}]}, timeout=180)
+            msg = ((r.json().get("choices") or [{}])[0]).get("message") or {}
+        except (requests.RequestException, ValueError):
+            continue
+        if r.status_code == 200 and msg.get("annotations") and msg.get("content"):
+            return msg["content"]
+    return ""
 
 
 def _chaine(lien: str, key: str, http_get) -> tuple[str | None, str]:
@@ -103,6 +133,9 @@ def chercher(lots: int = 4, taille: int = TAILLE, http: HttpClient | None = None
         except PlatformException as exc:
             lignes.append(str(exc))
             break
+        if not reponses:
+            lignes.append("aucune réponse sourcée pour ce lot : la suite au prochain passage")
+            break
         for i, a in enumerate(lot):
             r = reponses.get(i + 1) or {}
             db.run("UPDATE artists SET reseaux_le = NOW() WHERE id = ?", [a["id"]])
@@ -133,6 +166,6 @@ def chercher(lots: int = 4, taille: int = TAILLE, http: HttpClient | None = None
                     continue
                 db.run(f"UPDATE artists SET {site} = ?, comptes_source = COALESCE(comptes_source, 'ia-google'), comptes_le = NOW() WHERE id = ?", [v, a["id"]])
                 comptes += 1
-    lignes.insert(0, f"Réseaux des artistes (Gemini + Google) : {chaines} chaîne(s) YouTube reliée(s), {comptes} compte(s) "
+    lignes.insert(0, f"Réseaux des artistes (Gemini + Google, ou OpenRouter + web) : {chaines} chaîne(s) YouTube reliée(s), {comptes} compte(s) "
                      f"Instagram/TikTok · {ia_budget.bilan()}")
     return lignes
