@@ -114,18 +114,27 @@ def legende(post: dict, lien: str | None = None, limite: int = 2200) -> str:
     lien = lien or LIEN
     tags = (post.get("hashtags") or "").strip()
     appel = cta(post)
-    fr = f"{post['title']}\n\n{_sans_lien(post.get('caption'))}".strip()
+    # 06/11/2026 : la 1re ligne est une vraie accroche (l'info directe), plus le nom de la rubrique (voix.py)
+    try:
+        from core.services.social import voix
+        acc = voix.accroche(post)
+    except Exception:  # noqa: BLE001 — sans accroche, le titre du post reste
+        acc = None
+    titre = acc["fr"] if acc else post["title"]
+    fr = f"{titre}\n\n{_sans_lien(post.get('caption'))}".strip()
     try:
         faits = json.loads(post.get("facts") or "{}") or {}
     except (ValueError, TypeError):
         faits = {}
     if faits.get("illustration_ia"):
-        fr = f"{post['title']}\n\n{mention_illustration(_sans_lien(post.get('caption')))}"
+        fr = f"{titre}\n\n{mention_illustration(_sans_lien(post.get('caption')))}"
     place = limite - len(lien) - len(tags) - _CTA_MAX - 42          # séparateurs, drapeau, appel à s'abonner et marge
     if len(fr) > place // 2:
         coupe = fr[: place // 2]
         fr = (coupe.rsplit("\n", 1)[0] if "\n" in coupe else coupe).rstrip()
     anglais = en(post, place - len(fr) - len(post["title"]) - 4)
+    if anglais and acc and acc.get("en"):
+        anglais = {**anglais, "title": acc["en"]}
     caption_en = mention_illustration(anglais["caption"], "en") if anglais and faits.get("illustration_ia") else (anglais or {}).get("caption", "")
     texte_en = f"{DRAPEAU_EN} {anglais['title']}\n\n{caption_en}" if anglais else ""
     trop = len("\n\n".join(p for p in (fr, texte_en, appel, lien, tags) if p)) - limite

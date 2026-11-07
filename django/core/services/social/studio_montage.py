@@ -209,15 +209,18 @@ def images_cles(video: str, dossier: str, debut: float, fin: float, n: int = 4) 
 
 # ---------------------------------------------------------------- description automatique
 
-CONSIGNE = """Tu es la rédaction de Cauri Charts, « la référence de la musique ouest-africaine ».
-On te montre des images tirées d'une vidéo (dans l'ordre) et les informations publiques de sa publication d'origine.
+from core.services.social.voix import VOIX  # noqa: E402  (voix de créateur de contenu, 06/11/2026)
+
+CONSIGNE = VOIX + """
+
+Ici, on te montre des images tirées d'une vidéo (dans l'ordre) et les informations publiques de sa publication d'origine.
 Décris UNIQUEMENT ce qui est visible ou écrit dans ces informations : n'invente aucun fait, aucun chiffre, aucun nom.
 Si tu ne reconnais pas la personne avec certitude, ne la nomme pas (sauf si son nom figure dans les informations).
 Rends un objet JSON, rien d'autre :
 {"etiquette": "2 ou 3 mots en majuscules (ex. MOMENT VIRAL, EN CONCERT, EN STUDIO, BACKSTAGE)",
- "accroche": "phrase courte en français, 70 caractères maximum, qui donne envie de regarder, sans point final",
+ "accroche": "le TITRE selon les règles : l'info directe, les noms d'abord, 70 caractères maximum, sans point final ; jamais une description de ce qu'on voit (vêtements, décor)",
  "artiste": "nom de l'artiste principal si certain, sinon chaîne vide",
- "legende_fr": "2 ou 3 phrases en français qui racontent la vidéo, puis une question au public",
+ "legende_fr": "2 ou 3 phrases courtes en français : le contexte, ce qui rend ce moment important, puis une vraie question au public",
  "legende_en": "la même légende en anglais"}"""
 
 
