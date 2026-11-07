@@ -1,4 +1,4 @@
-"""Post hebdomadaire du classement officiel (mardi 17 h), au style 2026 validé le 19/10/2026.
+"""Post hebdomadaire du classement officiel (vendredi soir, après la publication), au style 2026 validé le 19/10/2026.
 
 Pour chaque pays publié cette semaine : une couverture « lockup » du n°1 (façon ChartFR) puis la liste du classement.
 Photo du n°1 : un plan large VALIDÉ (artist_photos), sinon le portrait officiel ; jamais une miniature YouTube.

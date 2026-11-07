@@ -1326,3 +1326,23 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .page-liste__plus { display: inline-block; margin: 6px 0 0 4px; font-size: .82rem; font-weight: 700; color: #5B2BD6; text-decoration: none; }
 
 .figure--score strong { color: #5B2BD6; }
+
+/* Méthodologie en document (07/11/2026), sur le modèle d'À propos */
+.methode__semaine { list-style: none; margin: 4px 0 18px; padding: 0; display: grid; grid-template-columns: repeat(7, 1fr) 1.9fr; gap: 6px; }
+.methode__semaine li { padding: 10px 4px; border-radius: 12px; text-align: center; font-size: .8rem; font-weight: 700; color: #1B1150; background: linear-gradient(135deg, #EEF6FF, #F6F1FF); border: 1px solid var(--ciel-bord, rgba(120,180,235,.45)); }
+.methode__semaine .methode__pub { color: #fff; background: linear-gradient(135deg, #3FA9F5, #7A3CF5); border-color: transparent; }
+@media (max-width: 640px) { .methode__semaine { grid-template-columns: repeat(7, 1fr); } .methode__semaine .methode__pub { grid-column: 1 / -1; } }
+.methode__tableau { overflow-x: auto; margin: 12px 0 16px; }
+.methode__tableau .data-table { min-width: 520px; }
+.methode__tableau td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.methode__source { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.methode__source img { width: 28px; height: 28px; object-fit: contain; border-radius: 8px; }
+.methode__role { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: .74rem; font-weight: 700; color: #4b4870; background: #F1F0F7; white-space: nowrap; }
+.methode__role--score { color: #5B2BD6; background: #F1ECFD; }
+.methode__formule { margin: 14px 0 16px; padding: 18px 20px; border-radius: 18px; background: linear-gradient(135deg, #EEF6FF, #F6F1FF); border: 1px solid rgba(122,60,245,.15); }
+.methode__egal { margin: 0 0 12px; font-family: var(--serif); font-size: clamp(1.05rem, 2.4vw, 1.3rem); font-weight: 700; color: #1B1150; text-align: center; }
+.methode__barre { display: flex; height: 34px; border-radius: 999px; overflow: hidden; font-size: .78rem; font-weight: 800; color: #fff; }
+.methode__barre span { display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; }
+.methode__b1 { flex: 2; background: #3FA9F5; } .methode__b2 { flex: 1; background: #7A3CF5; } .methode__b3 { flex: 1; background: #9B7AE9; }
+.methode__note { margin: 12px 0 0; font-size: .86rem; }
+.methode__h3 { margin: 18px 0 8px; font-size: 1.05rem; }

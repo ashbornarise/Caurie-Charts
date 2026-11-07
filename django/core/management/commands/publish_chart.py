@@ -15,7 +15,12 @@ class Command(BaseCommand):
     help = "Publie le classement officiel de la semaine pour les pays sans signalement."
 
     def add_arguments(self, p):
-        p.add_argument("--week", required=True, help="Semaine ISO (ex. 2026-W42)")
+        p.add_argument("--week", help="Semaine ISO (ex. 2026-W42)")
+        p.add_argument("--recul", type=int, default=0,
+                       help="Sans --week : la dernière semaine terminée (0), celle d'avant (1), etc.")
+        p.add_argument("--verifier-jour", action="store_true",
+                       help="Vérifie seulement si aujourd'hui est le jour de publication de la dernière semaine "
+                            "(mardi avant la bascule du 13/11/2026, vendredi ensuite) : code de sortie 3 sinon")
         p.add_argument("--country", help="Code pays (TG, GH, NG…) ; si absent, tous les pays prêts")
         p.add_argument("--clips-only", action="store_true",
                        help="Crée uniquement les clips N°1 (pas de publication ni de post)")
@@ -26,8 +31,24 @@ class Command(BaseCommand):
                        help="Rattrapage d'une ancienne semaine : ni Telegram, ni clips, ni post officiel")
 
     def handle(self, *args, **o):
+        from core import clock
+        from core.services.charts import Period
+        derniere = Period.last_completed_week(clock.today().isoformat())
+        if o["verifier_jour"]:
+            jour = derniere.publication_day()
+            self.stdout.write(f"Semaine {derniere.key} : publication le {jour}")
+            if clock.today().isoformat() != jour:
+                raise SystemExit(3)
+            return
+
         def task():
             week = o["week"]
+            if not week:
+                p = derniere
+                for _ in range(max(0, o["recul"])):
+                    p = p.previous()
+                week = p.key
+            out(f"Semaine {week}")
 
             if o["clips_only"]:
                 from core.services.social import officiel
@@ -49,7 +70,6 @@ class Command(BaseCommand):
                     "SELECT code FROM countries WHERE is_active = 1 ORDER BY sort_order")]
             publies = []
             from core.services import revue_ia
-            from core.services.charts import Period
             debut = Period.from_key("week", week).start
             for code in countries:
                 # Règle du fondateur : pas de classement officiel sous 8 artistes (pas de remplissage)

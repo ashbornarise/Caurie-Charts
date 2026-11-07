@@ -9,7 +9,7 @@ Une étape en échec est journalisée et n'empêche pas les suivantes.
 """
 import json
 import time
-from datetime import date
+from datetime import date, timedelta
 
 from core import budget, clock
 from core import conf, db
@@ -86,7 +86,8 @@ class DailyPipeline:
         self._step("4. Actualités", lambda: FeedImporter().run())
 
         weekday = clock.today().isoweekday()
-        if force_weekly or weekday == 1:
+        # 07/11/2026 : calcul le premier jour de la nouvelle semaine (lundi avant la bascule, vendredi ensuite)
+        if force_weekly or Period.week_of(clock.today().isoformat()).start == clock.today().isoformat():
             def weekly():
                 week = Period.last_completed_week(clock.today().isoformat())
                 service, lines = ChartService(), []
@@ -246,13 +247,14 @@ class DailyPipeline:
             return [analytics.collect_post_metrics()]
         self._step("10i. Statistiques des publications (vues, portée, réactions)", stats)
 
-        if weekday == 3:
+        derniere = Period.last_completed_week(clock.today().isoformat())
+        if clock.today().isoformat() == (date.fromisoformat(derniere.publication_day()) + timedelta(days=1)).isoformat():
             def revue_rattrapage():
-                """Mercredi : Google repasse sur les titres restés « à vérifier » de la semaine publiée mardi (budget du mardi
+                """Lendemain de la publication : Google repasse sur les titres restés « à vérifier » de la semaine publiée (budget du mardi
                 épuisé, 03/11/2026) ; une exclusion prouvée recalcule le classement publié."""
                 from datetime import timedelta
                 from core.services import revue_ia
-                debut = (clock.today() - timedelta(days=clock.today().weekday() + 7)).isoformat()
+                debut = derniere.start
                 lignes = []
                 for c in db.all("SELECT code FROM countries WHERE is_active = 1 ORDER BY sort_order"):
                     if revue_ia.en_attente(c["code"], debut):

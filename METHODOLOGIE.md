@@ -20,7 +20,7 @@ Tout ce qui est chiffré ici (poids, seuils, tailles) est une proposition de dé
 
 **Regroupement des versions.** Le titre original, son clip officiel, ses versions lyrics et audio, ses remixes et ses lives comptent pour un seul titre. Un remix n'est classé à part que s'il a un autre artiste principal ou s'il a été publié comme titre distinct (à décider au cas par cas, en admin).
 
-**Période de suivi.** Du lundi 00 h 00 au dimanche 23 h 59 (heure de Lomé, UTC+0). Le classement est calculé le lundi, vérifié, puis publié le mardi.
+**Période de suivi.** Du vendredi 00 h 00 au jeudi 23 h 59 (heure de Lomé, UTC+0), depuis le 13 novembre 2026 ; le classement est calculé et vérifié le vendredi, puis publié le vendredi soir. Avant : du lundi au dimanche, publié le mardi ; la semaine 46 (du lundi 9 au jeudi 12 novembre 2026) est une semaine de transition de quatre jours.
 
 ## 3. Sources de données
 
@@ -90,7 +90,7 @@ Règle de Buzz Chart : une progression de plus de 50 % par rapport à la semaine
 
 | Classement | Contenu | Période |
 |---|---|---|
-| **Prime Chart Mensuel** | Somme des scores hebdomadaires du mois | Mensuel, publié le premier mardi du mois suivant |
+| **Prime Chart Mensuel** | Somme des scores hebdomadaires du mois | Mensuel, publié le premier vendredi du mois suivant |
 | **Records** | Le plus de semaines à la première place, la plus forte entrée, la plus longue présence. Une page de faits, peu coûteuse à produire et très partageable | Mise à jour continue |
 
 ### Phase 3, quand les données sont solides
@@ -155,7 +155,7 @@ Cauri Charts appartient au même groupe que Nova Luz. Pour que le classement res
 
 ## 8. Publication, corrections et contestations
 
-- **Calendrier.** Calcul le lundi, vérification, publication le mardi. Les classements mensuels sortent le premier mardi du mois suivant.
+- **Calendrier.** Calcul et vérification le vendredi, publication le vendredi soir. Les classements mensuels sortent le premier vendredi du mois suivant.
 - **Historique.** Chaque classement publié reste consultable, avec la version de la méthodologie qui l'a produit.
 - **Correction d'erreur.** Toute erreur corrigée est signalée sur la page du classement, avec la date et la raison.
 - **Contestation.** Un artiste ou un label peut contester une position ou une exclusion via un formulaire, avec ses preuves. Réponse sous sept jours, et résultat inscrit dans le journal d'audit.
@@ -169,7 +169,7 @@ Cauri Charts appartient au même groupe que Nova Luz. Pour que le classement res
 
 ### Comment sont construits les classements Cauri Charts
 
-Cauri Charts classe la musique d'Afrique de l'Ouest à partir de chiffres d'écoute. Chaque semaine, nous mesurons combien un titre a été écouté ou visionné du lundi au dimanche, nous additionnons ces chiffres selon une formule publique, et nous publions le résultat le mardi.
+Cauri Charts classe la musique d'Afrique de l'Ouest à partir de chiffres d'écoute. Chaque semaine, nous mesurons combien un titre a été écouté ou visionné du vendredi au jeudi, nous additionnons ces chiffres selon une formule publique, et nous publions le résultat le mardi.
 
 **D'où viennent les chiffres.** Nous relevons chaque jour les compteurs publics des plateformes (YouTube, Audiomack, Boomplay, et d'autres selon les pays). Quand une plateforme ne donne pas accès à ses données, nous acceptons des déclarations d'artistes et de labels, à condition de pouvoir les recouper avec une donnée publique.
 

@@ -1,4 +1,4 @@
-"""Newsletter Cauri Charts (06/11/2026) : inscription en double confirmation, lettre du mardi après le classement.
+"""Newsletter Cauri Charts (06/11/2026) : inscription en double confirmation, lettre du vendredi après le classement.
 
 - inscrire() : adresse enregistrée « en attente », e-mail de confirmation avec un lien unique ; rien n'est envoyé ensuite
   tant que la personne n'a pas cliqué (preuve du consentement, exigée par la loi et par les messageries).
@@ -48,12 +48,12 @@ def inscrire(email: str, langue: str = "fr", source: str = "site", ip: str = "")
     lien = f"{_base()}{'/en' if langue == 'en' else ''}/newsletter/confirmer/{jeton}"
     if langue == "en":
         sujet, texte = "Confirm your Cauri Charts newsletter", (
-            "Hello,\n\nPlease confirm your subscription to the Cauri Charts newsletter: every Tuesday, the official No. 1 "
+            "Hello,\n\nPlease confirm your subscription to the Cauri Charts newsletter: every Friday, the official No. 1 "
             f"in each West African country and the West Africa Top 5.\n\nConfirm: {lien}\n\n"
             "If you did not ask for it, ignore this email: nothing will be sent.")
     else:
         sujet, texte = "Confirmez votre inscription à la newsletter Cauri Charts", (
-            "Bonjour,\n\nConfirmez votre inscription à la newsletter Cauri Charts : chaque mardi, les N°1 officiels de "
+            "Bonjour,\n\nConfirmez votre inscription à la newsletter Cauri Charts : chaque vendredi, les N°1 officiels de "
             f"chaque pays d'Afrique de l'Ouest et le Top 5 de la région.\n\nConfirmer : {lien}\n\n"
             "Si vous n'avez rien demandé, ignorez ce message : rien ne vous sera envoyé.")
     mail.send(email, sujet, texte)

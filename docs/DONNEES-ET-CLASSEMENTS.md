@@ -72,7 +72,7 @@ Toutes ne jouent pas le même rôle :
 
 ## 5. Le score de la semaine (formule v3)
 
-La semaine va **du lundi au dimanche**. Pour chaque titre :
+La semaine va **du vendredi au jeudi** depuis le 13/11/2026 (du lundi au dimanche avant ; semaine 46 de transition, du 9 au 12 novembre). Pour chaque titre :
 
 | Composante | Calcul |
 |---|---|
@@ -122,7 +122,7 @@ La semaine va **du lundi au dimanche**. Pour chaque titre :
 
 ## 7. Publication
 
-- **Quand :** automatique **chaque mardi à 8 h UTC**, sans validation manuelle (décision du 02/11/2026). Les semaines en retard sont rattrapées automatiquement.
+- **Quand :** automatique **chaque vendredi à 19 h UTC** (le mardi jusqu'à la semaine 45), sans validation manuelle (décision du 02/11/2026). Les semaines en retard sont rattrapées automatiquement.
 - **Diffusion :** site, chaîne Telegram, post officiel du classement sur Instagram, Facebook et TikTok.
 - **Reproductibilité :** chaque classement publié est **figé**, avec la formule exacte utilisée. Mêmes données, même calcul, même résultat. Un classement publié n'est jamais recalculé en silence : une correction porte une note datée.
 

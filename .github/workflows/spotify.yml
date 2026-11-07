@@ -1,7 +1,7 @@
 name: Relevé Spotify (Apify)
 on:
   schedule:
-    - cron: "30 5 * * 1"   # lundi matin, avant le calcul de la semaine
+    - cron: "30 5 * * 4"   # jeudi matin, avant le calcul de la semaine (vendredi depuis le 13/11/2026)
   workflow_dispatch:
 jobs:
   spotify:

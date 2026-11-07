@@ -17,12 +17,12 @@ LIEN = "💬 Ton avis en commentaire · Drop your take in the comments"
 
 # 20 messages d'appel à l'abonnement : un différent à chaque post, déterministe (même post = même message)
 _CTA = [
-    "🔔 Abonne-toi pour les N°1 chaque mardi · Follow for the No. 1s every Tuesday",
+    "🔔 Abonne-toi pour les N°1 chaque vendredi · Follow for the No. 1s every Friday",
     "👉 Abonne-toi pour ne rien rater · Follow for more",
     "👉 Du contenu musical frais chaque jour — abonne-toi · Fresh music daily — follow us",
     "👉 Si tu aimes la musique, tu es chez toi — abonne-toi · Love music? You're home — follow",
     "👉 Découvre des artistes que tu ne connaissais pas · Discover artists you didn't know — follow",
-    "👉 Le classement officiel, chaque mardi — abonne-toi · Official charts every Tuesday — follow",
+    "👉 Le classement officiel, chaque vendredi — abonne-toi · Official charts every Friday — follow",
     "👉 600+ artistes suivis dans 16 pays — abonne-toi · 600+ artists across 16 countries — follow",
     "👉 Tu veux t'éduquer sur la musique de ta région ? Abonne-toi · Learn about your region's music — follow",
     "👉 Pas convaincu ? Reviens dans une semaine · Not convinced? Come back in a week",

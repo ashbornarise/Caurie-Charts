@@ -56,7 +56,9 @@ def for_country(country: dict) -> dict:
         facts.append({"type": "most_tracks", "entry": ranked[0]["entry"], "value": ranked[0]["value"]})
 
     end = datetime.strptime(run["period_end"][:10], "%Y-%m-%d").date()
-    return {"run": run, "facts": facts, "next": (end + timedelta(days=9)).isoformat()}
+    from core.services.charts import Period
+    suivante = Period.week_of((end + timedelta(days=1)).isoformat())   # la semaine d'après, publiée le vendredi qui suit
+    return {"run": run, "facts": facts, "next": suivante.publication_day()}
 
 
 def did_you_know(count: int = 6) -> str:

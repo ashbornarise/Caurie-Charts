@@ -25,9 +25,17 @@ def _d(s: str) -> date:
 
 # ---------------------------------------------------------------- périodes
 
+# Semaine du vendredi au jeudi (décision du fondateur du 07/11/2026) : le classement paraît le vendredi soir, à la veille
+# de l'émission du samedi (Observatoire de la musique en Côte d'Ivoire). Avant : du lundi au dimanche, publié le mardi.
+# Bascule : la semaine 45 (2 au 8 novembre) reste du lundi au dimanche ; la semaine 46 est une semaine de transition de
+# 4 jours (lundi 9 au jeudi 12 novembre, publiée le vendredi 13) ; à partir de la semaine 47, du vendredi au jeudi.
+TRANSITION = ("2026-11-09", "2026-11-12")
+
+
 @dataclass(frozen=True)
 class Period:
-    """Semaine : lundi au dimanche. Une semaine appartient au mois (et à l'année) de son dimanche."""
+    """Semaine : du vendredi au jeudi depuis le 13/11/2026 (du lundi au dimanche avant). La clé est la semaine ISO du
+    dernier jour (jeudi, ou dimanche avant la bascule). Une semaine appartient au mois (et à l'année) de son dernier jour."""
     type: str
     key: str
     start: str
@@ -36,14 +44,25 @@ class Period:
     @staticmethod
     def week_of(day: str) -> "Period":
         d = _d(day)
-        monday = d - timedelta(days=d.isoweekday() - 1)
-        sunday = monday + timedelta(days=6)
-        y, w, _ = monday.isocalendar()
-        return Period("week", f"{y}-W{w:02d}", monday.isoformat(), sunday.isoformat())
+        if d < _d(TRANSITION[0]):
+            start = d - timedelta(days=d.isoweekday() - 1)                 # lundi
+            end = start + timedelta(days=6)                                 # dimanche
+        elif d <= _d(TRANSITION[1]):
+            start, end = _d(TRANSITION[0]), _d(TRANSITION[1])               # semaine de transition (4 jours)
+        else:
+            start = d - timedelta(days=(d.isoweekday() - 5) % 7)           # vendredi
+            end = start + timedelta(days=6)                                 # jeudi
+        y, w, _ = end.isocalendar()
+        return Period("week", f"{y}-W{w:02d}", start.isoformat(), end.isoformat())
 
     @staticmethod
     def last_completed_week(today: str) -> "Period":
-        return Period.week_of((_d(today) - timedelta(days=7)).isoformat())
+        """La dernière semaine terminée : celle qui précède la semaine en cours."""
+        return Period.week_of((_d(Period.week_of(today).start) - timedelta(days=1)).isoformat())
+
+    def publication_day(self) -> str:
+        """Jour de publication : le mardi qui suit (semaines du lundi au dimanche), le vendredi qui suit (vendredi-jeudi)."""
+        return (_d(self.end) + timedelta(days=2 if _d(self.end).isoweekday() == 7 else 1)).isoformat()
 
     @staticmethod
     def from_key(ptype: str, key: str) -> "Period":
@@ -60,29 +79,33 @@ class Period:
         m = re.fullmatch(r"(\d{4})-W(\d{2})", key)
         if not m:
             raise ValueError(f"Semaine invalide : {key}")
-        return Period.week_of(date.fromisocalendar(int(m[1]), int(m[2]), 1).isoformat())
+        jeudi = date.fromisocalendar(int(m[1]), int(m[2]), 4)
+        if jeudi < _d(TRANSITION[1]):
+            return Period.week_of(date.fromisocalendar(int(m[1]), int(m[2]), 1).isoformat())
+        return Period.week_of(jeudi.isoformat())
 
     @staticmethod
     def month(key: str) -> "Period":
-        """Mois = semaines dont le dimanche tombe dans le mois."""
+        """Mois = semaines dont le dernier jour tombe dans le mois."""
         if not re.fullmatch(r"\d{4}-\d{2}", key):
             raise ValueError(f"Mois invalide : {key}")
         y, m = int(key[:4]), int(key[5:7])
         first = date(y, m, 1)
         last = date(y, m, calendar.monthrange(y, m)[1])
-        first_sunday = first + timedelta(days=(7 - first.isoweekday()) % 7)
-        last_sunday = last - timedelta(days=last.isoweekday() % 7)
-        return Period("month", key, (first_sunday - timedelta(days=6)).isoformat(), last_sunday.isoformat())
+        derniere = Period.week_of(last.isoformat())
+        if _d(derniere.end) > last:
+            derniere = Period.week_of((_d(derniere.start) - timedelta(days=1)).isoformat())
+        return Period("month", key, Period.week_of(first.isoformat()).start, derniere.end)
 
     @staticmethod
     def year(key: str) -> "Period":
         return Period("year", str(key), Period.month(f"{key}-01").start, Period.month(f"{key}-12").end)
 
     def week_starts(self) -> list[str]:
-        out, d, end = [], _d(self.start), _d(self.end)
-        while d <= end:
-            out.append(d.isoformat())
-            d += timedelta(days=7)
+        out, w, end = [], Period.week_of(self.start), _d(self.end)
+        while _d(w.end) <= end:
+            out.append(w.start)
+            w = Period.week_of((_d(w.end) + timedelta(days=1)).isoformat())
         return out
 
     def official_week_starts(self) -> list[str]:
@@ -92,7 +115,7 @@ class Period:
 
     def previous(self) -> "Period":
         if self.type == "week":
-            return Period.week_of((_d(self.start) - timedelta(days=7)).isoformat())
+            return Period.week_of((_d(self.start) - timedelta(days=1)).isoformat())
         if self.type == "month":
             y, m = int(self.key[:4]), int(self.key[5:7])
             y, m = (y - 1, 12) if m == 1 else (y, m - 1)

@@ -42,7 +42,7 @@ def confirmer(request, jeton: str):
     ok = newsletter.confirmer(jeton)
     if not ok:
         return _page(request, tr("Lien expiré"), tr("Ce lien n’est plus valable. Inscrivez-vous à nouveau depuis le bas de n’importe quelle page."))
-    return _page(request, tr("Inscription confirmée"), tr("Merci ! Vous recevrez chaque mardi les N°1 officiels de l’Afrique de l’Ouest."))
+    return _page(request, tr("Inscription confirmée"), tr("Merci ! Vous recevrez chaque vendredi les N°1 officiels de l’Afrique de l’Ouest."))
 
 
 def desinscrire(request, jeton: str):

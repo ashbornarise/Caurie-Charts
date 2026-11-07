@@ -1,86 +1,257 @@
-{%- set w = formula.weights -%}
+{#- Méthodologie (refonte du 07/11/2026, sur le modèle d'À propos) : un document complet avec sommaire. Les valeurs de la
+    formule sont lues dans la version en vigueur (formula_versions) : la page dit toujours ce qui tourne réellement. -#}
+{%- set af = formula.anti_fraud -%}
 {%- set group = config('app.group_label.name') -%}
-<article class="prose">
-    <p class="eyebrow">{{ t('methodology.eyebrow') }}</p>
-    <h1>{{ t('methodology.heading', {'brand': brand()}) }}</h1>
-    <p class="lead">{{ t('methodology.intro', {'brand': brand()}) }}</p>
+<article class="apropos methode">
+    <header class="apropos__une">
+        <p class="apropos__sur">{{ t('methodology.eyebrow') }}</p>
+        <h1>{{ tr("Comment nous classons la musique ouest-africaine") }}</h1>
+        <p class="apropos__lead">{{ tr("Cauri Charts mesure la consommation musicale observable à partir d’un ensemble documenté de sources, puis explique chaque résultat. Voici exactement comment un titre obtient sa place : les sources, le calcul, les règles, les contrôles et nos limites.") }}</p>
+        <ul class="apropos__chiffres">
+            <li><b>v{{ formula.version }}</b><span>{{ tr("formule en vigueur") }}</span></li>
+            <li><b>6</b><span>{{ tr("plateformes relevées") }}</span></li>
+            <li><b>{{ tr("ven. → jeu.") }}</b><span>{{ tr("la semaine de mesure") }}</span></li>
+            <li><b>{{ tr("vendredi") }}</b><span>{{ tr("publication, le soir") }}</span></li>
+            {% if chiffres.titres %}<li><b>{{ fmt_number(chiffres.titres) }}</b><span>{{ tr("titres suivis") }}</span></li>{% endif %}
+        </ul>
+    </header>
 
-    <h2>{{ t('methodology.sources_title') }}</h2>
-    <p>{{ t('methodology.sources_text') }}</p>
+    <div class="apropos__corps">
+        <nav class="apropos__sommaire" aria-label="{{ tr("Sommaire") }}">
+            <p>{{ tr("Sommaire") }}</p>
+            <ol>
+                <li><a href="#principes">{{ tr("Nos principes") }}</a></li>
+                <li><a href="#calendrier">{{ tr("Le calendrier") }}</a></li>
+                <li><a href="#sources">{{ tr("Les sources") }}</a></li>
+                <li><a href="#traitement">{{ tr("Nettoyage et rapprochement") }}</a></li>
+                <li><a href="#score">{{ tr("Le calcul du score") }}</a></li>
+                <li><a href="#regles">{{ tr("Les règles de classement") }}</a></li>
+                <li><a href="#classements">{{ tr("Les classements") }}</a></li>
+                <li><a href="#alertes">{{ tr("Les alertes pour vérification") }}</a></li>
+                <li><a href="#fiabilite">{{ tr("L’indice de fiabilité") }}</a></li>
+                <li><a href="#limites">{{ tr("Ce que nous ne mesurons pas") }}</a></li>
+                <li><a href="#versions">{{ tr("Les versions de la formule") }}</a></li>
+                <li><a href="#independance">{{ tr("Indépendance et contestation") }}</a></li>
+            </ol>
+        </nav>
 
-    <h2>{{ t('methodology.score_title') }}</h2>
-    <p>{{ t('methodology.score_text') }}</p>
-    <table class="data-table">
-        <caption>{{ t('methodology.weights_caption', {'version': formula.version}) }}</caption>
-        <thead><tr><th scope="col">{{ t('methodology.source') }}</th><th scope="col">{{ t('methodology.weight') }}</th></tr></thead>
-        <tbody>
-            <tr><td>{{ t('methodology.w_audio') }}</td><td>{{ number_format(w.audio, 1, ',', '') }}</td></tr>
-            <tr><td>{{ t('methodology.w_youtube') }}</td><td>{{ number_format(w.youtube, 1, ',', '') }}</td></tr>
-            <tr><td>{{ t('methodology.w_declaration') }}</td><td>{{ number_format(w.declaration, 1, ',', '') }}</td></tr>
-            {% for source, cw in (formula.chart_weights or {}).items() if cw > 0 %}
-            <tr><td>{{ t('methodology.w_chart', {'platform': platform_name(source)}) }}</td><td>{{ number_format(cw, 0, ',', ' ') }}</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <p>{{ t('methodology.chart_positions', {'depth': (formula.chart_depth or 100)|int}) }}</p>
-    {% if formula.normalisation %}<p>{{ t('methodology.normalisation', {'yt': (formula.normalisation.youtube * 100)|int, 'st': (formula.normalisation.streaming * 100)|int}) }}</p>{% endif %}
-    {% if formula.buzz_verifies %}<p>{{ t('methodology.buzz_verifies') }}</p>{% endif %}
-    <p>{{ t('methodology.diversity', {'top': formula.diversity.top, 'sources': formula.diversity.min_sources}) }}</p>
-    {% if formula.artist_cap %}<p>{{ t('methodology.artist_cap', {'cap': formula.artist_cap}) }}</p>{% endif %}
-    <p>{{ t('methodology.country_cap', {'cap': config('charts.prime-wa.country_cap'), 'size': config('charts.prime-wa.size')}) }}</p>
-    <p>{{ t('methodology.ties') }}</p>
-    {% for u in upcoming %}
-        <p class="notice">{{ t('methodology.upcoming', {'version': u.version, 'date': fmt_date(u.effective_from)}) }} {{ u.note or '' }}</p>
-    {% endfor %}
+        <div class="apropos__texte">
+            <section id="principes">
+                <h2>{{ tr("Nos principes") }}</h2>
+                <ul class="apropos__liste">
+                    <li>{{ tr("Des données réelles uniquement : chaque chiffre vient d’une plateforme ou d’une déclaration vérifiée. Rien n’est estimé ni inventé.") }}</li>
+                    <li>{{ tr("Une méthode publique : tout ce qui décide d’un rang est écrit sur cette page.") }}</li>
+                    <li>{{ tr("Des classements reproductibles : avec les mêmes données, le même calcul donne le même résultat. Chaque classement publié est figé avec la formule utilisée.") }}</li>
+                    <li>{{ tr("Aucune correction silencieuse : une correction porte une note datée, visible en bas de cette page.") }}</li>
+                </ul>
+            </section>
 
-    <h2>{{ t('methodology.charts_title') }}</h2>
-    <ul>
-        {% for code, c in config('charts').items() if c.public %}
-            <li><strong>{{ c.name }}</strong> : {{ t('chart.short.' ~ code) }}</li>
-        {% endfor %}
-    </ul>
-    <p>{{ t('methodology.country_rule') }}</p>
-    <p>{{ t('methodology.calendar') }}</p>
+            <section id="calendrier">
+                <h2>{{ tr("Le calendrier") }}</h2>
+                <ol class="methode__semaine" aria-label="{{ tr("La semaine de mesure") }}">
+                    {% for j in [tr("Ven."), tr("Sam."), tr("Dim."), tr("Lun."), tr("Mar."), tr("Mer."), tr("Jeu.")] %}<li>{{ j }}</li>{% endfor %}
+                    <li class="methode__pub">{{ tr("Vendredi soir : publication") }}</li>
+                </ol>
+                <ul class="apropos__liste">
+                    <li>{{ tr("La semaine de mesure va du vendredi 0 h au jeudi 23 h 59, heure de Lomé et d’Abidjan (GMT).") }}</li>
+                    <li>{{ tr("Les plateformes sont relevées chaque nuit, et une seconde fois à la mi-journée pour les nouvelles sorties, Apple Music, Deezer et Shazam.") }}</li>
+                    <li>{{ tr("Le vendredi, le classement de la semaine est calculé, les titres signalés sont vérifiés, puis tout est publié automatiquement le soir, avec la newsletter.") }}</li>
+                    <li>{{ tr("Le lendemain, une seconde vérification repasse sur les titres restés en doute.") }}</li>
+                    <li>{{ tr("Un mois regroupe les semaines qui se terminent dans ce mois ; l’année, les semaines qui se terminent dans l’année.") }}</li>
+                </ul>
+                <p class="apropos__calendrier"><strong>{{ tr("Changement du 13 novembre 2026 :") }}</strong> {{ tr("jusqu’à la semaine 45, la semaine allait du lundi au dimanche et paraissait le mardi. La semaine 46 est une semaine de transition de quatre jours (du lundi 9 au jeudi 12 novembre), publiée le vendredi 13. Les classements de cette semaine-là reposent sur les parts de chaque titre : ils restent comparables aux autres.") }}</p>
+            </section>
 
-    <h2>{{ t('methodology.checks_title') }}</h2>
-    <p>{{ t('methodology.checks_text', {'factor': formula.anti_fraud.spike_factor|int, 'tolerance': php_round(formula.anti_fraud.declaration_tolerance * 100)|int}) }}</p>
+            <section id="sources">
+                <h2>{{ tr("Les sources") }}</h2>
+                <p>{{ tr("Six plateformes sont relevées automatiquement. Toutes ne jouent pas le même rôle : certaines comptent dans le score, d’autres servent au contrôle et à la découverte des titres.") }}</p>
+                <div class="methode__tableau">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">{{ tr("Source") }}</th><th scope="col">{{ tr("Ce que nous relevons") }}</th><th scope="col">{{ tr("Fréquence") }}</th><th scope="col">{{ tr("Rôle") }}</th></tr></thead>
+                        <tbody>
+                            {% for cle, nom, quoi, quand, role, compte in [
+                                ('youtube', 'YouTube', tr("Vues et « j’aime » de chaque clip officiel des artistes suivis"), tr("Chaque jour"), tr("Dans le score"), true),
+                                ('apple-music', 'Apple Music', tr("Top 100 « Les plus écoutés » de chaque pays"), tr("Chaque jour"), tr("Dans le score"), true),
+                                ('boomplay', 'Boomplay', tr("Top 100 officiel de 11 pays"), tr("Chaque semaine"), tr("Dans le score"), true),
+                                ('deezer', 'Deezer', tr("Top 100 de 3 pays, popularité des titres et nouvelles sorties"), tr("Chaque jour"), tr("Contrôle et découverte"), false),
+                                ('shazam', 'Shazam', tr("Top 200 des 7 derniers jours dans 4 pays"), tr("Chaque jour"), tr("Contrôle et découverte"), false),
+                                ('spotify', 'Spotify', tr("Auditeurs mensuels des artistes"), tr("Chaque semaine"), tr("Affiché, hors score"), false)] %}
+                            <tr>
+                                <td><span class="methode__source"><img src="{{ asset('img/plateformes/' ~ cle ~ '.png') }}" alt="" width="28" height="28" loading="lazy"> <strong>{{ nom }}</strong></span></td>
+                                <td>{{ quoi }}</td><td>{{ quand }}</td>
+                                <td><span class="methode__role{{ ' methode__role--score' if compte }}">{{ role }}</span></td>
+                            </tr>
+                            {% endfor %}
+                            <tr><td><strong>{{ tr("Déclarations") }}</strong></td><td>{{ tr("Écoutes déclarées par les artistes et labels, avec preuve") }}</td><td>{{ tr("Sur demande") }}</td><td><span class="methode__role methode__role--score">{{ tr("Dans le score, après contrôle") }}</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>{{ tr("Spotify ne publie pas d’écoutes par pays pour l’Afrique de l’Ouest (seulement un Top 50 pour le Nigeria). Tant qu’une source fiable et régulière n’existe pas pour tous les pays, Spotify reste affiché sans compter. Audiomack est prévu dans la formule mais n’est pas encore relevé.") }}</p>
+            </section>
 
-    <h2 id="fiabilite">{{ t('methodology.reliability_title') }}</h2>
-    <p>{{ t('methodology.reliability_text') }}</p>
+            <section id="traitement">
+                <h2>{{ tr("Nettoyage et rapprochement") }}</h2>
+                <ul class="apropos__liste">
+                    <li>{{ tr("Les mentions parasites sont retirées des titres (« Official Video », « Clip officiel », « Lyrics »…) pour rapprocher les lignes de chaque plateforme du bon titre.") }}</li>
+                    <li>{{ tr("Un titre n’est relié qu’au clip officiel de l’artiste, sur sa chaîne. Les chaînes automatiques « Topic », les reprises et les vidéos de fans sont écartées.") }}</li>
+                    <li>{{ tr("Les doublons sont fusionnés chaque semaine. Les remix, les versions live et acoustiques restent des titres à part.") }}</li>
+                    <li>{{ tr("Toutes les sorties des artistes suivis (albums, EP, singles) entrent en base dès leur parution, et leur catalogue complet est relu chaque mois.") }}</li>
+                    <li>{{ tr("Le pays de chaque artiste est vérifié par une recherche Google contrôlée ; seule une certitude « haute » est retenue. Le classement d’un pays ne contient que des artistes de ce pays, et un artiste en attente de vérification n’entre dans aucun classement.") }}</li>
+                </ul>
+            </section>
 
-    <h2 id="independance">{{ t('methodology.position_title') }}</h2>
-    <p>{{ t('methodology.position_text', {'brand': brand(), 'label': group}) }}</p>
+            <section id="score">
+                <h2>{{ tr("Le calcul du score") }}</h2>
+                {% if formula.normalisation %}
+                {%- set yt = (formula.normalisation.youtube * 100)|int -%}
+                {%- set st = (formula.normalisation.streaming * 100)|int -%}
+                <p>{{ tr("Chaque source compte pour la part que le titre y occupe dans la semaine et dans le pays, et non pour ses chiffres bruts. Ainsi, aucune source ne peut dominer mécaniquement les autres.") }}</p>
+                <div class="methode__formule">
+                    <p class="methode__egal">{{ tr("Score") }} = {{ yt }} % × {{ tr("part des vues YouTube") }} + {{ st }} % × {{ tr("part de l’écoute") }}</p>
+                    <div class="methode__barre" role="img" aria-label="YouTube {{ yt }} %, Apple Music {{ st // 2 }} %, Boomplay {{ st // 2 }} %">
+                        <span class="methode__b1">YouTube {{ yt }} %</span><span class="methode__b2">Apple Music {{ st // 2 }} %</span><span class="methode__b3">Boomplay {{ st // 2 }} %</span>
+                    </div>
+                    <p class="methode__note">{{ tr("Part YouTube : vues gagnées par le clip officiel pendant la semaine, divisées par le total des vues gagnées par tous les titres du pays. Part d’écoute : la place moyenne du titre dans le Top 100 de la plateforme, comptée en points (101 moins la place), divisée par le total du pays.") }}</p>
+                </div>
+                <ul class="apropos__liste">
+                    <li>{{ tr("Quand Apple Music et Boomplay sont tous deux relevés dans le pays, chacun compte pour la moitié de l’écoute ; si une seule plateforme d’écoute est relevée, elle porte toute l’écoute.") }}</li>
+                    <li>{{ tr("Une source absente d’un pays n’est pas comptée comme un zéro : son poids revient aux autres sources. Un titre n’a zéro pour une source que si elle a bien été relevée et qu’il n’y figure pas.") }}</li>
+                    <li>{{ tr("Le score s’exprime sur 10 000 : 250 points, c’est 2,5 % de l’audience mesurée du pays cette semaine-là.") }}</li>
+                    <li>{{ tr("Les déclarations validées s’ajoutent à l’écoute, seulement après contrôle.") }}</li>
+                </ul>
+                {% else %}
+                <p>{{ t('methodology.score_text') }}</p>
+                <p>{{ t('methodology.chart_positions', {'depth': (formula.chart_depth or 100)|int}) }}</p>
+                {% endif %}
+                {% for u in upcoming %}
+                    <p class="notice">{{ t('methodology.upcoming', {'version': u.version, 'date': fmt_date(u.effective_from)}) }} {{ u.note or '' }}</p>
+                {% endfor %}
+            </section>
 
-    <h2>{{ t('methodology.contest_title') }}</h2>
-    <p>{{ t('methodology.contest_text') }} <a href="{{ path('contact', {'type': 'contestation'}) }}">{{ t('chart.contest') }}</a></p>
+            <section id="regles">
+                <h2>{{ tr("Les règles de classement") }}</h2>
+                <div class="apropos__cartes">
+                    {% if formula.artist_cap %}<div class="apropos__carte"><h3>{{ tr("Trois titres au plus par artiste") }}</h3><p>{{ tr("Dans chaque Top de titres, un artiste a au plus :n titres. Les suivants descendent juste après le Top.", n=formula.artist_cap) }}</p></div>{% endif %}
+                    <div class="apropos__carte"><h3>{{ tr("Deux sources pour le Top 5") }}</h3><p>{{ tr("Pour entrer dans le Top :top, un titre doit apparaître sur au moins :n sources. Sinon, il est placé juste après.", top=formula.diversity.top, n=formula.diversity.min_sources) }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Les titres anciens") }}</h3><p>{{ tr("Un titre sorti il y a plus d’un an quitte les Tops, sauf vrai regain : un score au moins 1,5 fois supérieur à celui de la semaine précédente.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Le départage") }}</h3><p>{{ tr("À égalité : le score, puis le nombre de sources, puis la progression, puis le score de la semaine précédente.") }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Toute la région") }}</h3><p>{{ tr("Dans le Top :size de l’Afrique de l’Ouest, un pays a au plus :cap titres.", size=config('charts.prime-wa.size'), cap=config('charts.prime-wa.country_cap')) }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Huit artistes au moins") }}</h3><p>{{ tr("Un pays n’a de classement officiel qu’à partir de huit artistes suivis : jamais de remplissage.") }}</p></div>
+                </div>
+            </section>
 
-    <h2>{{ t('methodology.exclusions_title') }}</h2>
-    {% if exclusions %}
-        <table class="data-table">
-            <thead><tr><th scope="col">{{ t('track.week') }}</th><th scope="col">{{ t('methodology.track') }}</th><th scope="col">{{ t('methodology.reason') }}</th></tr></thead>
-            <tbody>
-            {% for x in exclusions %}
-                <tr>
-                    <td>{{ fmt_date(x.week_start) }} · {{ x.country_code }}</td>
-                    <td><a href="{{ path('titre/' ~ x.slug) }}">{{ x.title }}</a> · {{ x.artist_name }}</td>
-                    <td>{{ x.reason }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p class="empty">{{ t('methodology.no_exclusions') }}</p>
-    {% endif %}
+            <section id="classements">
+                <h2>{{ tr("Les classements") }}</h2>
+                <div class="methode__tableau">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">{{ tr("Classement") }}</th><th scope="col">{{ tr("Ce qu’il mesure") }}</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>Prime</strong></td><td>{{ tr("Les titres qui ont le plus de succès dans la semaine.") }}</td></tr>
+                            <tr><td><strong>Buzz</strong></td><td>{{ tr("Les plus fortes progressions : au moins :g % de hausse et :s points, pour des titres de moins d’un an, vérifiés, hors Prime.", g=formula.buzz.min_growth_pct, s=fmt_number(formula.buzz.min_score)) }}</td></tr>
+                            <tr><td><strong>Fresh</strong></td><td>{{ tr("Les sorties de moins de :j jours, avec au moins :s points dans la semaine.", j=formula.fresh.max_age_days, s=fmt_number(formula.fresh.min_score or 0)) }}</td></tr>
+                            <tr><td><strong>Icon</strong></td><td>{{ tr("Les artistes : la somme des scores de leurs titres.") }}</td></tr>
+                            <tr><td><strong>Legend</strong></td><td>{{ tr("Le cumul depuis le premier classement publié.") }}</td></tr>
+                            <tr><td><strong>{{ tr("Mois et année") }}</strong></td><td>{{ tr("Le cumul des semaines de la période.") }}</td></tr>
+                            <tr><td><strong>{{ tr("En direct") }}</strong></td><td>{{ tr("Le classement du jour, toutes sources relevées, mis à jour chaque nuit. Il est indicatif : seul le classement du vendredi est officiel.") }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>{{ t('methodology.country_rule') }}</p>
+            </section>
 
-    {% if corrections %}
-    <h2>{{ t('methodology.corrections_title') }}</h2>
-    <ul>
-        {% for c in corrections %}
-            <li>{{ c.chart_name }} {{ c.country_code }} {{ c.period_key }}, {{ fmt_date(c.corrected_at[:10]) }} : {{ c.correction_note }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
+            <section id="alertes">
+                <h2>{{ tr("Les alertes pour vérification") }}</h2>
+                <p>{{ tr("Un seuil dépassé ne prouve pas une fraude : un public particulier ou un format inhabituel peuvent l’expliquer. Il met seulement le titre en attente, le temps d’une vérification par recherche Google contrôlée, puis par notre équipe si le doute persiste. Un titre exclu ne compte pas ; un titre vérifié est réintégré.") }}</p>
+                <div class="methode__tableau">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">{{ tr("Alerte") }}</th><th scope="col">{{ tr("Seuil") }}</th></tr></thead>
+                        <tbody>
+                            <tr><td>{{ tr("Pic soudain") }}</td><td>{{ tr("Plus de :n fois la moyenne des :w semaines précédentes", n=af.spike_factor|int, w=af.spike_history_weeks|int) }}</td></tr>
+                            <tr><td>{{ tr("Rapport « j’aime » / vues YouTube inhabituel") }}</td><td>{{ tr("En dehors de :a à :b « j’aime » pour 1 000 vues", a=af.youtube_min_likes_per_1000|int, b=af.youtube_max_likes_per_1000|int) }}</td></tr>
+                            <tr><td>{{ tr("Vues trop faibles pour être mesurées") }}</td><td>{{ tr("Moins de :n vues", n=fmt_number(af.youtube_min_views)) }}</td></tr>
+                            <tr><td>{{ tr("Déclaration non confirmée") }}</td><td>{{ tr("Écart de plus de :n % avec les données publiques", n=php_round(af.declaration_tolerance * 100)|int) }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <h3 class="methode__h3">{{ t('methodology.exclusions_title') }}</h3>
+                {% if exclusions %}
+                <div class="methode__tableau">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">{{ t('track.week') }}</th><th scope="col">{{ t('methodology.track') }}</th><th scope="col">{{ t('methodology.reason') }}</th></tr></thead>
+                        <tbody>
+                        {% for x in exclusions %}
+                            <tr><td>{{ fmt_date(x.week_start) }} · {{ x.country_code }}</td><td><a href="{{ path('titre/' ~ x.slug) }}">{{ x.title }}</a> · {{ x.artist_name }}</td><td>{{ x.reason }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="empty">{{ t('methodology.no_exclusions') }}</p>
+                {% endif %}
+            </section>
 
-    <p class="fineprint">{{ t('methodology.attribution') }}</p>
-    <p class="fineprint">{{ t('methodology.version', {'version': config('app.methodology_version')}) }}</p>
+            <section id="fiabilite">
+                <h2>{{ tr("L’indice de fiabilité") }}</h2>
+                <p>{{ tr("Chaque classement affiche une note sur 100. Elle dit au public sur combien de données repose le classement de ce pays.") }}</p>
+                <div class="methode__tableau">
+                    <table class="data-table">
+                        <tbody>
+                            <tr><td>{{ tr("Nombre de plateformes relevées pour le pays (maximum à partir de 4)") }}</td><td class="num">40</td></tr>
+                            <tr><td>{{ tr("Nombre de jours relevés dans la semaine") }}</td><td class="num">20</td></tr>
+                            <tr><td>{{ tr("Part des titres du Top vus sur au moins deux sources") }}</td><td class="num">30</td></tr>
+                            <tr><td>{{ tr("Fraîcheur du dernier relevé") }}</td><td class="num">10</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>{{ tr("70 et plus : fiabilité élevée ; de 45 à 69 : moyenne ; en dessous : faible. Un pays qui ne repose que sur des sources calculées reste « indicatif ».") }}</p>
+            </section>
+
+            <section id="limites">
+                <h2>{{ tr("Ce que nous ne mesurons pas") }}</h2>
+                <ul class="apropos__liste">
+                    <li>{{ tr("La radio et la télévision, qui comptent beaucoup en Afrique de l’Ouest.") }}</li>
+                    <li>{{ tr("Les ventes physiques et les concerts.") }}</li>
+                    <li>{{ tr("TikTok et Audiomack, pas encore relevés.") }}</li>
+                    <li>{{ tr("Les écoutes Spotify par pays, que Spotify ne publie pas pour la région.") }}</li>
+                    <li>{{ tr("Les vues des reprises, des lyrics non officiels et des extraits sur les réseaux sociaux.") }}</li>
+                    <li>{{ tr("Toutes les plateformes ne couvrent pas tous les pays : Apple Music n’a pas de classement au Togo, Shazam couvre 4 pays et Deezer 3. L’indice de fiabilité en tient compte.") }}</li>
+                </ul>
+            </section>
+
+            <section id="versions">
+                <h2>{{ tr("Les versions de la formule") }}</h2>
+                <p>{{ tr("Chaque changement de formule porte un numéro et une date d’effet, annoncés à l’avance. Les classements déjà publiés gardent la formule avec laquelle ils ont été calculés.") }}</p>
+                <div class="methode__tableau">
+                    <table class="data-table">
+                        <thead><tr><th scope="col">{{ tr("Version") }}</th><th scope="col">{{ tr("En vigueur le") }}</th><th scope="col">{{ tr("Ce qui change") }}</th></tr></thead>
+                        <tbody>
+                        {% for v in versions %}
+                            <tr><td><strong>v{{ v.version }}</strong></td><td>{{ fmt_date(v.effective_from[:10]) }}</td><td>{{ v.note or '' }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if corrections %}
+                <h3 class="methode__h3">{{ t('methodology.corrections_title') }}</h3>
+                <ul class="apropos__liste">
+                    {% for c in corrections %}
+                        <li>{{ c.chart_name }} {{ c.country_code }} {{ c.period_key }}, {{ fmt_date(c.corrected_at[:10]) }} : {{ c.correction_note }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </section>
+
+            <section id="independance">
+                <h2>{{ tr("Indépendance et contestation") }}</h2>
+                <p>{{ t('methodology.position_text', {'brand': brand(), 'label': group}) }}</p>
+                <p>{{ tr("Aucune place ne s’achète. Aucun artiste, label, média, partenaire ou annonceur ne peut modifier un classement.") }}</p>
+                <div class="apropos__encart">
+                    <h3>{{ t('methodology.contest_title') }}</h3>
+                    <p>{{ t('methodology.contest_text') }} <a href="{{ path('contact', {'type': 'contestation'}) }}">{{ t('chart.contest') }}</a></p>
+                </div>
+                <p class="fineprint">{{ t('methodology.attribution') }}</p>
+                <p class="fineprint">{{ t('methodology.version', {'version': config('app.methodology_version')}) }}</p>
+            </section>
+        </div>
+    </div>
 </article>

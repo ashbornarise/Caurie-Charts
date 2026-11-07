@@ -17,7 +17,7 @@ from core.i18n import locale, set_locale, t, tr
 from core.services import insights, live_chart
 
 # Pages de contenu placées dans la grille à deux colonnes (avec l'encadré latéral)
-WITH_ASIDE = {"methodology", "contact", "claim", "submit", "legal", "news", "news-item", "artist", "track", "partners-page"}
+WITH_ASIDE = {"contact", "claim", "submit", "legal", "news", "news-item", "artist", "track", "partners-page"}
 
 
 # ---------------------------------------------------------------- outils communs
@@ -339,6 +339,9 @@ def methodology(request):
         "formula": formula_effective_for(today),
         "upcoming": db.all("SELECT version, effective_from, note FROM formula_versions WHERE effective_from > ? ORDER BY effective_from", [today]),
         "exclusions": repos.exclusions(),
+        # 07/11/2026 : page refaite en document (comme À propos) : historique des versions et chiffres réels
+        "versions": db.all("SELECT version, effective_from, note FROM formula_versions WHERE effective_from <= ? ORDER BY version DESC", [today]),
+        "chiffres": db.one("SELECT (SELECT COUNT(*) FROM tracks) AS titres") or {},
         "corrections": db.all(
             """SELECT r.period_key, r.corrected_at, r.correction_note, ct.name AS chart_name, c.code AS country_code
                FROM chart_runs r JOIN chart_types ct ON ct.id = r.chart_type_id JOIN countries c ON c.id = r.country_id

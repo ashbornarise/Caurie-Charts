@@ -1,4 +1,4 @@
-"""Lettre du mardi aux abonnés confirmés (après la publication du classement). manage.py newsletter_envoi"""
+"""Lettre du vendredi aux abonnés confirmés (après la publication du classement). manage.py newsletter_envoi"""
 from django.core.management.base import BaseCommand
 
 from core.management.commands._cli import out, run

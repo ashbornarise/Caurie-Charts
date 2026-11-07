@@ -306,8 +306,10 @@ def _php_numbers(v):
 
 
 def _next_monday(min_date: date) -> date:
+    """Premier début de semaine (vendredi depuis le 13/11/2026) à partir de min_date."""
+    from core.services.charts import Period
     d = min_date
-    while d.isoweekday() != 1:
+    while Period.week_of(d.isoformat()).start != d.isoformat():
         d += timedelta(days=1)
     return d
 
@@ -323,13 +325,13 @@ def formula(request):
 
 
 def _save_formula(request):
-    """Nouvelle version : en vigueur au moins deux semaines plus tard (METHODOLOGIE.md, section 8), toujours un lundi."""
+    """Nouvelle version : en vigueur au moins deux semaines plus tard (METHODOLOGIE.md, section 8), toujours un début de semaine (vendredi)."""
     f = formula_effective_for(clock.today().isoformat())
     effective = req_str(request, "effective_from")
     note = req_str(request, "note")
     errors = []
     d = _valid_date(effective)
-    if not d or d < clock.today() + timedelta(days=14) or d.isoweekday() != 1:
+    if not d or d < clock.today() + timedelta(days=14) or _next_monday(d) != d:
         errors.append(t("admin.formula_date_rule"))
     if note == "":
         errors.append(t("admin.formula_note_required"))

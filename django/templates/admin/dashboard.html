@@ -28,7 +28,7 @@
     <a class="adm-tache{{ ' adm-tache--info' if drafts }}" href="{{ path('admin/classements') }}">
         <span class="adm-tache__chiffre">{{ drafts|length }}</span>
         <span class="adm-tache__titre">Classements en brouillon</span>
-        <span class="adm-tache__quoi">{% if drafts %}Calculés mais pas encore publiés : relisez puis publiez (le mardi).{% else %}Aucun brouillon : tout est publié.{% endif %}</span>
+        <span class="adm-tache__quoi">{% if drafts %}Calculés mais pas encore publiés : relisez puis publiez (le vendredi).{% else %}Aucun brouillon : tout est publié.{% endif %}</span>
         {% if drafts %}<span class="adm-tache__action">Ouvrir →</span>{% endif %}
     </a>
     <a class="adm-tache{{ ' adm-tache--info' if messages }}" href="{{ path('admin/messages') }}">
@@ -74,7 +74,7 @@
         <li><span class="adm-jour">Chaque nuit</span><span>Relevés des plateformes (Apple Music, Deezer, Shazam, YouTube), nouveaux clips des artistes, pays vérifiés par Google. <em>Rien à faire.</em></span></li>
         <li><span class="adm-jour">Chaque jour</span><span>Cauri Monde à 8 h et 20 h, vidéos du Studio, publications sur les réseaux. <em>Vous validez les accroches dans le <a href="{{ path('studio') }}">Studio</a>.</em></span></li>
         <li><span class="adm-jour">Lundi</span><span>Calcul du classement de la semaine passée et relevé Spotify des artistes des tops. <em>Rien à faire.</em></span></li>
-        <li><span class="adm-jour adm-jour--fort">Mardi</span><span>Revue des titres signalés par Google et l’IA, puis publication du classement officiel. <em>Vous tranchez les cas douteux dans <a href="{{ path('admin/classements') }}">Classements</a>.</em></span></li>
+        <li><span class="adm-jour adm-jour--fort">Vendredi</span><span>Revue des titres signalés par Google et l’IA, puis publication du classement officiel. <em>Vous tranchez les cas douteux dans <a href="{{ path('admin/classements') }}">Classements</a>.</em></span></li>
         <li><span class="adm-jour">Le 1er du mois</span><span>Distinctions du mois et préparation du show. <em>Vous relisez dans <a href="{{ path('admin/distinctions') }}">Distinctions</a>.</em></span></li>
     </ol>
 </section>

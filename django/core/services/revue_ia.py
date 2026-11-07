@@ -1,4 +1,4 @@
-"""Revue des titres signalés par Gemini avec la recherche Google, avant la publication du mardi (27/10/2026).
+"""Revue des titres signalés par Gemini avec la recherche Google, avant la publication (mardi, puis vendredi soir depuis le 13/11/2026) (27/10/2026).
 
 Demande du fondateur : pour chaque pays, Google cherche d'abord les titres qui buzzent cette semaine-là, puis Gemini
 juge chaque titre signalé (pic soudain, rapport YouTube anormal) au vu de ce buzz et de ses propres recherches, le tout

@@ -1,7 +1,10 @@
 name: Publication du classement officiel
 on:
   schedule:
-    - cron: "0 8 * * 2"   # chaque mardi 8 h UTC : publication automatique, sans attendre le fondateur (sa décision du 02/11/2026)
+    # 07/11/2026 : semaine du vendredi au jeudi, publiée le vendredi soir (veille de l'émission du samedi). Le mardi reste
+    # planifié pour la semaine 45 (dernière du lundi au dimanche) ; la commande ne publie que le jour prévu pour la semaine.
+    - cron: "0 19 * * 5"   # chaque vendredi 19 h UTC (19 h à Abidjan et Lomé, 20 h à Paris)
+    - cron: "0 8 * * 2"
   workflow_dispatch:
     inputs:
       week:
@@ -58,15 +61,19 @@ jobs:
       - name: Publier
         working-directory: django
         run: |
-          # planifié, ou lancé à la main sans semaine : même publication automatique du mardi (03/11/2026 : la planification
+          # planifié, ou lancé à la main sans semaine : même publication automatique (03/11/2026 : la planification
           # toute neuve n'avait pas démarré)
           if [ "${{ github.event_name }}" = "schedule" ] || [ -z "${{ inputs.week }}" ]; then
-            # Rattrapage des 2 semaines d'avant restées en brouillon (sans envoi), puis la semaine passée (avec ses envois)
-            for k in 3 2; do
-              python manage.py publish_chart --week=$(date -u -d "$k weeks ago" +%G-W%V) --auto --sans-envois || true
+            # Rattrapage des 2 semaines d'avant restées en brouillon (sans envoi), puis la semaine passée (avec ses envois),
+            # seulement le jour de publication prévu (mardi jusqu'au 10/11/2026, vendredi ensuite)
+            if [ "${{ github.event_name }}" = "schedule" ] && ! python manage.py publish_chart --verifier-jour; then
+              exit 0   # pas le jour de publication de la dernière semaine
+            fi
+            for k in 2 1; do
+              python manage.py publish_chart --recul=$k --auto --sans-envois || true
             done
-            python manage.py publish_chart --week=$(date -u -d "7 days ago" +%G-W%V) --auto
-            python manage.py newsletter_envoi || true   # la lettre du mardi aux abonnés confirmés (06/11/2026)
+            python manage.py publish_chart --recul=0 --auto
+            python manage.py newsletter_envoi || true   # la lettre aux abonnés confirmés, après la publication (06/11/2026)
             exit 0
           fi
           ARGS="--week=${{ inputs.week }}"
