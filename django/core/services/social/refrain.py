@@ -62,7 +62,7 @@ def telecharge(video_id: str, dossier: str) -> str | None:
 
 def _audio(path: str, sr: int = 11025) -> np.ndarray:
     r = subprocess.run([ffmpeg(), "-v", "error", "-i", path, "-ac", "1", "-ar", str(sr), "-f", "s16le", "-"],
-                       capture_output=True, timeout=300, check=True)
+                       capture_output=True, timeout=900, check=True)
     return np.frombuffer(r.stdout, dtype=np.int16).astype(np.float32) / 32768.0
 
 

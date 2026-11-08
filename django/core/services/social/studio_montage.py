@@ -216,7 +216,7 @@ def images_cles(video: str, dossier: str, debut: float, fin: float, n: int = 4) 
         t = debut + (fin - debut) * (k + 0.5) / n
         p = os.path.join(dossier, f"cle{k}.jpg")
         subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", f"{t:.2f}", "-i", video, "-frames:v", "1",
-                        "-vf", "scale=640:-2", "-q:v", "4", p], capture_output=True, timeout=60)
+                        "-vf", "scale=640:-2", "-q:v", "4", p], capture_output=True, timeout=180)
         if os.path.isfile(p):
             out.append(p)
     return out
