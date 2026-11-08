@@ -104,14 +104,27 @@ def telecharge(lien: str, dossier: str) -> tuple[str, dict]:
     if re.search(r"tiktok\.com", lien, re.I):
         # TikTok refuse les serveurs (« Unexpected response from webpage request ») : on se présente comme Chrome (curl_cffi)
         cmd[3:3] = ["--impersonate", "chrome"]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
-    fichiers = [f for f in glob.glob(os.path.join(dossier, "source.*")) if not f.endswith(".json")]
+    for essai in range(3):
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        fichiers = [f for f in glob.glob(os.path.join(dossier, "source.*")) if not f.endswith(".json")]
+        # 08/11/2026 : « unable to download video data: HTTP Error 404 » = raté passager des serveurs vidéo de YouTube
+        # (le même lien passait au tour suivant) -> on redemande l'adresse du fichier au bout de quelques secondes
+        if (r.returncode == 0 and fichiers) or essai == 2 or not re.search(r"HTTP Error (404|403|5\d\d)|timed out", r.stderr or "", re.I):
+            break
+        for f in glob.glob(os.path.join(dossier, "source.*")):
+            os.remove(f)
+        time.sleep(10 * (essai + 1))
     if r.returncode != 0 or not fichiers:
         msg = (r.stderr or r.stdout or "").strip().splitlines()[-1:] or ["erreur inconnue"]
         texte = msg[0]
-        if re.search(r"login|cookies|rate-limit|Sign in|private", texte, re.I):
+        if re.search(r"not a bot", texte, re.I):
+            texte = ("YouTube bloque un moment les téléchargements depuis cette connexion. Réessaie plus tard. "
+                     "Détail : " + texte)
+        elif re.search(r"login|cookies|rate-limit|Sign in|private", texte, re.I):
             texte = ("La plateforme refuse le téléchargement depuis le serveur (connexion exigée). Lance la fabrication "
                      "depuis le PC : python manage.py studio_job --id <numéro>. Détail : " + texte)
+        elif re.search(r"HTTP Error", texte):
+            texte = "La plateforme n'a pas donné le fichier vidéo (3 essais). Relance dans quelques minutes. Détail : " + texte
         raise RuntimeError(texte[:400])
     infos = {}
     for j in glob.glob(os.path.join(dossier, "source*.info.json")):

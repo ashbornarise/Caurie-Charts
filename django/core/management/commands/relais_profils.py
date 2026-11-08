@@ -12,6 +12,15 @@ class Command(BaseCommand):
     help = "Relève les posts photo des profils Instagram en attente et lance leur tri sur GitHub."
 
     def handle(self, *args, **options):
+        import requests
+        try:
+            self._releve()
+        except requests.exceptions.RequestException as exc:
+            # 08/11/2026 : coupures du réseau (SSL EOF, connexion interrompue) -> une ligne, et on réessaie au passage suivant
+            from datetime import datetime
+            self.stdout.write(f"{datetime.now():%d/%m %H:%M} réseau indisponible, nouvel essai dans 5 min ({type(exc).__name__})")
+
+    def _releve(self):
         from core import storage, views_relais
         from core.services.social import studio_photos
         # vidéos YouTube du studio (YouTube refuse les serveurs) : fabriquées ici, une par une
