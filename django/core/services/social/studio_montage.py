@@ -286,21 +286,19 @@ def analyse(images: list[str], infos: dict) -> dict:
 def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str,
            taille: tuple[int, int] | None = None, sans_logo: bool = False) -> tuple[Image.Image, tuple[int, int, int, int], Image.Image]:
     """(calque fixe, zone de la vidéo x, y, w, h, calque titre). Rien dans les 20 % du bas en 9:16 (interface TikTok/Reels).
-    Calque fixe : logo et crédit, toute la vidéo, avec une ombre douce collée aux lettres. Calque titre : le titre animé
+    Calque fixe : le logo seul, toute la vidéo, avec une ombre douce collée aux lettres. Calque titre : le titre animé
     (studio_habillage) entièrement affiché, pour l'aperçu à valider.
     08/11/2026 : plus de dégradés sombres (« la couverture noire avec les titres, on enlève ») : la vidéo reste visible.
     « origine » : la vidéo remplit tout le cadre à ses proportions, l'habillage se pose par-dessus."""
     from core.services.social import couverture2026 as C
     from core.services.social import studio_habillage as HB
     W, H = taille or FORMATS[fmt]
-    haut, y_credit, bas_bloc = _geometrie(fmt, W, H, credit)
+    # 08/11/2026 : la source n'est plus écrite à l'écran (elle se mélangeait au titre) ; elle reste dans la légende du post
+    haut, _y_credit, bas_bloc = _geometrie(fmt, W, H, "")
     haut_bloc = bas_bloc - HB.hauteur_ouverture(W, etiquette, accroche, artiste)
     fixe = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     if not sans_logo:
         C._logo(fixe, 50, haut, 76)
-    if credit:
-        ImageDraw.Draw(fixe).text((50, y_credit), f"Source : {credit}"[:70], font=C.police("Montserrat.ttf", 24, "Medium"),
-                                  fill=(255, 255, 255, 225))
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     img.alpha_composite(HB._ombre(fixe, 10, 150).crop((30, 30, 30 + W, 30 + H)))
     titre_img = HB.image_ouverture((W, H), haut_bloc, etiquette, accroche, artiste)
@@ -504,7 +502,7 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
 
     # ── titre animé : pastille, accroche mot par mot ──
     if titre:
-        haut_bloc = _geometrie(fmt, W, H, titre.get("credit") or "")[2] - HB.hauteur_ouverture(
+        haut_bloc = _geometrie(fmt, W, H, "")[2] - HB.hauteur_ouverture(
             W, titre.get("etiquette") or "", titre.get("accroche") or "", titre.get("artiste") or "")
         anim, y_anim = HB.ouverture((W, H), haut_bloc, titre.get("etiquette") or "", titre.get("accroche") or "",
                                     titre.get("artiste") or "", duree_titre(duree), dossier)
