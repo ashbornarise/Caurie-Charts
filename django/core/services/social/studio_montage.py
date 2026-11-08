@@ -286,80 +286,40 @@ def analyse(images: list[str], infos: dict) -> dict:
 def calque(fmt: str, etiquette: str, accroche: str, artiste: str, credit: str,
            taille: tuple[int, int] | None = None, sans_logo: bool = False) -> tuple[Image.Image, tuple[int, int, int, int], Image.Image]:
     """(calque fixe, zone de la vidéo x, y, w, h, calque titre). Rien dans les 20 % du bas en 9:16 (interface TikTok/Reels).
-    Calque fixe : logo et crédit, toute la vidéo. Calque titre : étiquette et accroche EN BAS (en haut, le titre
-    cachait le visage des artistes — 20/10/2026), sur un dégradé qui monte du bas, effacé en fondu après quelques secondes.
-    « origine » : la vidéo remplit tout le cadre à ses proportions, l'habillage se pose par-dessus (dégradés sombres)."""
+    Calque fixe : logo et crédit, toute la vidéo, avec une ombre douce collée aux lettres. Calque titre : le titre animé
+    (studio_habillage) entièrement affiché, pour l'aperçu à valider.
+    08/11/2026 : plus de dégradés sombres (« la couverture noire avec les titres, on enlève ») : la vidéo reste visible.
+    « origine » : la vidéo remplit tout le cadre à ses proportions, l'habillage se pose par-dessus."""
     from core.services.social import couverture2026 as C
+    from core.services.social import studio_habillage as HB
     W, H = taille or FORMATS[fmt]
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    titre_img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    dt = ImageDraw.Draw(titre_img)
-    portrait = H / W > 1.6
-    haut = 110 if (fmt == "story" or (fmt == "origine" and portrait)) else 50
-    bas_reserve = int(H * .20) if (fmt == "story" or (fmt == "origine" and portrait)) else 70
-
-    # accroche : mise en lignes d'abord, pour connaître la hauteur du bloc titre
-    fe = C.police("Montserrat.ttf", 26, "ExtraBold")
-    eti = (etiquette or "VIDÉO").upper()[:32]
-    cibles = {re.sub(r"\W", "", m.lower()) for m in (artiste or "").split()}
-    texte = C.propre(accroche or "")
-    for taille_t in (60, 54, 48, 42):
-        f = C.police("Montserrat.ttf", taille_t, "ExtraBold")
-        lignes, cour = [], ""
-        for mot in texte.split():
-            essai = (cour + " " + mot).strip()
-            if d.textlength(essai, font=f) > W - 100 and cour:
-                lignes.append(cour); cour = mot
-            else:
-                cour = essai
-        if cour:
-            lignes.append(cour)
-        if len(lignes) <= 3:
-            break
-    y_credit = (H - bas_reserve - 46) if bas_reserve > 70 else H - 52
-    bas_bloc = (y_credit - 22) if credit else (H - bas_reserve - 24)
-    haut_bloc = bas_bloc - (46 + 20 + len(lignes) * (taille_t + 14) - 14)
-
-    if fmt == "origine":
-        # dégradés : léger en haut (lisibilité du logo), fort en bas pour le titre (s'efface avec lui), crédit en bas
-        haut_d, titre_d, bas_d = (Image.new("L", (1, H)) for _ in range(3))
-        debut = max(0, haut_bloc - 160) / H
-        for yy in range(H):
-            t = yy / H
-            haut_d.putpixel((0, yy), int(150 * max(0, 1 - t / .16) ** 1.5))
-            titre_d.putpixel((0, yy), int(225 * min(1, max(0, (t - debut) / max(.01, (haut_bloc / H + .06) - debut))) ** 1.2))
-            bas_d.putpixel((0, yy), int(170 * max(0, (t - .78) / .22) ** 1.6))
-        nuit = Image.new("RGBA", (W, H), (8, 6, 16, 255))
-        img.paste(nuit, (0, 0), haut_d.resize((W, H)))
-        img.paste(nuit, (0, 0), bas_d.resize((W, H)))
-        titre_img.paste(nuit, (0, 0), titre_d.resize((W, H)))
+    haut, y_credit, bas_bloc = _geometrie(fmt, W, H, credit)
+    haut_bloc = bas_bloc - HB.hauteur_ouverture(W, etiquette, accroche, artiste)
+    fixe = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     if not sans_logo:
-        C._logo(img, 50, haut, 76)
-
-    y = haut_bloc
-    tw = d.textlength(eti, font=fe)
-    dt.rounded_rectangle((50, y, 50 + tw + 34, y + 46), radius=23, fill=C.CIEL + (255,))
-    dt.text((67, y + 8), eti, font=fe, fill=C.NUIT + (255,))
-    y += 66
-    for ligne in lignes:
-        x = 50
-        for mot in ligne.split():
-            lm = d.textlength(mot, font=f)
-            if cibles and re.sub(r"\W", "", mot.lower()) in cibles:
-                dt.rectangle((x - 7, y + 5, x + lm + 7, y + taille_t + 9), fill=C.VIOLET + (255,))
-            dt.text((x, y), mot, font=f, fill=(255, 255, 255, 255))
-            x += lm + d.textlength(" ", font=f)
-        y += taille_t + 14
-    if credit:   # sur les deux calques : lisible par-dessus le dégradé du titre, et après son effacement
-        for calq in (d, dt):
-            calq.text((50, y_credit), f"Source : {credit}"[:70], font=C.police("Montserrat.ttf", 24, "Medium"), fill=(255, 255, 255, 210))
+        C._logo(fixe, 50, haut, 76)
+    if credit:
+        ImageDraw.Draw(fixe).text((50, y_credit), f"Source : {credit}"[:70], font=C.police("Montserrat.ttf", 24, "Medium"),
+                                  fill=(255, 255, 255, 225))
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    img.alpha_composite(HB._ombre(fixe, 10, 150).crop((30, 30, 30 + W, 30 + H)))
+    titre_img = HB.image_ouverture((W, H), haut_bloc, etiquette, accroche, artiste)
     if fmt == "origine":
         return img, (0, 0, W, H), titre_img
     # autres formats : la vidéo entre le logo (en haut) et le titre (en bas)
     zone_haut = haut + 100
     zone_bas = haut_bloc - 24
     return img, (0, zone_haut, W, max(200, zone_bas - zone_haut)), titre_img
+
+
+def _geometrie(fmt: str, W: int, H: int, credit: str) -> tuple[int, int, int]:
+    """(y du logo, y du crédit, bas du bloc titre)."""
+    portrait = H / W > 1.6
+    haut = 110 if (fmt == "story" or (fmt == "origine" and portrait)) else 50
+    bas_reserve = int(H * .20) if (fmt == "story" or (fmt == "origine" and portrait)) else 70
+    y_credit = (H - bas_reserve - 46) if bas_reserve > 70 else H - 52
+    bas_bloc = (y_credit - 22) if credit else (H - bas_reserve - 24)
+    return haut, y_credit, bas_bloc
 
 
 def duree_titre(duree: float) -> float:
@@ -516,15 +476,18 @@ def _anime_logo(logo_icone: Image.Image, pos_finale: tuple[int, int],
 
 
 def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_png: str, zone,
-          taille: tuple[int, int] | None = None, titre_png: str | None = None, titre_permanent: bool = False,
-          logo_anim: str | None = None, logo_colorkey: bool = False) -> None:
-    """Montage final : fond flouté + clip + calque fixe + titre animé + logo animé + flash + fondus.
-    ``logo_anim`` : vidéo du logo (FFV1+alpha ou fond noir si ``logo_colorkey=True``)."""
+          taille: tuple[int, int] | None = None, titre: dict | None = None, avec_fin: bool = True) -> None:
+    """Montage final : fond flouté + clip + calque fixe + titre animé (studio_habillage) + carte de fin.
+    ``titre`` : {etiquette, accroche, artiste, credit}. La carte de fin (08/11/2026) remplace l'ancien clip After Effects :
+    la dernière image se fige et se floute sous un voile blanc, la carte en verre arrive par-dessus."""
+    from core.services.social import studio_habillage as HB
     W, H = taille or FORMATS[fmt]
     x, y, w, h = zone
     duree = max(1.0, fin - debut)
-    fin_titre = duree + 5 if titre_permanent else duree_titre(duree)
     rogne = bandes(source, debut, duree)
+    dossier = os.path.dirname(sortie)
+    t_fin = max(0.0, duree - HB.FIN_AVANCE)              # début de la carte de fin
+    total = duree + (HB.FIN_DUREE if avec_fin else 0)
 
     # ── base : fond flouté + clip ──
     filtre = ((f"[0:v]crop={rogne},split=2[a][b];" if rogne else "[0:v]split=2[a][b];")
@@ -532,81 +495,57 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
               f"boxblur=28:6,eq=brightness=-0.35[fond];"
               + (f"[b]crop='min(iw,ih*1.9)':ih,scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];" if W < H * 1.2
                  else f"[b]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];")
-              + f"[fond][clip]overlay=(W-w)/2:{y}+({h}-h)/2[v0];")
+              + f"[fond][clip]overlay=(W-w)/2:{y}+({h}-h)/2,fps=30[v0];")
 
-    # ── calque fixe (logo arrondi, crédit, dégradés) ──
+    # ── calque fixe (logo, crédit) ──
     filtre += "[v0][1:v]overlay=0:0[v1];"
-    next_input = 2
+    entrees = []
+    n = 2
 
-    # ── titre : slide-in depuis le bas + fondu sortant ──
-    if titre_png:
-        slide_in = 0.4
-        filtre += (f"[{next_input}:v]format=rgba,"
-                   f"fade=t=in:d={slide_in:.2f}:alpha=1,"
-                   f"fade=t=out:st={fin_titre:.2f}:d=0.7:alpha=1[titre_f];"
-                   f"[v1][titre_f]overlay=0:'if(lt(t,{slide_in}),{H}-(({H})*t/{slide_in}),0)':shortest=1[v2];")
-        next_input += 1
+    # ── titre animé : pastille, accroche mot par mot ──
+    if titre:
+        haut_bloc = _geometrie(fmt, W, H, titre.get("credit") or "")[2] - HB.hauteur_ouverture(
+            W, titre.get("etiquette") or "", titre.get("accroche") or "", titre.get("artiste") or "")
+        anim, y_anim = HB.ouverture((W, H), haut_bloc, titre.get("etiquette") or "", titre.get("accroche") or "",
+                                    titre.get("artiste") or "", duree_titre(duree), dossier)
+        entrees += ["-i", anim]
+        filtre += f"[{n}:v]format=yuva444p[ti];[v1][ti]overlay=0:{y_anim}:eof_action=pass:format=auto[v2];"
+        n += 1
     else:
         filtre += "[v1]null[v2];"
 
-    # ── logo animé — eof_action=repeat garde le dernier frame ──
-    if logo_anim:
-        if logo_colorkey:
-            filtre += (f"[{next_input}:v]scale={W}:-1,colorkey=black:0.12:0.15,format=yuva444p[logo_a];"
-                       f"[v2][logo_a]overlay=0:350:eof_action=repeat:format=auto[v3];")
-        else:
-            filtre += (f"[{next_input}:v]format=yuva444p[logo_a];"
-                       f"[v2][logo_a]overlay=0:0:eof_action=repeat:format=auto[v3];")
-        next_input += 1
+    # ── carte de fin : image figée, flou progressif, carte en verre ──
+    if avec_fin:
+        entrees += ["-itsoffset", f"{t_fin:.3f}", "-i", HB.fin((W, H), dossier)]
+        filtre += (f"[v2]tpad=stop_mode=clone:stop_duration={HB.FIN_DUREE + 1:.2f},trim=duration={total:.3f},split=2[n1][n2];"
+                   f"[n2]gblur=sigma=26:enable='gte(t,{t_fin:.3f})'[fl];"
+                   f"[n1][fl]blend=all_expr='A+(B-A)*clip((T-{t_fin:.3f})/0.6,0,1)':enable='gte(t,{t_fin:.3f})'[nb];"
+                   f"[{n}:v]format=yuva444p[cf];[nb][cf]overlay=0:0:eof_action=repeat:format=auto[v3];")
+        n += 1
     else:
         filtre += "[v2]null[v3];"
 
     # ── flash subtil (éclair blanc rapide au début) ──
-    flash_t = 0.25
     filtre += (f"[v3]drawbox=x=0:y=0:w={W}:h={H}:color=white@0.15:t=fill"
-               f":enable='between(t,{flash_t},{flash_t + 0.08})'[v4];")
+               f":enable='between(t,0.25,0.33)'[v4];")
 
-    # ── finition : fps, couleur, fondus entrée/sortie ──
+    # ── finition : netteté, fondus (entrée au noir, sortie au blanc : la fin est claire) ──
     # netteté seule (07/11/2026) : le débruitage temporel (hqdn3d 5:5) lissait le mouvement ; mesuré sur la source du
     # reel Sethlo (n° 296), netteté 302 avec l'ancien réglage, 334 sans débruitage (source brute : 202)
-    filtre += (f"[v4]unsharp=5:5:0.5:5:5:0,fps=30,format=yuv420p,fade=t=in:d=0.25,"
-               f"fade=t=out:st={max(0, duree - 0.4):.2f}:d=0.4[v]")
+    filtre += (f"[v4]unsharp=5:5:0.5:5:5:0,format=yuv420p,fade=t=in:d=0.25,"
+               f"fade=t=out:st={max(0, total - 0.35):.2f}:d=0.35:color=white[v]")
 
+    # son : le clip s'éteint quand la carte arrive
+    af = (f"loudnorm=I=-14:TP=-1.5,apad=whole_dur={total:.3f},"
+          f"afade=t=out:st={max(0, (t_fin if avec_fin else duree) - 0.2):.2f}:d={0.9 if avec_fin else 0.5}")
     from core.services.social.encodage import AUDIO_HQ, FIN, VIDEO_HQ
     cmd = [ffmpeg(), "-y", "-v", "error", "-ss", f"{debut:.2f}", "-t", f"{duree:.2f}", "-i", source,
-           "-loop", "1", "-t", f"{duree:.2f}", "-i", calque_png,
-           *(["-loop", "1", "-t", f"{duree:.2f}", "-i", titre_png] if titre_png else []),
-           *(["-i", logo_anim] if logo_anim else []),
-           "-filter_complex", filtre, "-map", "[v]", "-map", "0:a?",
-           "-af", f"loudnorm=I=-14:TP=-1.5,afade=t=out:st={max(0, duree - 0.5):.2f}:d=0.5",
-           *VIDEO_HQ, *AUDIO_HQ, *FIN, "-shortest", sortie]
+           "-loop", "1", "-t", f"{total:.2f}", "-i", calque_png, *entrees,
+           "-filter_complex", filtre, "-map", "[v]", "-map", "0:a?", "-af", af,
+           *VIDEO_HQ, *AUDIO_HQ, *FIN, "-t", f"{total:.3f}", sortie]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=1500)
     if r.returncode != 0:
         raise RuntimeError("montage : " + (r.stderr or "")[-300:])
-
-
-def _concat_outro(video: str, taille: tuple[int, int], tmp: str, duree_clip: float = 0) -> None:
-    """Ajoute l'outro (animation logo AE) à la fin de la vidéo, durée proportionnelle au clip."""
-    from core.services.social.couverture2026 import RES
-    from core.services.social.encodage import AUDIO_HQ, FIN, VIDEO_HQ
-    outro = str(RES / "marque" / "logo_outro.mp4")
-    if not os.path.exists(outro):
-        return
-    OUTRO_FULL = 7.7
-    outro_dur = max(2.0, min(OUTRO_FULL, duree_clip * 0.2))
-    skip = OUTRO_FULL - outro_dur
-    W, H = taille
-    final = os.path.join(tmp, "avec_outro.mp4")
-    filtre = (f"[1:v]scale={W}:{H}:force_original_aspect_ratio=decrease,"
-              f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,fps=30,format=yuv420p[outro];"
-              f"[0:v][outro]concat=n=2:v=1:a=0[v]")
-    cmd = [ffmpeg(), "-y", "-v", "error", "-i", video,
-           "-ss", f"{skip:.2f}", "-i", outro,
-           "-filter_complex", filtre, "-map", "[v]", "-map", "0:a?",
-           *VIDEO_HQ, *AUDIO_HQ, *FIN, final]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    if r.returncode == 0:
-        os.replace(final, video)
 
 
 # ---------------------------------------------------------------- ensemble
@@ -692,11 +631,10 @@ def traite(job_id: int) -> dict:
             _maj(job_id, statut="montage", params=p)
             img, zone, titre_img = calque(fmt, etiquette, accroche, artiste, credit, taille)
             png = os.path.join(tmp, "calque.png"); img.save(png)
-            png_titre = os.path.join(tmp, "titre.png"); titre_img.save(png_titre)
             nom = f"studio-{job_id}-{os.urandom(3).hex()}"
             video = os.path.join(tmp, nom + ".mp4"); vignette = os.path.join(tmp, nom + ".jpg")
-            monte(source, video, fmt, debut, fin, png, zone, taille, png_titre)
-            _concat_outro(video, taille or FORMATS[fmt], tmp, duree_clip=fin - debut)
+            monte(source, video, fmt, debut, fin, png, zone, taille,
+                  {"etiquette": etiquette, "accroche": accroche, "artiste": artiste, "credit": credit})
             subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3", vignette],
                            capture_output=True, timeout=60)
             storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")
