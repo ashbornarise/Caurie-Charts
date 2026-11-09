@@ -32,7 +32,8 @@ def _reponse(contenu: str, status: int = 200) -> HttpResponse:
     r = HttpResponse(contenu, status=status)
     r["X-Robots-Tag"] = "noindex, nofollow"
     r["Cache-Control"] = "private, no-store"
-    r["Referrer-Policy"] = "no-referrer"
+    # « same-origin » : avec « no-referrer », le navigateur envoie « Origin: null » et le contrôle CSRF refuse le mot de passe
+    r["Referrer-Policy"] = "same-origin"
     # styles intégrés et polices Google autorisés ici seulement (la politique du site les bloque), aucun script
     r["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
     return r
