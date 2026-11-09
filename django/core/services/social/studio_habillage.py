@@ -84,7 +84,8 @@ def _elements_ouverture(W: int, etiquette: str, accroche: str, artiste: str):
     d = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
     # pastille en verre : blanc translucide, liseré clair, point bleu ciel « en direct »
     fe = C.police("Montserrat.ttf", int(25 * u), "ExtraBold")
-    eti = " ".join((etiquette or "VIDÉO").upper()[:32])          # lettres espacées
+    # lettres espacées ; émojis retirés (ils sortaient en carrés vides, « Chétté 👑⚔️ », tâche 308 du 08/11/2026)
+    eti = " ".join((C.propre(etiquette) or "VIDÉO").upper()[:32])
     tw = d.textlength(eti, font=fe)
     ph, pw = int(48 * u), int(tw + 74 * u)
     pastille = Image.new("RGBA", (pw, ph), (0, 0, 0, 0))
