@@ -5,6 +5,8 @@
   manage.py partenaires --envoyer [--semaine 2026-W46] [--id 1] [--a moi@exemple.com]   (--a : essai, non marqué envoyé)
   manage.py partenaires --apercu dossier [--semaine 2026-W46] [--id 1]                  fichiers écrits en local, rien d'envoyé
   manage.py partenaires --desactiver 1
+  manage.py partenaires --espace 1 --slug nec-ultra [--mot-de-passe X] [--couleurs "#111111,#C9A227"] [--logo URL]
+      espace protégé /espace/<slug> ; sans --mot-de-passe, un mot de passe est créé et affiché une seule fois
 """
 from pathlib import Path
 
@@ -28,6 +30,11 @@ class Command(BaseCommand):
         p.add_argument("--a", default="", help="Destinataires d'essai, séparés par des virgules")
         p.add_argument("--forcer", action="store_true", help="Renvoyer une édition déjà envoyée")
         p.add_argument("--desactiver", type=int)
+        p.add_argument("--espace", type=int, metavar="ID")
+        p.add_argument("--slug")
+        p.add_argument("--mot-de-passe", dest="mdp")
+        p.add_argument("--couleurs")
+        p.add_argument("--logo")
 
     def handle(self, *args, **o):
         def task():
@@ -36,7 +43,26 @@ class Command(BaseCommand):
             from core.services.charts import Period
             P.assure_tables()
             semaine = o["semaine"] or Period.last_completed_week(clock.today().isoformat()).key
-            if o["ajouter"]:
+            if o["espace"]:
+                import secrets as S
+                from core.backoffice import auth
+                champs = {}
+                if o["slug"]:
+                    champs["slug"] = o["slug"].strip().lower()
+                mdp = o["mdp"] or ("-".join(S.token_hex(2) for _ in range(4)) if not db.value(
+                    "SELECT mdp_hash FROM partenaires_acces WHERE id = ?", [o["espace"]]) else None)
+                if mdp:
+                    champs["mdp_hash"] = auth.hash_password(mdp)
+                if o["couleurs"]:
+                    c = [x.strip() for x in o["couleurs"].split(",")]
+                    champs.update(couleur=c[0], couleur2=c[1] if len(c) > 1 else None)
+                if o["logo"]:
+                    champs["logo_url"] = o["logo"]
+                if champs:
+                    db.update("partenaires_acces", champs, "id = :id", {"id": o["espace"]})
+                slug = db.value("SELECT slug FROM partenaires_acces WHERE id = ?", [o["espace"]])
+                out(f"Espace : https://cauricharts.com/espace/{slug}" + (f" · mot de passe : {mdp}" if mdp else ""))
+            elif o["ajouter"]:
                 r = P.ajouter(o["ajouter"], o["emails"].split(","), o["pays"].split(","))
                 out(f"Partenaire n°{r['id']} créé. Lien privé (à garder secret) : {r['lien']}")
             elif o["desactiver"]:
