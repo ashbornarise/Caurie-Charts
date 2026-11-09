@@ -40,7 +40,8 @@ Les classements de la musique ouest-africaine reviennent dans quelques instants.
 </main></body></html>"""
 
 # Pages jamais mises en cache par le réseau de Vercel : administration, formulaires (jeton CSRF), espace connecté
-NO_EDGE_CACHE = ("/admin", "/contact", "/envoie-ta-video", "/declarer", "/revendiquer", "/connexion", "/api/", "/show", "/tiktok/", "/studio")
+NO_EDGE_CACHE = ("/admin", "/contact", "/envoie-ta-video", "/declarer", "/revendiquer", "/connexion", "/api/", "/show", "/tiktok/", "/studio", "/espace/",
+                 "/partenaire/")
 
 
 def edge_cache(request, response) -> None:

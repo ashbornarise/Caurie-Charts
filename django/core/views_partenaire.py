@@ -58,4 +58,6 @@ Excel et les visuels pour l'antenne. Ce lien vous est personnel, merci de ne pas
     r["X-Robots-Tag"] = "noindex, nofollow"
     r["Referrer-Policy"] = "no-referrer"
     r["Cache-Control"] = "private, no-store"
+    # styles intégrés et polices Google autorisés ici seulement (la politique du site les bloque), aucun script
+    r["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
     return r
