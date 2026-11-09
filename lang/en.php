@@ -313,7 +313,7 @@ return [
     'aside.enters_at'        => 'enters at No. :n',
     'aside.new_count'        => ':n new entrie(s) this week',
     'aside.tracks_in_chart'  => ':n songs on the chart',
-    'aside.next'             => 'Next chart: Friday :date',
+    'aside.next'             => 'Next chart: :date',
     'aside.dyk_title'        => 'Did you know?',
     'aside.cta_title'        => 'Artist or label?',
     'aside.cta_text'         => 'Your Spotify for Artists, Audiomack or Boomplay figures can count. Send a screenshot and we will check it.',

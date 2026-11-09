@@ -88,7 +88,7 @@ CSS = """
   --serif:"Bodoni Moda","Bodoni 72",Didot,Georgia,serif; --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:light }
 * { box-sizing:border-box }
-body { margin:0; background:var(--fond); color:var(--encre); font:15px/1.5 var(--sans); -webkit-font-smoothing:antialiased }
+body { margin:0; min-height:100vh; display:flex; flex-direction:column; background:var(--fond); color:var(--encre); font:15px/1.5 var(--sans); -webkit-font-smoothing:antialiased }
 a { color:inherit }
 img { max-width:100% }
 .serif { font-family:var(--serif) }
@@ -127,7 +127,7 @@ h1,h2,h3 { text-wrap:balance; margin:0 }
 .semaine span.off { color:#cfcbe0 }
 .semaine strong { font-size:.9rem; padding:0 6px; white-space:nowrap }
 
-main { padding-block:32px 56px }
+main { padding-block:32px 56px; flex:1; width:100% }
 .titre { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:24px }
 .sur { margin:0 0 6px; font-size:.75rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--doux);
   display:flex; align-items:center; gap:8px }
@@ -404,7 +404,7 @@ def _espace(request, p: dict) -> str:
 
     titre = {"accueil": f"Semaine {choisie[-2:]}" if choisie else "Bienvenue", "classements": "Classements officiels",
              "top100": "Les 100 titres de la semaine", "artistes": "Les artistes de la semaine", "fichiers": "Téléchargements"}[vue]
-    actions = _boutons(edition) if vue in ("accueil", "fichiers") and edition else ""
+    actions = _boutons(edition) if vue == "accueil" and edition else ""
     html_.append(f'<div class="titre"><div><p class="sur">{_drapeau("mini-drapeau")} {e(nom_pays)} · {e(p["nom"])} × Cauri Charts</p>'
                  f'<h1>{e(titre)}</h1><p class="periode">{e(periode)}</p></div><div class="actions">{actions}</div></div>')
 

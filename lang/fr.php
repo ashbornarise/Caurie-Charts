@@ -519,7 +519,7 @@ return [
     'aside.enters_at'        => 'entre à la place n° :n',
     'aside.new_count'        => ':n nouvelle(s) entrée(s) cette semaine',
     'aside.tracks_in_chart'  => ':n titres dans le classement',
-    'aside.next'             => 'Prochain classement : vendredi :date',
+    'aside.next'             => 'Prochain classement : :date',
     'aside.dyk_title'        => 'Le saviez-vous ?',
     'aside.cta_title'        => 'Artiste ou label ?',
     'aside.cta_text'         => 'Vos chiffres Spotify for Artists, Audiomack ou Boomplay peuvent compter. Envoyez une capture, nous la vérifions.',
