@@ -113,7 +113,8 @@ h2 {{ margin:0; font-size:clamp(1.35rem,3vw,1.8rem) }} .section__tete p {{ margi
 .un .badge {{ position:absolute; top:28px; left:28px; background:var(--violet); color:#fff; font:800 1.1rem Montserrat,sans-serif;
   padding:6px 14px; border-radius:999px }}
 .un h3 {{ margin:14px 0 2px; font-size:1.5rem; line-height:1.15 }} .un .qui {{ color:var(--gris) }}
-.grille {{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; align-content:start }}
+.grille {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-content:start }}
+@media (max-width:560px) {{ .grille {{ grid-template-columns:repeat(2,minmax(0,1fr)) }} }}
 .carte {{ background:var(--carte); border:1px solid var(--ligne); border-radius:18px; padding:10px; position:relative; min-width:0 }}
 .carte img,.carte .init {{ width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px; display:block }}
 .init {{ display:grid !important; place-items:center; background:linear-gradient(135deg,var(--violet),var(--ciel)); color:#fff;
