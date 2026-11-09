@@ -118,7 +118,7 @@
     "chart.description.prime": "The main chart: the best performing songs of the week in :country.",
     "chart.description.buzz": "The biggest gains of the week (over 50%) among songs outside the Prime Chart.",
     "chart.description.fresh": "Songs released in the last 8 weeks and emerging artists.",
-    "chart.description.icon": "Artist ranking: the sum of all their songs' scores for the week.",
+    "chart.description.icon": "Artists ranked by their points for the week: the sum of the scores of all their titles.",
     "chart.description.legend": "All weekly scores added up since launch.",
     "chart.short.prime": "The main chart of the week",
     "chart.short.buzz": "The biggest gains",
@@ -441,5 +441,13 @@
     "show.ics_description": "West Africa's number ones revealed live.",
     "chart.live_insufficient": "Not enough data yet to rank :country: we follow :n artist(s) from this country and need at least :min for a credible chart. Rather than fill this Top with artists from other countries or the same artist repeated, we are waiting for more sources. Artist or label from this country? Submit your music.",
     "methodology.normalisation": "Since formula v4 (week 46), each source counts as the song's share of that source's total, in the country and for the week: YouTube weighs :yt%, listening platforms :st%, split equally between those tracked in the country (Apple Music and Boomplay: 25% each; only one: 50%). A source with no data for the country is not counted as zero: its weight goes to the others. A song scores zero for a source only if that source was tracked and the song is not in it.",
-    "methodology.buzz_verifies": "Buzz Chart: only reviewed songs are ranked. A flagged song not yet reviewed stays on hold, then enters the chart if reinstated."
+    "methodology.buzz_verifies": "Buzz Chart: only reviewed songs are ranked. A flagged song not yet reviewed stays on hold, then enters the chart if reinstated.",
+    "chart.description.saison": "Artists ranked by their points accumulated since January: the sum of all their published weeks.",
+    "chart.description.g-afrobeats": "The best-performing afrobeats titles of the week.",
+    "chart.description.g-rap": "The best-performing rap titles of the week.",
+    "chart.description.g-gospel": "The best-performing gospel titles of the week.",
+    "chart.description.g-coupe-decale": "The best-performing coupé-décalé and zouglou titles of the week.",
+    "chart.description.g-highlife": "The best-performing highlife titles of the week.",
+    "chart.description.g-mbalax": "The best-performing mbalax titles of the week.",
+    "chart.description.g-rnb": "The best-performing R&B titles of the week."
 }

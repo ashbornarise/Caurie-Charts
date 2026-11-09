@@ -11,8 +11,15 @@
         {% endfor %}
     </nav>
     <nav class="chips" aria-label="{{ t('chart.choose') }}">
-        {% for c, def in config('charts').items() if def.public and not def.regional %}{% set target = 'prime-wa' if regional and c == 'prime' else c %}
+        {% for c, def in config('charts').items() if def.public and not def.regional and not def.genre %}{% set target = 'prime-wa' if regional and c == 'prime' else c %}
             <a class="chip" href="{{ chart_path('WA' if regional else code, target) }}" {{ Markup('aria-current="page"') if target == chartCode }}>{{ def.name|tr }}</a>
+        {% endfor %}
+    </nav>
+    {#- 09/11/2026 : classements par genre, sur une rangée à part -#}
+    <nav class="chips chips--genres" aria-label="{{ tr('Genres') }}">
+        <span class="chips__label">{{ tr("Genres") }}</span>
+        {% for c, def in config('charts').items() if def.public and def.genre %}
+            <a class="chip" href="{{ chart_path('WA' if regional else code, c) }}" {{ Markup('aria-current="page"') if c == chartCode }}>{{ def.name|replace('Top ', '')|tr }}</a>
         {% endfor %}
     </nav>
     <p class="eyebrow">{% if regional %}{% for c in countries %}{{ flag(c.code, 14) }}{% endfor %}{% endif %}{{ flag(code, 16) }}{{ country_name(code) }}</p>
@@ -98,7 +105,7 @@
 </section>
 {% else %}
 {#- Défilé des pochettes en haut du classement officiel (06/11/2026) -#}
-{% if view == 'official' and entries and chartCode != 'icon' %}{{ partial('partials/top-flow', rows=entries, entries=entries) }}{% endif %}
+{% if view == 'official' and entries and chart.kind != 'artists' %}{{ partial('partials/top-flow', rows=entries, entries=entries) }}{% endif %}
 {#- « Les N°1 qui durent », refait le 06/11/2026 : le record de Cauri Charts en vedette (pochette, couronne, frise des
     semaines), puis une carte par pays : pochette, drapeau, titre, et une jauge de règne graduée en semaines. -#}
 {% if numerosUn and numerosUn.actuels %}

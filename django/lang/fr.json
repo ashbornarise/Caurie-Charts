@@ -118,7 +118,7 @@
     "chart.description.prime": "Le classement principal : les titres les plus performants de la semaine au :country.",
     "chart.description.buzz": "Les plus fortes progressions de la semaine (plus de 50 %) parmi les titres absents du Prime Chart.",
     "chart.description.fresh": "Titres sortis depuis moins de 8 semaines et artistes émergents.",
-    "chart.description.icon": "Classement des artistes : somme des scores de tous leurs titres sur la semaine.",
+    "chart.description.icon": "Les artistes classés par leurs points de la semaine : la somme des scores de tous leurs titres.",
     "chart.description.legend": "Cumul de tous les scores hebdomadaires depuis le lancement.",
     "chart.short.prime": "Le classement principal de la semaine",
     "chart.short.buzz": "Les plus fortes progressions",
@@ -702,5 +702,13 @@
     "show.ics_description": "Les N°1 de l'Afrique de l'Ouest révélés en direct.",
     "chart.live_insufficient": "Pas encore assez de données pour classer :country : nous suivons :n artiste(s) du pays, il en faut au moins :min pour un classement crédible. Plutôt que de remplir ce Top avec des artistes d'autres pays ou le même artiste répété, nous attendons d'avoir assez de sources. Vous êtes artiste ou label de ce pays ? Déclarez votre musique.",
     "methodology.normalisation": "Depuis la formule v4 (semaine 46), chaque source compte pour la part du titre dans le total de la source, dans le pays et pour la semaine : YouTube pèse :yt %, les plateformes d'écoute :st %, partagés à parts égales entre celles qui sont relevées dans le pays (Apple Music et Boomplay : 25 % chacune ; une seule : 50 %). Une source sans donnée pour le pays n'est pas comptée comme un zéro : son poids revient aux autres. Un titre n'a zéro pour une source que si elle a bien été relevée et qu'il n'y figure pas.",
-    "methodology.buzz_verifies": "Buzz Chart : seuls les titres vérifiés sont classés. Un titre signalé et pas encore examiné reste en attente, puis entre au classement s'il est réintégré."
+    "methodology.buzz_verifies": "Buzz Chart : seuls les titres vérifiés sont classés. Un titre signalé et pas encore examiné reste en attente, puis entre au classement s'il est réintégré.",
+    "chart.description.saison": "Les artistes classés par leurs points cumulés depuis janvier : la somme de toutes leurs semaines publiées.",
+    "chart.description.g-afrobeats": "Les titres afrobeats les plus performants de la semaine.",
+    "chart.description.g-rap": "Les titres rap les plus performants de la semaine.",
+    "chart.description.g-gospel": "Les titres gospel les plus performants de la semaine.",
+    "chart.description.g-coupe-decale": "Les titres coupé-décalé et zouglou les plus performants de la semaine.",
+    "chart.description.g-highlife": "Les titres highlife les plus performants de la semaine.",
+    "chart.description.g-mbalax": "Les titres mbalax les plus performants de la semaine.",
+    "chart.description.g-rnb": "Les titres R&B les plus performants de la semaine."
 }

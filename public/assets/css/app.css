@@ -72,6 +72,8 @@ h1, h2, h3 { font-family: var(--serif); line-height: 1.1; margin: 0 0 .5em; }
 .tabs__item[aria-current="page"] { background: var(--accent); color: var(--on-accent); }
 
 .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 12px; scrollbar-width: thin; }
+.chips--genres { align-items: center; margin-top: -4px; }
+.chips__label { flex: none; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #6b6f80); padding-right: 4px; }
 .chip { flex: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; font-size: .88rem; white-space: nowrap; }
 .chip[aria-current="page"] { border-color: var(--ink); background: var(--ink); color: var(--surface); }
 

@@ -124,5 +124,13 @@ class Command(BaseCommand):
                 out(f"Post officiel : {'créé' if post else 'déjà fait ou pas de données'}")
             except Exception as exc:
                 out(f"Post officiel : {exc}")
+            # 09/11/2026 : les partenaires média (Nec+Ultra…) reçoivent leur dossier dès la publication, sans passer par le site
+            if publies:
+                from core.services import partenaires
+                try:
+                    for ligne in partenaires.envoyer(week):
+                        out(f"Partenaires : {ligne}")
+                except Exception as exc:  # noqa: BLE001
+                    out(f"Partenaires : {exc}")
             return [f"{len(publies)} pays publié(s) : {', '.join(publies)}"] if publies else ["rien à publier"]
         run("publish-chart", task)

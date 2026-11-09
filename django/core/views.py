@@ -187,7 +187,8 @@ def home(request):
 
 def regional(request, period: str = "semaine", key: str = ""):
     code = req_str(request, "classement")
-    code = code if code in ("buzz", "fresh", "icon", "legend") else "prime-wa"
+    regionaux = [c for c, cfg in (conf.get("charts") or {}).items() if cfg.get("region")]
+    code = code if code in ("buzz", "fresh", "legend", *regionaux) else "prime-wa"
     return _render_chart(request, region(), code, period, key)
 
 

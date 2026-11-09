@@ -21,8 +21,20 @@ def _minus_days(day: str, n: int) -> str:
     return (_d(day) - timedelta(days=n)).isoformat()
 
 
+_SCHEMA_OK = False
+
+
 class ChartService:
     def __init__(self):
+        global _SCHEMA_OK
+        if not _SCHEMA_OK:
+            # 09/11/2026 : colonnes de genre et nouveaux types (Top Artistes de la saison, genres) créés au besoin
+            from core.services import genres
+            try:
+                genres.assure_schema()
+                _SCHEMA_OK = True
+            except Exception:  # noqa: BLE001 — base en lecture seule (tests) : les classements existants restent calculables
+                pass
         self.chart_types = {r["code"]: int(r["id"]) for r in db.all("SELECT id, code FROM chart_types")}
 
     def country(self, code: str) -> dict:
@@ -60,9 +72,13 @@ class ChartService:
             legend_items = self._cumulative_items(cid, weeks, period.start)
             results["legend"] = ranker.cumulative(legend_items, self._size("legend", size), self._history("legend", cid, "week", period.start))
 
+        results.update(self._extras(items, ranker, cid, period, size,
+                                    lambda: self._published_weeks(cid, period.end[:4] + "-01-01", _minus_days(period.start, 1)) + [period.start]))
+
         with db.atomic():
             for code, entries in results.items():
-                self._save_run(code, cid, period, formula, entries, False, correction, user_id)
+                if code in self.chart_types:
+                    self._save_run(code, cid, period, formula, entries, False, correction, user_id)
 
         # Semaine publiée puis corrigée : le mois et l'année qui la contiennent suivent
         if correction is not None:
@@ -71,6 +87,38 @@ class ChartService:
         pending = sum(1 for i in items if i["review_status"] == "pending" and i["score"] > 0)
         return {"country": country["code"], "period": period.key, "tracks_scored": len(items), "pending": pending,
                 "entries": {k: len(v) for k, v in results.items()}}
+
+    def _extras(self, items: list, ranker: ChartRanker, cid, period: Period, size: int, semaines_saison) -> dict:
+        """Classements ajoutés le 09/11/2026 : Top Artistes de la saison (points cumulés depuis janvier) et Top par genre.
+        cid None = toute l'Afrique de l'Ouest. Un genre n'a de classement que s'il a assez de titres et d'artistes."""
+        from core.services import genres
+        charts, out = conf.get("charts"), {}
+        if charts.get("saison", {}).get("computed") and "saison" in self.chart_types:
+            cumul = self._regional_season_items(period) if cid is None else self._cumulative_items(cid, semaines_saison(), period.start)
+            out["saison"] = ranker.icon(cumul, self._size("saison", size), self._history("saison", cid, "week", period.start))
+        par_titre = genres.genres_des_titres()
+        for code, cfg in charts.items():
+            if not cfg.get("genre") or not cfg.get("computed") or code not in self.chart_types:
+                continue
+            choix = ranker.eligible([i for i in items if par_titre.get(int(i["track_id"])) == cfg["genre"]])
+            if len(choix) < genres.MIN_TITRES or len({i["artist_id"] for i in choix}) < genres.MIN_ARTISTES:
+                continue
+            out[code] = ranker.prime(choix, self._size(code, size), self._history(code, cid, "week", period.start), ref=period.end)
+        return out
+
+    def _regional_season_items(self, week: Period) -> list:
+        """Cumul de l'année de tous les titres, sur les semaines où leur pays a été publié."""
+        rows = db.all(
+            """SELECT ws.track_id, t.artist_id, SUM(ws.score) AS score, MAX(ws.sources_count) AS sources_count,
+                      SUM(CASE WHEN ws.week_start = ? THEN ws.score ELSE 0 END) AS last_week
+               FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id
+               JOIN chart_runs r ON r.chart_type_id = ? AND r.country_id = ws.country_id AND r.period_type = 'week'
+                  AND r.status = 'published' AND r.period_start = ws.week_start
+               WHERE ws.week_start BETWEEN ? AND ? AND ws.review_status <> 'excluded'
+               GROUP BY ws.track_id, t.artist_id""", [week.start, self.chart_types["prime"], week.end[:4] + "-01-01", week.start])
+        return [{"track_id": int(r["track_id"]), "artist_id": int(r["artist_id"]), "score": php_round(float(r["score"]), 2),
+                 "sources_count": int(r["sources_count"]), "prev_score": php_round(float(r["score"]) - float(r["last_week"]), 2),
+                 "release_date": None, "is_emerging": False, "flags": [], "review_status": "ok", "breakdown": []} for r in rows]
 
     def _score_week(self, country: dict, period: Period, formula: dict) -> list:
         cid = int(country["id"])
@@ -425,8 +473,15 @@ class ChartService:
         formula = formula_effective_for(week.start)
         entries = ChartRanker(formula).prime(items, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, "week", week.start),
                                              conf.get("charts.prime-wa.country_cap"), ref=week.end)
+        ranker = ChartRanker(formula)
+        autres = {}
+        if conf.get("charts.icon.region") and "icon" in self.chart_types:
+            autres["icon"] = ranker.icon(items, self._size("icon", 20), self._history("icon", None, "week", week.start))
+        autres.update(self._extras(items, ranker, None, week, 20, lambda: []))
         with db.atomic():
             self._save_run("prime-wa", None, week, formula, entries, not complete, None, user_id, True)
+            for code, lst in autres.items():
+                self._save_run(code, None, week, formula, lst, not complete, None, user_id, True)
             if complete:
                 self._publish_regional(week)
         if complete:
@@ -458,9 +513,12 @@ class ChartService:
         return {"period": period.key, "entries": len(entries), "provisional": provisional}
 
     def _publish_regional(self, period: Period) -> None:
-        db.run("""UPDATE chart_runs SET status = 'published', published_at = COALESCE(published_at, ?)
-                  WHERE chart_type_id = ? AND country_id IS NULL AND period_type = ? AND period_key = ?""",
-               [now_utc(), self.chart_types["prime-wa"], period.type, period.key])
+        """Publie les classements régionaux de la période : Top 20 et, depuis le 09/11/2026, Top Artistes, saison, genres."""
+        codes = ["prime-wa"] + [c for c, cfg in (conf.get("charts") or {}).items() if cfg.get("region") and c in self.chart_types]
+        ids = [self.chart_types[c] for c in codes if c in self.chart_types]
+        db.run(f"""UPDATE chart_runs SET status = 'published', published_at = COALESCE(published_at, ?)
+                  WHERE chart_type_id IN ({', '.join(['?'] * len(ids))}) AND country_id IS NULL AND period_type = ? AND period_key = ?""",
+               [now_utc(), *ids, period.type, period.key])
 
     # ------------------------------------------------------------ enregistrement, publication, décisions
 

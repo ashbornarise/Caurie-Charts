@@ -71,7 +71,15 @@ def _all() -> dict:
             "prime": {"name": "Prime Chart", "kind": "tracks", "public": True, "computed": True, "size": None, "periods": ["week", "month", "year"]},
             "buzz": {"name": "Buzz Chart", "kind": "tracks", "public": True, "computed": True, "size": 10, "periods": ["week"]},
             "fresh": {"name": "Fresh Chart", "kind": "tracks", "public": True, "computed": True, "size": 10, "periods": ["week"]},
-            "icon": {"name": "Icon Chart", "kind": "artists", "public": True, "computed": True, "size": 10, "periods": ["week"]},
+            # 09/11/2026 (avant l'envoi à Nec+Ultra) : « Top Artistes », Top 20, aussi pour toute l'Afrique de l'Ouest
+            # (« region » : même code, pays NULL) ; « saison » : points cumulés semaine après semaine depuis janvier
+            "icon": {"name": "Top Artistes", "kind": "artists", "public": True, "computed": True, "size": 20, "periods": ["week"], "region": True},
+            "saison": {"name": "Top Artistes de la saison", "kind": "artists", "public": True, "computed": True, "size": 20, "periods": ["week"],
+                       "region": True},
+            **{f"g-{slug}": {"name": f"Top {nom}", "kind": "tracks", "public": True, "computed": True, "size": 10, "periods": ["week"],
+                             "region": True, "genre": slug} for slug, nom in (
+                ("afrobeats", "Afrobeats"), ("rap", "Rap"), ("gospel", "Gospel"), ("coupe-decale", "Coupé-décalé & Zouglou"),
+                ("highlife", "Highlife"), ("mbalax", "Mbalax"), ("rnb", "R&B"))},
             "legend": {"name": "Legend Chart", "kind": "tracks", "public": True, "computed": True, "size": None, "periods": ["week"]},
             "vintage": {"name": "Vintage Chart", "kind": "tracks", "public": False, "computed": False, "size": None, "periods": ["year"]},
             # country_cap : au plus 5 titres d'artistes d'un même pays dans le Top 20 régional (diversité de la région)
