@@ -149,7 +149,7 @@ def ia_par_artiste(artistes: list[dict], client=None) -> dict:
 # ---------------------------------------------------------------- étiquetage
 
 def etiqueter(limite: int = 400, http: HttpClient | None = None, client_ia=None, avec_ia: bool = True,
-             pause: float = 3.2) -> dict:
+             pause: float = 3.2, reprendre: bool = False) -> dict:
     """Étiquette les titres classés récemment (les plus utiles d'abord). Revient sur un titre tous les 60 jours."""
     assure_schema()
     http = http or HttpClient(30)
@@ -159,8 +159,11 @@ def etiqueter(limite: int = 400, http: HttpClient | None = None, client_ia=None,
                   (SELECT MAX(w.score) FROM weekly_scores w WHERE w.track_id = t.id AND w.week_start >= CURRENT_DATE - 56) AS recent
            FROM tracks t JOIN artists a ON a.id = t.artist_id
            WHERE t.is_active = 1 AND a.status = 'active' AND COALESCE(t.genre_source, '') <> 'manuel'
-             AND (t.genre_checked_at IS NULL OR t.genre_checked_at < CURRENT_TIMESTAMP - INTERVAL '60 days')
-           ORDER BY recent DESC NULLS LAST, t.id DESC LIMIT ?""", [limite])
+             AND (t.genre_checked_at IS NULL OR t.genre_checked_at < CURRENT_TIMESTAMP - INTERVAL '60 days'
+                  -- reprise : titres sans genre ou rangés en afrobeats par Apple, jamais vérifiés par Google
+                  OR (? AND COALESCE(t.genre_source, '') <> 'ia' AND (t.genre IS NULL OR (t.genre = 'afrobeats'
+                      AND COALESCE(a.base_country, a.origin_country) IN ('CI', 'SN', 'GH')))))
+           ORDER BY recent DESC NULLS LAST, t.id DESC LIMIT ?""", [bool(reprendre), limite])
     par_id = apple_par_ids([str(t["apple_id"]) for t in titres if t["apple_id"]], http) if titres else {}
     bilan = {"titres": len(titres), "apple": 0, "ia": 0, "sans": 0}
     resultats, a_verifier = {}, {}
@@ -184,6 +187,7 @@ def etiqueter(limite: int = 400, http: HttpClient | None = None, client_ia=None,
             a = a_verifier.setdefault(int(t["artist_id"]), {"id": int(t["artist_id"]), "nom": t["artiste"], "pays": t["pays"],
                                                              "apple": apple, "titres": []})
             a["titres"].append(t["title"])
+    bilan["artistes_ia"] = len(a_verifier)
     if a_verifier:
         artistes = list(a_verifier.values())
         verdicts = {}

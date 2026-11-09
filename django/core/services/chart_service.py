@@ -103,10 +103,12 @@ class ChartService:
             choix = ranker.eligible([i for i in items if par_titre.get(int(i["track_id"])) == cfg["genre"]])
             if len(choix) < genres.MIN_TITRES or len({i["artist_id"] for i in choix}) < genres.MIN_ARTISTES:
                 continue
-            out[code] = ranker.prime(choix, self._size(code, size), self._history(code, cid, "week", period.start), ref=period.end)
+            top = ranker.prime(choix, self._size(code, size), self._history(code, cid, "week", period.start), ref=period.end)
+            if len(top) >= genres.MIN_TITRES:   # pas de Top de genre à 4 titres (règle des 3 titres, titres anciens…)
+                out[code] = top
         return out
 
-    def completer_semaine(self, country_code: str, week_key: str) -> dict:
+    def completer_semaine(self, country_code: str, week_key: str, refaire_genres: bool = False) -> dict:
         """Semaine DÉJÀ publiée : calcule et publie seulement les classements ajoutés le 09/11/2026 (saison, genres) qui
         lui manquent, à partir des scores enregistrés. Les classements publiés ne sont jamais recalculés."""
         country = self.country(country_code)
@@ -115,6 +117,9 @@ class ChartService:
                              AND period_key = ? AND status = 'published'""", [self.chart_types["prime"], cid, week_key])
         if not publie:
             return {}
+        if refaire_genres:   # genres réétiquetés : les classements par genre de la semaine sont refaits (jamais le classement officiel)
+            db.run("""DELETE FROM chart_runs r USING chart_types ct WHERE ct.id = r.chart_type_id AND left(ct.code, 2) = 'g-'
+                      AND r.country_id = ? AND r.period_type = 'week' AND r.period_key = ?""", [cid, week_key])
         existants = {r["code"] for r in db.all("""SELECT ct.code FROM chart_runs r JOIN chart_types ct ON ct.id = r.chart_type_id
                                                   WHERE r.country_id = ? AND r.period_type = 'week' AND r.period_key = ?""",
                                                [cid, week_key])}

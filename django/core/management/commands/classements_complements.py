@@ -14,6 +14,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, p):
         p.add_argument("--semaine")
+        p.add_argument("--refaire-genres", action="store_true", help="Refaire les classements par genre (après un réétiquetage)")
 
     def handle(self, *args, **o):
         def task():
@@ -28,7 +29,7 @@ class Command(BaseCommand):
                 semaines = [derniere.previous(), derniere]
             for p in semaines:
                 for c in db.all("SELECT code FROM countries WHERE is_active = 1 ORDER BY sort_order"):
-                    r = service.completer_semaine(c["code"], p.key)
+                    r = service.completer_semaine(c["code"], p.key, o["refaire_genres"])
                     if r:
                         out(f"{p.key} {c['code']} : " + ", ".join(f"{k} ({n})" for k, n in r.items()))
                 reg = service.compute_regional_week(p)

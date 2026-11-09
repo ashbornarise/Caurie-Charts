@@ -7,16 +7,22 @@ on:
       limite:
         description: Nombre de titres à étiqueter
         default: "400"
+      reprendre:
+        description: "Revoir les titres sans genre ou « afrobeats » jamais vérifiés par Google, et refaire les classements par genre"
+        type: boolean
+        default: false
 jobs:
   genres:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
       APP_URL: ${{ secrets.APP_URL }}
       APP_ENV: production
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      # 09/11/2026 : sans la recherche Google, l'IA répond sans sources et aucun genre ambigu (coupé-décalé…) n'est retenu
+      GEMINI_GROUNDING: "1"
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -28,6 +34,11 @@ jobs:
       - name: Étiqueter
         working-directory: django
         run: |
-          python manage.py genres_titres --limite=${{ github.event.inputs.limite || '400' }}
-          # les semaines déjà publiées reçoivent leurs classements par genre et de la saison (09/11/2026)
-          python manage.py classements_complements
+          if [ "${{ inputs.reprendre }}" = "true" ]; then
+            python manage.py genres_titres --limite=${{ github.event.inputs.limite || '400' }} --reprendre
+            python manage.py classements_complements --refaire-genres
+          else
+            python manage.py genres_titres --limite=${{ github.event.inputs.limite || '400' }}
+            # les semaines déjà publiées reçoivent leurs classements par genre et de la saison (09/11/2026)
+            python manage.py classements_complements
+          fi

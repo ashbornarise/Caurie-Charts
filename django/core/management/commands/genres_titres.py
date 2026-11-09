@@ -15,10 +15,11 @@ class Command(BaseCommand):
     def add_arguments(self, p):
         p.add_argument("--limite", type=int, default=400)
         p.add_argument("--sans-ia", action="store_true")
+        p.add_argument("--reprendre", action="store_true", help="Revoir les titres sans genre ou « afrobeats » jamais vérifiés par Google")
 
     def handle(self, *args, **o):
         def task():
             from core.services import genres
-            b = genres.etiqueter(o["limite"], avec_ia=not o["sans_ia"])
-            out(f"{b['titres']} titre(s) : {b['apple']} par Apple Music, {b['ia']} vérifié(s) par Google, {b['sans']} sans genre")
+            b = genres.etiqueter(o["limite"], avec_ia=not o["sans_ia"], reprendre=o["reprendre"])
+            out(f"{b['titres']} titre(s) : {b['apple']} par Apple Music, {b['ia']} vérifié(s) par Google, {b['sans']} sans genre ; {b.get('artistes_ia', 0)} artiste(s) envoyés à la vérification Google")
         run("genres-titres", task)
