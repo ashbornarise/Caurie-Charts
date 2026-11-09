@@ -1,11 +1,13 @@
-"""Espace partenaire protégé par mot de passe : /espace/<slug> (09/11/2026, Nec+Ultra Media × Cauri Charts).
+"""Espace partenaire protégé par mot de passe : /espace/<slug> (Nec+Ultra Media × Cauri Charts).
 
-Tout sur la Côte d'Ivoire (ou les pays du partenaire) : faits marquants, classements officiels en cartes avec
-pochettes et photos, classement complet des 100 titres de la semaine, artistes classés avec leurs chiffres,
-téléchargements (PDF, Excel, visuels TV) et toutes les semaines publiées. Co-marquage : couleurs du pays,
-de Cauri Charts et du partenaire. Jamais indexé, jamais mis en cache.
+Refonte du 09/11/2026 : un portail en onglets plutôt qu'une longue page.
+  Vue d'ensemble · Classements (un classement à la fois) · Top 100 · Artistes · Téléchargements
+Navigation par liens (?vue=, ?c=, ?semaine=) : aucun script, la page reste sous une politique de sécurité stricte.
+Couleurs : Cauri (violet, interface) · partenaire (noir et or : bandeau et n°1) · pays (drapeau, mouvements).
+Jamais indexé, jamais mis en cache.
 """
 import html
+from urllib.parse import urlencode
 
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.middleware.csrf import get_token
@@ -18,6 +20,17 @@ e = html.escape
 DRAPEAUX = {"CI": ("#F77F00", "#FFFFFF", "#009E60"), "TG": ("#006A4E", "#FFCE00", "#D21034"), "SN": ("#00853F", "#FDEF42", "#E31B23"),
             "GH": ("#CE1126", "#FCD116", "#006B3F"), "NG": ("#008751", "#FFFFFF", "#008751"), "BJ": ("#008751", "#FCD116", "#E8112D")}
 SESSION = "espace_partenaire_{}"
+VUES = [("accueil", "Vue d'ensemble"), ("classements", "Classements"), ("top100", "Top 100"), ("artistes", "Artistes"),
+        ("fichiers", "Téléchargements")]
+DESCRIPTIONS = {
+    "prime": "Le classement officiel : les titres les plus forts de la semaine.",
+    "icon": "Les artistes classés par les points de tous leurs titres additionnés.",
+    "saison": "Les points des artistes additionnés semaine après semaine depuis le début de la saison.",
+    "buzz": "Les plus fortes progressions de la semaine parmi les titres absents du classement officiel.",
+    "fresh": "Les titres sortis depuis moins de 8 semaines et les artistes émergents.",
+}
+FICHIERS = {"pdf": ("Dossier PDF", "Faits marquants et classements"), "xlsx": ("Tableau Excel", "Une feuille par classement"),
+            "zip": ("Visuels TV", "1920 × 1080, prêts pour l'antenne")}
 
 
 def _partenaire(slug: str) -> dict | None:
@@ -65,188 +78,446 @@ def page(request, slug: str):
     return _reponse(_espace(request, p))
 
 
-# ---------------------------------------------------------------- mise en page
+# ---------------------------------------------------------------- styles
+
+CSS = """
+:root { --encre:#121118; --encre2:#4a4858; --doux:#77748a; --ligne:#e9e7f1; --fond:#f6f5fa; --carte:#ffffff;
+  --violet:#8B52FF; --violet-fond:#f1ebff; --ciel:#38bdf8;
+  --pays1:__P1__; --pays2:__P2__; --pays3:__P3__; --nec:__N1__; --or:__N2__;
+  --monte:#0b7d4b; --monte-fond:#e3f5ec; --baisse:#c2353b; --baisse-fond:#fcebec; --neuf:#b45300; --neuf-fond:#fff0e0;
+  --serif:"Bodoni Moda","Bodoni 72",Didot,Georgia,serif; --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light }
+* { box-sizing:border-box }
+body { margin:0; background:var(--fond); color:var(--encre); font:15px/1.5 var(--sans); -webkit-font-smoothing:antialiased }
+a { color:inherit }
+img { max-width:100% }
+.serif { font-family:var(--serif) }
+h1,h2,h3 { text-wrap:balance; margin:0 }
+.cadre { max-width:1160px; margin:0 auto; padding-left:max(20px,env(safe-area-inset-left,0px)); padding-right:max(20px,env(safe-area-inset-right,0px)) }
+
+/* bandeau partenaire */
+.bandeau { background:var(--nec); color:#fff }
+.bandeau .cadre { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-block:16px; flex-wrap:wrap }
+.duo { display:flex; align-items:center; gap:16px; min-width:0 }
+.duo__cauri { height:30px; width:auto; display:block }
+.duo__x { width:1px; height:30px; background:rgba(255,255,255,.22) }
+.duo__nec { font:600 1.15rem/1 var(--serif); letter-spacing:.04em; color:var(--or); white-space:nowrap }
+.duo__nec img { height:30px; width:auto; display:block }
+.bandeau__droite { display:flex; align-items:center; gap:18px; font-size:.82rem; color:rgba(255,255,255,.7) }
+.bandeau__droite a { color:#fff; text-decoration:none; padding:7px 12px; border:1px solid rgba(255,255,255,.22); border-radius:999px }
+.bandeau__droite a:hover { border-color:var(--or) }
+.drapeau { display:flex; height:4px } .drapeau i { flex:1 }
+.drapeau i:nth-child(1) { background:var(--pays1) } .drapeau i:nth-child(2) { background:var(--pays2) } .drapeau i:nth-child(3) { background:var(--pays3) }
+.mini-drapeau { display:inline-flex; width:22px; height:15px; border-radius:3px; overflow:hidden; box-shadow:0 0 0 1px rgba(0,0,0,.08); vertical-align:-2px }
+.mini-drapeau i { flex:1 } .mini-drapeau i:nth-child(1) { background:var(--pays1) } .mini-drapeau i:nth-child(2) { background:var(--pays2) }
+.mini-drapeau i:nth-child(3) { background:var(--pays3) }
+
+/* barre de navigation */
+.barre { position:sticky; top:0; z-index:5; background:rgba(255,255,255,.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--ligne) }
+.barre .cadre { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap }
+.onglets { display:flex; gap:4px; overflow-x:auto; scrollbar-width:none; margin-bottom:-1px }
+.onglets::-webkit-scrollbar { display:none }
+.onglets a { text-decoration:none; padding:16px 14px 14px; font-weight:600; font-size:.92rem; color:var(--doux); border-bottom:3px solid transparent; white-space:nowrap }
+.onglets a:hover { color:var(--encre) }
+.onglets a[aria-current] { color:var(--encre); border-bottom-color:var(--violet) }
+.semaine { display:flex; align-items:center; gap:6px; padding-block:8px }
+.semaine a, .semaine span.off { display:grid; place-items:center; width:34px; height:34px; border-radius:999px; border:1px solid var(--ligne);
+  text-decoration:none; font-size:1.1rem; color:var(--encre); background:#fff }
+.semaine a:hover { border-color:var(--violet); color:var(--violet) }
+.semaine span.off { color:#cfcbe0 }
+.semaine strong { font-size:.9rem; padding:0 6px; white-space:nowrap }
+
+main { padding-block:32px 56px }
+.titre { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:24px }
+.sur { margin:0 0 6px; font-size:.75rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--doux);
+  display:flex; align-items:center; gap:8px }
+.titre h1 { font:700 clamp(2rem,4.6vw,3rem)/1.02 var(--serif) }
+.titre p.periode { margin:6px 0 0; color:var(--encre2) }
+.actions { display:flex; gap:8px; flex-wrap:wrap }
+.bouton { display:inline-flex; align-items:center; gap:8px; padding:11px 16px; border-radius:12px; font-weight:600; font-size:.9rem;
+  text-decoration:none; border:1px solid var(--ligne); background:#fff; color:var(--encre) }
+.bouton:hover { border-color:var(--violet) }
+.bouton--plein { background:var(--violet); border-color:var(--violet); color:#fff }
+.bouton--plein:hover { background:#7a3ff5 }
+.bouton svg { width:17px; height:17px; flex:none }
+.note { color:var(--doux); font-size:.88rem; margin:0 }
+
+/* vue d'ensemble : le n°1 et les faits */
+.une { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:16px }
+@media (max-width:860px) { .une { grid-template-columns:1fr } }
+.vedette { position:relative; display:grid; grid-template-columns:minmax(0,220px) minmax(0,1fr); gap:22px; align-items:center;
+  background:var(--nec); color:#fff; border-radius:22px; padding:22px; overflow:hidden; text-decoration:none }
+.vedette::after { content:""; position:absolute; inset:auto -60px -80px auto; width:260px; height:260px; border-radius:50%;
+  background:radial-gradient(circle,rgba(139,82,255,.45),transparent 70%); pointer-events:none }
+@media (max-width:520px) { .vedette { grid-template-columns:110px minmax(0,1fr); gap:14px; padding:14px; border-radius:18px }
+  .vedette h2 { font-size:1.35rem; margin-top:10px } .stats { gap:14px } .stats b { font-size:1.1rem } }
+@media (max-width:640px) { .bandeau__droite span { display:none } .bandeau .cadre { flex-wrap:nowrap } .duo { gap:10px } .duo__cauri { height:24px } .duo__x { height:24px } .duo__nec { font-size:.92rem } .bandeau__droite a { padding:6px 10px; font-size:.78rem } .barre .semaine { margin-left:auto } }
+.vedette .visuel { width:100%; aspect-ratio:1; border-radius:14px; object-fit:cover; display:block; box-shadow:0 18px 40px rgba(0,0,0,.35) }
+.couronne { display:inline-flex; align-items:center; gap:6px; background:var(--or); color:var(--nec); font:700 .78rem var(--sans);
+  letter-spacing:.1em; text-transform:uppercase; padding:5px 10px; border-radius:999px }
+.vedette h2 { font:700 clamp(1.6rem,3.4vw,2.3rem)/1.05 var(--serif); margin:14px 0 6px }
+.vedette .qui { color:rgba(255,255,255,.78); font-size:1rem }
+.vedette .detail { margin-top:14px; font-size:.86rem; color:rgba(255,255,255,.7) }
+.faits { display:grid; gap:12px }
+.fait { display:grid; grid-template-columns:72px minmax(0,1fr); gap:14px; align-items:center; background:var(--carte);
+  border:1px solid var(--ligne); border-radius:18px; padding:12px }
+.fait img,.fait .init { width:72px; height:72px; border-radius:12px; object-fit:cover; display:block }
+.fait small { display:block; font-size:.7rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--doux) }
+.fait strong { display:block; font-size:1rem; line-height:1.25; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.fait span.qui { display:block; color:var(--encre2); font-size:.86rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.fait .mv { margin-top:4px }
+
+.deux { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:16px }
+@media (max-width:860px) { .deux { grid-template-columns:1fr } }
+.bloc { background:var(--carte); border:1px solid var(--ligne); border-radius:22px; padding:20px }
+.bloc__tete { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:8px }
+.bloc__tete h2 { font:700 1.35rem/1.1 var(--serif) }
+.lien { color:var(--violet); font-weight:600; font-size:.88rem; text-decoration:none; white-space:nowrap }
+.lien:hover { text-decoration:underline }
+.liste { list-style:none; margin:0; padding:0 }
+.liste li { display:grid; grid-template-columns:28px 48px minmax(0,1fr) auto; gap:12px; align-items:center; padding:9px 0; border-top:1px solid var(--ligne) }
+.liste li:first-child { border-top:0 }
+.liste .n { font:700 1.15rem var(--serif); text-align:center }
+.liste img,.liste .init { width:48px; height:48px; border-radius:10px; object-fit:cover; display:block }
+.liste strong { display:block; font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.liste span.qui { display:block; color:var(--doux); font-size:.84rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.aussi { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin-top:16px }
+.aussi a { text-decoration:none }
+.aussi .fait:hover { border-color:var(--violet) }
+
+/* mouvements */
+.mv { display:inline-block; font:700 .72rem/1 var(--sans); padding:5px 8px; border-radius:999px; background:#f1f0f6; color:var(--encre2); white-space:nowrap }
+.mv--monte { color:var(--monte); background:var(--monte-fond) } .mv--baisse { color:var(--baisse); background:var(--baisse-fond) }
+.mv--neuf { color:var(--neuf); background:var(--neuf-fond) }
+
+/* classements */
+.puces { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:22px }
+.puces a { text-decoration:none; padding:8px 14px; border-radius:999px; border:1px solid var(--ligne); background:#fff; font-weight:600; font-size:.88rem; color:var(--encre2) }
+.puces a:hover { border-color:var(--violet) }
+.puces a[aria-current] { background:var(--encre); border-color:var(--encre); color:#fff }
+.chart-tete { margin-bottom:18px } .chart-tete h2 { font:700 clamp(1.6rem,3.6vw,2.2rem)/1.05 var(--serif) }
+.chart-tete p { margin:6px 0 0; color:var(--encre2); max-width:65ch }
+.stats { display:flex; gap:22px; flex-wrap:wrap; margin-top:16px }
+.stats div { font-size:.78rem; color:rgba(255,255,255,.65); text-transform:uppercase; letter-spacing:.1em; font-weight:600 }
+.stats b { display:block; font:700 1.35rem/1.1 var(--serif); color:#fff; text-transform:none; letter-spacing:0; margin-top:4px }
+.grille { display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:14px; margin-top:16px }
+@media (max-width:520px) { .grille { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px } }
+.carte { background:var(--carte); border:1px solid var(--ligne); border-radius:18px; padding:8px 8px 12px; min-width:0 }
+.carte__img { position:relative }
+.carte__img img,.carte__img .init { width:100%; aspect-ratio:1; border-radius:12px; object-fit:cover; display:block }
+.carte .rang { position:absolute; left:8px; bottom:8px; min-width:34px; height:34px; padding:0 8px; border-radius:999px; background:var(--encre);
+  color:#fff; display:grid; place-items:center; font:700 1rem var(--serif); box-shadow:0 4px 12px rgba(0,0,0,.25) }
+.carte .mv { position:absolute; right:8px; top:8px; box-shadow:0 2px 8px rgba(0,0,0,.12) }
+.carte h3 { margin:10px 4px 0; font-size:.93rem; line-height:1.25; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.carte p { margin:2px 4px 0; color:var(--doux); font-size:.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+
+/* tableaux */
+.table { background:var(--carte); border:1px solid var(--ligne); border-radius:20px; overflow:hidden }
+table { width:100%; border-collapse:collapse; font-size:.92rem }
+th,td { padding:9px 14px; text-align:left; border-bottom:1px solid var(--ligne) }
+tbody tr:last-child td { border-bottom:0 }
+th { font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; color:var(--doux); background:#fbfafd; font-weight:700 }
+td.n { font:700 1.05rem var(--serif); width:56px; text-align:center }
+td.n--or { color:var(--or) }
+td.qui { min-width:0 }
+.ident { display:flex; align-items:center; gap:12px; min-width:0 }
+.ident img,.ident .init { width:42px; height:42px; border-radius:9px; object-fit:cover; flex:none; display:block }
+.ident strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.ident span { display:block; color:var(--doux); font-size:.83rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.ident > div { min-width:0 }
+td.c, th.c { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap }
+table { table-layout:fixed }
+@media (max-width:640px) { .cache-mobile { display:none } th,td { padding:8px 10px } td.n { width:40px } }
+
+/* podium artistes */
+.podium { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:16px }
+@media (max-width:640px) { .podium { grid-template-columns:1fr } }
+.marche { display:grid; grid-template-columns:84px minmax(0,1fr); gap:14px; align-items:center; background:var(--carte); border:1px solid var(--ligne);
+  border-radius:20px; padding:14px }
+.marche--1 { background:var(--nec); color:#fff; border-color:var(--nec) }
+.marche img,.marche .init { width:84px; height:84px; border-radius:50%; object-fit:cover; display:block }
+.marche--1 img { box-shadow:0 0 0 3px var(--or) }
+.marche small { font-size:.7rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--doux) }
+.marche--1 small { color:var(--or) }
+.marche strong { display:block; font:700 1.25rem/1.15 var(--serif); margin:2px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.marche span { font-size:.85rem; color:var(--doux) } .marche--1 span { color:rgba(255,255,255,.7) }
+
+/* téléchargements */
+.editions { display:grid; gap:12px }
+.edition { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; background:var(--carte);
+  border:1px solid var(--ligne); border-radius:20px; padding:18px 20px }
+.edition--courante { border-color:var(--violet); box-shadow:0 10px 30px rgba(139,82,255,.10) }
+.edition h3 { font:700 1.3rem/1.1 var(--serif) } .edition p { margin:4px 0 0; color:var(--doux); font-size:.86rem }
+.vide { background:var(--carte); border:1px dashed var(--ligne); border-radius:20px; padding:28px; color:var(--encre2) }
+
+.init { display:grid !important; place-items:center; background:linear-gradient(135deg,var(--violet),var(--ciel)); color:#fff; font:700 1.2rem var(--serif) }
+.pages { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:16px }
+.pages a { text-decoration:none; padding:8px 14px; border-radius:999px; border:1px solid var(--ligne); background:#fff; font-weight:600; font-size:.85rem; color:var(--encre2) }
+.pages a[aria-current] { background:var(--encre); color:#fff; border-color:var(--encre) }
+.pied { border-top:1px solid var(--ligne); background:#fff }
+.pied .cadre { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-block:20px; font-size:.83rem; color:var(--doux) }
+
+/* connexion */
+.connexion { min-height:100vh; padding:0 !important; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); background:#fff }
+@media (max-width:860px) { .connexion { grid-template-columns:1fr } }
+.connexion__marque { position:relative; overflow:hidden; background:var(--nec); color:#fff; display:flex; flex-direction:column;
+  justify-content:space-between; gap:40px; padding:40px max(28px,env(safe-area-inset-left,0px)) }
+.connexion__marque::before { content:""; position:absolute; width:520px; height:520px; right:-200px; top:-160px; border-radius:50%;
+  background:radial-gradient(circle,rgba(139,82,255,.42),transparent 68%) }
+.connexion__marque::after { content:""; position:absolute; left:0; right:0; bottom:0; height:6px;
+  background:linear-gradient(90deg,var(--pays1) 0 33.3%,var(--pays2) 33.3% 66.6%,var(--pays3) 66.6%) }
+.connexion__marque > * { position:relative }
+.connexion__marque h1 { font:700 clamp(2.1rem,4.4vw,3.4rem)/1.04 var(--serif); max-width:15ch }
+.connexion__marque p { color:rgba(255,255,255,.72); max-width:46ch; margin:14px 0 0 }
+.connexion__pied { font-size:.82rem; color:rgba(255,255,255,.55) }
+.connexion__form { display:grid; place-items:center; padding:40px max(24px,env(safe-area-inset-right,0px)) }
+.connexion__form form { width:min(380px,100%) }
+.connexion__form h2 { font:700 1.8rem/1.1 var(--serif); margin-bottom:6px }
+.connexion__form p { color:var(--doux); margin:0 0 24px }
+label { display:block; font-weight:600; font-size:.88rem; margin-bottom:8px }
+input[type=password] { width:100%; padding:14px 16px; border-radius:12px; border:1px solid #d9d6e5; font:inherit; font-size:1rem; background:#fff }
+input[type=password]:focus { outline:3px solid var(--violet-fond); border-color:var(--violet) }
+button { margin-top:16px; width:100%; padding:14px; border:0; border-radius:12px; background:var(--violet); color:#fff; font:600 1rem var(--sans); cursor:pointer }
+button:hover { background:#7a3ff5 }
+.erreur { background:var(--baisse-fond); color:var(--baisse); font-weight:600; padding:10px 14px; border-radius:10px; margin:0 0 16px }
+:focus-visible { outline:3px solid var(--violet); outline-offset:2px }
+"""
+
+ICONE_DL = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+            'aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>')
+
 
 def _css(p: dict, pays: str) -> str:
-    o, b, v = DRAPEAUX.get(pays, ("#F77F00", "#FFFFFF", "#009E60"))
-    nec1, nec2 = p.get("couleur") or "#14141c", p.get("couleur2") or "#C9A227"
-    return f"""
-:root {{ --violet:#7c3aed; --ciel:#38bdf8; --nuit:#0c0b16; --gris:#6b6a7e; --ligne:#e7e5f0; --fond:#f7f7fb; --carte:#ffffff;
-  --pays1:{o}; --pays2:{b}; --pays3:{v}; --nec:{nec1}; --nec2:{nec2}; color-scheme:light }}
-* {{ box-sizing:border-box }}
-body {{ margin:0; background:var(--fond); color:var(--nuit); font:16px/1.5 "DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif }}
-h1,h2,h3,.titre {{ font-family:"Montserrat",system-ui,sans-serif; text-wrap:balance }}
-.drapeau {{ display:flex; height:8px }} .drapeau i {{ flex:1 }} .drapeau i:nth-child(1) {{ background:var(--pays1) }}
-.drapeau i:nth-child(2) {{ background:var(--pays2) }} .drapeau i:nth-child(3) {{ background:var(--pays3) }}
-.cauri {{ height:4px; background:linear-gradient(90deg,var(--ciel),var(--violet)) }}
-.page {{ max-width:1180px; margin:0 auto; padding:0 max(16px,env(safe-area-inset-right)) 64px max(16px,env(safe-area-inset-left)) }}
-.entete {{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:22px 0 }}
-.duo {{ display:flex; align-items:center; gap:14px; flex-wrap:wrap }}
-.marque {{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.05rem; text-decoration:none; color:inherit }}
-.marque__cauri {{ width:40px; height:40px; border-radius:10px; background:var(--violet); color:#fff; display:grid; place-items:center;
-  font:800 .95rem Montserrat,sans-serif }}
-.fois {{ color:var(--gris); font-size:1.2rem }}
-.marque__nec {{ padding:8px 14px; border-radius:10px; background:var(--nec); color:var(--nec2); font:800 1rem Montserrat,sans-serif;
-  letter-spacing:.04em }}
-.marque__nec img {{ height:28px; display:block }}
-.sortir {{ font-size:.85rem; color:var(--gris) }}
-.hero {{ position:relative; overflow:hidden; border-radius:28px; padding:36px clamp(20px,4vw,48px); color:#fff;
-  background:radial-gradient(120% 140% at 0% 0%, var(--pays1) 0%, transparent 55%),
-             radial-gradient(120% 140% at 100% 100%, var(--pays3) 0%, transparent 55%),
-             linear-gradient(135deg,var(--nec) 0%, #2a1660 55%, var(--violet) 100%) }}
-.hero__sur {{ margin:0; font:700 .78rem Montserrat,sans-serif; letter-spacing:.16em; text-transform:uppercase; opacity:.9 }}
-.hero h1 {{ margin:.25em 0 .2em; font-size:clamp(2rem,5.5vw,3.4rem); line-height:1.05 }}
-.hero p {{ margin:0; max-width:62ch; opacity:.92 }}
-.semaines {{ margin-top:22px; display:flex; flex-wrap:wrap; gap:8px; align-items:center }}
-.semaines a {{ color:#fff; text-decoration:none; padding:6px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.35); font-size:.88rem }}
-.semaines a[aria-current] {{ background:#fff; color:var(--nuit); border-color:#fff; font-weight:700 }}
-.faits {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin:22px 0 8px }}
-.fait {{ background:var(--carte); border:1px solid var(--ligne); border-left:5px solid var(--pays1); border-radius:16px; padding:14px 16px }}
-.fait:nth-child(3n+2) {{ border-left-color:var(--pays3) }} .fait:nth-child(3n) {{ border-left-color:var(--violet) }}
-section {{ margin-top:44px }}
-.section__tete {{ display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:14px }}
-h2 {{ margin:0; font-size:clamp(1.35rem,3vw,1.8rem) }} .section__tete p {{ margin:0; color:var(--gris); font-size:.92rem }}
-.podium {{ display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,2fr); gap:16px }}
-@media (max-width:800px) {{ .podium {{ grid-template-columns:1fr }} }}
-.un {{ background:var(--carte); border:1px solid var(--ligne); border-radius:24px; padding:18px; position:relative }}
-.un img,.un .init {{ width:100%; aspect-ratio:1; object-fit:cover; border-radius:18px; display:block }}
-.un .badge {{ position:absolute; top:28px; left:28px; background:var(--violet); color:#fff; font:800 1.1rem Montserrat,sans-serif;
-  padding:6px 14px; border-radius:999px }}
-.un h3 {{ margin:14px 0 2px; font-size:1.5rem; line-height:1.15 }} .un .qui {{ color:var(--gris) }}
-.grille {{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-content:start }}
-@media (max-width:560px) {{ .grille {{ grid-template-columns:repeat(2,minmax(0,1fr)) }} }}
-.carte {{ background:var(--carte); border:1px solid var(--ligne); border-radius:18px; padding:10px; position:relative; min-width:0 }}
-.carte img,.carte .init {{ width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px; display:block }}
-.init {{ display:grid !important; place-items:center; background:linear-gradient(135deg,var(--violet),var(--ciel)); color:#fff;
-  font:800 2rem Montserrat,sans-serif }}
-.rang {{ position:absolute; top:16px; left:16px; min-width:36px; height:36px; padding:0 8px; border-radius:999px; background:var(--nuit);
-  color:#fff; display:grid; place-items:center; font:800 1rem Montserrat,sans-serif }}
-.carte h3 {{ margin:8px 2px 0; font-size:.98rem; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }}
-.carte .qui {{ margin:0 2px; color:var(--gris); font-size:.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }}
-.mv {{ display:inline-block; margin:6px 2px 0; font:800 .74rem Montserrat,sans-serif; padding:2px 8px; border-radius:999px; background:#f1effa }}
-.mv--monte {{ color:#0f8a52; background:#e3f6ec }} .mv--baisse {{ color:#c2353b; background:#fbe9ea }} .mv--neuf {{ color:var(--violet) }}
-.onglets {{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px }}
-.onglets a {{ text-decoration:none; color:inherit; padding:7px 14px; border-radius:999px; border:1px solid var(--ligne); background:#fff; font-size:.9rem }}
-.table {{ overflow-x:auto; background:var(--carte); border:1px solid var(--ligne); border-radius:18px }}
-table {{ width:100%; border-collapse:collapse; font-size:.93rem }} th,td {{ padding:9px 12px; text-align:left; border-bottom:1px solid var(--ligne) }}
-th {{ font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); background:#fbfaff }}
-td.n {{ font:800 1rem Montserrat,sans-serif; width:48px }} td img {{ width:40px; height:40px; border-radius:8px; object-fit:cover; display:block }}
-td .qui {{ color:var(--gris); font-size:.84rem }} td.chiffre {{ font-variant-numeric:tabular-nums; white-space:nowrap }}
-.telechargements {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px }}
-.fichier {{ display:flex; flex-direction:column; padding:16px; border-radius:16px; border:1px solid var(--ligne); background:#fff; text-decoration:none;
-  color:inherit }} .fichier:hover {{ border-color:var(--violet) }} .fichier span {{ color:var(--gris); font-size:.86rem }}
-.pied {{ margin-top:56px; padding-top:20px; border-top:1px solid var(--ligne); color:var(--gris); font-size:.86rem; display:flex;
-  flex-wrap:wrap; justify-content:space-between; gap:8px }}
-.connexion {{ min-height:100vh; display:grid; place-items:center; padding:24px 16px }}
-.boite {{ width:min(440px,100%); background:#fff; border:1px solid var(--ligne); border-radius:24px; overflow:hidden; box-shadow:0 20px 60px rgba(20,10,60,.10) }}
-.boite__corps {{ padding:28px }} .boite h1 {{ margin:6px 0 4px; font-size:1.6rem }} .boite p {{ color:var(--gris); margin:0 0 18px }}
-label {{ display:block; font-weight:700; font-size:.9rem; margin-bottom:6px }}
-input[type=password] {{ width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--ligne); font:inherit }}
-button {{ margin-top:14px; width:100%; padding:13px; border:0; border-radius:12px; background:var(--violet); color:#fff; font:700 1rem inherit; cursor:pointer }}
-.erreur {{ color:#c2353b; font-weight:700 }}
-"""
+    o, b, v = DRAPEAUX.get(pays, DRAPEAUX["CI"])
+    return (CSS.replace("__P1__", o).replace("__P2__", b).replace("__P3__", v)
+            .replace("__N1__", p.get("couleur") or "#14141c").replace("__N2__", p.get("couleur2") or "#C9A227"))
 
 
 def _tete(p: dict, titre: str, pays: str) -> str:
     return f"""<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow"><title>{e(titre)}</title>
+<meta name="robots" content="noindex, nofollow"><title>{e(titre)}</title><link rel="icon" href="/assets/img/brand/favicon-32.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,600;6..96,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>{_css(p, pays)}</style></head><body>"""
 
 
-def _marques(p: dict) -> str:
-    nec = f'<img src="{e(p["logo_url"])}" alt="{e(p["nom"])}">' if p.get("logo_url") else e(p["nom"])
-    return (f'<div class="duo"><span class="marque"><span class="marque__cauri">CC</span>Cauri Charts</span>'
-            f'<span class="fois" aria-hidden="true">×</span><span class="marque__nec">{nec}</span></div>')
+def _duo(p: dict) -> str:
+    nec = f'<img src="{e(p["logo_url"])}" alt="{e(p["nom"])}">' if p.get("logo_url") else e(p["nom"].replace(" Media", "").upper())
+    return (f'<div class="duo"><img class="duo__cauri" src="/assets/img/brand/logo-white.svg" alt="Cauri Charts" width="68" height="30">'
+            f'<span class="duo__x" aria-hidden="true"></span><span class="duo__nec">{nec}</span></div>')
+
+
+def _drapeau(cls: str = "drapeau") -> str:
+    return f'<span class="{cls}" aria-hidden="true"><i></i><i></i><i></i></span>'
 
 
 def _connexion(request, p: dict, erreur: str) -> str:
     pays = (p.get("pays") or "CI").split(",")[0] or "CI"
-    return (_tete(p, f"Espace {p['nom']} · Cauri Charts", pays)
-            + f"""<div class="drapeau"><i></i><i></i><i></i></div><div class="cauri"></div><main class="connexion"><div class="boite">
-<div class="boite__corps">{_marques(p)}<h1>Espace réservé</h1>
-<p>Les classements officiels de la {e(P.NOMS_PAYS.get(pays, pays))}, chaque semaine, dès leur publication.</p>
+    nom_pays = P.NOMS_PAYS.get(pays, pays)
+    return (_tete(p, f"Espace {p['nom']} · Cauri Charts", pays) + f"""<main class="connexion">
+<section class="connexion__marque">{_duo(p)}<div><p class="sur" style="color:rgba(255,255,255,.6)">{_drapeau("mini-drapeau")} {e(nom_pays)} · espace partenaire</p>
+<h1>Les classements de la {e(nom_pays)}, chaque semaine.</h1>
+<p>Classements officiels, faits marquants, artistes de la semaine et dossiers prêts pour l'antenne, réservés à {e(p['nom'])}.</p></div>
+<p class="connexion__pied">Cauri Charts · la référence de la musique ouest-africaine</p></section>
+<section class="connexion__form"><form method="post"><h2>Connexion</h2><p>Entrez le mot de passe qui vous a été remis.</p>
 {f'<p class="erreur" role="alert">{e(erreur)}</p>' if erreur else ''}
-<form method="post"><input type="hidden" name="csrfmiddlewaretoken" value="{e(get_token(request))}">
+<input type="hidden" name="csrfmiddlewaretoken" value="{e(get_token(request))}">
 <label for="mdp">Mot de passe</label><input id="mdp" type="password" name="mot_de_passe" autocomplete="current-password" required autofocus>
-<button type="submit">Entrer</button></form></div><div class="drapeau"><i></i><i></i><i></i></div></div></main></body></html>""")
+<button type="submit">Accéder à l'espace</button></form></section></main></body></html>""")
 
+
+# ---------------------------------------------------------------- petits éléments
 
 def _img(url: str, nom: str, cls: str = "") -> str:
+    c = f' class="{cls}"' if cls else ""
     if url:
-        return f'<img src="{e(url)}" alt="" loading="lazy" referrerpolicy="no-referrer"{f" class={cls}" if cls else ""}>'
+        return f'<img src="{e(url)}" alt="" loading="lazy" referrerpolicy="no-referrer"{c}>'
     lettres = "".join(m[0] for m in (nom or "?").split()[:2]).upper()
-    return f'<span class="init {cls}" aria-hidden="true">{e(lettres)}</span>'
+    return f'<span class="init{" " + cls if cls else ""}" aria-hidden="true">{e(lettres)}</span>'
 
 
 def _mv(l: dict) -> str:
     m = P._mouvement(l)
-    cls = "monte" if m.startswith("+") else "baisse" if m.startswith("-") else "neuf" if m in ("NOUVEAU", "RETOUR") else ""
-    return f'<span class="mv mv--{cls}">{e(m)}</span>'
-
-
-def _classement(c: dict) -> str:
-    lignes = c["lignes"]
-    if not lignes:
-        return ""
-    n1 = lignes[0]
-    nom1 = n1["titre"] or n1["artiste"]
-    qui1 = n1["artiste"] if n1["titre"] else f"points sur {n1['titres'] or 1} titre{'s' if (n1['titres'] or 1) > 1 else ''}"
-    cartes = "".join(
-        f'<article class="carte"><span class="rang">{l["rang"]}</span>{_img(l["image"], l["artiste"])}'
-        f'<h3 title="{e(l["titre"] or l["artiste"])}">{e(l["titre"] or l["artiste"])}</h3>'
-        f'<p class="qui">{e(l["artiste"] if l["titre"] else "points sur " + str(l["titres"] or 1) + " titres")}</p>{_mv(l)}</article>'
-        for l in lignes[1:])
-    return (f'<div class="podium"><article class="un"><span class="badge">N°1</span>{_img(n1["image"], n1["artiste"])}'
-            f'<h3>{e(nom1)}</h3><div class="qui">{e(qui1)}</div>{_mv(n1)}</article><div class="grille">{cartes}</div></div>')
+    if m == "NOUVEAU":
+        return '<span class="mv mv--neuf">Entrée</span>'
+    if m == "RETOUR":
+        return '<span class="mv mv--neuf">Retour</span>'
+    cls = "monte" if m.startswith("+") else "baisse" if m.startswith("-") else ""
+    texte = {"=": "="}.get(m, m.replace("-", "−"))
+    return f'<span class="mv mv--{cls}" title="Évolution depuis la semaine passée">{e(texte)}</span>'
 
 
 def _nombre(n) -> str:
     return f"{int(n):,}".replace(",", " ") if n else "—"
 
 
+def _nom(l: dict) -> str:
+    return l["titre"] or l["artiste"]
+
+
+def _qui(l: dict) -> str:
+    if l["titre"]:
+        return l["artiste"] + (f" feat. {l['feat']}" if l.get("feat") else "")
+    n = l["titres"] or 1
+    return f"points sur {n} titre{'s' if n > 1 else ''}"
+
+
+# ---------------------------------------------------------------- la page
+
 def _espace(request, p: dict) -> str:
     pays = (p.get("pays") or "CI").split(",")[0] or "CI"
     nom_pays = P.NOMS_PAYS.get(pays, pays)
     c = db.one("SELECT id FROM countries WHERE code = ?", [pays])
     cid = int(c["id"]) if c else None
-    semaines = repos.published_runs(cid, "prime", "week", 30) if cid else []
-    choisie = request.GET.get("semaine") or (semaines[0]["period_key"] if semaines else "")
-    if semaines and choisie not in {s["period_key"] for s in semaines}:
-        choisie = semaines[0]["period_key"]
+    semaines = [s["period_key"] for s in (repos.published_runs(cid, "prime", "week", 30) if cid else [])]
+    choisie = request.GET.get("semaine") or (semaines[0] if semaines else "")
+    if semaines and choisie not in semaines:
+        choisie = semaines[0]
+    vue = request.GET.get("vue") if request.GET.get("vue") in dict(VUES) else "accueil"
     d = P.donnees(choisie, [pays]) if choisie else {"perimetres": [], "periode": None}
     local = next((x for x in d["perimetres"] if x["code"] == pays), None)
-    periode = f"du {P._date_fr(d['periode'][0])} au {P._date_fr(d['periode'][1])}" if d.get("periode") else ""
+    debut = d["periode"][0] if d.get("periode") else None
+    periode = f"Du {P._date_fr(d['periode'][0])} au {P._date_fr(d['periode'][1])}" if d.get("periode") else ""
+    editions = P.editions(int(p["id"]))
+    edition = next((x for x in editions if x["semaine"] == choisie), None)
 
-    corps = [f"""<div class="drapeau"><i></i><i></i><i></i></div><div class="cauri"></div><div class="page">
-<header class="entete">{_marques(p)}<a class="sortir" href="?sortir">Se déconnecter</a></header>
-<div class="hero"><p class="hero__sur">{e(p['nom'])} × Cauri Charts · classements officiels</p>
-<h1>{e(nom_pays)} · semaine {e(choisie[-2:]) if choisie else '—'}</h1><p>{e(periode)}. Données réelles relevées sur YouTube, Apple Music,
-Boomplay, Spotify et les classements des plateformes, publiées chaque vendredi soir. Mention à l'antenne : « Source : Cauri Charts ».</p>
-<nav class="semaines" aria-label="Semaines">""" + "".join(
-        f'<a href="?semaine={e(s["period_key"])}"{" aria-current=page" if s["period_key"] == choisie else ""}>S{e(s["period_key"][-2:])}</a>'
-        for s in semaines[:12]) + "</nav></div>"]
+    def u(**kw) -> str:
+        q = {"semaine": choisie, "vue": vue}
+        q.update(kw)
+        q = {k: v for k, v in q.items() if v and not (k == "vue" and v == "accueil")}
+        return "?" + urlencode(q) if q else "?"
 
-    if not local:
-        corps.append('<section><p>Aucun classement publié pour le moment. La première édition arrive vendredi soir.</p></section>')
-    else:
-        corps.append('<div class="faits">' + "".join(f'<div class="fait">{e(f)}</div>' for f in local["faits"]) + "</div>")
-        ancres = [(x["code"], x["nom"]) for x in local["classements"]]
-        corps.append('<nav class="onglets" aria-label="Classements">' + "".join(f'<a href="#{e(k)}">{e(n)}</a>' for k, n in ancres)
-                     + '<a href="#complet">Classement complet</a><a href="#artistes">Artistes</a><a href="#telechargements">Téléchargements</a></nav>')
-        for x in local["classements"]:
-            corps.append(f'<section id="{e(x["code"])}"><div class="section__tete"><h2>{e(x["nom"])}</h2>'
-                         f'<p>{e(nom_pays)} · semaine {e(choisie[-2:])}</p></div>{_classement(x)}</section>')
-        corps.append(_complet(cid, d["periode"][0] if d.get("periode") else None))
-        corps.append(_artistes(cid, d["periode"][0] if d.get("periode") else None))
-    corps.append(_telechargements(p))
-    corps.append(f"""<footer class="pied"><span>Cauri Charts · la référence de la musique ouest-africaine · cauricharts.com</span>
-<span>Espace réservé à {e(p['nom'])} · contact@cauricharts.com</span></footer></div></body></html>""")
-    return _tete(p, f"{p['nom']} × Cauri Charts · {nom_pays}", pays) + "".join(corps)
+    # semaine précédente / suivante
+    i = semaines.index(choisie) if choisie in semaines else -1
+    avant = semaines[i + 1] if 0 <= i < len(semaines) - 1 else None
+    apres = semaines[i - 1] if i > 0 else None
+    fleche = lambda s, sens, t: (f'<a href="{e(u(semaine=s))}" aria-label="{t} (S{e(s[-2:])})">{sens}</a>' if s
+                                 else f'<span class="off" aria-hidden="true">{sens}</span>')
+    nav_semaine = (f'<div class="semaine">{fleche(avant, "‹", "Semaine précédente")}<strong>Semaine {e(choisie[-2:]) if choisie else "—"}'
+                   f'</strong>{fleche(apres, "›", "Semaine suivante")}</div>')
+    onglets = "".join(f'<a href="{e(u(vue=k, c=None))}"{" aria-current=page" if k == vue else ""}>{t}</a>' for k, t in VUES)
+
+    html_ = [f"""<header class="bandeau"><div class="cadre">{_duo(p)}<div class="bandeau__droite"><span>Espace partenaire</span>
+<a href="?sortir">Se déconnecter</a></div></div></header>{_drapeau()}
+<div class="barre"><div class="cadre"><nav class="onglets" aria-label="Rubriques">{onglets}</nav>{nav_semaine}</div></div>
+<main class="cadre">"""]
+
+    titre = {"accueil": f"Semaine {choisie[-2:]}" if choisie else "Bienvenue", "classements": "Classements officiels",
+             "top100": "Les 100 titres de la semaine", "artistes": "Les artistes de la semaine", "fichiers": "Téléchargements"}[vue]
+    actions = _boutons(edition) if vue in ("accueil", "fichiers") and edition else ""
+    html_.append(f'<div class="titre"><div><p class="sur">{_drapeau("mini-drapeau")} {e(nom_pays)} · {e(p["nom"])} × Cauri Charts</p>'
+                 f'<h1>{e(titre)}</h1><p class="periode">{e(periode)}</p></div><div class="actions">{actions}</div></div>')
+
+    if vue == "fichiers":
+        html_.append(_fichiers(editions, choisie))
+    elif not local:
+        html_.append('<div class="vide">Aucun classement publié pour le moment. La première édition arrive vendredi soir.</div>')
+    elif vue == "accueil":
+        html_.append(_accueil(local, u, edition))
+    elif vue == "classements":
+        html_.append(_classements(local, request.GET.get("c"), u, nom_pays))
+    elif vue == "top100":
+        html_.append(_top100(cid, debut, _page(request), u))
+    elif vue == "artistes":
+        html_.append(_artistes(cid, debut, _page(request), u))
+
+    html_.append(f"""</main><footer class="pied"><div class="cadre"><span>Cauri Charts · la référence de la musique ouest-africaine ·
+mention à l'antenne : « Source : Cauri Charts »</span><span>Espace réservé à {e(p['nom'])} · contact@cauricharts.com</span></div></footer>
+</body></html>""")
+    return _tete(p, f"{p['nom']} × Cauri Charts · {nom_pays}", pays) + "".join(html_)
 
 
-def _complet(cid, debut) -> str:
+def _boutons(ed: dict) -> str:
+    out = []
+    for nom, url in ed["fichiers"].items():
+        ext = nom.rsplit(".", 1)[-1]
+        titre = FICHIERS.get(ext, (nom, ""))[0]
+        out.append(f'<a class="bouton{" bouton--plein" if ext == "pdf" else ""}" href="{e(url)}" download>{ICONE_DL}{e(titre)}</a>')
+    return "".join(out)
+
+
+def _fait(etiquette: str, l: dict, detail: str = "", mv: bool = False, href: str = "") -> str:
+    corps = (f'<div class="fait">{_img(l["image"], l["artiste"])}<div><small>{e(etiquette)}</small><strong>{e(_nom(l))}</strong>'
+             f'<span class="qui">{e(detail or _qui(l))}</span>{_mv(l) if mv else ""}</div></div>')
+    return f'<a href="{e(href)}">{corps}</a>' if href else corps
+
+
+def _accueil(local: dict, u, edition) -> str:
+    par = {c["code"]: c for c in local["classements"]}
+    top = (par.get("prime") or {}).get("lignes") or []
+    out = []
+    if top:
+        n1 = top[0]
+        if n1["precedent"] == 1:
+            detail = f"Reste n°1 · {n1['semaines'] or 1} semaines au classement"
+        elif n1["precedent"]:
+            detail = f"Nouveau n°1 · était {P._e(n1['precedent'])} la semaine passée"
+        else:
+            detail = "Entrée directe à la 1re place"
+        faits = []
+        if par.get("icon") and par["icon"]["lignes"]:
+            a = par["icon"]["lignes"][0]
+            faits.append(_fait("Artiste de la semaine", a))
+        montees = [l for l in top[1:] if l["precedent"] and l["precedent"] > l["rang"]]
+        if montees:
+            m = max(montees, key=lambda l: l["precedent"] - l["rang"])
+            faits.append(_fait("Plus forte progression", m, f"{m['artiste']} · de la {P._e(m['precedent'])} à la {P._e(m['rang'])} place", True))
+        entrees = [l for l in top[1:] if not l["precedent"] and (l["semaines"] or 1) <= 1]
+        if entrees:
+            en = min(entrees, key=lambda l: l["rang"])
+            faits.append(_fait("Meilleure entrée", en, f"{en['artiste']} · entre {P._e(en['rang'])}", True))
+        out.append(f'<div class="une"><a class="vedette" href="{e(u(vue="classements", c="prime"))}">{_img(n1["image"], n1["artiste"], "visuel")}'
+                   f'<div><span class="couronne">N°1 de la semaine</span><h2>{e(_nom(n1))}</h2><div class="qui">{e(_qui(n1))}</div>'
+                   f'<div class="detail">{e(detail)}</div></div></a><div class="faits">{"".join(faits)}</div></div>')
+
+    def liste(code: str, titre: str) -> str:
+        c = par.get(code)
+        if not c or not c["lignes"]:
+            return ""
+        lignes = "".join(f'<li><span class="n">{l["rang"]}</span>{_img(l["image"], l["artiste"])}<div><strong>{e(_nom(l))}</strong>'
+                         f'<span class="qui">{e(_qui(l))}</span></div>{_mv(l)}</li>' for l in c["lignes"][:5])
+        return (f'<section class="bloc"><div class="bloc__tete"><h2>{e(titre)}</h2><a class="lien" href="{e(u(vue="classements", c=code))}">'
+                f'Voir les {len(c["lignes"])} →</a></div><ol class="liste">{lignes}</ol></section>')
+
+    out.append(f'<div class="deux">{liste("prime", "Top des titres")}{liste("icon", "Top Artistes")}</div>')
+    autres = [c for c in local["classements"] if c["code"] not in ("prime", "icon") and c["lignes"]]
+    if autres:
+        out.append('<div class="aussi">' + "".join(
+            _fait(f"N°1 · {c['nom']}", c["lignes"][0], href=u(vue="classements", c=c["code"])) for c in autres) + "</div>")
+    if not edition:
+        out.append('<p class="note" style="margin-top:18px">Le dossier PDF, le tableau Excel et les visuels TV de cette semaine '
+                   'arrivent dans « Téléchargements » dès la publication du vendredi soir.</p>')
+    return "".join(out)
+
+
+def _classements(local: dict, code: str | None, u, nom_pays: str) -> str:
+    charts = [c for c in local["classements"] if c["lignes"]]
+    if not charts:
+        return '<div class="vide">Aucun classement publié cette semaine.</div>'
+    c = next((x for x in charts if x["code"] == code), charts[0])
+    puces = "".join(f'<a href="{e(u(vue="classements", c=x["code"]))}"{" aria-current=page" if x is c else ""}>{e(x["nom"])}</a>'
+                    for x in charts)
+    desc = DESCRIPTIONS.get(c["code"]) or (f"Les titres {c['nom'].replace('Top ', '').lower()} les plus forts de la semaine."
+                                           if c["code"].startswith("g-") else "")
+    n1, reste = c["lignes"][0], c["lignes"][1:]
+    stats = [("Évolution", P._mouvement(n1).replace("NOUVEAU", "Entrée").replace("RETOUR", "Retour").replace("-", "−"))]
+    if n1.get("semaines"):
+        stats.append(("Semaines", str(n1["semaines"])))
+    if n1.get("meilleur"):
+        stats.append(("Meilleur rang", str(n1["meilleur"])))
+    if c["artistes"] and n1.get("titres"):
+        stats.append(("Titres", str(n1["titres"])))
+    cartes = "".join(
+        f'<article class="carte"><div class="carte__img">{_img(l["image"], l["artiste"])}<span class="rang">{l["rang"]}</span>{_mv(l)}</div>'
+        f'<h3 title="{e(_nom(l))}">{e(_nom(l))}</h3><p>{e(_qui(l))}</p></article>' for l in reste)
+    return (f'<nav class="puces" aria-label="Classements">{puces}</nav>'
+            f'<div class="chart-tete"><h2>{e(c["nom"])} · {e(nom_pays)}</h2><p>{e(desc)}</p></div>'
+            f'<div class="vedette">{_img(n1["image"], n1["artiste"], "visuel")}<div><span class="couronne">N°1</span>'
+            f'<h2>{e(_nom(n1))}</h2><div class="qui">{e(_qui(n1))}</div><div class="stats">'
+            + "".join(f"<div>{e(k)}<b>{e(v)}</b></div>" for k, v in stats) + f'</div></div></div><div class="grille">{cartes}</div>')
+
+
+def _top100(cid, debut, page: int, u) -> str:
     """Tous les titres de la semaine dans le pays, par score (titres vérifiés seulement)."""
     if not cid or not debut:
         return ""
@@ -255,16 +526,17 @@ def _complet(cid, debut) -> str:
                      WHERE ws.country_id = ? AND ws.week_start = ? AND ws.score > 0 AND ws.review_status IN ('ok', 'validated')
                      ORDER BY ws.score DESC LIMIT 100""", [cid, debut])
     if not rows:
-        return ""
-    lignes = "".join(f'<tr><td class="n">{i}</td><td>{_img(r["cover_url"] or r["photo"], r["name"])}</td>'
-                     f'<td><strong>{e(r["title"])}</strong><div class="qui">{e(r["name"])}{" feat. " + e(r["featuring"]) if r["featuring"] else ""}</div></td>'
-                     f'<td class="chiffre">{_nombre(r["score"])}</td></tr>' for i, r in enumerate(rows, 1))
-    return (f'<section id="complet"><div class="section__tete"><h2>Classement complet</h2><p>Les {len(rows)} titres de la semaine, '
-            f'par score Cauri</p></div><div class="table"><table><thead><tr><th>Rang</th><th></th><th>Titre</th><th>Score</th></tr>'
-            f'</thead><tbody>{lignes}</tbody></table></div></section>')
+        return '<div class="vide">Le détail des titres de cette semaine n\'est pas disponible.</div>'
+    lignes = "".join(
+        f'<tr><td class="n{" n--or" if i == 1 else ""}">{i}</td><td class="qui"><div class="ident">{_img(r["cover_url"] or r["photo"], r["name"])}'
+        f'<div><strong>{e(r["title"])}</strong><span>{e(r["name"])}{" feat. " + e(r["featuring"]) if r["featuring"] else ""}</span></div></div></td>'
+        f'<td class="c">{_nombre(r["score"])}</td></tr>' for i, r in enumerate(rows, 1) if (page - 1) * 25 < i <= page * 25)
+    return (f'<p class="note" style="margin:-8px 0 16px">Tous les titres relevés cette semaine, par score Cauri. Le classement officiel '
+            f'(Top 20) est dans « Classements ».</p><div class="table"><table><colgroup><col style="width:56px"><col><col style="width:120px">'
+            f'</colgroup><thead><tr><th>Rang</th><th>Titre</th><th class="c">Score</th></tr></thead><tbody>{lignes}</tbody></table></div>' + _pager(len(rows), 25, page, u))
 
 
-def _artistes(cid, debut) -> str:
+def _artistes(cid, debut, page: int, u) -> str:
     if not cid or not debut:
         return ""
     rows = db.all("""SELECT a.name, COALESCE(a.image_hd_url, a.image_url) AS photo, a.youtube_subscribers, a.fans,
@@ -273,30 +545,48 @@ def _artistes(cid, debut) -> str:
                      WHERE ws.country_id = ? AND ws.week_start = ? AND ws.score > 0 AND ws.review_status IN ('ok', 'validated')
                      GROUP BY a.id, a.name, photo, a.youtube_subscribers, a.fans ORDER BY points DESC LIMIT 60""", [cid, debut])
     if not rows:
+        return '<div class="vide">Le détail des artistes de cette semaine n\'est pas disponible.</div>'
+    podium = "".join(
+        f'<div class="marche{" marche--1" if i == 1 else ""}">{_img(r["photo"], r["name"])}<div><small>{P._e(i)} de la semaine</small>'
+        f'<strong>{e(r["name"])}</strong><span>{_nombre(r["points"])} points · {int(r["titres"])} titre{"s" if r["titres"] > 1 else ""}</span>'
+        f'</div></div>' for i, r in enumerate(rows[:3], 1))
+    lignes = "".join(
+        f'<tr><td class="n">{i}</td><td class="qui"><div class="ident">{_img(r["photo"], r["name"])}<div><strong>{e(r["name"])}</strong>'
+        f'<span>{int(r["titres"])} titre{"s" if r["titres"] > 1 else ""}</span></div></div></td><td class="c">{_nombre(r["points"])}</td>'
+        f'<td class="c cache-mobile">{_nombre(r["youtube_subscribers"])}</td><td class="c cache-mobile">{_nombre(r["fans"])}</td></tr>'
+        for i, r in enumerate(rows, 1) if i > 3 and (page - 1) * 20 < i <= page * 20)
+    if page > 1:
+        podium = ""
+    return (f'<div class="podium">{podium}</div><div class="table"><table><colgroup><col style="width:56px"><col>'
+            f'<col style="width:120px"><col class="cache-mobile" style="width:150px"><col class="cache-mobile" style="width:130px"></colgroup>'
+            f'<thead><tr><th>Rang</th><th>Artiste</th><th class="c">Points</th><th class="c cache-mobile">Abonnés YouTube</th>'
+            f'<th class="c cache-mobile">Fans Deezer</th></tr></thead><tbody>{lignes}</tbody></table></div>'
+            + _pager(len(rows), 20, page, u) + f'<p class="note" style="margin-top:12px">Points : somme des scores de tous les titres de l\'artiste cette semaine.</p>')
+
+
+def _page(request) -> int:
+    try:
+        return max(1, min(10, int(request.GET.get("page") or 1)))
+    except ValueError:
+        return 1
+
+
+def _pager(total: int, par: int, page: int, u) -> str:
+    n = (total + par - 1) // par
+    if n <= 1:
         return ""
-    lignes = "".join(f'<tr><td class="n">{i}</td><td>{_img(r["photo"], r["name"])}</td><td><strong>{e(r["name"])}</strong></td>'
-                     f'<td class="chiffre">{_nombre(r["points"])}</td><td class="chiffre">{int(r["titres"])}</td>'
-                     f'<td class="chiffre">{_nombre(r["youtube_subscribers"])}</td><td class="chiffre">{_nombre(r["fans"])}</td></tr>'
-                     for i, r in enumerate(rows, 1))
-    return (f'<section id="artistes"><div class="section__tete"><h2>Les artistes de la semaine</h2><p>Points de tous leurs titres, '
-            f'abonnés YouTube et fans Deezer</p></div><div class="table"><table><thead><tr><th>Rang</th><th></th><th>Artiste</th>'
-            f'<th>Points</th><th>Titres</th><th>Abonnés YouTube</th><th>Fans Deezer</th></tr></thead><tbody>{lignes}</tbody></table>'
-            f'</div></section>')
+    return '<nav class="pages" aria-label="Pages">' + "".join(
+        f'<a href="{e(u(page=str(k) if k > 1 else None))}"{" aria-current=page" if k == page else ""}>{(k - 1) * par + 1}–{min(k * par, total)}</a>'
+        for k in range(1, n + 1)) + "</nav>"
 
 
-def _telechargements(p: dict) -> str:
-    eds = P.editions(int(p["id"]))
-    if not eds:
-        return ('<section id="telechargements"><div class="section__tete"><h2>Téléchargements</h2></div>'
-                "<p>Le dossier de chaque semaine (PDF, Excel, visuels pour l'antenne) arrive ici dès la publication du vendredi soir.</p></section>")
-    noms = {".pdf": ("Dossier PDF", "faits marquants et classements"), ".xlsx": ("Tableau Excel", "une feuille par classement"),
-            ".zip": ("Visuels TV", "1920 x 1080, prêts pour l'antenne")}
+def _fichiers(editions: list[dict], choisie: str) -> str:
+    if not editions:
+        return ('<div class="vide">Le dossier de chaque semaine (PDF, Excel, visuels pour l\'antenne) arrive ici dès la publication '
+                'du vendredi soir.</div>')
     blocs = []
-    for ed in eds[:8]:
-        liens = "".join(f'<a class="fichier" href="{e(url)}" download><strong>{noms.get("." + nom.rsplit(".", 1)[-1], (nom, ""))[0]} · '
-                        f'S{e(ed["semaine"][-2:])}</strong><span>{noms.get("." + nom.rsplit(".", 1)[-1], ("", ""))[1]}</span></a>'
-                        for nom, url in ed["fichiers"].items())
-        blocs.append(liens)
-    return (f'<section id="telechargements"><div class="section__tete"><h2>Téléchargements</h2><p>Chaque semaine, dès la '
-            f'publication</p></div><div class="telechargements">{"".join(blocs)}</div></section>')
-
+    for ed in editions[:20]:
+        date = f"Envoyée le {ed['envoye_le']:%d/%m/%Y}" if ed.get("envoye_le") else "Préparée"
+        blocs.append(f'<div class="edition{" edition--courante" if ed["semaine"] == choisie else ""}"><div><h3>Semaine {e(ed["semaine"][-2:])}'
+                     f'</h3><p>{e(ed["semaine"][:4])} · {date}</p></div><div class="actions">{_boutons(ed)}</div></div>')
+    return f'<div class="editions">{"".join(blocs)}</div>'
