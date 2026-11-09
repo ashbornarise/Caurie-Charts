@@ -613,7 +613,7 @@ def actu(photo, etiquette: str, titre: str, surligne: list | None = None, chapo:
         d.text((marges, y_chapo + 8 * u), chapo, font=fc, fill=(70, 70, 95) if verre else (230, 230, 240))
     tw = d.textlength(etiquette, font=fe)
     ye = y_titre - int(70 * u)
-    d.rounded_rectangle((marges, ye, marges + tw + 36 * u, ye + 50 * u), radius=int(25 * u), fill=VIOLET if verre else CIEL)
+    d.rounded_rectangle((marges, ye, marges + tw + 36 * u, ye + 50 * u), radius=int(25 * u), fill=couleur if verre else CIEL)   # couleur du pays possible (top 10, 09/11/2026)
     d.text((marges + 18 * u, ye + 9 * u), etiquette, font=fe, fill=BLANC if verre else NUIT)
     _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u) if not en_haut else h - int(130 * u), int(84 * u))
     return c

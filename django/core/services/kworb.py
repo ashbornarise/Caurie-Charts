@@ -40,9 +40,10 @@ def chiffres(spotify_id: str, n_titres: int = 3) -> dict | None:
         return None
     total = _nombre(m.group(1))
     titres = []
-    for feat, titre, streams, jour in re.findall(r'<td class="text"><div>(\* )?<a href="https://open\.spotify\.com/track/[^"]+"[^>]*>([^<]+)</a></div></td>'
-                                                 r'<td>([\d,]+)</td><td>([\d,]*)</td>', page):
-        titres.append({"titre": html.unescape(titre), "streams": _nombre(streams), "jour": _nombre(jour) if jour else 0.0, "feat": bool(feat)})
+    for feat, tid, titre, streams, jour in re.findall(r'<td class="text"><div>(\* )?<a href="https://open\.spotify\.com/track/([^"]+)"[^>]*>([^<]+)</a></div></td>'
+                                                      r'<td>([\d,]+)</td><td>([\d,]*)</td>', page):
+        titres.append({"titre": html.unescape(titre), "streams": _nombre(streams), "jour": _nombre(jour) if jour else 0.0, "feat": bool(feat),
+                       "spotify_id": tid})   # identifiant du titre : pochette par l'oEmbed public de Spotify (09/11/2026)
     jour = sum(t["jour"] for t in titres)
     aud = auditeurs().get(spotify_id)
     # prochain cap rond : tous les 10 milliards au-delà de 10 Md, chaque milliard au-delà de 1 Md, sinon tous les 100 millions

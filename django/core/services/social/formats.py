@@ -63,6 +63,11 @@ def _post(theme: str, jour: date, due: datetime, titre: str, pages: list, legend
             fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": titre})
             continue
         dp = dp or {}
+        if dp.get("rendu"):   # diapo dessinée par son propre gabarit (listes du top 10, 09/11/2026)
+            a = PI.save_jpeg(dp["rendu"]("feed"), PI.DIR / f"{nom}-{n}.jpg")
+            b = PI.save_jpeg(dp["rendu"]("story"), PI.DIR / f"{nom}-{n}-916.jpg")
+            fichiers.append({"file": Path(a).name, "tiktok": Path(b).name, "label": dp.get("titre") or titre})
+            continue
         fond = dp.get("fond") or (M._photo_portrait(f["artiste"]) if f.get("artiste") else None)
         etiquette = str(dp.get("etiquette") or kk or "CAURI CHARTS").upper()[:28]
         titre_d = dp.get("titre") or f.get("titre") or titre
@@ -187,18 +192,24 @@ def top10(jour: date, due: datetime) -> dict | None:
         lignes = [f"N°{i + 1}  {x['titre']} · {kworb.volume(x['streams'])}" for i, x in enumerate(t)]
         cle = str(a["id"])
         une = f"LES {len(t)} TITRES LES PLUS ÉCOUTÉS DE {a['name']}"
-        pages = [(_fiche(a["name"], une, f"Classés par streams sur Spotify : {kworb.volume(c['total'])} au total.", ["Spotify (via Kworb)"], cle),
-                  f"Classés · {jour:%d/%m}", None)]
-        bas, haut = lignes[5:][::-1], lignes[:5][::-1]
-        if bas:
-            pages.append((_fiche(a["name"], "", "", ["Spotify (via Kworb)"], cle), "2 / 4",
-                          _diapo("CLASSÉS", VIOLET, f"N°{len(t)} À N°6", "\n".join(bas), "b", M.objet({"titre": "album", "resume": "", "rubrique": "sorties"}, cle))))
-        pages.append((_fiche(a["name"], "", "", ["Spotify (via Kworb)"], cle), "3 / 4", _diapo("CLASSÉS", BLEU, "LE TOP 5", "\n".join(haut), "h")))
-        pages.append(_fin(f"Votre préféré dans la liste ⁉️", cle))
+        # 09/11/2026 : listes aux couleurs du pays de l'artiste, chaque titre avec sa pochette (top_titres)
+        from core.services.social import top_titres as TT
+        pays = a.get("country")
+        rangs = list(enumerate(t, 1))
+        fiche = _fiche(a["name"], une, f"Classés par streams sur Spotify : {kworb.volume(c['total'])} au total.", ["Spotify (via Kworb)"], cle)
+        pages = [(fiche, f"Classés · {jour:%d/%m}", None)]
+        if len(t) > 5:
+            pages.append((fiche, "2 / 3", {"titre": f"N°{len(t)} à N°6",
+                                           "rendu": lambda fmt, l=rangs[5:][::-1], n=len(t): TT.liste(l, a["name"], pays, fmt, f"N°{n} à N°6")}))
+        pages.append((fiche, "3 / 3", {"titre": "Le top 5", "rendu": lambda fmt, l=rangs[:5]: TT.liste(l, a["name"], pays, fmt, "Le top 5")}))
+        photo = M._photo_portrait(a["name"])
+        teinte = TT.accent_texte(TT.couleurs(pays)[0])
+        couverture = lambda fmt: C26.actu(photo, f"CLASSÉS · {jour:%d/%m}", f"Les {len(t)} titres les plus écoutés de {a['name']}",  # noqa: E731
+                                          [a["name"]], "", fmt, couleur=teinte)
         legende = (f"🎧 Les {len(t)} titres de {a['name']} les plus écoutés sur Spotify :\n\n" + "\n".join(lignes)
                    + "\n\nVotre préféré ⁉️ Dites-le en commentaire ‼️\n\nSource : Spotify (compteurs publics relevés par Kworb).")
         return _post("format-top10", jour, due, f"Les 10 titres les plus écoutés de {a['name']}", pages, legende,
-                     f"#CauriCharts #{a['name'].replace(' ', '')} #Classement #Spotify", cle)
+                     f"#CauriCharts #{a['name'].replace(' ', '')} #Classement #Spotify", cle, couverture=couverture)
     return None
 
 
