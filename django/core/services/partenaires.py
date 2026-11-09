@@ -50,7 +50,10 @@ def ajouter(nom: str, emails: list[str], pays: list[str]) -> dict:
 
 
 def lien(jeton: str) -> str:
-    return f"{(env.get('APP_URL', '') or SITE).rstrip('/')}/partenaire/{jeton}"
+    base = env.get("APP_URL", "") or SITE
+    if "localhost" in base or "127.0.0.1" in base:   # lancé depuis le PC : le lien donné au partenaire est celui du site
+        base = SITE
+    return f"{base.rstrip('/')}/partenaire/{jeton}"
 
 
 def par_jeton(jeton: str) -> dict | None:
