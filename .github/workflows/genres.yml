@@ -27,4 +27,7 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Étiqueter
         working-directory: django
-        run: python manage.py genres_titres --limite=${{ github.event.inputs.limite || '400' }}
+        run: |
+          python manage.py genres_titres --limite=${{ github.event.inputs.limite || '400' }}
+          # les semaines déjà publiées reçoivent leurs classements par genre et de la saison (09/11/2026)
+          python manage.py classements_complements

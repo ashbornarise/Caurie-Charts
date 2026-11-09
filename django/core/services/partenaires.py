@@ -284,7 +284,7 @@ def pdf(d: dict, partenaire: str) -> bytes:
             doc.set_text_color(*nuit)
             doc.cell(0, 11, c["nom"], new_x="LMARGIN", new_y="NEXT")
             doc.ln(2)
-            cols = [(12, "Rang"), (20, "Évol."), (88, "Artiste" if c["artistes"] else "Titre / artiste"), (22, "Titres" if c["artistes"] else "Pays"),
+            cols = [(12, "Rang"), (10, ""), (20, "Évol."), (78, "Artiste" if c["artistes"] else "Titre / artiste"), (22, "Titres" if c["artistes"] else "Pays"),
                     (20, "Sem."), (18, "Meill.")]
             doc.set_font("C", size=8.5)
             doc.set_text_color(*gris)
@@ -299,6 +299,11 @@ def pdf(d: dict, partenaire: str) -> bytes:
                 doc.set_font("T", size=12)
                 doc.set_text_color(*(violet if l["rang"] == 1 else nuit))
                 doc.cell(12, 9, str(l["rang"]))
+                vignette = _image(l["image"], 160)
+                if vignette:
+                    tampon = io.BytesIO(); vignette.save(tampon, "JPEG", quality=85)
+                    doc.image(tampon, x=doc.get_x() - 1, y=y, w=8.5, h=8.5)
+                doc.set_x(doc.get_x() + 10)
                 mv = _mouvement(l)
                 doc.set_font("C", size=8.5)
                 doc.set_text_color(*((22, 150, 90) if mv.startswith("+") else (200, 60, 60) if mv.startswith("-") else violet
@@ -308,13 +313,13 @@ def pdf(d: dict, partenaire: str) -> bytes:
                 doc.set_font("C", size=10.5)
                 doc.set_text_color(*nuit)
                 principal = l["artiste"] if c["artistes"] else (l["titre"] or "")
-                doc.cell(88, 5, principal[:52])
+                doc.cell(78, 5, principal[:46])
                 if not c["artistes"]:
                     doc.set_xy(x, y + 4.6)
                     doc.set_font("C", size=8.5)
                     doc.set_text_color(*gris)
-                    doc.cell(88, 4.5, (l["artiste"] + (f" feat. {l['feat']}" if l["feat"] else ""))[:64])
-                doc.set_xy(x + 88, y)
+                    doc.cell(78, 4.5, (l["artiste"] + (f" feat. {l['feat']}" if l["feat"] else ""))[:56])
+                doc.set_xy(x + 78, y)
                 doc.set_font("C", size=9.5)
                 doc.set_text_color(*nuit)
                 doc.cell(22, 9, str(l["titres"] if c["artistes"] else (l["pays"] or "")))
@@ -327,17 +332,43 @@ def pdf(d: dict, partenaire: str) -> bytes:
 
 # ---------------------------------------------------------------- visuels TV (1920 x 1080)
 
-def _image(url: str, cote: int):
-    from PIL import Image, ImageOps
+_IMAGES: dict = {}
+
+
+def _octets(url: str) -> bytes | None:
+    """Image d'une pochette ou d'un artiste, téléchargée une seule fois par édition."""
     import requests
     if not url:
         return None
-    try:
-        r = requests.get(url, timeout=12, headers={"User-Agent": "Mozilla/5.0"})
-        r.raise_for_status()
-        return ImageOps.fit(Image.open(io.BytesIO(r.content)).convert("RGB"), (cote, cote))
-    except Exception:  # noqa: BLE001 — image indisponible : initiales
+    if url not in _IMAGES:
+        try:
+            r = requests.get(url, timeout=12, headers={"User-Agent": "Mozilla/5.0"})
+            r.raise_for_status()
+            _IMAGES[url] = r.content
+        except Exception:  # noqa: BLE001 — image indisponible : initiales
+            _IMAGES[url] = None
+    return _IMAGES[url]
+
+
+def _image(url: str, cote: int):
+    from PIL import Image, ImageOps
+    data = _octets(url)
+    if not data:
         return None
+    try:
+        return ImageOps.fit(Image.open(io.BytesIO(data)).convert("RGB"), (cote, cote))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _initiales(nom: str, cote: int, rayon: int):
+    from PIL import Image, ImageDraw
+    from core.services.social import couverture2026 as C
+    im = Image.new("RGB", (cote, cote), C.VIOLET)
+    lettres = "".join(m[0] for m in (nom or "?").split()[:2]).upper()
+    ImageDraw.Draw(im).text((cote // 2, cote // 2), lettres, font=C.police("Montserrat.ttf", cote // 3, "ExtraBold"),
+                            fill=(255, 255, 255), anchor="mm")
+    return _arrondi(im, rayon)
 
 
 def _arrondi(im, rayon: int):
@@ -408,29 +439,40 @@ def visuel(perimetre: str, classement: dict, semaine: str, periode, n: int = 10)
     d.text((mx + cw // 2, y0 + 36 + cote + 146), {"=": "reste n°1", "NOUVEAU": "entrée directe", "RETOUR": "retour au n°1"}.get(
         mv, "nouveau n°1" if mv.startswith("+") else mv),
            font=C.police("Montserrat.ttf", 22, "Bold"), fill=C.VIOLET, anchor="mm")
-    # rangs : liste à droite
-    x0 = mx + cw + 48
-    lh = (ch - 8) / max(1, len(lignes))
-    fr, fn, fa = C.police("Montserrat.ttf", 34, "ExtraBold"), C.police("Montserrat.ttf", 30, "Bold"), C.police("DMSans.ttf", 22, "Medium")
-    for i, l in enumerate(lignes):
-        y = int(y0 + i * lh)
-        if i % 2 == 0:
-            band = Image.new("RGBA", (W - mx - x0, int(lh) - 6), (255, 255, 255, 150))
-            im.alpha_composite(_arrondi(band, 18), (x0, y))
-        cy = y + (int(lh) - 6) // 2
-        d.text((x0 + 44, cy), str(l["rang"]), font=fr, fill=C.VIOLET if l["rang"] == 1 else C.NUIT, anchor="mm")
-        nom = l["titre"] or l["artiste"]
-        while d.textlength(nom, font=fn) > W - mx - x0 - 330 and len(nom) > 4:
-            nom = nom[:-2]
-        if nom != (l["titre"] or l["artiste"]):
-            nom = nom.rstrip() + "…"
-        d.text((x0 + 100, cy - (14 if l["titre"] else 0)), nom, font=fn, fill=C.NUIT, anchor="lm")
-        if l["titre"]:
-            d.text((x0 + 100, cy + 22), (l["artiste"] + (f" feat. {l['feat']}" if l["feat"] else ""))[:60], font=fa, fill=(100, 100, 120), anchor="lm")
+    # rangs 2 à 10 : grille de cartes avec la pochette de chaque titre (ou la photo de chaque artiste), 09/11/2026
+    x0 = mx + cw + 40
+    cols, rangs = 3, lignes[1:10]
+    gw = (W - mx - x0 - (cols - 1) * 22) // cols
+    gh = (ch - 2 * 20) // 3
+    cote = min(gh - 92, gw - 24)
+    fn, fa = C.police("Montserrat.ttf", 25, "Bold"), C.police("DMSans.ttf", 20, "Medium")
+    fb, fm = C.police("Montserrat.ttf", 26, "ExtraBold"), C.police("Montserrat.ttf", 19, "ExtraBold")
+    for i, l in enumerate(rangs):
+        cx, cy = x0 + (i % cols) * (gw + 22), y0 + (i // cols) * (gh + 20)
+        fondc = Image.new("RGBA", (gw, gh), (255, 255, 255, 190))
+        im.alpha_composite(_arrondi(fondc, 26), (cx, cy))
+        ix = cx + (gw - cote) // 2
+        img = _image(l["image"], cote)
+        im.alpha_composite(_arrondi(img, 18) if img else _initiales(l["artiste"], cote, 18), (ix, cy + 12))
+        # rang en pastille sur l'image, évolution à droite
+        d.rounded_rectangle((ix + 8, cy + 20, ix + 8 + 58, cy + 20 + 44), radius=22, fill=C.NUIT)
+        d.text((ix + 37, cy + 42), str(l["rang"]), font=fb, fill=(255, 255, 255), anchor="mm")
         mv = _mouvement(l)
-        coul = (22, 150, 90) if mv.startswith("+") else (210, 60, 60) if mv.startswith("-") else C.VIOLET if mv in ("NOUVEAU", "RETOUR") else (130, 130, 145)
-        fm = C.police("Montserrat.ttf", 22 if len(mv) > 3 else 26, "ExtraBold")
-        d.text((W - mx - 24, cy), mv, font=fm, fill=coul, anchor="rm")
+        coul = (22, 150, 90) if mv.startswith("+") else (210, 60, 60) if mv.startswith("-") else C.VIOLET if mv in ("NOUVEAU", "RETOUR") else (110, 110, 125)
+        tw = d.textlength(mv, font=fm) + 22
+        yb = cy + 12 + cote - 8 - 34          # en bas à droite de l'image : ne recouvre jamais le rang
+        d.rounded_rectangle((ix + cote - 8 - tw, yb, ix + cote - 8, yb + 34), radius=17, fill=(255, 255, 255, 235))
+        d.text((ix + cote - 8 - tw / 2, yb + 17), mv, font=fm, fill=coul, anchor="mm")
+        nom = l["titre"] or l["artiste"]
+        while d.textlength(nom, font=fn) > gw - 24 and len(nom) > 4:
+            nom = nom[:-2].rstrip()
+        if nom != (l["titre"] or l["artiste"]):
+            nom += "…"
+        d.text((cx + gw // 2, cy + 12 + cote + 26), nom, font=fn, fill=C.NUIT, anchor="mm")
+        sous = (l["artiste"] + (f" feat. {l['feat']}" if l["feat"] else "")) if l["titre"] else             f"points sur {l['titres'] or 1} titre{'s' if (l['titres'] or 1) > 1 else ''}"
+        while d.textlength(sous, font=fa) > gw - 24 and len(sous) > 4:
+            sous = sous[:-2].rstrip()
+        d.text((cx + gw // 2, cy + 12 + cote + 60), sous, font=fa, fill=(100, 100, 120), anchor="mm")
     out = io.BytesIO()
     im.convert("RGB").save(out, "PNG", optimize=True)
     return out.getvalue()

@@ -106,6 +106,41 @@ class ChartService:
             out[code] = ranker.prime(choix, self._size(code, size), self._history(code, cid, "week", period.start), ref=period.end)
         return out
 
+    def completer_semaine(self, country_code: str, week_key: str) -> dict:
+        """Semaine DÉJÀ publiée : calcule et publie seulement les classements ajoutés le 09/11/2026 (saison, genres) qui
+        lui manquent, à partir des scores enregistrés. Les classements publiés ne sont jamais recalculés."""
+        country = self.country(country_code)
+        cid, period = int(country["id"]), Period.from_key("week", week_key)
+        publie = db.value("""SELECT COUNT(*) FROM chart_runs WHERE chart_type_id = ? AND country_id = ? AND period_type = 'week'
+                             AND period_key = ? AND status = 'published'""", [self.chart_types["prime"], cid, week_key])
+        if not publie:
+            return {}
+        existants = {r["code"] for r in db.all("""SELECT ct.code FROM chart_runs r JOIN chart_types ct ON ct.id = r.chart_type_id
+                                                  WHERE r.country_id = ? AND r.period_type = 'week' AND r.period_key = ?""",
+                                               [cid, week_key])}
+        rows = db.all(
+            """SELECT ws.track_id, t.artist_id, COALESCE(t.release_date, (SELECT MIN(px.published_at) FROM track_platform_ids px
+                      WHERE px.track_id = t.id AND px.platform = 'youtube')) AS release_date, ws.score, ws.sources_count,
+                      ws.breakdown, ws.review_status, (SELECT p.score FROM weekly_scores p WHERE p.track_id = ws.track_id
+                      AND p.week_start = ?) AS prev_score
+               FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id
+               WHERE ws.country_id = ? AND ws.week_start = ? AND ws.review_status <> 'excluded'""",
+            [period.previous().start, cid, period.start])
+        items = [{"track_id": int(r["track_id"]), "artist_id": int(r["artist_id"]), "score": float(r["score"]),
+                  "sources_count": int(r["sources_count"]), "prev_score": float(r["prev_score"] or 0), "release_date": r["release_date"],
+                  "is_emerging": False, "flags": [], "review_status": r["review_status"] or "ok",
+                  "breakdown": json.loads(r["breakdown"] or "[]") or []} for r in rows]
+        formula = formula_effective_for(period.start)
+        extras = self._extras(items, ChartRanker(formula), cid, period, int(country["chart_size"]),
+                              lambda: self._published_weeks(cid, period.end[:4] + "-01-01", period.start))
+        nouveaux = {code: e for code, e in extras.items() if code not in existants}
+        with db.atomic():
+            for code, entries in nouveaux.items():
+                self._save_run(code, cid, period, formula, entries, False, None, None)
+                db.run("""UPDATE chart_runs SET status = 'published', published_at = ? WHERE chart_type_id = ? AND country_id = ?
+                          AND period_type = 'week' AND period_key = ?""", [now_utc(), self.chart_types[code], cid, week_key])
+        return {code: len(e) for code, e in nouveaux.items()}
+
     def _regional_season_items(self, week: Period) -> list:
         """Cumul de l'année de tous les titres, sur les semaines où leur pays a été publié."""
         rows = db.all(
