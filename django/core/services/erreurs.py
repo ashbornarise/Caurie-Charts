@@ -30,6 +30,9 @@ def empreinte(canal: str, message: str) -> str:
 
 
 def note(canal: str, niveau: str, message: str, contexte: dict | None = None) -> None:
+    import sys
+    if "pytest" in sys.modules:   # les tests simulent des pannes (« Article : refusé ») : ni journal ni e-mail (10/11/2026)
+        return
     if getattr(_local, "occupe", False):     # une erreur pendant l'écriture du journal : jamais de boucle
         return
     _local.occupe = True

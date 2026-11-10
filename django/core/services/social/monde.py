@@ -71,6 +71,23 @@ GOOGLE_NEWS = "https://news.google.com/rss/search?hl=fr&gl=FR&ceid=FR:fr&q="
 REQUETE_STAR = {"SDM": "rappeur SDM", "Black Coffee": "DJ Black Coffee"}
 
 
+def _fiches_entieres(texte: str) -> list:
+    """Les objets JSON complets d'une liste coupée en route (la réponse de l'IA s'arrête parfois au milieu d'une fiche)."""
+    dec, out, i = json.JSONDecoder(), [], texte.find("[")
+    while i != -1:
+        i = texte.find("{", i + 1)
+        if i == -1:
+            break
+        try:
+            obj, fin = dec.raw_decode(texte, i)
+        except ValueError:
+            break
+        if isinstance(obj, dict):
+            out.append(obj)
+        i = fin - 1
+    return out
+
+
 def _flux_stars(artistes: list | None = None) -> list:
     from urllib.parse import quote
     lots = [STARS[i:i + 9] for i in range(0, len(STARS), 9)]
@@ -259,14 +276,17 @@ def _redige(histoires: list) -> list:
         "Français impeccable, aucun anglicisme (concerts et pas shows), noms propres exacts, phrases complètes.\n"
         "Rends une liste JSON, rien d'autre.\n\n" + json.dumps(lots, ensure_ascii=False))
     from core.services import redaction
-    r = ai.make().ask(SYSTEME + redaction.consignes("monde"), consigne, max_tokens=6000)   # + leçons de la rédaction
+    r = ai.make().ask(SYSTEME + redaction.consignes("monde"), consigne, max_tokens=8000)   # + leçons de la rédaction
     texte = r["text"].strip()
     texte = texte[texte.find("["): texte.rfind("]") + 1]
     try:
         fiches = json.loads(texte)
     except ValueError:
-        log_write("monde", "error", "rédaction illisible : " + r["text"][:300])
-        return []
+        fiches = _fiches_entieres(r["text"])   # réponse coupée (10/11/2026) : on garde les fiches complètes
+        if not fiches:
+            log_write("monde", "error", "rédaction illisible : " + r["text"][:300])
+            return []
+        log_write("monde", "warning", f"rédaction coupée : {len(fiches)} fiche(s) complète(s) gardée(s)")
     out = []
     for f in fiches:
         try:
