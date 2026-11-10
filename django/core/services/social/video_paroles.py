@@ -115,9 +115,9 @@ def rendu(source_audio: str, cover, lignes: list, t0: float, t1: float, titre: s
     at = T.accent_texte(a)
     cov = C._image(cover) if not isinstance(cover, Image.Image) else cover
     fond = _decor(cov, w, h, a, b)
-    cote = int((720 if fmt == "story" else 430) * u)
+    cote = int((720 if fmt == "story" else 480) * u)
     carte = _carte_pochette(cov, cote)
-    y_cov = int((290 if fmt == "story" else 120) * u)
+    y_cov = int((290 if fmt == "story" else 100) * u)
     ft = C.police("Montserrat.ttf", int((64 if fmt == "story" else 54) * u), "ExtraBold")
     fv = C.police("Montserrat.ttf", int((40 if fmt == "story" else 34) * u), "Bold")
     fti = C.police("Montserrat.ttf", int(40 * u), "ExtraBold")
@@ -168,11 +168,6 @@ def rendu(source_audio: str, cover, lignes: list, t0: float, t1: float, titre: s
         d.text((w / 2, yb + 50 * u), f"{artistes}  ·  {album}", font=fa, fill=(90, 90, 112), anchor="mm")
         d.rounded_rectangle((w / 2 - 60 * u, yb + 86 * u, w / 2 + 60 * u, yb + 92 * u), radius=int(3 * u), fill=at)
         T._logo_sombre(c, int(50 * u), int((150 if fmt == "story" else 30) * u), int(60 * u))
-        # barre de progression fine aux couleurs du pays
-        d = ImageDraw.Draw(c)
-        p = min(1, i / max(1, dur * FPS))
-        d.rounded_rectangle((int(80 * u), yb + 120 * u, w - int(80 * u), yb + 126 * u), radius=int(3 * u), fill=(225, 225, 235))
-        d.rounded_rectangle((int(80 * u), yb + 120 * u, int(80 * u + (w - 160 * u) * p), yb + 126 * u), radius=int(3 * u), fill=at)
         if i < 8:   # ouverture en fondu depuis le blanc
             c = Image.blend(Image.new("RGB", (w, h), BLANC), c, i / 8)
         return c

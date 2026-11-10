@@ -88,14 +88,21 @@ def bio(name: str, qid: str | None) -> dict | None:
         title = titles.get(lang)
         if not title:
             continue
-        s = _json(f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{quote(title.replace(' ', '_'))}") or {}
-        text = str(s.get("extract") or "").strip()
+        # 10/11/2026 : toute l'introduction de l'article (le résumé ne donnait parfois qu'une phrase, et l'IA comblait)
+        q = _json(f"https://{lang}.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&redirects=1"
+                  f"&format=json&titles={quote(title)}") or {}
+        pages = list(((q.get("query") or {}).get("pages") or {}).values())
+        text = str((pages[0] if pages else {}).get("extract") or "").strip()
+        if len(text) < 60:
+            s = _json(f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{quote(title.replace(' ', '_'))}") or {}
+            text = str(s.get("extract") or "").strip()
+        text = re.sub(r"\s*\n+\s*", " ", text)
         # Graphies spéciales (« stylisé REMΛ ») : absentes des polices des visuels, et sans intérêt pour le lecteur
         text = re.sub(r",?\s*(stylisé|stylised|stylized)[^,.;]*", "", text)
         text = re.sub("[^\u0000-\u024F\u2018-\u201F\u2026\u00ab\u00bb\u2013\u2014]", "", text).strip()
         if len(text) < 60:
             continue
-        cut, out = 420, ""
+        cut, out = 1400, ""
         for sentence in re.split(r"(?<=[.!?])\s+", text):
             if len(out) + len(sentence) > cut and out:
                 break
@@ -106,7 +113,7 @@ def bio(name: str, qid: str | None) -> dict | None:
 
 def facts(a: dict) -> dict:
     qid = wikidata_id(a["name"], a["country"])
-    tracks = db.all("""SELECT t.title, MIN(o.position) AS best, COUNT(DISTINCT o.source || o.country_id) AS charts
+    tracks = db.all("""SELECT t.title, t.cover_url, MIN(o.position) AS best, COUNT(DISTINCT o.source || o.country_id) AS charts
                        FROM chart_observations o JOIN tracks t ON t.id = o.track_id
                        WHERE t.artist_id = ? AND o.observed_on >= CURRENT_DATE - 7 GROUP BY t.id, t.title ORDER BY charts DESC, best LIMIT 5""", [a["id"]])
     best = db.one("""SELECT o.position, o.source, c.code, t.title FROM chart_observations o JOIN tracks t ON t.id = o.track_id
@@ -133,6 +140,22 @@ def _n(v) -> str:
     return f"{int(v):,}".replace(",", " ")
 
 
+def _lettres(v, unite: str) -> str:
+    """Grands nombres en lettres (10/11/2026) : 392 508 111 vues -> « 392 millions de vues » ;
+    1 730 000 abonnés -> « 1,7 million d'abonnés » ; sous le million, en chiffres (« 82 179 fans »)."""
+    v = float(v)
+    if v >= 1e9:
+        x, mot = v / 1e9, "milliard"
+    elif v >= 1e6:
+        x, mot = v / 1e6, "million"
+    else:
+        return f"{_n(v)} {unite}"
+    chiffre = (f"{x:.1f}" if x < 10 else f"{x:.0f}").rstrip("0").rstrip(".").replace(".", ",")
+    pluriel = "s" if x >= 2 else ""
+    de = "d’" if unite[:1].lower() in "aeéèêiouyh" else "de "
+    return f"{chiffre} {mot}{pluriel} {de}{unite}"
+
+
 def _bio_fr(bio: dict | None) -> dict | None:
     """La biographie en français : traduite fidèlement si Wikipédia n'a que l'anglais (jamais d'anglais dans une
     légende française, 20/10/2026) ; None si la traduction échoue (le portrait se fait sans)."""
@@ -151,15 +174,21 @@ def _bio_fr(bio: dict | None) -> dict | None:
 
 
 def _bio_courte(texte: str) -> str:
-    """Biographie de magazine : 3 phrases, 45 mots au plus, français naturel, fidèle aux faits (Awa, 20/10/2026)."""
+    """Biographie de magazine : 5 à 6 phrases, 95 mots au plus (10/11/2026 : « son histoire un peu plus longue »),
+    français naturel, fidèle aux faits (Awa, 20/10/2026)."""
     try:
         from core.services import ai
-        r = ai.make().ask("Tu es rédacteur d'un magazine musical. Résume fidèlement en français naturel, en 3 phrases "
-                          "et 45 mots au maximum, sans rien inventer ni ajouter, sans formule lourde (« connu "
-                          "professionnellement »). Noms propres et titres inchangés. Réponds uniquement par le résumé.",
-                          texte, max_tokens=400)
+        # 10/11/2026 : plus long si la source le permet, jamais rallongé (une source d'une phrase donnait « il incarne
+        # la nouvelle génération… », inventé) : uniquement des faits présents dans le texte, aucun jugement
+        r = ai.make().ask("Tu es rédacteur d'un magazine musical. Résume fidèlement en français naturel, en 5 à 6 phrases "
+                          "et 95 mots au maximum (débuts, style, grands succès, collaborations, dates clés). Utilise "
+                          "UNIQUEMENT les faits du texte : si le texte est court, ton résumé est court. Aucun jugement, "
+                          "aucune appréciation, aucune phrase de remplissage (« il incarne », « il s'est fait remarquer »), "
+                          "sans formule lourde (« connu professionnellement »). Noms propres et titres inchangés. "
+                          "Réponds uniquement par le résumé.",
+                          texte, max_tokens=500)
         court = re.sub(r"[*_#`]+", "", (r.get("text") or "")).strip().strip('"')   # pas de mise en forme Markdown
-        if 15 <= len(court.split()) <= 60:
+        if 15 <= len(court.split()) <= 115:
             return court
     except Exception:  # noqa: BLE001
         pass
@@ -199,6 +228,9 @@ def rendu_2026(name: str, f: dict, slides: list, country: str) -> list:
             titre = s_["big"][:1] + s_["big"][1:].lower()       # « Ses titres classés », pas de capitales partout
             titre = re.sub(re.escape(f["name"]), f["name"], titre, flags=re.I)   # « Didi B », pas « Didi b »
             fond = fonds[k % len(fonds)]
+            if s_.get("rendu"):   # diapo dessinée par son gabarit (tableaux, albums : 10/11/2026)
+                images.append(s_["rendu"](fmt))
+                continue
             if s_.get("cta"):
                 images.append(C.actu(nettes[(n_verre + 1) % len(nettes)], "SA FICHE", f"Tout sur {f['name']} : classements, titres et clips",
                                      [f["name"]], f"cauricharts.com/artiste/{f['slug']}", fmt, variante="voile"))
@@ -258,10 +290,10 @@ def post(day: date, artist_id: int | None = None, remplace: int | None = None) -
     country = country_name(f["country"])
     stats = []
     if f["youtube_views_total"]:
-        stats.append((1, _n(f["youtube_views_total"]) + " vues", "chaîne YouTube officielle, au total"))
+        stats.append((1, _lettres(f["youtube_views_total"], "vues"), "chaîne YouTube officielle, au total"))
     # abonnés incohérents avec les vues (autre chaîne relevée par erreur : 1 020 abonnés pour 68 M de vues) : écartés
     if f["youtube_subscribers"] and not (f["youtube_views_total"] and f["youtube_subscribers"] * 2000 < f["youtube_views_total"]):
-        stats.append((2, _n(f["youtube_subscribers"]) + " abonnés", "sur YouTube"))
+        stats.append((2, _lettres(f["youtube_subscribers"], "abonnés"), "sur YouTube"))
     if f["fans"]:
         stats.append((3, _n(f["fans"]) + " fans", "sur Deezer"))
     if f["best"]:
@@ -271,17 +303,23 @@ def post(day: date, artist_id: int | None = None, remplace: int | None = None) -
                "rows": [(i + 1, v, d) for i, (_, v, d) in enumerate(stats)]}] if stats else []
     # Palmarès : récompenses (Wikidata), complétées par ses n°1 et meilleures places chez Cauri Charts
     # ses meilleures places (top 10 seulement), avec le titre du morceau ; une ligne par classement
-    records = db.all("""SELECT DISTINCT ON (o.source, c.code) o.source, c.code, o.position AS best, t.title
+    records = db.all("""SELECT DISTINCT ON (o.source, c.code) o.source, c.code, o.position AS best, t.title, t.cover_url
                         FROM chart_observations o JOIN tracks t ON t.id = o.track_id JOIN countries c ON c.id = o.country_id
                         WHERE t.artist_id = ? AND o.source NOT IN ('deezer_popularity', 'youtube_views') AND o.position <= 10
                         ORDER BY o.source, c.code, o.position, o.observed_on DESC""", [f["artist_id"]])
-    records = sorted(records, key=lambda r: (r["best"], r["source"]))[:4]
-    rows = [(a_["year"] or "—", a_["award"], "") for a_ in f["awards"][:4]]
-    rows += [(f"N°{r['best']}", f"« {r['title']} » · {live_chart.SOURCES.get(r['source'], r['source'])} {country_name(r['code'])}", "")
-             for r in records][: max(0, 4 - len(rows))]
-    if rows:
-        slides.append({"bg": E.GOLD, "fg": E.INK, "acc": E.INK, "tag": "PALMARÈS",
-                       "big": "SES RÉCOMPENSES" if f["awards"] else "SES MEILLEURES PLACES", "rows": rows})
+    records = sorted(records, key=lambda r: (r["best"], r["source"]))[:6]
+    from core.services.social import top_titres as TT
+    nom, pays_a = f["name"], f["country"]
+    if f["awards"]:
+        slides.append({"bg": E.GOLD, "fg": E.INK, "acc": E.INK, "tag": "PALMARÈS", "big": "SES RÉCOMPENSES",
+                       "rows": [(a_["year"] or "—", a_["award"], "") for a_ in f["awards"][:4]]})
+    # 10/11/2026 : ses meilleures places dans un vrai tableau (place, pochette et titre, plateforme, pays et drapeau)
+    if records:
+        rangees = [{"place": f"N°{r['best']}", "titre": r["title"], "image": r.get("cover_url"),
+                    "col3": live_chart.SOURCES.get(r["source"], r["source"]), "pays": r["code"]} for r in records]
+        slides.append({"tag": "PALMARÈS", "big": "SES MEILLEURES PLACES",
+                       "rendu": lambda fmt, rg=rangees: TT.tableau(rg, nom, pays_a, fmt, "Ses meilleures places", "PALMARÈS",
+                                                               ("Place", "Titre", "Classement", "Pays"))})
     # Spotify en chiffres (compteurs publics relevés par Kworb), seulement pour les artistes qu'il suit
     sp = f.get("spotify")
     if sp:
@@ -307,11 +345,25 @@ def post(day: date, artist_id: int | None = None, remplace: int | None = None) -
         src = "Wikipédia" + ("" if f["bio"]["lang"] == "fr" else ", traduit de l'anglais")
         slides.append({"bg": E.CREAM, "fg": E.INK, "acc": E.VIOLET, "tag": "BIOGRAPHIE", "big": "SON HISTOIRE",
                        "body": f["bio_court"], "pied": f"Source : {src} (CC BY-SA)"})
-    titres = sorted([t for t in f["tracks"] if t["best"] <= 20], key=lambda t: t["best"])[:4]
-    if titres:
-        slides.append({"bg": E.VIOLET, "fg": E.WHITE, "acc": E.GOLD, "tag": "EN CE MOMENT", "big": "SES TITRES CLASSÉS",
-                       "rows": [(f"N°{t['best']}", t["title"], f"meilleure place cette semaine · dans {t['charts']} classement{'s' if t['charts'] > 1 else ''}")
-                                for t in titres]})
+    titres = sorted([t for t in f["tracks"] if t["best"] <= 20], key=lambda t: t["best"])[:5]
+    if titres:   # 10/11/2026 : chaque titre avec sa pochette
+        rangees = [{"place": f"N°{t['best']}", "titre": t["title"], "image": t.get("cover_url"), "sous": "cette semaine",
+                    "col3": f"{t['charts']} classement{'s' if t['charts'] > 1 else ''}", "col4": ""} for t in titres]
+        slides.append({"tag": "EN CE MOMENT", "big": "SES TITRES CLASSÉS",
+                       "rendu": lambda fmt, rg=rangees: TT.tableau(rg, nom, pays_a, fmt, "Ses titres classés", "EN CE MOMENT",
+                                                               ("Place", "Titre", "Présence", ""))})
+    # 10/11/2026 : ses albums les plus écoutés (écoutes Spotify des titres, albums d'après Deezer)
+    try:
+        albums = TT.albums_ecoutes(a.get("deezer_id"), a.get("spotify_id"), nom)[:4] if sp else []
+    except Exception:  # noqa: BLE001 — le portrait se fait sans
+        albums = []
+    if len(albums) >= 2:
+        lignes_al = [(i + 1, {"titre": x["titre"], "streams": x["streams"], "image": x["cover"],
+                              "sous": x["annee"] + (" · réédition" if x["reedition"] else "") + (f" · {x['phare']}" if x["phare"] else "")})
+                     for i, x in enumerate(albums)]
+        slides.append({"tag": "SES ALBUMS", "big": "SES ALBUMS LES PLUS ÉCOUTÉS",
+                       "rendu": lambda fmt, l=lignes_al: TT.liste(l, nom, pays_a, fmt, "Ses albums", "ÉCOUTES SPOTIFY",
+                                                                  "Spotify (via Kworb) · Deezer")})
     if len(slides) < 2:
         return None  # trop peu de faits pour un vrai portrait
     slides.append({"bg": E.INK, "fg": E.WHITE, "acc": E.GOLD, "tag": "SA FICHE", "big": "TOUT SUR " + f["name"].upper(),

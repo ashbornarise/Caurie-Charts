@@ -224,7 +224,10 @@ def liste(lignes: list, artiste: str, pays: str | None, fmt: str = "feed", titre
             pw = d.textlength(pill, font=fp)
             d.rounded_rectangle((x, y + 34 * u, x + pw + 36 * u, y + 84 * u), radius=int(25 * u), fill=at)
             d.text((x + 18 * u, y + 59 * u), pill, font=fp, fill=BLANC, anchor="lm")
-            fn = C.police("Montserrat.ttf", int(50 * u), "ExtraBold")
+            for taille_1 in (50, 44, 38, 33):   # nom long : rétrécit avant d'être coupé
+                fn = C.police("Montserrat.ttf", int(taille_1 * u), "ExtraBold")
+                if d.textlength(nom, font=fn) <= lx:
+                    break
             d.text((x, y + 100 * u), _coupe(d, nom, fn, lx), font=fn, fill=NUIT)
             yy = y + 162 * u
             if avec:
@@ -337,7 +340,7 @@ def tableau(rangees: list, artiste: str, pays: str | None, fmt: str = "feed", ti
     d = ImageDraw.Draw(c)
     # colonnes (base 1080) : place | pochette + titre | classement | pays
     x0 = box[0] + 26 * u
-    xs = [x0, x0 + 128 * u, x0 + 560 * u, x0 + 780 * u]
+    xs = [x0, x0 + 128 * u, x0 + 470 * u, x0 + 680 * u]   # colonne Pays élargie (noms coupés, 10/11/2026)
     fh = C.police("Montserrat.ttf", int(20 * u), "ExtraBold")
     yh = y + 26 * u
     for x, lab in zip(xs, colonnes):
@@ -391,3 +394,52 @@ def tableau(rangees: list, artiste: str, pays: str | None, fmt: str = "feed", ti
     d.text((m, yb), "Source : " + source, font=fpied, fill=GRIS)
     d.text((w - m, yb - 2 * u), "cauricharts.com", font=C.police("Jost.ttf", int(28 * u), "SemiBold"), fill=at, anchor="ra")
     return c
+
+
+# ---------------------------------------------------------------- albums les plus écoutés (10/11/2026)
+
+def _cle_titre(s: str) -> str:
+    import unicodedata
+    s = re.sub(r"\s*[\(\[](feat|ft|with)[^\)\]]*[\)\]]", "", s or "", flags=re.I)
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]", "", s)
+
+
+def albums_ecoutes(deezer_id, spotify_id: str, artiste: str) -> list:
+    """Ses albums classés par écoutes Spotify : somme des écoutes (Kworb) des titres de chaque album (liste Deezer).
+    Chaque titre compte une fois, dans le 1er album (puis EP) où il est sorti ; une réédition ne compte que ses titres
+    ajoutés. [{"titre", "annee", "streams", "cover", "phare", "reedition"}] du plus écouté au moins écouté."""
+    from core.services import kworb
+    if not deezer_id or not spotify_id:
+        return []
+    c = kworb.chiffres(spotify_id, n_titres=500)
+    if not c:
+        return []
+    ecoutes = {}
+    for t in c["titres"]:
+        ecoutes.setdefault(_cle_titre(t["titre"]), (t["streams"], t["titre"]))
+    try:
+        albums = requests.get(f"https://api.deezer.com/artist/{int(deezer_id)}/albums?limit=100", timeout=30).json().get("data") or []
+    except (requests.RequestException, ValueError):
+        return []
+    albums = [a for a in albums if a.get("record_type") in ("album", "ep")]
+    albums.sort(key=lambda a: (0 if a["record_type"] == "album" else 1, a.get("release_date") or ""))
+    pris, out = set(), []
+    for a in albums:
+        try:
+            pistes = requests.get(f"https://api.deezer.com/album/{a['id']}/tracks?limit=100", timeout=30).json().get("data") or []
+        except (requests.RequestException, ValueError):
+            continue
+        total, meilleur = 0.0, None
+        for p in pistes:
+            k = _cle_titre(p["title"])
+            if k in ecoutes and k not in pris:
+                pris.add(k)
+                total += ecoutes[k][0]
+                if not meilleur or ecoutes[k][0] > meilleur[0]:
+                    meilleur = ecoutes[k]
+        if total > 0:
+            out.append({"titre": a["title"], "annee": (a.get("release_date") or "")[:4], "streams": total,
+                        "cover": a.get("cover_xl"), "phare": nettoie(meilleur[1], artiste)[0] if meilleur else "",
+                        "reedition": bool(re.search(r"deluxe|r[ée][ée]dition|edition|version", a["title"], re.I))})
+    return sorted(out, key=lambda x: -x["streams"])
