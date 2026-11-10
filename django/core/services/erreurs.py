@@ -10,6 +10,7 @@ import threading
 
 ALERTE_APRES_H = 6
 ALERTES_PAR_JOUR = 20
+REPETITIONS_PASSAGERES = 3   # une source extérieure en panne une fois (Apple Music 502, 10/11/2026) ne réveille personne
 _local = threading.local()
 
 
@@ -27,6 +28,12 @@ def empreinte(canal: str, message: str) -> str:
     base = re.sub(r"https?://\S+", "<url>", message or "")
     base = re.sub(r"\d+", "#", base)[:300]
     return hashlib.sha1(f"{canal}|{base}".encode()).hexdigest()[:40]
+
+
+def passagere(message: str) -> bool:
+    m = (message or "").lower()
+    return any(k in m for k in ("timed out", "timeout", "max retries", "connection reset", "connection aborted",
+                                 "temporarily unavailable", "http 500", "http 502", "http 503", "http 504", "(http 5"))
 
 
 def note(canal: str, niveau: str, message: str, contexte: dict | None = None) -> None:
@@ -59,6 +66,10 @@ def _note(canal, niveau, message, contexte):
         jid = db.insert("journal_erreurs", {"canal": canal[:40], "niveau": niveau[:12], "empreinte": e, "message": (message or "")[:4000],
                                             "contexte": ctx})
         deja = None
+    if passagere(message):   # panne d'un service extérieur (délai, HTTP 5xx) : alerte seulement si elle se répète
+        occ = int(db.value("SELECT occurrences FROM journal_erreurs WHERE id = ?", [jid]) or 1)
+        if occ < REPETITIONS_PASSAGERES:
+            return
     recente = db.value("SELECT 1 FROM journal_erreurs WHERE id = ? AND alerte_le >= NOW() - (? * interval '1 hour')", [jid, ALERTE_APRES_H])
     du_jour = int(db.value("SELECT COUNT(*) FROM journal_erreurs WHERE alerte_le >= date_trunc('day', NOW())") or 0)
     if recente or du_jour >= ALERTES_PAR_JOUR:
