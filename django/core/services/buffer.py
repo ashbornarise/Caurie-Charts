@@ -108,11 +108,14 @@ def tiktok_copies(files: list, base: str) -> list:
         return HttpClient(15).request("HEAD", f"{base}/media/social/{name}")["status"] == 200
 
     def one(f: str) -> str:
-        small = f.rsplit(".", 1)[0] + "-tt45n.jpg"
+        import hashlib
         try:
+            data = http_get(f"{base}/media/social/{f}", binary=True)
+            # le nom porte l'empreinte de l'original : un visuel refait sous le même nom (portrait refait le 10/11/2026)
+            # reprenait l'ancienne copie et TikTok recevait les anciennes images
+            small = f.rsplit(".", 1)[0] + f"-tt{hashlib.md5(data).hexdigest()[:8]}.jpg"
             if readable(small):
                 return small
-            data = http_get(f"{base}/media/social/{f}", binary=True)
             img = Image.open(io.BytesIO(data)).convert("RGB")
             if img.size[0] > TIKTOK_SIZE[0]:   # 1080 de large, proportions gardées (4:5 -> 1080 × 1350)
                 img = img.resize((TIKTOK_SIZE[0], round(img.size[1] * TIKTOK_SIZE[0] / img.size[0])), Image.LANCZOS)
