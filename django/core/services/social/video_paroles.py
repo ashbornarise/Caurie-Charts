@@ -150,8 +150,11 @@ def rendu(source_audio: str, cover, lignes: list, t0: float, t1: float, titre: s
                 _phrase(d, phr[idx - 1]["mots"], t, fv, w / 2, y_par - int(10 * u) + dy, at, largeur, .35, False)
             y = y_par + int(80 * u) + dy
             hcur = _phrase(d, cur["mots"], t, ft, w / 2, y, at, largeur, entree, True, lum, texte)
-            if idx + 1 < len(phr):
-                _phrase(d, phr[idx + 1]["mots"], -1, fv, w / 2, y + hcur + int(30 * u), at, largeur, .5, False)
+            # la phrase suivante seulement si elle tient au-dessus du titre (jamais de texte sur le bas de l'écran)
+            y_suiv = y + hcur + int(30 * u)
+            if idx + 1 < len(phr) and y_suiv + len(_coupe_lignes(d, phr[idx + 1]["mots"], fv, largeur)) * fv.size * 1.28 \
+                    < h - int((330 if fmt == "story" else 170) * u) - int(50 * u):
+                _phrase(d, phr[idx + 1]["mots"], -1, fv, w / 2, y_suiv, at, largeur, .5, False)
         c = c.convert("RGBA")
         y_b0, y_b1 = max(0, y_par - int(120 * u)), min(h, y_par + int(760 * u))   # halo : seulement la bande des paroles
         halo = lum_im.crop((0, y_b0, w, y_b1)).filter(ImageFilter.GaussianBlur(int(22 * u)))

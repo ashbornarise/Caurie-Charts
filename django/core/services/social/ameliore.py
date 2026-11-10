@@ -21,9 +21,11 @@ from core.services.platforms import log_write
 # RealESRGAN_x4plus, pour une netteté presque identique (essai sur Innoss'B, 19/10/2026)
 MODELE = Path(os.path.expanduser("~/.u2net")) / "realesr-leger.onnx"
 URL_MODELE = "https://huggingface.co/James040/realesrganfp16-onnx-5mb/resolve/main/onnx/model.onnx"
-DEBRUITAGE = 0.4
-SEUIL = 1600          # en dessous, on agrandit
-ENTREE_MAX = 540      # côté max avant ×4 (2 160 px en sortie : la largeur de nos images)
+# 10/11/2026 (même correction que les vidéos du Studio) : l'entrée était réduite à 540 px avant l'IA (une photo Instagram
+# de 1 080 px perdait la moitié de ses détails) et le débruitage à 0,4 lissait peau et textures.
+DEBRUITAGE = 0.1
+SEUIL = 1000          # en dessous, on agrandit par IA ; au-dessus, la vraie photo, simplement retouchée
+ENTREE_MAX = 720      # côté max avant ×4
 _SESSION = None
 
 
@@ -76,7 +78,7 @@ def ameliore(im: Image.Image) -> Image.Image:
     base = storage.blob_public_url()
     if base:
         try:
-            r = requests.get(f"{base}/media/ameliorees-c/{cle}.jpg", timeout=20)
+            r = requests.get(f"{base}/media/ameliorees-d/{cle}.jpg", timeout=20)   # -d : réglages du 10/11/2026
             if r.ok:
                 return Image.open(io.BytesIO(r.content)).convert("RGB")
         except Exception:  # noqa: BLE001
@@ -89,8 +91,8 @@ def ameliore(im: Image.Image) -> Image.Image:
         log_write("social", "warning", f"amélioration de photo impossible : {str(exc)[:150]}")
         return im
     try:
-        out = io.BytesIO(); grand.save(out, format="JPEG", quality=93)
-        storage.store_media("ameliorees-c", f"{cle}.jpg", out.getvalue(), "image/jpeg")
+        out = io.BytesIO(); grand.save(out, format="JPEG", quality=95, subsampling=0)
+        storage.store_media("ameliorees-d", f"{cle}.jpg", out.getvalue(), "image/jpeg")
     except Exception:  # noqa: BLE001
         pass
     return grand

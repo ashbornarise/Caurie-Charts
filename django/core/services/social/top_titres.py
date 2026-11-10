@@ -285,3 +285,109 @@ def liste(lignes: list, artiste: str, pays: str | None, fmt: str = "feed", titre
     fsite = C.police("Jost.ttf", int(28 * u), "SemiBold")
     d.text((w - m, yb - 2 * u), "cauricharts.com", font=fsite, fill=at, anchor="ra")
     return c
+
+
+# ---------------------------------------------------------------- tableau (portraits, 10/11/2026)
+
+def _entete(c: Image.Image, w: int, h: int, u: float, fmt: str, titre: str, etiquette: str, artiste: str,
+            pays: str | None, a, at, bandes) -> int:
+    """Liseré du drapeau, logo, pastille, titre et ligne « artiste · pays » (comme les listes) ; rend le y suivant."""
+    d = ImageDraw.Draw(c)
+    haut = 0 if fmt == "feed" else int(170 * u)
+    for i, band in enumerate(bandes):
+        d.rectangle((i * w / 3, 0, (i + 1) * w / 3, int(14 * u)), fill=band if _clair(band) < .95 else (236, 236, 242))
+    m = int(64 * u)
+    _logo_sombre(c, m - int(8 * u), haut + int(50 * u), int(72 * u))
+    d = ImageDraw.Draw(c)
+    fe = C.police("Montserrat.ttf", int(23 * u), "ExtraBold")
+    tw = d.textlength(etiquette, font=fe)
+    ye = haut + int(60 * u)
+    d.rounded_rectangle((w - m - tw - 40 * u, ye, w - m, ye + 50 * u), radius=int(25 * u), fill=at)
+    d.text((w - m - tw - 20 * u, ye + 25 * u), etiquette, font=fe, fill=BLANC, anchor="lm")
+    y = haut + int(160 * u)
+    for taille in (76, 68, 60):
+        ft = C.police("Montserrat.ttf", int(taille * u), "ExtraBold")
+        if d.textlength(titre, font=ft) <= w - 2 * m:
+            break
+    d.text((m - 4 * u, y), titre, font=ft, fill=NUIT)
+    y += int(96 * u)
+    _drapeau(c, m, y + int(4 * u), int(54 * u), int(36 * u), bandes, u)
+    d = ImageDraw.Draw(c)
+    d.text((m + 72 * u, y + 22 * u), f"{artiste}  ·  {country_name(pays) if pays else 'Afrique de l’Ouest'}",
+           font=C.police("Montserrat.ttf", int(34 * u), "SemiBold"), fill=GRIS, anchor="lm")
+    return y + int(80 * u)
+
+
+def tableau(rangees: list, artiste: str, pays: str | None, fmt: str = "feed", titre: str = "",
+            etiquette: str = "CAURI CHARTS", colonnes: tuple = ("Place", "Titre", "Classement", "Pays"),
+            source: str = "classements Cauri Charts") -> Image.Image:
+    """Tableau de classements : rangees = [{"place": "N°1", "titre", "image" (URL), "sous" (facultatif),
+    "col3": texte, "pays": code ISO ou None, "col4": texte si pas de pays}] (6 au plus)."""
+    w, h = C.FORMATS.get(fmt, C.FORMATS["feed"])
+    u = w / 1080
+    a, b, bandes = couleurs(pays)
+    at = accent_texte(a)
+    c = _fond(w, h, a, b, u)
+    y = _entete(c, w, h, u, fmt, titre, etiquette, artiste, pays, a, at, bandes)
+    m = int(64 * u)
+    bas = h - (int(110 * u) if fmt == "feed" else int(330 * u))
+    rangees = rangees[:6]
+    box = (m - 16 * u, y, w - m + 16 * u, bas)
+    _carte(c, box, int(36 * u), u, BLANC, .80)
+    d = ImageDraw.Draw(c)
+    # colonnes (base 1080) : place | pochette + titre | classement | pays
+    x0 = box[0] + 26 * u
+    xs = [x0, x0 + 128 * u, x0 + 560 * u, x0 + 780 * u]
+    fh = C.police("Montserrat.ttf", int(20 * u), "ExtraBold")
+    yh = y + 26 * u
+    for x, lab in zip(xs, colonnes):
+        d.text((x + (8 * u if x == x0 else 0), yh), " ".join(lab.upper()), font=fh, fill=(130, 130, 150))
+    y_l = yh + int(46 * u)
+    d.line((box[0] + 20 * u, y_l - 10 * u, box[2] - 20 * u, y_l - 10 * u), fill=(220, 220, 232), width=max(1, int(2 * u)))
+    hl = min(int((150 if fmt == "feed" else 190) * u), int((bas - 20 * u - y_l) / max(1, len(rangees))))
+    fp = C.police("Montserrat.ttf", int(40 * u), "ExtraBold")
+    fn = C.police("Montserrat.ttf", int(30 * u), "ExtraBold")
+    fs = C.police("Montserrat.ttf", int(22 * u), "Medium")
+    f3 = C.police("Montserrat.ttf", int(25 * u), "SemiBold")
+    for k, r in enumerate(rangees):
+        yy = int(y_l + k * hl)
+        if k % 2 == 0:   # lignes alternées, teinte légère du pays
+            taille = (int(box[2] - box[0] - 24 * u), hl - int(6 * u))
+            mk = Image.new("L", taille, 0)
+            ImageDraw.Draw(mk).rounded_rectangle((0, 0, taille[0] - 1, taille[1] - 1), radius=int(18 * u), fill=24)
+            c.paste(Image.new("RGB", taille, a), (int(box[0] + 12 * u), yy + int(3 * u)), mk)
+            d = ImageDraw.Draw(c)
+        cy = yy + hl / 2
+        place = str(r.get("place") or "")
+        if place in ("N°1", "1"):
+            pw = d.textlength(place, font=fp)
+            d.rounded_rectangle((xs[0], cy - 30 * u, xs[0] + pw + 24 * u, cy + 30 * u), radius=int(30 * u), fill=at)
+            d.text((xs[0] + 12 * u, cy), place, font=fp, fill=BLANC, anchor="lm")
+        else:
+            d.text((xs[0] + 8 * u, cy), place, font=fp, fill=at, anchor="lm")
+        cote = int(hl - 34 * u)
+        _pochette(c, C._image(r["image"]) if r.get("image") else None, int(xs[1]), int(cy - cote / 2), cote, int(14 * u), u, a)
+        d = ImageDraw.Draw(c)
+        xt = xs[1] + cote + 20 * u
+        lt = xs[2] - xt - 16 * u
+        nom = C.propre(r.get("titre") or "")
+        if r.get("sous"):
+            d.text((xt, cy - 6 * u), _coupe(d, nom, fn, lt), font=fn, fill=NUIT, anchor="ls")
+            d.text((xt, cy + 8 * u), _coupe(d, r["sous"], fs, lt), font=fs, fill=GRIS, anchor="lt")
+        else:
+            d.text((xt, cy), _coupe(d, nom, fn, lt), font=fn, fill=NUIT, anchor="lm")
+        d.text((xs[2], cy), _coupe(d, str(r.get("col3") or ""), f3, xs[3] - xs[2] - 14 * u), font=f3, fill=NUIT, anchor="lm")
+        if r.get("pays"):
+            bd = FLAGS.get(r["pays"].lower())
+            if bd:
+                _drapeau(c, int(xs[3]), int(cy - 15 * u), int(40 * u), int(28 * u), bd, u)
+                d = ImageDraw.Draw(c)
+            d.text((xs[3] + (52 * u if bd else 0), cy), _coupe(d, country_name(r["pays"]), f3, box[2] - xs[3] - 70 * u),
+                   font=f3, fill=NUIT, anchor="lm")
+        elif r.get("col4"):
+            d.text((xs[3], cy), str(r["col4"]), font=f3, fill=NUIT, anchor="lm")
+    fpied = C.police("Montserrat.ttf", int(24 * u), "Medium")
+    yb = h - (int(70 * u) if fmt == "feed" else int(270 * u))
+    d.text((m, yb), "Source : " + source, font=fpied, fill=GRIS)
+    d.text((w - m, yb - 2 * u), "cauricharts.com", font=C.police("Jost.ttf", int(28 * u), "SemiBold"), fill=at, anchor="ra")
+    return c

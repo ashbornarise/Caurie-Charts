@@ -89,7 +89,7 @@ def candidats(video_id: str, dossier_sortie: str, n: int = 6) -> list[str]:
         for _, t, f in sorted(gardes, key=lambda g: g[1]):
             nom = os.path.join(dossier_sortie, f"{video_id}-{int(t):04d}s.jpg")
             with Image.open(f) as im:
-                im.save(nom, quality=94)
+                im.save(nom, quality=95, subsampling=0)
             sortie.append(nom)
         return sortie
 
@@ -118,7 +118,7 @@ def enregistre(artiste: str, chemin: str, video_id: str, seconde: int, coupe_bas
         im = im.convert("RGB")
         if coupe_bas:
             im = im.crop((0, 0, im.width, int(im.height * (1 - coupe_bas))))
-        out = io.BytesIO(); im.save(out, format="JPEG", quality=94)
+        out = io.BytesIO(); im.save(out, format="JPEG", quality=95, subsampling=0)
     nom = f"{re.sub(r'[^a-z0-9-]', '', a['slug'])}-{video_id}-{seconde:04d}s.jpg"
     storage.store_media("artists/plans", nom, out.getvalue(), "image/jpeg")
     if not db.value("SELECT 1 FROM artist_photos WHERE fichier = ?", [nom]):

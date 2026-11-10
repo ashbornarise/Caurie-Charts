@@ -242,7 +242,7 @@ def save_jpeg(img: Image.Image, file: Path) -> str | None:
     """JPEG haute qualité : un PNG 4K d'une photo pèse 15 à 25 Mo, sans gain visible après compression des réseaux."""
     out = file.with_suffix(".jpg")
     try:
-        img.convert("RGB").save(out, "JPEG", quality=92, subsampling=0, optimize=True)
+        img.convert("RGB").save(out, "JPEG", quality=95, subsampling=0, optimize=True)   # 95 (10/11/2026)
         return str(out)
     except OSError:
         return None

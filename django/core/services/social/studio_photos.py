@@ -29,7 +29,7 @@ def _jpeg(chemin: str) -> bytes | None:
             im = im.convert("RGB")
             if min(im.size) < 400:          # vignettes et avatars : pas pour nos couvertures
                 return None
-            out = io.BytesIO(); im.save(out, format="JPEG", quality=94)
+            out = io.BytesIO(); im.save(out, format="JPEG", quality=95, subsampling=0)   # couleurs pleines (10/11/2026)
             return out.getvalue()
     except Exception:  # noqa: BLE001
         return None
