@@ -4,421 +4,1011 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Cauri Studio · Montage</title>
+<meta name="theme-color" content="#FFFFFF">
+<title>Cauri Studio</title>
 <link rel="manifest" href="{{ base }}/manifest.json">
 <link rel="icon" href="/assets/marque/studio-192.png">
+<link rel="apple-touch-icon" href="/assets/marque/studio-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
 <style>
-/* Cauri Studio v2 (10/11/2026) : table de montage, projets, boîte à outils — maquette validée par le fondateur */
+/* Cauri Studio v2 (10/11/2026) — un seul geste principal par écran, les options avancées repliées, des assistants en étapes */
 :root { --fond:#F6F6FB; --carte:#FFFFFF; --encre:#12121F; --doux:#3A3A50; --faible:#5B5B72; --trait:#E6E6F0; --trait2:#D9D9E6;
-  --violet:#7C3AED; --violet-fonce:#5B21B6; --violet-clair:#F1EAFE; --ciel:#38BDF8; --ciel-clair:#E0F4FE; --orange:#F77F00; }
-* { box-sizing: border-box }
+  --violet:#7C3AED; --violet-fonce:#5B21B6; --violet-clair:#F1EAFE; --ciel-clair:#E0F4FE; --vert:#166534; --rouge:#B91C1C; --orange:#F77F00 }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent }
 html, body { margin: 0; background: var(--fond); color: var(--encre); font: 15px/1.45 Inter, system-ui, sans-serif }
 button, input, select, textarea { font: inherit; color: inherit }
+button { cursor: pointer }
 a { color: var(--violet-fonce) }
+[hidden] { display: none !important }
 .app { display: flex; min-height: 100vh }
-.menu { width: 232px; flex-shrink: 0; background: var(--carte); border-right: 1px solid var(--trait); padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh }
-.marque { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px }
+/* menu (ordinateur) / barre du bas (téléphone) */
+.menu { width: 220px; flex-shrink: 0; background: var(--carte); border-right: 1px solid var(--trait); padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh }
+.marque { display: flex; align-items: center; gap: 10px; padding: 4px 8px 22px }
 .marque .c { width: 36px; height: 36px; border-radius: 10px; background: var(--violet); color: #fff; display: grid; place-items: center; font: 700 15px Unbounded, sans-serif }
 .marque b { font: 700 14px Unbounded, sans-serif; display: block } .marque span { font-size: 12px; color: var(--faible) }
-.menu button, .menu a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 0; background: none; text-align: left; font-weight: 500; font-size: 14px; color: var(--doux); cursor: pointer; text-decoration: none }
-.menu .actif { background: var(--violet-clair); color: var(--violet-fonce); font-weight: 600 }
-.menu .pied { margin-top: auto; padding: 14px; border-radius: 14px; background: linear-gradient(135deg, #EDE4FF, #E0F4FE); font-size: 13px; color: var(--doux) }
-svg.i { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round }
-main { flex: 1; min-width: 0; padding: 28px 32px 90px }
+.menu button { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 10px; border: 0; background: none; text-align: left; font-weight: 500; font-size: 14px; color: var(--doux) }
+.menu button.actif { background: var(--violet-clair); color: var(--violet-fonce); font-weight: 600 }
+.menu .badge, .barre-bas .badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--orange); color: #fff; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center }
+svg.i { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round }
+main { flex: 1; min-width: 0; padding: 28px clamp(16px, 4vw, 40px) 110px; max-width: 1180px }
 .vue { display: none } .vue.vu { display: block }
-h1 { margin: 0; font: 700 26px/1.2 Unbounded, sans-serif; text-wrap: balance }
-.sous { color: var(--faible); margin: 6px 0 20px; max-width: 70ch }
-.entete { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px } .entete > div { flex: 1; min-width: 240px }
-.btn { border: 0; border-radius: 12px; padding: 11px 16px; font-weight: 600; font-size: 14px; cursor: pointer; background: var(--violet); color: #fff; display: inline-flex; align-items: center; gap: 8px; text-decoration: none }
-.btn.second { background: var(--carte); color: var(--encre); border: 1px solid var(--trait2) } .btn:disabled { opacity: .5; cursor: default }
-.carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; padding: 16px 18px }
-.compteurs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px }
-.compteurs b { display: block; font: 700 26px Unbounded, sans-serif } .compteurs span { font-size: 13px; color: var(--faible) }
-.filtres { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px }
-.puce { border: 1px solid var(--trait2); background: var(--carte); padding: 8px 14px; border-radius: 99px; font-weight: 600; font-size: 13px; cursor: pointer; color: var(--doux) }
+h1 { margin: 0 0 4px; font: 700 26px/1.2 Unbounded, sans-serif; text-wrap: balance }
+h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
+.sous { color: var(--faible); margin: 0 0 22px; max-width: 62ch }
+.retour { border: 0; background: none; color: var(--faible); font-weight: 600; padding: 0; margin: 0 0 14px; display: inline-flex; align-items: center; gap: 6px }
+.carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 18px; padding: 18px; margin-bottom: 14px }
+.btn { border: 0; border-radius: 14px; padding: 13px 18px; font-weight: 600; font-size: 15px; background: var(--violet); color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 8px }
+.btn.large { width: 100% } .btn.second { background: var(--carte); color: var(--encre); border: 1px solid var(--trait2) }
+.btn.vert { background: #16A34A } .btn:disabled { opacity: .5; cursor: default }
+.lien { border: 0; background: none; color: var(--violet-fonce); font-weight: 600; padding: 6px 0 }
+.lien.rouge { color: var(--rouge) }
+.champ { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 14px; color: var(--doux) }
+.champ input, .champ select, .champ textarea { border: 1px solid var(--trait2); border-radius: 12px; padding: 12px 13px; font-weight: 500; font-size: 15px; background: #fff; width: 100%; color: var(--encre) }
+.champ textarea { min-height: 96px; resize: vertical }
+.champ small { font-weight: 500; color: var(--faible) }
+.ligne-champ { display: flex; gap: 8px } .ligne-champ input { flex: 1 }
+.deux { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.puces { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px }
+.puce { border: 1px solid var(--trait2); background: var(--carte); padding: 9px 14px; border-radius: 99px; font-weight: 600; font-size: 13px; color: var(--doux) }
 .puce.on { background: var(--encre); color: #fff; border-color: var(--encre) }
-.recherche { display: flex; align-items: center; gap: 8px; background: var(--carte); border: 1px solid var(--trait2); border-radius: 12px; padding: 0 12px; min-width: 260px }
-.recherche input { border: 0; outline: 0; padding: 10px 0; width: 100%; background: none }
-.table { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; overflow: hidden }
-.ligne { display: grid; grid-template-columns: 56px minmax(0, 2.2fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, .9fr) 110px; gap: 14px; padding: 12px 18px; align-items: center; border-bottom: 1px solid #F1F1F7 }
-.ligne.titres { font-size: 12px; font-weight: 700; letter-spacing: .05em; color: var(--faible); border-bottom-color: #EEEEF4 }
-.vign { width: 48px; height: 60px; border-radius: 10px; background: #E9E9F2 center/cover no-repeat }
-.etat { justify-self: start; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 99px; white-space: nowrap }
-.e-cours { background: var(--ciel-clair); color: #075985 } .e-valider { background: #FFEDD5; color: #9A3412 } .e-pret { background: #DCFCE7; color: #166534 }
+.plus { border: 0; background: none; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 4px 0; font-weight: 600; color: var(--doux) }
+.plus svg { transition: transform .2s } .plus.ouvert svg { transform: rotate(180deg) }
+.msg { font-size: 14px; margin: 10px 0 0; color: var(--faible); min-height: 0 } .msg.err { color: var(--rouge) } .msg.ok { color: var(--vert) }
+.vide { padding: 36px 16px; text-align: center; color: var(--faible) }
+/* bascule */
+.bascule { display: flex; gap: 12px; align-items: flex-start; border: 0; background: none; text-align: left; padding: 0; width: 100% }
+.bascule i { width: 46px; height: 28px; border-radius: 99px; background: var(--trait2); position: relative; flex-shrink: 0; transition: background .2s }
+.bascule i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 99px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .2s }
+.bascule[aria-checked="true"] i { background: var(--violet) } .bascule[aria-checked="true"] i::after { left: 21px }
+.bascule span { font-size: 14px; color: var(--doux) } .bascule b { display: block; color: var(--encre) }
+/* assistant en étapes */
+.etapes { display: flex; gap: 6px; margin: 0 0 18px } .etapes span { flex: 1; height: 5px; border-radius: 99px; background: var(--trait) } .etapes span.fait { background: var(--violet) }
+.pied { position: sticky; bottom: 0; padding: 14px 0 0; background: linear-gradient(transparent, var(--fond) 30%) ; display: flex; gap: 10px }
+/* accueil */
+.attente { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 22px }
+.attente button { text-align: left; border: 1px solid var(--trait); background: var(--carte); border-radius: 16px; padding: 14px; display: flex; gap: 12px; align-items: center }
+.attente img, .attente .vg { width: 46px; height: 58px; border-radius: 10px; object-fit: cover; background: #E9E9F2; flex-shrink: 0 }
+.attente b { display: block; font-size: 14px } .attente small { color: var(--faible); font-size: 12px }
+.alerte { width: 100%; border: 1px solid #FED7AA; background: #FFF7ED; border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; align-items: center; text-align: left; margin-bottom: 8px; color: #9A3412 }
+.alerte b { display: block; color: var(--encre); font-size: 14px } .alerte small { color: var(--doux) } .alerte em { margin-left: auto; font-style: normal; font-weight: 700 }
+.liste { background: var(--carte); border: 1px solid var(--trait); border-radius: 18px; overflow: hidden }
+.projet { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 16px; border: 0; border-bottom: 1px solid #F1F1F7; background: none; text-align: left }
+.projet:last-child { border-bottom: 0 } .projet:hover { background: #FAFAFD }
+.projet .vg { width: 44px; height: 56px; border-radius: 10px; background: #E9E9F2 center/cover no-repeat; flex-shrink: 0 }
+.projet .txt { flex: 1; min-width: 0 } .projet b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.projet small { display: block; color: var(--faible); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.etat { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 99px; white-space: nowrap; flex-shrink: 0 }
+.e-cours { background: var(--ciel-clair); color: #075985 } .e-valider { background: #FFEDD5; color: #9A3412 } .e-pret { background: #DCFCE7; color: var(--vert) }
 .e-publie { background: #EDE4FF; color: var(--violet-fonce) } .e-erreur { background: #FEE2E2; color: #991B1B } .e-autre { background: #F1F1F7; color: var(--doux) }
-.ligne small { display: block; color: var(--faible); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-.vide { padding: 40px; text-align: center; color: var(--faible) }
-.grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px }
-.outil { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; text-align: left; color: var(--encre); text-decoration: none }
-.outil:hover { border-color: #C9B6FA; box-shadow: 0 6px 20px rgba(76, 29, 149, .08) }
-.outil .tete { display: flex; align-items: center; gap: 10px } .outil b { font-size: 15px }
-.pastille { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-weight: 800 }
-.outil small { color: var(--faible); font-size: 13px } .outil em { font-style: normal; color: var(--violet-fonce); font-size: 12px; font-weight: 600 }
-.cote { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 18px; align-items: start }
-.champ { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 12px }
-.champ input, .champ select, .champ textarea { border: 1px solid var(--trait2); border-radius: 10px; padding: 10px 12px; font-weight: 500; font-size: 14px; background: #fff; width: 100% }
-.champ textarea { min-height: 120px; resize: vertical }
-.deux { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
-.briques { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px }
-.brique { border: 1px dashed #B9B9CC; background: #FAFAFD; padding: 8px 12px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; color: var(--doux) }
-.etape { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #F6F3FF; border: 1px solid #E7DEFF; margin-bottom: 8px }
-.etape .n { width: 24px; height: 24px; border-radius: 99px; background: var(--violet); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; flex-shrink: 0 }
-.etape button { margin-left: auto; border: 0; background: none; font-size: 18px; color: var(--faible); cursor: pointer }
-/* table de montage */
-.montage { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 0; background: var(--carte); border: 1px solid var(--trait); border-radius: 18px; overflow: hidden }
-.scene { background: var(--fond); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; min-height: 480px }
-.ecran { width: min(360px, 100%); aspect-ratio: 4/5; border-radius: 18px; overflow: hidden; box-shadow: 0 24px 60px rgba(30, 20, 70, .25); background: #1B1B2B center/cover no-repeat; display: grid; place-items: center; color: #fff; text-align: center; padding: 20px }
-.ecran video { width: 100%; height: 100%; object-fit: cover }
-.inspecteur { border-left: 1px solid var(--trait); padding: 18px; max-height: 640px; overflow: auto }
-.inspecteur h3 { margin: 0 0 4px; font-size: 12px; letter-spacing: .06em; color: var(--faible) }
-.pl { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 8px; align-items: center; margin-bottom: 6px }
-.pl span { font-size: 11px; color: var(--faible); font-variant-numeric: tabular-nums }
-.pl input { border: 1px solid var(--trait2); border-radius: 8px; padding: 7px 9px; font-size: 13px; width: 100% }
-.frise { grid-column: 1 / -1; border-top: 1px solid var(--trait); padding: 12px 18px 16px; display: flex; flex-direction: column; gap: 8px }
-.piste { display: flex; align-items: center; gap: 10px } .piste > span { width: 76px; font-size: 12px; font-weight: 600; color: var(--doux); flex-shrink: 0 }
-.piste > div { flex: 1; height: 32px; border-radius: 9px; display: flex; gap: 3px; overflow: hidden; position: relative }
-.bloc { border-radius: 8px; background: #EDE4FF; color: #3B1F75; font-size: 11px; font-weight: 600; padding: 0 6px; display: flex; align-items: center; overflow: hidden; white-space: nowrap; position: absolute; top: 0; bottom: 0 }
-.photos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px }
-.photos button { aspect-ratio: 4/5; border-radius: 9px; border: 0; background: #EEE center/cover no-repeat; cursor: pointer }
-.photos button.on { outline: 3px solid var(--violet); outline-offset: 1px }
-.choix { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px }
-.resultats button { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; padding: 8px; border-radius: 10px; cursor: pointer; text-align: left }
-.resultats button:hover { background: var(--fond) } .resultats img { width: 32px; height: 32px; border-radius: 99px; object-fit: cover }
-.msg { font-size: 13px; margin-top: 10px; color: var(--faible) } .msg.err { color: #B91C1C } .msg.ok { color: #166534 }
+.idee { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #F1F1F7 } .idee:last-child { border-bottom: 0 }
+.idee img { width: 64px; height: 40px; border-radius: 8px; object-fit: cover } .idee .txt { flex: 1; min-width: 0 } .idee b { display: block; font-size: 14px } .idee small { color: var(--faible); font-size: 12px }
+/* créer */
+.outils { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-bottom: 26px }
+.outil { border: 1px solid var(--trait); background: var(--carte); border-radius: 18px; padding: 18px; text-align: left; display: flex; flex-direction: column; gap: 10px }
+.outil:hover { border-color: #C9B6FA; box-shadow: 0 8px 24px rgba(76, 29, 149, .08) }
+.outil .pastille { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; font-size: 16px }
+.outil b { font-size: 16px } .outil small { color: var(--faible); font-size: 13px }
+.brique { border: 1px dashed #B9B9CC; background: #FAFAFD; padding: 8px 12px; border-radius: 10px; font-weight: 600; font-size: 13px; color: var(--doux) }
+.etape-o { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #F6F3FF; border: 1px solid #E7DEFF; margin-bottom: 8px; font-weight: 600; font-size: 14px }
+.etape-o .n { width: 24px; height: 24px; border-radius: 99px; background: var(--violet); color: #fff; font-size: 12px; display: grid; place-items: center }
+.etape-o button { margin-left: auto; border: 0; background: none; font-size: 20px; color: var(--faible) }
+/* galeries */
+.galerie { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 14px }
+.galerie button { position: relative; aspect-ratio: 4/5; border: 0; border-radius: 12px; background: #E9E9F2 center/cover no-repeat; padding: 0; overflow: hidden }
+.galerie button.on { outline: 3px solid var(--violet); outline-offset: 2px }
+.galerie .ordre, .galerie .tag { position: absolute; top: 6px; left: 6px; background: var(--violet); color: #fff; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 2px 8px }
+.galerie .tag { background: rgba(18,18,31,.75); top: auto; bottom: 6px }
+.galerie .x { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 99px; background: rgba(18,18,31,.7); color: #fff; display: grid; place-items: center; font-size: 15px; border: 0 }
+.galerie.larges { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) }
+.galerie button span.nom { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 8px 6px; background: linear-gradient(transparent, rgba(0,0,0,.6)); color: #fff; font-size: 12px; font-weight: 600; text-align: left }
+.apercu-lien { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 12px; background: var(--fond); margin-top: -4px; margin-bottom: 14px }
+.apercu-lien img { width: 76px; height: 48px; border-radius: 8px; object-fit: cover } .apercu-lien b { display: block; font-size: 14px } .apercu-lien small { color: var(--faible) }
+/* projet */
+.projet-grille { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 22px; align-items: start }
+.ecran { width: 100%; aspect-ratio: 4/5; border-radius: 20px; overflow: hidden; background: #1B1B2B center/contain no-repeat; display: grid; place-items: center; color: #fff; box-shadow: 0 20px 50px rgba(30,20,70,.2) }
+.ecran video, .ecran img { width: 100%; height: 100%; object-fit: contain; background: #000 }
+.suivi { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px }
+.suivi div { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--faible) }
+.suivi div i { width: 22px; height: 22px; border-radius: 99px; border: 2px solid var(--trait2); flex-shrink: 0; display: grid; place-items: center }
+.suivi div.fait { color: var(--encre) } .suivi div.fait i { background: var(--violet); border-color: var(--violet) } .suivi div.fait i::after { content: "✓"; color: #fff; font-size: 12px; font-style: normal; font-weight: 700 }
+.suivi div.cours { color: var(--encre); font-weight: 600 } .suivi div.cours i { border-color: var(--violet); border-top-color: transparent; animation: tourne 1s linear infinite }
+@keyframes tourne { to { transform: rotate(360deg) } }
+.pl { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 8px; align-items: center; margin-bottom: 6px }
+.pl span { font-size: 12px; color: var(--faible); font-variant-numeric: tabular-nums } .pl input { border: 1px solid var(--trait2); border-radius: 10px; padding: 8px 10px; font-size: 14px; width: 100% }
+.frise { display: flex; height: 30px; border-radius: 9px; background: var(--violet-clair); position: relative; overflow: hidden; margin: 6px 0 14px }
+.frise span { position: absolute; top: 3px; bottom: 3px; border-radius: 6px; background: #8B5CF6 }
+/* feuille de publication */
+.voile { position: fixed; inset: 0; background: rgba(18,18,31,.45); z-index: 40 }
+.feuille { position: fixed; z-index: 41; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100%); background: var(--carte); border-radius: 22px 22px 0 0; padding: 22px 20px calc(22px + env(safe-area-inset-bottom)); max-height: 88vh; overflow: auto }
+.choix { width: 100%; border: 1px solid var(--trait); background: var(--carte); border-radius: 16px; padding: 14px; display: flex; gap: 12px; align-items: center; text-align: left; margin-bottom: 10px }
+.choix:hover { border-color: #C9B6FA } .choix b { display: block } .choix small { color: var(--faible); font-size: 13px }
+.choix .pastille { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; background: var(--violet-clair); color: var(--violet-fonce) }
+.onglets { display: flex; gap: 4px; background: #ECECF4; padding: 4px; border-radius: 12px; margin-bottom: 18px; width: fit-content; max-width: 100% }
+.onglets button { border: 0; background: none; padding: 9px 16px; border-radius: 9px; font-weight: 600; font-size: 14px; color: var(--doux) }
+.onglets button.on { background: var(--carte); color: var(--encre); box-shadow: 0 1px 3px rgba(18,18,31,.1) }
+.ligne-l { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #F1F1F7 } .ligne-l:last-child { border-bottom: 0 }
+.ligne-l img { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; flex-shrink: 0 } .ligne-l .txt { flex: 1; min-width: 0 } .ligne-l b { display: block; font-size: 14px } .ligne-l small { color: var(--faible); font-size: 13px }
+.resultats button { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; padding: 8px; border-radius: 10px; text-align: left }
+.resultats button:hover { background: var(--fond) } .resultats img { width: 34px; height: 34px; border-radius: 99px; object-fit: cover; background: #E9E9F2 }
+.choisi { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--violet-clair); margin-bottom: 14px; font-weight: 600 }
+.choisi button { margin-left: auto }
 .barre-bas { display: none }
 @media (max-width: 900px) {
-  .menu { display: none } main { padding: 18px max(16px, env(safe-area-inset-left)) 96px }
-  .compteurs { grid-template-columns: repeat(2, minmax(0, 1fr)) } .cote, .montage { grid-template-columns: minmax(0, 1fr) }
-  .inspecteur { border-left: 0; border-top: 1px solid var(--trait); max-height: none }
-  .ligne { grid-template-columns: 48px minmax(0, 1fr) auto; } .ligne > :nth-child(3), .ligne > :nth-child(5), .ligne.titres { display: none }
-  .barre-bas { display: flex; position: fixed; left: 0; right: 0; bottom: 0; background: var(--carte); border-top: 1px solid var(--trait); padding: 8px 6px calc(10px + env(safe-area-inset-bottom)) }
-  .barre-bas button { flex: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--faible) }
+  .menu { display: none } main { padding: 18px max(16px, env(safe-area-inset-left)) 190px max(16px, env(safe-area-inset-right)) }
+  .projet-grille { grid-template-columns: minmax(0, 1fr) } h1 { font-size: 22px }
+  .barre-bas { display: flex; position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; background: var(--carte); border-top: 1px solid var(--trait); padding: 8px 6px calc(10px + env(safe-area-inset-bottom)) }
+  .barre-bas button { flex: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--faible); position: relative }
   .barre-bas button.actif { color: var(--violet-fonce) }
+  .barre-bas .badge { position: absolute; top: -2px; left: calc(50% + 6px); margin: 0 }
+  .pied, #pj-actions:not(:empty) { position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); padding: 12px max(16px, env(safe-area-inset-left)) 10px; background: linear-gradient(transparent, var(--fond) 25%); z-index: 20; margin: 0 !important }
+  #pj-actions .btn { flex: 1 } #pj-actions .btn.second { flex: 0 0 auto }
 }
 </style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-montage" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M3 20h18M7 20v-4M17 20v-4"/></symbol>
-  <symbol id="i-projets" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></symbol>
-  <symbol id="i-outils" viewBox="0 0 24 24"><path d="M14 7l3-3 3 3-3 3M4 20l10-10"/><rect x="3" y="3" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-accueil" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-photo" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></symbol>
-  <symbol id="i-ancien" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-reglages" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-gauche" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-bas" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-envoi" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></symbol>
+  <symbol id="i-musique" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
   <symbol id="i-cherche" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
 </svg>
+
 <div class="app">
   <nav class="menu" aria-label="Menu du Studio">
     <div class="marque"><div class="c">C</div><div><b>Cauri Studio</b><span>{{ nom.split(' ')[0] if nom else '' }}</span></div></div>
-    <button data-vue="projets" class="actif"><svg class="i"><use href="#i-projets"/></svg>Projets</button>
-    <button data-vue="montage"><svg class="i"><use href="#i-montage"/></svg>Table de montage</button>
-    <button data-vue="outils"><svg class="i"><use href="#i-outils"/></svg>Boîte à outils</button>
-    <a href="{{ base }}?classique=1#photos"><svg class="i"><use href="#i-photo"/></svg>Banque de photos</a>
-    <a href="{{ base }}?classique=1"><svg class="i"><use href="#i-ancien"/></svg>Studio d'avant</a>
-    <div class="pied"><b style="color:var(--encre)">Vidéos lourdes</b><br>Paroles et liens YouTube se fabriquent sur le PC : laisse-le allumé.</div>
+    <button data-nav="accueil" class="actif"><svg class="i"><use href="#i-accueil"/></svg>Accueil</button>
+    <button data-nav="creer"><svg class="i"><use href="#i-plus"/></svg>Créer</button>
+    <button data-nav="banque"><svg class="i"><use href="#i-photo"/></svg>Banque photos<span class="badge" hidden data-badge></span></button>
+    <button data-nav="reglages"><svg class="i"><use href="#i-reglages"/></svg>Réglages</button>
   </nav>
 
   <main>
-    <!-- PROJETS -->
-    <section class="vue vu" id="v-projets" aria-label="Projets">
-      <div class="entete"><div><h1>Projets</h1><p class="sous" style="margin-bottom:0">Chaque création reste un projet : tu le rouvres, tu le valides, tu le publies.</p></div>
-        <button class="btn" data-va="outils">+ Nouveau projet</button></div>
-      <div class="compteurs" id="compteurs"></div>
-      <div class="filtres" id="filtres">
-        <label class="recherche"><svg class="i"><use href="#i-cherche"/></svg><input id="q" placeholder="Chercher un projet, un artiste…" aria-label="Chercher"></label>
-      </div>
-      <div class="table" id="liste"><div class="vide">Chargement…</div></div>
+    <!-- ACCUEIL -->
+    <section class="vue vu" id="v-accueil">
+      <h1>Bonjour {{ nom.split(' ')[0] if nom else '' }}</h1>
+      <p class="sous">Ce qui t'attend, puis tous tes projets.</p>
+      <div id="alertes"></div>
+      <div id="bloc-attente" hidden><h2>À faire maintenant</h2><div class="attente" id="attente"></div></div>
+      <div class="carte" id="bloc-idees" hidden><h2>Idées du jour</h2><p class="msg" style="margin:-4px 0 6px">Vrais clips officiels, souvenirs et records. Un toucher : la vidéo se fabrique au refrain.</p><div id="idees"></div></div>
+      <h2 style="margin-top:6px">Projets</h2>
+      <div class="puces" id="filtres"></div>
+      <div class="liste" id="projets"><div class="vide">Chargement…</div></div>
     </section>
 
-    <!-- OUTILS -->
-    <section class="vue" id="v-outils" aria-label="Boîte à outils">
-      <div class="entete"><div><h1>Boîte à outils</h1><p class="sous" style="margin-bottom:0">Un outil = une recette. Ouvre-en un pour créer un projet, ou assemble le tien.</p></div></div>
-      <div class="cote">
-        <div class="grille" id="outils"></div>
-        <div class="carte" aria-label="Créer un outil">
-          <div style="font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--violet)">CRÉER UN OUTIL</div>
-          <h2 style="margin:4px 0 14px;font:700 19px Unbounded,sans-serif">Assemble ta recette</h2>
+    <!-- CRÉER -->
+    <section class="vue" id="v-creer">
+      <h1>Créer</h1>
+      <p class="sous">Choisis ce que tu veux publier. Chaque outil te guide étape par étape.</p>
+      <div class="outils" id="outils"></div>
+      <div class="carte">
+        <button class="plus" id="plus-outil" aria-expanded="false"><span>Créer mon propre outil</span><svg class="i"><use href="#i-bas"/></svg></button>
+        <div id="constructeur" hidden style="margin-top:14px">
+          <p class="msg" style="margin:0 0 12px">Une recette = un outil de départ, ses étapes et un réglage par défaut. Elle apparaît ensuite dans tes outils.</p>
           <label class="champ">Nom de l'outil<input id="co-nom" placeholder="Ex. : N°1 de la semaine en paroles"></label>
-          <label class="champ">Outil de départ<select id="co-base">
-            <option value="paroles">Vidéo paroles</option><option value="clip">Vidéo de clip</option><option value="annonce">Annonce en images</option>
-            <option value="vedette">Mettre en valeur un artiste</option><option value="photos">Photos d'artistes</option></select></label>
-          <div style="font-size:13px;font-weight:600;margin-bottom:6px">Briques · touche pour ajouter</div>
-          <div class="briques" id="co-briques"></div>
-          <div style="font-size:13px;font-weight:600;margin-bottom:6px">Les étapes de ton outil</div>
+          <label class="champ">Outil de départ<select id="co-base"><option value="paroles">Vidéo paroles</option><option value="clip">Vidéo de clip</option><option value="annonce">Annonce</option><option value="vedette">Mettre en valeur</option></select></label>
+          <div class="champ" style="margin-bottom:6px">Étapes · touche une brique pour l'ajouter</div>
+          <div class="puces" id="co-briques"></div>
           <div id="co-etapes"></div>
-          <label class="champ">Réglages par défaut (facultatif)<input id="co-artistes" placeholder="Artiste ou pays par défaut, ex. : Didi B"></label>
-          <button class="btn" id="co-enregistrer" style="width:100%;justify-content:center">Enregistrer dans ma boîte</button>
-          <div class="msg" id="co-msg"></div>
+          <label class="champ">Artiste par défaut (facultatif)<input id="co-artiste" placeholder="Ex. : Didi B"></label>
+          <button class="btn large" id="co-enregistrer">Enregistrer l'outil</button>
+          <p class="msg" id="co-msg"></p>
         </div>
       </div>
     </section>
 
-    <!-- TABLE DE MONTAGE : vidéo paroles -->
-    <section class="vue" id="v-montage" aria-label="Table de montage">
-      <div class="entete"><div><h1 id="m-titre">Nouvelle vidéo paroles</h1><p class="sous" id="m-sous" style="margin-bottom:0">Un son, une photo, les paroles : le Studio cale chaque mot sur la voix.</p></div>
-        <span class="etat e-autre" id="m-etat" style="display:none"></span></div>
-
-      <!-- 1) création -->
-      <div id="m-nouveau" class="cote">
+    <!-- OUTIL : VIDÉO DE CLIP -->
+    <section class="vue" id="v-clip">
+      <button class="retour" data-nav="creer"><svg class="i"><use href="#i-gauche"/></svg>Créer</button>
+      <h1>Vidéo de clip</h1>
+      <div class="etapes" id="clip-etapes"><span></span><span></span><span></span></div>
+      <div data-etape="1">
+        <p class="sous">Colle le lien du clip ou de la vidéo.</p>
         <div class="carte">
-          <label class="champ">Lien du son (YouTube, Instagram, TikTok…)<input id="p-lien" type="url" placeholder="https://www.youtube.com/watch?v=…"></label>
-          <label class="champ">… ou un fichier son depuis le téléphone<input id="p-son" type="file" accept="audio/*,video/*"></label>
-          <div class="deux">
-            <label class="champ">Titre<input id="p-titre" placeholder="PARTY"></label>
-            <label class="champ">Artistes<input id="p-artistes" placeholder="Didi B ft. Davido"></label>
-          </div>
-          <div class="deux">
-            <label class="champ">Album ou projet<input id="p-album" placeholder="SHOGUN IN LAGOS"></label>
-            <label class="champ">Pays (couleurs)<select id="p-pays">
-              <option value="CI">Côte d'Ivoire</option><option value="NG">Nigeria</option><option value="GH">Ghana</option><option value="SN">Sénégal</option>
-              <option value="BJ">Bénin</option><option value="TG">Togo</option><option value="BF">Burkina Faso</option><option value="ML">Mali</option>
-              <option value="GN">Guinée</option><option value="CV">Cap-Vert</option><option value="NE">Niger</option><option value="">Couleurs Cauri</option></select></label>
-          </div>
-          <div class="deux">
-            <label class="champ">Début du passage (secondes, facultatif)<input id="p-debut" inputmode="decimal" placeholder="refrain trouvé tout seul"></label>
-            <label class="champ">Fin du passage<input id="p-fin" inputmode="decimal" placeholder="ex. 67"></label>
-          </div>
-        </div>
-        <div class="carte">
-          <div class="champ" style="margin-bottom:6px">Photo de fond · banque de l'artiste</div>
-          <label class="recherche" style="margin-bottom:8px"><svg class="i"><use href="#i-cherche"/></svg><input id="p-cherche" placeholder="Chercher l'artiste…" aria-label="Chercher l'artiste"></label>
-          <div class="resultats" id="p-resultats"></div>
-          <div class="photos" id="p-photos"></div>
-          <label class="champ">… ou une photo du téléphone<input id="p-photo" type="file" accept="image/*"></label>
-          <label class="champ">Paroles (colle le texte, une ligne par ligne chantée)<textarea id="p-texte" placeholder="Laisse vide si tu ajoutes des captures, ou pour les chercher en ligne"></textarea></label>
-          <label class="champ">… ou des captures d'écran des paroles (Spotify), dans l'ordre<input id="p-captures" type="file" accept="image/*" multiple></label>
-          <button class="btn" id="p-creer" style="width:100%;justify-content:center">Préparer la vidéo</button>
-          <div class="msg" id="p-msg"></div>
+          <label class="champ">Lien<div class="ligne-champ"><input id="clip-lien" type="url" inputmode="url" placeholder="YouTube, TikTok, Instagram, X…" autocomplete="off" autocapitalize="off"><button class="btn second" id="clip-coller" type="button">Coller</button></div></label>
+          <div id="clip-apercu"></div>
         </div>
       </div>
-
-      <!-- 2) projet ouvert -->
-      <div id="m-projet" style="display:none">
-        <div class="montage">
-          <div class="scene">
-            <div class="ecran" id="m-ecran">Préparation en cours…</div>
-            <div id="m-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div>
-            <div class="msg" id="m-msg"></div>
-          </div>
-          <aside class="inspecteur" aria-label="Paroles">
-            <h3>PAROLES · À RELIRE</h3>
-            <p style="font-size:13px;color:var(--faible);margin:0 0 12px" id="m-origine"></p>
-            <div id="m-lignes"></div>
-          </aside>
-          <div class="frise" aria-label="Frise du temps">
-            <div class="piste"><span>Passage</span><div id="f-passage" style="background:var(--violet-clair)"></div></div>
-            <div class="piste"><span>Paroles</span><div id="f-paroles"></div></div>
-            <div class="piste"><span>Habillage</span><div><span class="bloc" style="left:0;right:0;background:var(--ciel-clair);color:#075985">Photo en fond · logo · titre et pochette, toute la durée</span></div></div>
-          </div>
+      <div data-etape="2" hidden>
+        <p class="sous">Quel passage garder ?</p>
+        <div class="carte">
+          <div class="puces" id="clip-types"><button class="puce on" data-t="refrain">Le refrain</button><button class="puce" data-t="extrait">Un passage précis</button><button class="puce" data-t="resume">Les temps forts</button></div>
+          <p class="msg" id="clip-aide" style="margin:-4px 0 14px">Le Studio trouve tout seul le refrain.</p>
+          <div class="champ" style="margin-bottom:6px">Durée</div>
+          <div class="puces" id="clip-durees"><button class="puce" data-d="15">15 s</button><button class="puce on" data-d="30">30 s</button><button class="puce" data-d="60">60 s</button><button class="puce" data-d="90">90 s</button></div>
+          <label class="champ" id="clip-debut-champ" hidden>Début (en secondes)<input id="clip-debut" type="number" min="0" step="0.5" value="0" inputmode="decimal"></label>
+          <button class="plus" id="plus-format"><span>Format · plein cadre</span><svg class="i"><use href="#i-bas"/></svg></button>
+          <div class="puces" id="clip-formats" hidden style="margin-top:10px"><button class="puce on" data-f="origine">Plein cadre</button><button class="puce" data-f="story">9:16</button><button class="puce" data-f="feed">4:5</button><button class="puce" data-f="square">1:1</button></div>
         </div>
       </div>
+      <div data-etape="3" hidden>
+        <p class="sous">L'IA écrit l'accroche ; tu la valideras sur l'aperçu.</p>
+        <div class="carte">
+          <label class="champ">Contexte pour l'IA (facultatif)<textarea id="clip-contexte" placeholder="Ex. : extrait du concert de Lomé, sortie de l'album"></textarea></label>
+          <button class="plus" id="plus-textes"><span>Écrire les textes moi-même</span><svg class="i"><use href="#i-bas"/></svg></button>
+          <div id="clip-textes" hidden style="margin-top:12px">
+            <label class="champ">Étiquette<input id="clip-etiquette" placeholder="Ex. : MOMENT VIRAL"></label>
+            <label class="champ">Accroche sur la vidéo<input id="clip-accroche" maxlength="90"></label>
+            <label class="champ">Artiste (surligné)<input id="clip-artiste"></label>
+            <label class="champ">Crédit de la source<input id="clip-credit" placeholder="Rempli automatiquement"></label>
+          </div>
+        </div>
+        <div class="carte"><button class="bascule" id="clip-droits" role="switch" aria-checked="false"><i></i><span><b>Je republie en connaissance de cause</b>Accord, contenu libre ou partagé par l'artiste. Si une plateforme bloque la vidéo, je la supprime.</span></button></div>
+      </div>
+      <p class="msg" id="clip-msg"></p>
+      <div class="pied"><button class="btn second" id="clip-prec" hidden>Retour</button><button class="btn large" id="clip-suiv">Suivant</button></div>
+    </section>
+
+    <!-- OUTIL : VIDÉO PAROLES -->
+    <section class="vue" id="v-paroles">
+      <button class="retour" data-nav="creer"><svg class="i"><use href="#i-gauche"/></svg>Créer</button>
+      <h1>Vidéo paroles</h1>
+      <div class="etapes" id="par-etapes"><span></span><span></span><span></span></div>
+      <div data-etape="1">
+        <p class="sous">Le son et le morceau.</p>
+        <div class="carte">
+          <label class="champ">Lien du son<input id="par-lien" type="url" inputmode="url" placeholder="Clip YouTube officiel, Instagram, TikTok…"></label>
+          <label class="champ">… ou un fichier son du téléphone<input id="par-son" type="file" accept="audio/*,video/*"></label>
+          <div class="deux"><label class="champ">Titre<input id="par-titre" placeholder="PARTY"></label><label class="champ">Artistes<input id="par-artistes" placeholder="Didi B ft. Davido"></label></div>
+          <div class="deux"><label class="champ">Album (facultatif)<input id="par-album" placeholder="SHOGUN IN LAGOS"></label>
+            <label class="champ">Couleurs du pays<select id="par-pays"><option value="CI">Côte d'Ivoire</option><option value="NG">Nigeria</option><option value="GH">Ghana</option><option value="SN">Sénégal</option><option value="BJ">Bénin</option><option value="TG">Togo</option><option value="BF">Burkina Faso</option><option value="ML">Mali</option><option value="GN">Guinée</option><option value="CV">Cap-Vert</option><option value="NE">Niger</option><option value="">Couleurs Cauri</option></select></label></div>
+        </div>
+      </div>
+      <div data-etape="2" hidden>
+        <p class="sous">La photo de fond.</p>
+        <div class="carte">
+          <label class="champ">Artiste<div class="ligne-champ"><input id="par-cherche" placeholder="Chercher dans la banque…" autocomplete="off"></div></label>
+          <div class="resultats" id="par-resultats"></div>
+          <div class="galerie" id="par-photos"></div>
+          <label class="champ">… ou une photo du téléphone<input id="par-photo" type="file" accept="image/*"></label>
+        </div>
+      </div>
+      <div data-etape="3" hidden>
+        <p class="sous">Les paroles. Laisse vide : le Studio les cherche en ligne, sinon il les écoute.</p>
+        <div class="carte">
+          <label class="champ">Captures d'écran des paroles (Spotify), dans l'ordre<input id="par-captures" type="file" accept="image/*" multiple></label>
+          <label class="champ">… ou colle le texte, une ligne par ligne chantée<textarea id="par-texte"></textarea></label>
+          <button class="plus" id="plus-passage"><span>Choisir le passage (sinon : le refrain)</span><svg class="i"><use href="#i-bas"/></svg></button>
+          <div class="deux" id="par-passage" hidden style="margin-top:12px"><label class="champ">Début (s)<input id="par-debut" inputmode="decimal"></label><label class="champ">Fin (s)<input id="par-fin" inputmode="decimal"></label></div>
+        </div>
+      </div>
+      <p class="msg" id="par-msg"></p>
+      <div class="pied"><button class="btn second" id="par-prec" hidden>Retour</button><button class="btn large" id="par-suiv">Suivant</button></div>
+    </section>
+
+    <!-- OUTIL : ANNONCE -->
+    <section class="vue" id="v-annonce">
+      <button class="retour" data-nav="creer"><svg class="i"><use href="#i-gauche"/></svg>Créer</button>
+      <h1>Annonce</h1>
+      <div class="etapes" id="an-etapes"><span></span><span></span></div>
+      <div data-etape="1">
+        <p class="sous">Les images : la première devient la couverture Cauri.</p>
+        <div class="carte">
+          <label class="champ">Lien d'un post<div class="ligne-champ"><input id="an-lien" type="url" inputmode="url" placeholder="Instagram, X, Facebook, TikTok…"><button class="btn second" id="an-recuperer" type="button">Récupérer</button></div></label>
+          <label class="champ">… ou des images du téléphone<input id="an-fichiers" type="file" accept="image/*" multiple></label>
+          <div class="galerie" id="an-galerie"></div>
+          <p class="msg" style="margin:0">Touche une image pour la mettre en couverture, × pour la retirer. 10 au plus.</p>
+        </div>
+      </div>
+      <div data-etape="2" hidden>
+        <p class="sous">Le texte de l'annonce.</p>
+        <div class="carte">
+          <div class="puces" id="an-etiquettes"><button class="puce on" data-e="EXCLU">Exclu</button><button class="puce" data-e="ANNONCE">Annonce</button><button class="puce" data-e="NOUVEAU SON">Nouveau son</button><button class="puce" data-e="ALBUM">Album</button><button class="puce" data-e="CONCERT">Concert</button><button class="puce" data-e="RECORD">Record</button></div>
+          <label class="champ">Titre<input id="an-accroche" maxlength="90" placeholder="Ex. : Didi B annonce un concert au stade FHB"></label>
+          <label class="champ">Artiste<input id="an-artiste" placeholder="Ex. : Didi B"></label>
+          <label class="champ">Texte<textarea id="an-fr" placeholder="Les faits : quoi, quand, où. L'anglais est traduit tout seul."></textarea></label>
+          <label class="champ">Crédit photo (si l'image n'est pas à nous)<input id="an-credit"></label>
+          <button class="btn second large" id="an-ia" type="button">L'IA écrit le titre et le texte</button>
+        </div>
+      </div>
+      <p class="msg" id="an-msg"></p>
+      <div class="pied"><button class="btn second" id="an-prec" hidden>Retour</button><button class="btn large" id="an-suiv">Suivant</button></div>
+    </section>
+
+    <!-- OUTIL : METTRE EN VALEUR -->
+    <section class="vue" id="v-vedette">
+      <button class="retour" data-nav="creer"><svg class="i"><use href="#i-gauche"/></svg>Créer</button>
+      <h1>Mettre en valeur</h1>
+      <div class="etapes" id="ve-etapes"><span></span><span></span><span></span></div>
+      <div data-etape="1">
+        <p class="sous">Quel artiste ?</p>
+        <div class="carte"><label class="champ">Artiste<input id="ve-cherche" placeholder="Chercher un artiste…" autocomplete="off"></label><div class="resultats" id="ve-resultats"></div><div id="ve-choisi"></div></div>
+      </div>
+      <div data-etape="2" hidden>
+        <p class="sous">Ses photos : touche-en une ou plusieurs (la 1re porte le visuel, les autres suivent en carrousel).</p>
+        <div class="carte"><div class="galerie" id="ve-photos"></div></div>
+      </div>
+      <div data-etape="3" hidden>
+        <p class="sous">Les modèles de visuels à essayer.</p>
+        <div class="carte">
+          <div class="puces" id="ve-modeles"></div>
+          <button class="plus" id="plus-ve-textes"><span>Textes du visuel</span><svg class="i"><use href="#i-bas"/></svg></button>
+          <div id="ve-textes" hidden style="margin-top:12px">
+            <label class="champ">Grand titre<input id="ve-titre" maxlength="40"></label>
+            <label class="champ">Petit texte au-dessus<input id="ve-sur" maxlength="60"></label>
+            <label class="champ">Ligne du bas<input id="ve-bas" maxlength="90"></label>
+            <label class="champ">Chiffre géant<input id="ve-chiffre" maxlength="8"></label>
+            <label class="champ">Crédit photo<input id="ve-credit" maxlength="80"></label>
+          </div>
+          <label class="champ" style="margin-top:12px">Importer un exemple (devient un modèle)<input id="ve-exemple" type="file" accept="image/*"></label>
+        </div>
+      </div>
+      <p class="msg" id="ve-msg"></p>
+      <div class="pied"><button class="btn second" id="ve-prec" hidden>Retour</button><button class="btn large" id="ve-suiv">Suivant</button></div>
+    </section>
+
+    <!-- PROJET (toutes les créations) -->
+    <section class="vue" id="v-projet">
+      <button class="retour" data-nav="accueil"><svg class="i"><use href="#i-gauche"/></svg>Projets</button>
+      <h1 id="pj-titre">Projet</h1>
+      <p class="sous" id="pj-sous"></p>
+      <div class="projet-grille">
+        <div><div class="ecran" id="pj-ecran"></div></div>
+        <div>
+          <div class="suivi" id="pj-suivi"></div>
+          <div id="pj-corps"></div>
+          <p class="msg" id="pj-msg"></p>
+          <div id="pj-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BANQUE PHOTOS -->
+    <section class="vue" id="v-banque">
+      <h1>Banque photos</h1>
+      <p class="sous">Les photos de chaque artiste, pour les couvertures et les visuels.</p>
+      <div class="onglets" role="tablist"><button class="on" data-onglet="ajouter">Ajouter</button><button data-onglet="trier">À trier <span data-badge-tri></span></button><button data-onglet="dossiers">Dossiers</button></div>
+      <div data-panneau="ajouter">
+        <div class="carte">
+          <label class="champ">Artiste<input id="ba-cherche" placeholder="Chercher un artiste suivi…" autocomplete="off"></label>
+          <div class="resultats" id="ba-resultats"></div><div id="ba-choisi"></div>
+          <label class="champ">Liens de posts ou de profil (un par ligne)<textarea id="ba-liens" rows="3" placeholder="https://www.instagram.com/p/…"></textarea></label>
+          <label class="champ">… ou des photos du téléphone<input id="ba-fichiers" type="file" accept="image/*" multiple></label>
+          <label class="champ">Contexte (facultatif)<input id="ba-contexte" placeholder="Ex. : concert à l'Accor Arena"></label>
+          <div id="ba-lot"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="ba-lancer">Trier ces photos</button><button class="btn second" id="ba-ajouter">+ Préparer un autre artiste</button></div>
+          <p class="msg" id="ba-msg"></p>
+        </div>
+      </div>
+      <div data-panneau="trier" hidden>
+        <div class="carte" id="tri-liste"><div class="vide">Rien à trier.</div></div>
+        <div class="carte" id="tri-grille" hidden>
+          <div class="choisi" id="tri-qui"></div>
+          <div id="tri-cherche-bloc" hidden><label class="champ">Qui est-ce ?<input id="tri-cherche" placeholder="Chercher l'artiste…" autocomplete="off"></label><div class="resultats" id="tri-resultats"></div></div>
+          <p class="msg" id="tri-info" style="margin:0 0 10px"></p>
+          <div class="galerie" id="tri-photos"></div>
+          <button class="bascule" id="tri-entiere" role="switch" aria-checked="false" style="margin-bottom:14px"><i></i><span><b>La personne est entière sur ces photos</b>Elles serviront au détourage (classements, records).</span></button>
+          <button class="btn large" id="tri-valider">Garder la sélection</button>
+          <div id="tri-publier" hidden style="margin-top:16px">
+            <h2>Publier aussi en carrousel ?</h2>
+            <label class="champ">Étiquette<input id="tp-etiquette"></label><label class="champ">Accroche<input id="tp-accroche" maxlength="90"></label>
+            <label class="champ">Légende<textarea id="tp-fr"></textarea></label><input id="tp-en" type="hidden">
+            <button class="btn large" id="tp-publier">Publier le carrousel</button>
+          </div>
+          <p class="msg" id="tri-msg"></p>
+        </div>
+      </div>
+      <div data-panneau="dossiers" hidden>
+        <div class="carte" id="dos-liste"><div class="vide">Chargement…</div></div>
+        <div class="carte" id="dos-photos" hidden><button class="retour" id="dos-retour"><svg class="i"><use href="#i-gauche"/></svg>Dossiers</button><h2 id="dos-titre"></h2><p class="msg" style="margin:-4px 0 10px">Touche × pour retirer une photo de la banque.</p><div class="galerie" id="dos-grille"></div></div>
+      </div>
+    </section>
+
+    <!-- RÉGLAGES -->
+    <section class="vue" id="v-reglages">
+      <h1>Réglages</h1>
+      <p class="sous" id="rg-compte"></p>
+      <div class="carte"><h2>Déverrouillage par empreinte</h2><div id="rg-appareils"></div><button class="btn second" id="rg-ajouter" style="margin-top:10px">Ajouter cet appareil</button><p class="msg" id="rg-msg"></p></div>
+      <div class="carte"><h2>Installer l'appli</h2><p class="msg" style="margin:0">iPhone : Safari, Partager, « Sur l'écran d'accueil ». Android : Chrome, menu ⋮, « Installer l'application ».</p></div>
+      <button class="btn second" id="rg-sortie">Se déconnecter</button>
     </section>
   </main>
 </div>
+
 <nav class="barre-bas" aria-label="Navigation">
-  <button data-vue="projets" class="actif"><svg class="i"><use href="#i-projets"/></svg>Projets</button>
-  <button data-vue="montage"><svg class="i"><use href="#i-montage"/></svg>Montage</button>
-  <button data-vue="outils"><svg class="i"><use href="#i-outils"/></svg>Outils</button>
+  <button data-nav="accueil" class="actif"><svg class="i"><use href="#i-accueil"/></svg>Accueil</button>
+  <button data-nav="creer"><svg class="i"><use href="#i-plus"/></svg>Créer</button>
+  <button data-nav="banque"><svg class="i"><use href="#i-photo"/></svg>Photos<span class="badge" hidden data-badge></span></button>
+  <button data-nav="reglages"><svg class="i"><use href="#i-reglages"/></svg>Réglages</button>
 </nav>
 
+<div class="voile" id="voile" hidden></div>
+<div class="feuille" id="feuille" role="dialog" aria-modal="true" aria-labelledby="fe-titre" hidden>
+  <h2 id="fe-titre">Publier</h2>
+  <div class="champ" style="margin-bottom:6px">Sur quels réseaux · touche pour retirer</div>
+  <div class="puces" id="fe-reseaux"><button class="puce on" data-r="instagram">Instagram</button><button class="puce on" data-r="facebook">Facebook</button><button class="puce on" data-r="tiktok">TikTok</button><button class="puce on" data-r="telegram">Telegram</button></div>
+  <div id="fe-choix"></div>
+  <button class="btn second large" id="fe-annuler">Annuler</button>
+</div>
+
 <script nonce="{{ nonce }}">
-const BASE = {{ base|tojson }}, CSRF = {{ csrf|tojson }};
+const BASE = {{ base|tojson }}, CSRF = {{ csrf|tojson }}, A_PASSKEY = {{ 'true' if a_passkey else 'false' }};
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const vibre = () => navigator.vibrate && navigator.vibrate(10);
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const deb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
 async function post(url, data) {
   const r = await fetch(BASE + url, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF}, body: JSON.stringify(data || {})});
   let j = {}; try { j = await r.json(); } catch (e) {}
   if (r.status === 401) { location.href = BASE; return new Promise(() => {}); }
-  if (!r.ok) throw new Error(j.erreur || ('Erreur ' + r.status));
+  if (!r.ok || j.erreur) { const e = new Error(j.erreur || ('Erreur ' + r.status)); e.donnees = j; throw e; }
   return j;
 }
 async function get(url) { const r = await fetch(BASE + url); if (r.status === 401) { location.href = BASE; return new Promise(() => {}); } return r.json(); }
-async function envoieFichier(url, corps) {
-  const r = await fetch(BASE + url, {method: 'POST', headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/octet-stream'}, body: corps});
-  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.erreur || ('Erreur ' + r.status)); return j;
+async function envoie(url, corps, type) {
+  const r = await fetch(BASE + url, {method: 'POST', headers: {'X-CSRFToken': CSRF, 'Content-Type': type || 'application/octet-stream'}, body: corps});
+  const j = await r.json().catch(() => ({})); if (!r.ok || j.erreur) throw new Error(j.erreur || ('Erreur ' + r.status)); return j;
 }
-function msg(sel, texte, ok) { const el = $(sel); el.className = 'msg' + (texte ? (ok ? ' ok' : ok === false ? ' err' : '') : ''); el.textContent = texte || ''; }
+function msg(sel, texte, ok) { const el = $(sel); if (!el) return; el.className = 'msg' + (ok === true ? ' ok' : ok === false ? ' err' : ''); el.textContent = texte || ''; }
 const mmss = s => { s = Math.max(0, +s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
-// image réduite à 2 000 px (moins de 4 Mo à envoyer)
-function reduit(fichier) {
+function reduit(f, max) {
   return new Promise((ok, ko) => { const img = new Image(); img.onload = () => {
-    const k = Math.min(1, 2000 / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+    const k = Math.min(1, (max || 2400) / Math.max(img.width, img.height)), c = document.createElement('canvas');
     c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    c.toBlob(b => b ? ok(b) : ko(new Error('image illisible')), 'image/jpeg', .9); }; img.onerror = () => ko(new Error('image illisible'));
-    img.src = URL.createObjectURL(fichier); });
+    c.toBlob(b => b ? ok(b) : ko(new Error('photo illisible')), 'image/jpeg', .92); URL.revokeObjectURL(img.src); };
+    img.onerror = () => ko(new Error('photo illisible')); img.src = URL.createObjectURL(f); });
 }
+function bascule(el) { el.onclick = () => { vibre(); el.setAttribute('aria-checked', el.getAttribute('aria-checked') !== 'true'); }; }
+const actif = el => el.getAttribute('aria-checked') === 'true';
+function replie(btn, cible) { btn.onclick = () => { const o = cible.hidden; cible.hidden = !o; btn.classList.toggle('ouvert', o); btn.setAttribute('aria-expanded', o); }; }
+function puces(sel, unique, rappel) {
+  $$(sel + ' .puce').forEach(b => b.onclick = () => { vibre();
+    if (unique) $$(sel + ' .puce').forEach(x => x.classList.toggle('on', x === b)); else b.classList.toggle('on');
+    if (rappel) rappel(b); });
+}
+const choisie = sel => ($(sel + ' .puce.on') || {dataset: {}}).dataset;
+// recherche d'un artiste suivi (réutilisée partout)
+function chercheArtiste(champ, boite, choix) {
+  let t; $(champ).addEventListener('input', () => { clearTimeout(t); t = setTimeout(async () => {
+    const q = $(champ).value.trim(); if (q.length < 2) { $(boite).innerHTML = ''; return; }
+    const r = await get('/artistes?q=' + encodeURIComponent(q));
+    $(boite).innerHTML = (r.artistes || []).map((a, i) => `<button data-i="${i}"><img src="${esc(a.photo)}" alt=""><span><b>${esc(a.nom)}</b> <small>${esc(a.pays)}</small></span></button>`).join('')
+      || '<p class="msg" style="margin:0">Aucun artiste suivi à ce nom.</p>';
+    $$(boite + ' button').forEach(b => b.onclick = () => { vibre(); $(boite).innerHTML = ''; $(champ).value = ''; choix(r.artistes[+b.dataset.i]); });
+  }, 250); });
+}
+
+// ---------------- verrou : à chaque nouvelle ouverture de l'appli, l'empreinte est redemandée
+if (A_PASSKEY && !sessionStorage.getItem('studio-ouvert')) { post('/verrouiller').finally(() => location.href = BASE); }
+let cache = Date.now();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { cache = Date.now(); return; }
+  if (A_PASSKEY && Date.now() - cache > 5 * 60 * 1000) post('/verrouiller').finally(() => location.href = BASE);
+  else if (vue === 'accueil') accueil(); else if (vue === 'projet' && pj.id) ouvreProjet(pj.id);
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(BASE + '/sw.js', {scope: BASE}).catch(() => {});
 
 // ---------------- navigation
-let vue = 'projets';
+let vue = 'accueil';
+const NAV = {accueil: 'accueil', creer: 'creer', clip: 'creer', paroles: 'creer', annonce: 'creer', vedette: 'creer', projet: 'accueil', banque: 'banque', reglages: 'reglages'};
 function montre(nom) {
   vue = nom; $$('.vue').forEach(v => v.classList.toggle('vu', v.id === 'v-' + nom));
-  $$('[data-vue]').forEach(b => b.classList.toggle('actif', b.dataset.vue === nom));
-  window.scrollTo({top: 0}); if (nom === 'projets') projets(); if (nom === 'outils') boite();
+  $$('[data-nav]').forEach(b => b.classList.toggle('actif', b.dataset.nav === NAV[nom] && !b.classList.contains('retour')));
+  window.scrollTo({top: 0});
+  if (nom === 'accueil') accueil(); if (nom === 'creer') creer(); if (nom === 'banque') banque(); if (nom === 'reglages') reglages();
+  if (nom !== 'projet') clearTimeout(pj.minuteur);
 }
-$$('[data-vue]').forEach(b => b.onclick = () => { if (b.dataset.vue === 'montage') nouveauMontage(); montre(b.dataset.vue); });
-$$('[data-va]').forEach(b => b.onclick = () => montre(b.dataset.va));
+$$('[data-nav]').forEach(b => b.onclick = () => { vibre(); montre(b.dataset.nav); });
 
-// ---------------- projets
-const ETATS = {attente: ['En cours', 'cours'], telechargement: ['En cours', 'cours'], analyse: ['En cours', 'cours'], montage: ['En cours', 'cours'],
-  attente_pc: ['Sur le PC', 'cours'], a_valider: ['À valider', 'valider'], pret: ['Prêt', 'pret'], envoye: ['Publié', 'publie'],
-  erreur: ['Erreur', 'erreur'], annule: ['Annulé', 'autre']};
-const OUTIL_NOM = {paroles: 'Vidéo paroles', vedette: 'Mise en valeur', extrait: 'Vidéo de clip', refrain: 'Vidéo de clip', resume: 'Vidéo de clip'};
-let tousJobs = [], filtre = 'Tous';
-async function projets() {
-  let r; try { r = await get('/historique'); } catch (e) { $('#liste').innerHTML = '<div class="vide">Liste indisponible.</div>'; return; }
-  tousJobs = r.jobs || [];
-  const n = k => tousJobs.filter(j => (ETATS[j.statut] || ['', 'autre'])[1] === k).length;
-  $('#compteurs').innerHTML = [['En cours', n('cours'), '#075985'], ['À valider', n('valider'), '#9A3412'], ['Prêts à publier', n('pret'), '#166534'], ['Publiés', n('publie'), '#5B21B6']]
-    .map(([l, v, c]) => `<div class="carte"><span>${l}</span><b style="color:${c}">${v}</b></div>`).join('');
-  const f = $('#filtres'); $$('#filtres .puce').forEach(p => p.remove());
-  ['Tous', 'En cours', 'À valider', 'Prêt', 'Publié', 'Erreur'].forEach(l => { const b = document.createElement('button');
-    b.className = 'puce' + (l === filtre ? ' on' : ''); b.textContent = l; b.onclick = () => { filtre = l; liste(); projets(); }; f.appendChild(b); });
-  liste();
+// ---------------- états
+const ETATS = {attente: ['En file', 'cours'], telechargement: ['En cours', 'cours'], analyse: ['En cours', 'cours'], montage: ['En fabrication', 'cours'],
+  attente_pc: ['Sur le PC', 'cours'], a_valider: ['À valider', 'valider'], a_choisir: ['À choisir', 'valider'], pret: ['Prêt à publier', 'pret'],
+  envoye: ['Publié', 'publie'], erreur: ['Échec', 'erreur'], annule: ['Annulé', 'autre']};
+const EN_COURS = ['attente', 'attente_pc', 'telechargement', 'analyse', 'montage'];
+const etat = s => ETATS[s] || [s, 'autre'];
+function nomProjet(j) {
+  const p = j.params || {};
+  if (p.type === 'paroles') return [`${p.titre || 'Vidéo paroles'}${p.artistes ? ' · ' + p.artistes : ''}`, 'Vidéo paroles'];
+  if (p.type === 'vedette') return [`${p.artiste_nom || 'Artiste'}${p.textes && p.textes.titre ? ' · ' + p.textes.titre : ''}`, 'Mise en valeur'];
+  return [p.accroche || (j.lien || '').replace(/^https?:\/\/(www\.)?/, '').slice(0, 48) || 'Vidéo', 'Vidéo de clip'];
 }
-function liste() {
-  const q = ($('#q').value || '').toLowerCase();
-  const l = tousJobs.filter(j => { const e = (ETATS[j.statut] || [j.statut])[0];
-    const txt = [j.params.titre, j.params.artistes, j.params.accroche, j.params.artiste, j.lien].join(' ').toLowerCase();
-    return (filtre === 'Tous' || e === filtre || (filtre === 'En cours' && e === 'Sur le PC')) && (!q || txt.includes(q)); });
-  if (!l.length) { $('#liste').innerHTML = '<div class="vide">Aucun projet ici pour l\'instant.</div>'; return; }
-  $('#liste').innerHTML = '<div class="ligne titres"><span></span><span>PROJET</span><span>OUTIL</span><span>ÉTAT</span><span>CRÉÉ</span><span></span></div>' + l.map(j => {
-    const p = j.params, e = ETATS[j.statut] || [j.statut, 'autre'];
-    const nom = p.type === 'paroles' ? `${p.titre || 'Sans titre'} · ${p.artistes || ''}` : (p.accroche || p.artiste_nom || p.artiste || 'Vidéo');
-    const outil = OUTIL_NOM[p.type] || (p.type === 'vedette' ? 'Mise en valeur' : 'Vidéo de clip');
-    const detail = p.type === 'paroles' ? (p.album || 'Vidéo paroles') : (p.etiquette || j.lien || '');
-    return `<div class="ligne"><div class="vign" style="background-image:url('${esc(j.vignette || '')}')"></div>
-      <div style="min-width:0"><b>${esc(nom)}</b><small>${esc(detail)}</small></div><span>${esc(outil)}</span>
-      <span class="etat e-${e[1]}">${esc(e[0])}</span><small>${esc((j.cree_le || '').replace('T', ' '))}</small>
-      <button class="btn second" data-ouvre="${j.id}" data-type="${esc(p.type || '')}" style="justify-self:end;padding:8px 14px">Ouvrir</button></div>`; }).join('');
-  $$('[data-ouvre]').forEach(b => b.onclick = () => b.dataset.type === 'paroles' ? ouvreProjet(+b.dataset.ouvre) : (location.href = BASE + '?classique=1#videos'));
-}
-$('#q').oninput = liste;
 
-// ---------------- boîte à outils
-const BASES = [
-  {id: 'paroles', nom: 'Vidéo paroles', l: 'P', fond: '#FFEDD5', encre: '#9A3412', d: 'Un son et une photo : les mots qui s\'allument au rythme de la voix.', e: 'Son · Paroles · Photo · Rendu'},
-  {id: 'clip', nom: 'Vidéo de clip', l: 'V', fond: '#EDE4FF', encre: '#5B21B6', d: 'Un lien : le meilleur passage, habillé aux couleurs Cauri.', e: 'Lien · Passage · Habillage', va: '#creer'},
-  {id: 'annonce', nom: 'Annonce en images', l: 'A', fond: '#E0F4FE', encre: '#075985', d: 'Une actu chaude en carrousel, avec accroche.', e: 'Images · Accroche · Carrousel', va: '#annonce'},
-  {id: 'vedette', nom: 'Mettre en valeur', l: 'M', fond: '#EDE4FF', encre: '#5B21B6', d: 'Les plus belles photos d\'un artiste, 10 modèles.', e: 'Artiste · Photos · Modèle', va: '#vedette'},
-  {id: 'photos', nom: 'Photos d\'artistes', l: 'B', fond: '#DCFCE7', encre: '#166534', d: 'Ajouter ou trier les photos de la banque.', e: 'Liens · Tri · Banque', va: '#photos'}];
-const BRIQUES = ['Un titre du classement', 'Son du clip', 'Paroles', 'Photo de la banque', 'Couleurs du pays', 'Accroche IA', 'Modèle visuel',
-  'Rendu 4:5 + 9:16', 'Version muette', 'Programmer', 'Publier après validation'];
-let etapes = ['Son du clip', 'Paroles', 'Photo de la banque', 'Rendu 4:5 + 9:16', 'Publier après validation'];
-async function boite() {
+// ---------------- ACCUEIL
+let jobs = [], filtre = 'Tous';
+async function accueil() {
+  alertes(); idees();
+  let r; try { r = await get('/historique'); } catch (e) { $('#projets').innerHTML = '<div class="vide">Liste indisponible.</div>'; return; }
+  jobs = r.jobs || [];
+  const aFaire = jobs.filter(j => ['a_valider', 'a_choisir', 'pret'].includes(j.statut));
+  $('#bloc-attente').hidden = !aFaire.length;
+  $('#attente').innerHTML = aFaire.slice(0, 6).map(j => { const [n, o] = nomProjet(j), e = etat(j.statut);
+    return `<button data-pj="${j.id}">${j.vignette ? `<img src="${esc(j.vignette)}" alt="">` : '<span class="vg"></span>'}<span style="min-width:0"><b>${esc(n)}</b><small>${esc(o)} · <span class="etat e-${e[1]}" style="padding:2px 8px">${esc(e[0])}</span></small></span></button>`; }).join('');
+  $('#filtres').innerHTML = ['Tous', 'En cours', 'À faire', 'Publiés', 'Échecs'].map(f => `<button class="puce${f === filtre ? ' on' : ''}" data-f="${f}">${f}</button>`).join('');
+  $$('#filtres .puce').forEach(b => b.onclick = () => { filtre = b.dataset.f; accueil(); });
+  const garde = j => filtre === 'Tous' || (filtre === 'En cours' && EN_COURS.includes(j.statut)) || (filtre === 'À faire' && ['a_valider', 'a_choisir', 'pret'].includes(j.statut))
+    || (filtre === 'Publiés' && j.statut === 'envoye') || (filtre === 'Échecs' && ['erreur', 'annule'].includes(j.statut));
+  const l = jobs.filter(garde);
+  $('#projets').innerHTML = l.length ? l.map(j => { const [n, o] = nomProjet(j), e = etat(j.statut);
+    return `<button class="projet" data-pj="${j.id}"><span class="vg" style="background-image:url('${esc(j.vignette || '')}')"></span><span class="txt"><b>${esc(n)}</b><small>${esc(o)} · ${esc((j.cree_le || '').replace('T', ' ').slice(0, 16))}</small></span><span class="etat e-${e[1]}">${esc(e[0])}</span></button>`; }).join('')
+    : '<div class="vide">Rien ici pour l\'instant. Touche « Créer » pour commencer.</div>';
+  $$('[data-pj]').forEach(b => b.onclick = () => { vibre(); ouvreProjet(+b.dataset.pj); });
+}
+async function alertes() {
+  let r; try { r = await get('/alertes'); } catch (e) { return; }
+  $('#alertes').innerHTML = (r.alertes || []).map(a => `<button class="alerte" data-al="${a.id}" data-nom="${esc(a.nom)}"><svg class="i"><use href="#i-photo"/></svg><span><b>Photos à trouver : ${esc(a.nom)}</b><small>${esc(a.motif)}</small></span><em>Chercher</em></button>`).join('');
+  $$('[data-al]').forEach(b => b.onclick = async () => { vibre(); await post('/alertes/' + b.dataset.al + '/vue').catch(() => {}); montre('banque'); ongletBanque('ajouter'); $('#ba-cherche').value = b.dataset.nom; $('#ba-cherche').dispatchEvent(new Event('input')); });
+}
+let ideesChargees = false;
+async function idees() {
+  if (ideesChargees) return; ideesChargees = true;
+  let d; try { d = await get('/idees'); } catch (e) { return; }
+  const l = (d && d.idees) || []; $('#bloc-idees').hidden = !l.length;
+  $('#idees').innerHTML = l.map((x, i) => `<div class="idee">${(x.elements[0] || {}).vignette ? `<img src="${esc(x.elements[0].vignette)}" alt="">` : ''}<span class="txt"><b>${esc(x.titre)}</b><small>${esc(x.sous_titre)}${x.mode === 'compilation' ? ' · ' + x.elements.length + ' vidéos' : ''}</small></span><button class="btn second" data-idee="${i}" style="padding:9px 14px">Fabriquer</button></div>`).join('');
+  $$('[data-idee]').forEach(b => b.onclick = async () => { b.disabled = true; vibre();
+    try { const j = await post('/idees/fabriquer', {cle: l[+b.dataset.idee].cle, droits: true}); ouvreProjet(j.id); } catch (e) { b.disabled = false; b.textContent = e.message.slice(0, 30); } });
+}
+
+// ---------------- CRÉER
+const OUTILS = [
+  {id: 'clip', nom: 'Vidéo de clip', l: 'V', fond: '#EDE4FF', encre: '#5B21B6', d: 'Un lien : le meilleur passage, habillé aux couleurs Cauri.'},
+  {id: 'paroles', nom: 'Vidéo paroles', l: 'P', fond: '#FFEDD5', encre: '#9A3412', d: 'Un son et une photo : les mots s\'allument au rythme de la voix.'},
+  {id: 'annonce', nom: 'Annonce', l: 'A', fond: '#E0F4FE', encre: '#075985', d: 'Une actu chaude en carrousel, avec la couverture Cauri.'},
+  {id: 'vedette', nom: 'Mettre en valeur', l: 'M', fond: '#DCFCE7', encre: '#166534', d: 'Les plus belles photos d\'un artiste, sur nos modèles de visuels.'}];
+const BRIQUES = ['Un titre du classement', 'Son du clip', 'Paroles', 'Photo de la banque', 'Couleurs du pays', 'Accroche IA', 'Version muette', 'Publier après validation'];
+let briques = ['Son du clip', 'Paroles', 'Photo de la banque', 'Publier après validation'];
+async function creer() {
   let maison = []; try { maison = (await get('/outils')).outils || []; } catch (e) {}
-  const carte = (o, extra) => `<button class="outil" data-outil="${esc(o.id)}" ${extra || ''}><div class="tete"><span class="pastille" style="background:${o.fond};color:${o.encre}">${esc(o.l)}</span><b>${esc(o.nom)}</b></div><small>${esc(o.d)}</small><em>${esc(o.e)}</em></button>`;
-  $('#outils').innerHTML = BASES.map(o => carte(o)).join('') + maison.map(m => carte({id: 'm' + m.id, nom: m.nom, l: '★', fond: '#12121F', encre: '#fff',
-    d: 'Ton outil · départ : ' + ((BASES.find(b => b.id === m.base) || {}).nom || m.base), e: (m.etapes || []).join(' · ')}, `data-base="${esc(m.base)}" data-reglages="${esc(JSON.stringify(m.reglages || {}))}"`)).join('');
-  $$('[data-outil]').forEach(b => b.onclick = () => {
-    const base = b.dataset.base || b.dataset.outil, def = BASES.find(x => x.id === base) || {};
-    if (base === 'paroles') { nouveauMontage(b.dataset.reglages ? JSON.parse(b.dataset.reglages) : {}); montre('montage'); }
-    else location.href = BASE + '?classique=1' + (def.va || '');
-  });
-  dessineEtapes();
+  const carte = (o, attr) => `<button class="outil" ${attr}><span class="pastille" style="background:${o.fond};color:${o.encre}">${esc(o.l)}</span><b>${esc(o.nom)}</b><small>${esc(o.d)}</small></button>`;
+  $('#outils').innerHTML = OUTILS.map(o => carte(o, `data-outil="${o.id}"`)).join('') + maison.map(m => carte({nom: m.nom, l: '★', fond: '#12121F', encre: '#fff',
+    d: (m.etapes || []).join(' · ') || 'Ton outil'}, `data-outil="${esc(m.base)}" data-maison="${m.id}" data-reglages="${esc(JSON.stringify(m.reglages || {}))}"`)).join('');
+  $$('[data-outil]').forEach(b => b.onclick = () => { vibre(); const r = b.dataset.reglages ? JSON.parse(b.dataset.reglages) : {}; ouvreOutil(b.dataset.outil, r); });
+  dessineBriques();
 }
-function dessineEtapes() {
+function dessineBriques() {
   $('#co-briques').innerHTML = BRIQUES.map((x, i) => `<button class="brique" data-b="${i}">+ ${esc(x)}</button>`).join('');
-  $$('#co-briques .brique').forEach(b => b.onclick = () => { etapes.push(BRIQUES[+b.dataset.b]); dessineEtapes(); });
-  $('#co-etapes').innerHTML = etapes.map((x, i) => `<div class="etape"><span class="n">${i + 1}</span><b style="font-size:14px">${esc(x)}</b><button data-retire="${i}" aria-label="Retirer l'étape">×</button></div>`).join('')
-    || '<p class="msg">Ajoute des briques.</p>';
-  $$('[data-retire]').forEach(b => b.onclick = () => { etapes.splice(+b.dataset.retire, 1); dessineEtapes(); });
+  $$('#co-briques .brique').forEach(b => b.onclick = () => { briques.push(BRIQUES[+b.dataset.b]); dessineBriques(); });
+  $('#co-etapes').innerHTML = briques.map((x, i) => `<div class="etape-o"><span class="n">${i + 1}</span>${esc(x)}<button data-rb="${i}" aria-label="Retirer">×</button></div>`).join('');
+  $$('[data-rb]').forEach(b => b.onclick = () => { briques.splice(+b.dataset.rb, 1); dessineBriques(); });
 }
+replie($('#plus-outil'), $('#constructeur'));
 $('#co-enregistrer').onclick = async () => {
-  try { await post('/outils', {nom: $('#co-nom').value, base: $('#co-base').value, etapes, reglages: $('#co-artistes').value ? {artistes: $('#co-artistes').value} : {}});
-    msg('#co-msg', 'Outil enregistré dans ta boîte.', true); $('#co-nom').value = ''; boite(); }
-  catch (e) { msg('#co-msg', e.message, false); }
+  try { await post('/outils', {nom: $('#co-nom').value, base: $('#co-base').value, etapes: briques, reglages: $('#co-artiste').value ? {artistes: $('#co-artiste').value} : {}});
+    msg('#co-msg', 'Outil enregistré : il est dans tes outils.', true); $('#co-nom').value = ''; creer(); } catch (e) { msg('#co-msg', e.message, false); }
 };
-
-// ---------------- table de montage (vidéo paroles)
-let jobOuvert = null, photoChoisie = null, minuteur = null;
-function nouveauMontage(reglages) {
-  jobOuvert = null; clearTimeout(minuteur);
-  $('#m-nouveau').style.display = ''; $('#m-projet').style.display = 'none'; $('#m-etat').style.display = 'none';
-  $('#m-titre').textContent = 'Nouvelle vidéo paroles'; msg('#p-msg', '');
-  if (reglages && reglages.artistes) $('#p-artistes').value = reglages.artistes;
+function ouvreOutil(id, reglages) {
+  if (id === 'clip') { clip.etape = 1; montre('clip'); assistant('clip', clip); }
+  if (id === 'paroles') { par.etape = 1; if (reglages.artistes) $('#par-artistes').value = reglages.artistes; montre('paroles'); assistant('par', par); }
+  if (id === 'annonce') { an.etape = 1; montre('annonce'); assistant('an', an); }
+  if (id === 'vedette') { ve.etape = 1; montre('vedette'); assistant('ve', ve);
+    if (reglages.artistes) { $('#ve-cherche').value = reglages.artistes; $('#ve-cherche').dispatchEvent(new Event('input')); } }
 }
-let attente = null;
-$('#p-cherche').oninput = () => { clearTimeout(attente); attente = setTimeout(async () => {
-  const q = $('#p-cherche').value.trim(); if (q.length < 2) { $('#p-resultats').innerHTML = ''; return; }
-  const r = await get('/artistes?q=' + encodeURIComponent(q));
-  $('#p-resultats').innerHTML = (r.artistes || []).map(a => `<button data-art="${a.id}" data-nom="${esc(a.nom)}" data-pays="${esc(a.pays)}"><img src="${esc(a.photo)}" alt=""><span>${esc(a.nom)} <small style="color:var(--faible)">${esc(a.pays)}</small></span></button>`).join('');
-  $$('[data-art]').forEach(b => b.onclick = async () => {
-    $('#p-resultats').innerHTML = ''; $('#p-cherche').value = b.dataset.nom;
-    if (!$('#p-artistes').value) $('#p-artistes').value = b.dataset.nom;
-    if (b.dataset.pays && [...$('#p-pays').options].some(o => o.value === b.dataset.pays)) $('#p-pays').value = b.dataset.pays;
-    const ph = (await get('/banque/' + b.dataset.art)).photos || [];
-    $('#p-photos').innerHTML = ph.slice(0, 16).map(p => `<button data-ph="${p.id}" style="background-image:url('${esc(p.url)}')" aria-label="Choisir cette photo"></button>`).join('') || '<p class="msg">Pas encore de photo dans sa banque.</p>';
-    $$('[data-ph]').forEach(x => x.onclick = () => { photoChoisie = +x.dataset.ph; $$('[data-ph]').forEach(y => y.classList.toggle('on', y === x)); });
-  }); }, 250); };
+// assistant générique : une étape visible, « Retour » / « Suivant », le dernier bouton lance l'action
+function assistant(pref, o) {
+  const sec = $('#v-' + {clip: 'clip', par: 'paroles', an: 'annonce', ve: 'vedette'}[pref]);
+  const n = sec.querySelectorAll('[data-etape]').length;
+  sec.querySelectorAll('[data-etape]').forEach(d => d.hidden = +d.dataset.etape !== o.etape);
+  sec.querySelectorAll('.etapes span').forEach((s, i) => s.classList.toggle('fait', i < o.etape));
+  $('#' + pref + '-prec').hidden = o.etape === 1;
+  $('#' + pref + '-suiv').textContent = o.etape === n ? o.fin : 'Suivant';
+  msg('#' + pref + '-msg', '');
+}
+function brancheAssistant(pref, o) {
+  $('#' + pref + '-prec').onclick = () => { o.etape--; assistant(pref, o); };
+  $('#' + pref + '-suiv').onclick = async () => {
+    const b = $('#' + pref + '-suiv'), n = document.querySelectorAll('#v-' + {clip: 'clip', par: 'paroles', an: 'annonce', ve: 'vedette'}[pref] + ' [data-etape]').length;
+    try { b.disabled = true; const err = await o.verifie(o.etape); if (err) { msg('#' + pref + '-msg', err, false); return; }
+      if (o.etape < n) { o.etape++; assistant(pref, o); window.scrollTo({top: 0}); } else await o.lance(); }
+    catch (e) { msg('#' + pref + '-msg', e.message, false); } finally { b.disabled = false; }
+  };
+}
 
-$('#p-creer').onclick = async () => {
-  const lien = $('#p-lien').value.trim(), son = $('#p-son').files[0];
-  if (!lien && !son) { msg('#p-msg', 'Ajoute un lien ou un fichier son.', false); return; }
-  if (!$('#p-titre').value.trim()) { msg('#p-msg', 'Donne le titre du morceau.', false); return; }
-  const btn = $('#p-creer'); btn.disabled = true;
-  try {
-    msg('#p-msg', 'Création du projet…');
-    const r = await post('/paroles/nouveau', {lien, titre: $('#p-titre').value, artistes: $('#p-artistes').value, album: $('#p-album').value,
-      pays: $('#p-pays').value, texte: $('#p-texte').value, photo_id: photoChoisie, debut: $('#p-debut').value, fin: $('#p-fin').value});
-    const id = r.id;
-    if (son) { msg('#p-msg', 'Envoi du son…'); const ext = (son.name.split('.').pop() || 'mp3').toLowerCase(); await envoieFichier(`/paroles/${id}/fichier?genre=son&ext=${ext}`, son); }
-    if ($('#p-photo').files[0]) { msg('#p-msg', 'Envoi de la photo…'); await envoieFichier(`/paroles/${id}/fichier?genre=photo&ext=jpg`, await reduit($('#p-photo').files[0])); }
-    const caps = [...$('#p-captures').files];
-    for (let i = 0; i < caps.length; i++) { msg('#p-msg', `Envoi des captures (${i + 1}/${caps.length})…`); await envoieFichier(`/paroles/${id}/fichier?genre=capture&ext=jpg`, await reduit(caps[i])); }
-    await post(`/paroles/${id}/lancer`);
-    ouvreProjet(id);
-  } catch (e) { msg('#p-msg', e.message, false); } finally { btn.disabled = false; }
+// ---- VIDÉO DE CLIP
+const clip = {etape: 1, fin: 'Fabriquer la vidéo', type: 'refrain'};
+const AIDES = {refrain: 'Le Studio trouve tout seul le refrain.', extrait: 'Tu choisis le début ; la durée fait le reste.', resume: 'Pour une vidéo longue : les temps forts enchaînés.'};
+puces('#clip-types', true, b => { clip.type = b.dataset.t; msg('#clip-aide', AIDES[clip.type]); $('#clip-debut-champ').hidden = clip.type !== 'extrait'; });
+puces('#clip-durees', true); puces('#clip-formats', true, b => { $('#plus-format span').textContent = 'Format · ' + b.textContent; });
+replie($('#plus-format'), $('#clip-formats')); replie($('#plus-textes'), $('#clip-textes')); bascule($('#clip-droits'));
+$('#clip-coller').onclick = async () => { try { $('#clip-lien').value = (await navigator.clipboard.readText()).trim(); apercuLien(); } catch (e) { $('#clip-lien').focus(); } };
+let tLien; $('#clip-lien').addEventListener('input', () => { clearTimeout(tLien); tLien = setTimeout(apercuLien, 450); });
+async function apercuLien() {
+  const lien = $('#clip-lien').value.trim(), box = $('#clip-apercu');
+  if (!/^https?:\/\//.test(lien)) { box.innerHTML = ''; return; }
+  try { const d = await post('/apercu-lien', {lien});
+    box.innerHTML = `<div class="apercu-lien">${d.miniature ? `<img src="${esc(d.miniature)}" alt="">` : ''}<span><b>${esc(d.titre || 'Vidéo détectée')}</b><small>${esc(d.plateforme || '')}${d.auteur ? ' · @' + esc(d.auteur.replace(/^@/, '')) : ''}</small></span></div>`; }
+  catch (e) { box.innerHTML = ''; }
+}
+clip.verifie = async e => {
+  if (e === 1 && !/^https?:\/\//.test($('#clip-lien').value.trim())) return 'Colle le lien de la vidéo.';
+  if (e === 3 && !actif($('#clip-droits'))) return 'Active l\'interrupteur des droits pour continuer.';
 };
+clip.lance = async () => {
+  const duree = +(choisie('#clip-durees').d || 30), debut = clip.type === 'extrait' ? (+$('#clip-debut').value || 0) : 0;
+  const j = await post('/fabriquer', {lien: $('#clip-lien').value.trim(), format: choisie('#clip-formats').f || 'origine', type: clip.type, debut, fin: debut + duree,
+    etiquette: $('#clip-etiquette').value, accroche: $('#clip-accroche').value, artiste: $('#clip-artiste').value, credit: $('#clip-credit').value,
+    contexte: $('#clip-contexte').value, droits: true});
+  ['#clip-lien', '#clip-contexte', '#clip-etiquette', '#clip-accroche', '#clip-artiste', '#clip-credit'].forEach(s => $(s).value = ''); $('#clip-apercu').innerHTML = '';
+  ouvreProjet(j.id);
+};
+brancheAssistant('clip', clip);
 
+// ---- VIDÉO PAROLES
+const par = {etape: 1, fin: 'Préparer la vidéo', photo: null};
+chercheArtiste('#par-cherche', '#par-resultats', async a => {
+  if (!$('#par-artistes').value) $('#par-artistes').value = a.nom;
+  if (a.pays && [...$('#par-pays').options].some(o => o.value === a.pays)) $('#par-pays').value = a.pays;
+  const ph = (await get('/banque/' + a.id)).photos || [];
+  $('#par-photos').innerHTML = ph.slice(0, 18).map(p => `<button data-ph="${p.id}" style="background-image:url('${esc(p.url)}')" aria-label="Choisir cette photo"></button>`).join('') || '<p class="msg">Pas encore de photo dans sa banque.</p>';
+  $$('#par-photos [data-ph]').forEach(x => x.onclick = () => { vibre(); par.photo = +x.dataset.ph; $$('#par-photos [data-ph]').forEach(y => y.classList.toggle('on', y === x)); });
+});
+replie($('#plus-passage'), $('#par-passage'));
+par.verifie = async e => {
+  if (e === 1 && !$('#par-lien').value.trim() && !$('#par-son').files[0]) return 'Ajoute un lien ou un fichier son.';
+  if (e === 1 && !$('#par-titre').value.trim()) return 'Donne le titre du morceau.';
+};
+par.lance = async () => {
+  msg('#par-msg', 'Création du projet…');
+  const r = await post('/paroles/nouveau', {lien: $('#par-lien').value.trim(), titre: $('#par-titre').value, artistes: $('#par-artistes').value, album: $('#par-album').value,
+    pays: $('#par-pays').value, texte: $('#par-texte').value, photo_id: par.photo, debut: $('#par-debut').value, fin: $('#par-fin').value});
+  const son = $('#par-son').files[0];
+  if (son) { msg('#par-msg', 'Envoi du son…'); await envoie(`/paroles/${r.id}/fichier?genre=son&ext=${(son.name.split('.').pop() || 'mp3').toLowerCase()}`, son); }
+  if ($('#par-photo').files[0]) { msg('#par-msg', 'Envoi de la photo…'); await envoie(`/paroles/${r.id}/fichier?genre=photo&ext=jpg`, await reduit($('#par-photo').files[0], 2000)); }
+  const caps = [...$('#par-captures').files];
+  for (let i = 0; i < caps.length; i++) { msg('#par-msg', `Envoi des captures (${i + 1}/${caps.length})…`); await envoie(`/paroles/${r.id}/fichier?genre=capture&ext=jpg`, await reduit(caps[i], 2000)); }
+  await post(`/paroles/${r.id}/lancer`);
+  ['#par-lien', '#par-titre', '#par-artistes', '#par-album', '#par-texte', '#par-debut', '#par-fin', '#par-son', '#par-photo', '#par-captures'].forEach(s => $(s).value = '');
+  par.photo = null; $('#par-photos').innerHTML = '';
+  ouvreProjet(r.id);
+};
+brancheAssistant('par', par);
+
+// ---- ANNONCE
+const an = {etape: 1, fin: 'Publier l\'annonce', items: [], job: null, n: 0};
+puces('#an-etiquettes', true);
+function anGalerie() {
+  $('#an-galerie').innerHTML = an.items.map((it, i) => `<button data-ai="${i}" class="${i === 0 ? 'on' : ''}" style="background-image:url('${esc(it.url)}')">${i === 0 ? '<span class="ordre">Couverture</span>' : ''}<span class="x" data-ax="${i}" role="button" aria-label="Retirer">×</span></button>`).join('');
+  $$('#an-galerie [data-ai]').forEach(b => b.onclick = ev => { vibre(); const i = +b.dataset.ai;
+    if (ev.target.dataset.ax !== undefined) { const it = an.items.splice(i, 1)[0]; if (it.f) URL.revokeObjectURL(it.url); }
+    else an.items.unshift(an.items.splice(i, 1)[0]); anGalerie(); });
+}
+$('#an-recuperer').onclick = async () => {
+  const lien = $('#an-lien').value.trim();
+  if (!/^https?:\/\//.test(lien)) return msg('#an-msg', 'Colle le lien d\'un post.', false);
+  if (an.job) return msg('#an-msg', 'Un seul lien par annonce.', false);
+  const b = $('#an-recuperer'); b.disabled = true;
+  try { const j = await post('/photos/nouveau', {lien, artiste_nom: $('#an-artiste').value.trim()}); an.job = j.id;
+    msg('#an-msg', 'Récupération des images (1 à 2 minutes)…');
+    const tour = async () => { const d = await get('/job/' + j.id);
+      if (d.statut === 'erreur') { an.job = null; b.disabled = false; return msg('#an-msg', d.erreur || 'Images introuvables.', false); }
+      if (d.statut === 'pret' && (d.photos || []).length) { an.n = d.photos.length; an.items = d.photos.map((url, idx) => ({url, idx})).concat(an.items); anGalerie();
+        b.disabled = false; $('#an-lien').value = ''; if (d.params && d.params.credit && !$('#an-credit').value) $('#an-credit').value = d.params.credit;
+        return msg('#an-msg', d.photos.length + ' image(s) récupérée(s).', true); }
+      setTimeout(tour, 3000); };
+    tour(); } catch (e) { an.job = null; b.disabled = false; msg('#an-msg', e.message, false); }
+};
+$('#an-fichiers').onchange = () => { [...$('#an-fichiers').files].forEach(f => { if (an.items.length < 10) an.items.push({f, url: URL.createObjectURL(f)}); }); $('#an-fichiers').value = ''; anGalerie(); };
+async function anImages() {
+  if (!an.job) { const j = await post('/photos/nouveau', {lien: '', artiste_nom: $('#an-artiste').value.trim()}); an.job = j.id; an.n = 0; }
+  const a = an.items.filter(it => it.idx === undefined);
+  for (let k = 0; k < a.length; k++) { msg('#an-msg', `Envoi des images : ${k + 1} / ${a.length}…`);
+    const r = await fetch(BASE + '/photos/' + an.job + '/importer', {method: 'POST', headers: {'Content-Type': 'image/jpeg', 'X-CSRFToken': CSRF}, body: await reduit(a[k].f)});
+    const d = await r.json().catch(() => ({})); if (!r.ok || !d.ok) throw new Error('Image ' + (k + 1) + ' refusée (trop petite ou illisible) : retire-la.');
+    a[k].idx = an.n++; }
+  return an.job;
+}
+const anIndices = () => an.items.slice(0, 10).map(it => it.idx);
+$('#an-ia').onclick = async () => {
+  if (!an.items.length) return msg('#an-msg', 'Ajoute d\'abord les images.', false);
+  const b = $('#an-ia'); b.disabled = true;
+  try { const id = await anImages(); msg('#an-msg', 'L\'IA regarde les images et écrit…');
+    const s = await post('/photos/' + id + '/suggestions', {indices: anIndices(), contexte: [$('#an-accroche').value, $('#an-artiste').value, $('#an-fr').value].filter(Boolean).join(' · ')});
+    if (s.accroche && !$('#an-accroche').value.trim()) $('#an-accroche').value = s.accroche; if (s.legende_fr) $('#an-fr').value = s.legende_fr;
+    msg('#an-msg', 'Textes proposés : relis-les.', true); } catch (e) { msg('#an-msg', e.message, false); } b.disabled = false;
+};
+an.verifie = async e => {
+  if (e === 1 && !an.items.length) return 'Ajoute au moins une image.';
+  if (e === 2 && !$('#an-accroche').value.trim()) return 'Écris le titre de l\'annonce.';
+};
+an.lance = async () => {
+  const reseaux = await demandeReseaux('Publier l\'annonce', [{id: 'ok', titre: 'Publier maintenant', sous: 'Carrousel Cauri sur les réseaux choisis, dans 2 minutes.', icone: 'envoi'}]);
+  if (!reseaux) return;
+  const id = await anImages();
+  await post('/photos/' + id + '/publier', {indices: anIndices(), reseaux: reseaux.reseaux, notifier: false, etiquette: choisie('#an-etiquettes').e || 'ANNONCE',
+    accroche: $('#an-accroche').value.trim(), legende_fr: $('#an-fr').value.trim() || $('#an-accroche').value.trim(), legende_en: '',
+    artiste_nom: $('#an-artiste').value.trim(), credit: $('#an-credit').value.trim()});
+  msg('#an-msg', 'Annonce en fabrication (1 à 3 minutes), puis envoyée.', true);
+  an.items.forEach(x => { if (x.f) URL.revokeObjectURL(x.url); }); an.items = []; an.job = null; anGalerie();
+  ['#an-accroche', '#an-artiste', '#an-fr', '#an-credit', '#an-lien'].forEach(s => $(s).value = '');
+};
+brancheAssistant('an', an);
+
+// ---- METTRE EN VALEUR
+const ve = {etape: 1, fin: 'Voir les visuels', artiste: null, r: null, photos: []};
+chercheArtiste('#ve-cherche', '#ve-resultats', async a => {
+  ve.artiste = a; ve.photos = [];
+  $('#ve-choisi').innerHTML = `<div class="choisi">${esc(a.nom)}</div>`;
+  const r = await post('/vedette/preparer', {artiste_id: a.id}); ve.r = r;
+  $('#ve-photos').innerHTML = r.photos.map((p, i) => `<button data-vp="${i}" style="background-image:url('${esc(p.url)}')"></button>`).join('') || '<p class="msg">Pas de photo dans sa banque : ajoute-en dans Banque photos.</p>';
+  $$('#ve-photos [data-vp]').forEach(b => b.onclick = () => { vibre(); const p = r.photos[+b.dataset.vp], i = ve.photos.indexOf(p);
+    if (i >= 0) ve.photos.splice(i, 1); else if (ve.photos.length < 10) ve.photos.push(p);
+    $$('#ve-photos [data-vp]').forEach(x => { const k = ve.photos.indexOf(r.photos[+x.dataset.vp]); x.classList.toggle('on', k >= 0); x.innerHTML = k >= 0 ? `<span class="ordre">${k + 1}</span>` : ''; });
+    $('#ve-credit').value = (ve.photos[0] && ve.photos[0].credit) || ''; });
+  $('#ve-titre').value = r.textes.titre || ''; $('#ve-sur').value = r.textes.sur_titre || ''; $('#ve-bas').value = r.textes.bas || ''; $('#ve-chiffre').value = r.textes.chiffre || '';
+  $('#ve-modeles').innerHTML = r.modeles.map(m => `<button class="puce on" data-m="${esc(m.id)}">${esc(m.nom)}</button>`).join(''); puces('#ve-modeles', false);
+});
+replie($('#plus-ve-textes'), $('#ve-textes'));
+$('#ve-exemple').onchange = async () => {
+  const f = $('#ve-exemple').files[0]; if (!f) return; msg('#ve-msg', 'Gemini lit ton exemple…');
+  try { const r = await envoie('/vedette/modele?nom=' + encodeURIComponent((f.name || 'Mon modèle').replace(/\.[a-z0-9]+$/i, '').slice(0, 40)), f, f.type || 'image/jpeg');
+    $('#ve-modeles').insertAdjacentHTML('beforeend', `<button class="puce on" data-m="${esc(r.modele.id)}">${esc(r.modele.nom)}</button>`); puces('#ve-modeles', false);
+    msg('#ve-msg', 'Modèle « ' + r.modele.nom + ' » ajouté.', true); } catch (e) { msg('#ve-msg', e.message, false); }
+  $('#ve-exemple').value = '';
+};
+const veTextes = () => ({titre: $('#ve-titre').value, sur_titre: $('#ve-sur').value, bas: $('#ve-bas').value, chiffre: $('#ve-chiffre').value, credit: $('#ve-credit').value});
+ve.verifie = async e => {
+  if (e === 1 && !ve.artiste) return 'Choisis un artiste.';
+  if (e === 2 && !ve.photos.length) return 'Touche au moins une photo.';
+  if (e === 3 && !$$('#ve-modeles .puce.on').length) return 'Garde au moins un modèle.';
+};
+ve.lance = async () => {
+  const p = ve.photos[0];
+  const r = await post('/vedette/apercus', {artiste_id: ve.artiste.id, artiste_nom: ve.artiste.nom, photo: p.url, photo_id: p.id, photos: ve.photos, textes: veTextes(),
+    modeles: $$('#ve-modeles .puce.on').map(b => b.dataset.m)});
+  ve.artiste = null; ve.photos = []; $('#ve-choisi').innerHTML = ''; $('#ve-photos').innerHTML = '';
+  ouvreProjet(r.id);
+};
+brancheAssistant('ve', ve);
+
+// ---------------- feuille de publication (réseaux + façon de publier)
+function demandeReseaux(titre, choix, defaut) {
+  return new Promise(ok => {
+    $('#fe-titre').textContent = titre;
+    const d = defaut || ['instagram', 'facebook', 'tiktok', 'telegram'];
+    $$('#fe-reseaux .puce').forEach(b => { b.classList.toggle('on', d.includes(b.dataset.r)); b.onclick = () => { vibre(); b.classList.toggle('on'); }; });
+    $('#fe-choix').innerHTML = choix.map(c => `<button class="choix" data-c="${c.id}"><span class="pastille"><svg class="i"><use href="#i-${c.icone || 'envoi'}"/></svg></span><span><b>${esc(c.titre)}</b><small>${esc(c.sous)}</small></span></button>`).join('');
+    const ferme = v => { $('#voile').hidden = $('#feuille').hidden = true; ok(v); };
+    $$('#fe-choix [data-c]').forEach(b => b.onclick = () => { const r = $$('#fe-reseaux .puce.on').map(x => x.dataset.r);
+      if (!r.length) { b.querySelector('small').textContent = 'Choisis au moins un réseau.'; return; } vibre(); ferme({choix: b.dataset.c, reseaux: r}); });
+    $('#fe-annuler').onclick = $('#voile').onclick = () => ferme(null);
+    $('#voile').hidden = $('#feuille').hidden = false;
+  });
+}
+
+// ---------------- PROJET
+const pj = {id: null, minuteur: null, j: null};
+const ETAPES_CLIP = [['telechargement', 'Téléchargement en HD'], ['analyse', 'L\'IA regarde la vidéo'], ['a_valider', 'Tu valides l\'accroche'], ['montage', 'Habillage Cauri'], ['pret', 'Prête à publier']];
+const ETAPES_PAROLES = [['telechargement', 'Le son'], ['analyse', 'Paroles calées sur la voix'], ['a_valider', 'Tu relis les paroles'], ['montage', 'Rendu de la vidéo'], ['pret', 'Prête à publier']];
+const ETAPES_VEDETTE = [['montage', 'Fabrication des visuels'], ['a_choisir', 'Tu choisis'], ['envoye', 'Publié']];
+function dessineSuivi(etapes, statut) {
+  const ordre = etapes.map(e => e[0]); let n = ordre.indexOf(statut);
+  if (statut === 'envoye') n = ordre.length; if (['attente', 'attente_pc'].includes(statut)) n = 0;
+  $('#pj-suivi').innerHTML = etapes.map((e, k) => `<div class="${k < n || (statut === 'pret' && k === n) ? 'fait' : k === n && !['erreur', 'annule'].includes(statut) ? 'cours' : ''}"><i></i>${esc(e[1])}</div>`).join('');
+}
 async function ouvreProjet(id) {
-  montre('montage'); jobOuvert = id; clearTimeout(minuteur);
-  $('#m-nouveau').style.display = 'none'; $('#m-projet').style.display = '';
-  let j; try { j = await get('/job/' + id); } catch (e) { msg('#m-msg', 'Projet introuvable.', false); return; }
-  if (jobOuvert !== id) return;
-  const p = j.params, e = ETATS[j.statut] || [j.statut, 'autre'];
-  $('#m-titre').textContent = `${p.titre || 'Vidéo paroles'} · ${p.artistes || ''}`;
-  $('#m-sous').textContent = p.album ? `${p.album} · vidéo paroles` : 'Vidéo paroles';
-  const et = $('#m-etat'); et.style.display = ''; et.className = 'etat e-' + e[1]; et.textContent = e[0];
-  const ecran = $('#m-ecran'), act = $('#m-actions');
-  act.innerHTML = ''; msg('#m-msg', '');
-  if (j.statut === 'pret' || j.statut === 'envoye') {
-    ecran.style.backgroundImage = ''; ecran.innerHTML = `<video src="${esc(j.video)}" controls playsinline poster="${esc(j.vignette || '')}"></video>`;
-  } else if (j.vignette) { ecran.innerHTML = ''; ecran.style.backgroundImage = `url('${j.vignette}')`; }
-  else { ecran.style.backgroundImage = ''; ecran.textContent = j.statut === 'erreur' ? 'Erreur' : 'Préparation sur le PC…'; }
-  // paroles et frise
-  const lignes = p.lignes || [], textes = p.paroles || lignes.map(l => l.mots.map(w => w.m).join(' '));
-  $('#m-origine').textContent = lignes.length ? `${lignes.length} lignes · source : ${p.origine_paroles || '—'}. Corrige un mot si besoin : les temps restent.` : 'Les paroles apparaîtront ici après la préparation.';
-  $('#m-lignes').innerHTML = lignes.map((l, i) => `<div class="pl"><span>${mmss(l.debut)}</span><input data-l="${i}" value="${esc(textes[i] || '')}" ${j.statut === 'a_valider' ? '' : 'disabled'} aria-label="Ligne ${i + 1}"></div>`).join('');
-  const t0 = +p.debut || 0, t1 = +p.fin || (t0 + 30), d = Math.max(1, t1 - t0);
-  $('#f-passage').innerHTML = `<span class="bloc" style="left:0;right:0;background:#8B5CF6;color:#fff">${mmss(t0)} → ${mmss(t1)} · ${Math.round(d)} s</span>`;
-  $('#f-paroles').innerHTML = lignes.map((l, i) => `<span class="bloc" style="left:${Math.max(0, (l.debut - t0) / d * 100)}%;width:${Math.max(1, (l.fin - l.debut) / d * 100)}%">${esc((textes[i] || '').slice(0, 24))}</span>`).join('');
-  if (j.statut === 'erreur') {
-    msg('#m-msg', j.erreur || 'Erreur', false);
-    const b = document.createElement('button'); b.className = 'btn second'; b.textContent = 'Relancer';
-    b.onclick = async () => { await post(`/job/${id}/relancer`); ouvreProjet(id); }; act.appendChild(b);
-  } else if (j.statut === 'a_valider') {
-    const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Valider et fabriquer';
-    b.onclick = async () => { b.disabled = true; try { await post(`/job/${id}/valider`, {paroles: $$('#m-lignes input').map(x => x.value)}); ouvreProjet(id); } catch (e) { msg('#m-msg', e.message, false); b.disabled = false; } };
-    act.appendChild(b);
-  } else if (j.statut === 'pret') {
-    act.innerHTML = `<div class="choix"><button class="puce on" data-son="avec">Avec le son</button><button class="puce" data-son="muette">Muette (son officiel dans l'appli)</button></div>`;
-    let son = 'avec';
-    $$('[data-son]').forEach(b => b.onclick = () => { son = b.dataset.son; $$('[data-son]').forEach(x => x.classList.toggle('on', x === b)); });
-    const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Publier sur les réseaux';
-    b.onclick = async () => { b.disabled = true; try { const r = await post(`/job/${id}/envoyer`, {son, accroche: `${p.titre} · ${p.artistes}`, legende_fr: `${p.artistes}, « ${p.titre} »` + (p.album ? `\nExtrait de ${p.album}.` : '') + '\n\nTa phrase préférée en commentaire ‼️'});
-      msg('#m-msg', 'Envoyé : ' + (r.recus || []).join(', ') + (son === 'muette' ? ' — termine dans l\'appli Buffer pour ajouter le son.' : ''), true); ouvreProjet(id); }
-      catch (e) { msg('#m-msg', e.message, false); b.disabled = false; } };
-    act.appendChild(b);
+  if (vue !== 'projet') montre('projet'); clearTimeout(pj.minuteur); pj.id = id;
+  let j; try { j = await get('/job/' + id); } catch (e) { msg('#pj-msg', 'Projet introuvable.', false); return; }
+  if (pj.id !== id) return; pj.j = j;
+  const p = j.params || {}, [nom, outil] = nomProjet(j), e = etat(j.statut);
+  $('#pj-titre').textContent = nom; $('#pj-sous').innerHTML = `${esc(outil)} · <span class="etat e-${e[1]}">${esc(e[0])}</span>`;
+  $('#pj-corps').innerHTML = ''; $('#pj-actions').innerHTML = ''; msg('#pj-msg', '');
+  const ecran = $('#pj-ecran');
+  if (j.video && ['pret', 'envoye'].includes(j.statut)) ecran.innerHTML = `<video src="${esc(j.video)}" controls playsinline preload="metadata" poster="${esc(j.vignette || '')}"></video>`;
+  else if (j.vignette) ecran.innerHTML = `<img src="${esc(j.vignette)}" alt="Aperçu">`;
+  else ecran.innerHTML = `<span style="opacity:.7;padding:20px;text-align:center">${EN_COURS.includes(j.statut) ? 'Fabrication en cours…' : ''}</span>`;
+  if (p.type === 'paroles') projetParoles(j); else if (p.type === 'vedette') projetVedette(j); else projetClip(j);
+  if (['erreur', 'annule'].includes(j.statut)) {
+    msg('#pj-msg', j.statut === 'erreur' ? (j.erreur || 'Échec de la fabrication.') : 'Projet annulé.', false);
+    bouton('Recommencer', async () => { await post('/job/' + id + '/relancer'); ouvreProjet(id); });
   }
-  if (['attente', 'attente_pc', 'telechargement', 'analyse', 'montage'].includes(j.statut)) {
-    msg('#m-msg', j.statut === 'attente_pc' ? 'En attente du PC (relais toutes les 5 min)…' : 'Le PC travaille… (rendu de 5 à 15 min)');
-    minuteur = setTimeout(() => { if (jobOuvert === id && vue === 'montage') ouvreProjet(id); }, 8000);
+  if (EN_COURS.includes(j.statut) || j.statut === 'a_valider') bouton('Annuler', async () => { await post('/job/' + id + '/annuler'); ouvreProjet(id); }, true);
+  if (EN_COURS.includes(j.statut)) {
+    msg('#pj-msg', j.statut === 'attente_pc' ? 'En attente du PC (il passe toutes les 5 minutes). Tu peux fermer l\'appli.' : 'Le Studio travaille. Tu peux fermer l\'appli : le projet t\'attendra ici.');
+    pj.minuteur = setTimeout(() => { if (vue === 'projet' && pj.id === id) ouvreProjet(id); }, 4000);
+  }
+}
+function bouton(texte, action, second) {
+  const b = document.createElement('button'); b.className = 'btn' + (second ? ' second' : ''); b.textContent = texte;
+  b.onclick = async () => { b.disabled = true; vibre(); try { await action(); } catch (e) { msg('#pj-msg', e.message, false);
+    if (e.donnees && e.donnees.deja_tiktok) bouton('Republier quand même', () => action(true)); } finally { b.disabled = false; } };
+  $('#pj-actions').appendChild(b); return b;
+}
+const champ = (id, lab, val, long) => `<label class="champ">${lab}${long ? `<textarea id="${id}">${esc(val)}</textarea>` : `<input id="${id}" value="${esc(val)}">`}</label>`;
+
+// ---- projet : vidéo de clip
+function projetClip(j) {
+  const p = j.params || {}, id = j.id; dessineSuivi(ETAPES_CLIP, j.statut);
+  if (j.statut === 'a_valider') {
+    $('#pj-corps').innerHTML = `<div class="carte"><h2>L'accroche sur la vidéo</h2>${champ('cv-accroche', 'Accroche', p.accroche)}${champ('cv-etiquette', 'Étiquette', p.etiquette)}
+      <button class="plus" id="cv-plus"><span>Artiste, crédit et légendes</span><svg class="i"><use href="#i-bas"/></svg></button><div id="cv-autres" hidden style="margin-top:12px">
+      ${champ('cv-artiste', 'Artiste (surligné)', p.artiste)}${champ('cv-credit', 'Crédit', p.credit)}${champ('cv-fr', 'Légende en français', p.legende_fr, 1)}${champ('cv-en', 'Légende en anglais', p.legende_en, 1)}</div></div>`;
+    replie($('#cv-plus'), $('#cv-autres'));
+    const textes = () => ({etiquette: $('#cv-etiquette').value, accroche: $('#cv-accroche').value, artiste: $('#cv-artiste').value, credit: $('#cv-credit').value, legende_fr: $('#cv-fr').value, legende_en: $('#cv-en').value});
+    bouton('Valider et fabriquer', async () => { await post('/job/' + id + '/valider', textes()); ouvreProjet(id); });
+    bouton('Revoir l\'aperçu', async () => { const r = await post('/job/' + id + '/apercu', textes()); $('#pj-ecran').innerHTML = `<img src="${esc(r.vignette)}" alt="Aperçu">`; }, true);
+  }
+  if (['pret', 'envoye'].includes(j.statut)) {
+    if (p.source_basse) msg('#pj-msg', 'Source en basse définition (' + p.source_basse + ') : pour un clip, préfère le lien YouTube officiel.', false);
+    $('#pj-corps').innerHTML = `<div class="carte"><h2>Le texte du post</h2>${champ('cp-accroche', 'Accroche', p.accroche)}
+      <div class="champ" style="margin-bottom:6px">Légende</div><div class="puces" id="cp-mode"><button class="puce on" data-m="complete">Complète</button><button class="puce" data-m="courte">Courte</button><button class="puce" data-m="aucune">Aucune</button></div>
+      <button class="plus" id="cp-plus"><span>Légendes, crédit, comptes de l'artiste</span><svg class="i"><use href="#i-bas"/></svg></button><div id="cp-autres" hidden style="margin-top:12px">
+      ${champ('cp-fr', 'Légende en français', p.legende_fr, 1)}${champ('cp-en', 'Légende en anglais', p.legende_en, 1)}${champ('cp-credit', 'Crédit', p.credit)}
+      ${champ('cp-ig', 'Instagram de l\'artiste (invité en collaboration)', '')}${champ('cp-tt', 'TikTok de l\'artiste', '')}</div></div>`;
+    puces('#cp-mode', true); replie($('#cp-plus'), $('#cp-autres'));
+    if (p.artiste) get('/artiste-profil?nom=' + encodeURIComponent(p.artiste)).then(d => { const a = d.artiste || {};
+      $('#cp-ig').value = a.instagram ? '@' + a.instagram : ''; $('#cp-tt').value = a.tiktok ? '@' + a.tiktok : ''; $('#cp-ig').dataset.avant = $('#cp-ig').value; $('#cp-tt').dataset.avant = $('#cp-tt').value; }).catch(() => {});
+    const publier = async forcer => {
+      const c = await demandeReseaux(j.statut === 'envoye' ? 'Republier' : 'Publier', [
+        {id: 'auto', titre: 'Publier maintenant', sous: 'Avec le son de la vidéo, dans 2 minutes.', icone: 'envoi'},
+        {id: 'notif', titre: 'J\'ajoute ma musique', sous: 'Instagram et TikTok t\'envoient une notification pour choisir le son.', icone: 'musique'}], p.reseaux);
+      if (!c) return;
+      const ig = $('#cp-ig').value.trim(), tt = $('#cp-tt').value.trim();
+      if (p.artiste && ((ig && ig !== $('#cp-ig').dataset.avant) || (tt && tt !== $('#cp-tt').dataset.avant))) await post('/artiste-profil', {nom: p.artiste, instagram: ig, tiktok: tt});
+      const k = await post('/job/' + j.id + '/envoyer', {accroche: $('#cp-accroche').value, legende_fr: $('#cp-fr').value, legende_en: $('#cp-en').value, credit: $('#cp-credit').value,
+        artiste: p.artiste || '', notifier: c.choix === 'notif', reseaux: c.reseaux, forcer: !!forcer, legende_mode: choisie('#cp-mode').m || 'complete'});
+      msg('#pj-msg', 'Envoyée : ' + (k.recus || []).join(', ') + ((k.refus || []).length ? '. Refusé : ' + k.refus.join(' · ') : '.'), !(k.refus || []).length);
+      setTimeout(() => ouvreProjet(j.id), 1500);
+    };
+    bouton(j.statut === 'envoye' ? 'Republier' : 'Publier', publier);
   }
 }
 
-// ouverture directe : #projet-123 ou #outils
+// ---- projet : vidéo paroles
+function projetParoles(j) {
+  const p = j.params || {}, id = j.id; dessineSuivi(ETAPES_PAROLES, j.statut);
+  const lignes = p.lignes || [], textes = p.paroles || lignes.map(l => l.mots.map(w => w.m).join(' '));
+  if (lignes.length) {
+    const t0 = +p.debut || 0, t1 = +p.fin || t0 + 30, d = Math.max(1, t1 - t0);
+    $('#pj-corps').innerHTML = `<div class="carte"><h2>Les paroles</h2><p class="msg" style="margin:-4px 0 10px">${lignes.length} lignes · source : ${esc(p.origine_paroles || '—')} · passage ${mmss(t0)} → ${mmss(t1)}.${j.statut === 'a_valider' ? ' Corrige un mot si besoin, les temps restent.' : ''}</p>
+      <div class="frise">${lignes.map(l => `<span style="left:${Math.max(0, (l.debut - t0) / d * 100)}%;width:${Math.max(1, (l.fin - l.debut) / d * 100)}%"></span>`).join('')}</div>
+      ${lignes.map((l, i) => `<div class="pl"><span>${mmss(l.debut)}</span><input data-l="${i}" value="${esc(textes[i] || '')}" ${j.statut === 'a_valider' ? '' : 'disabled'} aria-label="Ligne ${i + 1}"></div>`).join('')}</div>`;
+  }
+  if (j.statut === 'a_valider') bouton('Valider et fabriquer', async () => { await post('/job/' + id + '/valider', {paroles: $$('#pj-corps [data-l]').map(x => x.value)}); ouvreProjet(id); });
+  if (['pret', 'envoye'].includes(j.statut)) bouton(j.statut === 'envoye' ? 'Republier' : 'Publier', async forcer => {
+    const c = await demandeReseaux('Publier la vidéo paroles', [
+      {id: 'avec', titre: 'Avec le son', sous: 'La vidéo et sa chanson, publiée dans 2 minutes.', icone: 'envoi'},
+      {id: 'muette', titre: 'Muette : j\'ajoute le son officiel', sous: 'Notification Instagram / TikTok : choisis le son dans leur bibliothèque, au même passage.', icone: 'musique'}]);
+    if (!c) return;
+    const k = await post('/job/' + id + '/envoyer', {son: c.choix, reseaux: c.reseaux, forcer: !!forcer, accroche: `${p.titre} · ${p.artistes}`,
+      legende_fr: `${p.artistes}, « ${p.titre} »` + (p.album ? `\nExtrait de ${p.album}.` : '') + '\n\nTa phrase préférée en commentaire ‼️'});
+    msg('#pj-msg', 'Envoyée : ' + (k.recus || []).join(', ') + (c.choix === 'muette' ? '. Termine dans l\'appli Buffer pour ajouter le son.' : '.'), true);
+    setTimeout(() => ouvreProjet(id), 1500);
+  });
+}
+
+// ---- projet : mise en valeur
+function projetVedette(j) {
+  const p = j.params || {}, id = j.id; dessineSuivi(ETAPES_VEDETTE, j.statut);
+  if (!['a_choisir', 'envoye'].includes(j.statut)) return;
+  const ap = p.apercus || [], choix = Array.isArray(p.choix) ? p.choix.slice() : (p.choix ? [p.choix] : []);
+  $('#pj-ecran').innerHTML = ap[0] ? `<img src="${esc(ap[0].url)}" alt="">` : '';
+  $('#pj-corps').innerHTML = `<div class="carte"><h2>Choisis les visuels</h2><p class="msg" style="margin:-4px 0 10px">Ils ouvrent le carrousel dans l'ordre touché.</p>
+    <div class="galerie larges" id="pv-grille">${ap.map(a => `<button data-m="${esc(a.modele)}" style="background-image:url('${esc(a.url)}')"><span class="nom">${esc(a.nom)}</span></button>`).join('')}</div>
+    ${champ('pv-fr', 'Légende (l\'anglais est traduit tout seul)', '', 1)}</div>`;
+  const dessine = () => $$('#pv-grille [data-m]').forEach(b => { const k = choix.indexOf(b.dataset.m); b.classList.toggle('on', k >= 0);
+    b.querySelector('.ordre') && b.querySelector('.ordre').remove(); if (k >= 0) b.insertAdjacentHTML('afterbegin', `<span class="ordre">${k + 1}</span>`); });
+  $$('#pv-grille [data-m]').forEach(b => b.onclick = () => { vibre(); const k = choix.indexOf(b.dataset.m); if (k >= 0) choix.splice(k, 1); else choix.push(b.dataset.m); dessine();
+    $('#pj-ecran').innerHTML = `<img src="${esc((ap.find(a => a.modele === (choix[0] || b.dataset.m)) || {}).url || '')}" alt="">`; });
+  dessine();
+  bouton(j.statut === 'envoye' ? 'Republier' : 'Publier', async () => {
+    if (!choix.length) throw new Error('Touche au moins un visuel.');
+    const c = await demandeReseaux('Publier la mise en valeur', [{id: 'ok', titre: 'Publier maintenant', sous: 'En carré et en story, dans 2 minutes.', icone: 'envoi'}]);
+    if (!c) return;
+    await post('/vedette/' + id + '/publier', {choix, textes: p.textes || {}, legende_fr: $('#pv-fr').value, reseaux: c.reseaux});
+    msg('#pj-msg', 'Envoi en cours.', true); setTimeout(() => ouvreProjet(id), 4000);
+  });
+}
+
+// ---------------- BANQUE PHOTOS
+let ba = {artiste: null, lot: []}, tri = {job: null, photos: [], choix: new Set(), artiste: null, indices: null};
+function ongletBanque(o) {
+  $$('[data-onglet]').forEach(b => b.classList.toggle('on', b.dataset.onglet === o)); $$('[data-panneau]').forEach(p => p.hidden = p.dataset.panneau !== o);
+  if (o === 'trier') profils(); if (o === 'dossiers') dossiers();
+}
+$$('[data-onglet]').forEach(b => b.onclick = () => { vibre(); ongletBanque(b.dataset.onglet); });
+function banque() { ongletBanque(($('[data-onglet].on') || {dataset: {onglet: 'ajouter'}}).dataset.onglet); }
+chercheArtiste('#ba-cherche', '#ba-resultats', a => { ba.artiste = a; $('#ba-choisi').innerHTML = `<div class="choisi">${esc(a.nom)}</div>`; });
+const nbLiens = t => (t.match(/https?:\/\/[^\s,;]+/g) || []).length;
+function dessineLot() {
+  $('#ba-lot').innerHTML = ba.lot.length ? `<div class="champ" style="margin-bottom:6px">Prêts à trier en même temps</div>` + ba.lot.map((x, i) => `<div class="ligne-l"><span class="txt"><b>${esc(x.artiste.nom)}</b><small>${nbLiens(x.liens)} lien(s)</small></span><button class="lien rouge" data-rl="${i}">Retirer</button></div>`).join('') : '';
+  $$('[data-rl]').forEach(b => b.onclick = () => { ba.lot.splice(+b.dataset.rl, 1); dessineLot(); });
+}
+$('#ba-ajouter').onclick = () => {
+  if (!ba.artiste || !nbLiens($('#ba-liens').value)) return msg('#ba-msg', 'Choisis l\'artiste et colle au moins un lien.', false);
+  ba.lot.push({artiste: ba.artiste, liens: $('#ba-liens').value.trim(), contexte: $('#ba-contexte').value.trim()});
+  ba.artiste = null; $('#ba-choisi').innerHTML = ''; $('#ba-liens').value = ''; $('#ba-contexte').value = ''; dessineLot(); msg('#ba-msg', 'Ajouté. Prépare le suivant, ou trie.', true);
+};
+$('#ba-lancer').onclick = async () => {
+  const b = $('#ba-lancer'); b.disabled = true;
+  try {
+    const fichiers = [...$('#ba-fichiers').files];
+    if (fichiers.length) {   // photos du téléphone : sélection immédiate
+      const j = await post('/photos/nouveau', {lien: '', artiste_id: ba.artiste && ba.artiste.id, artiste_nom: ba.artiste && ba.artiste.nom});
+      for (let k = 0; k < fichiers.length && k < 20; k++) { msg('#ba-msg', `Envoi des photos : ${k + 1} / ${fichiers.length}…`);
+        await fetch(BASE + '/photos/' + j.id + '/importer', {method: 'POST', headers: {'Content-Type': 'image/jpeg', 'X-CSRFToken': CSRF}, body: await reduit(fichiers[k])}); }
+      $('#ba-fichiers').value = ''; msg('#ba-msg', ''); ongletBanque('trier'); ouvreTri(j.id, ba.artiste); return;
+    }
+    const tous = ba.lot.slice(); if (ba.artiste && nbLiens($('#ba-liens').value)) tous.push({artiste: ba.artiste, liens: $('#ba-liens').value.trim(), contexte: $('#ba-contexte').value.trim()});
+    if (!tous.length) return msg('#ba-msg', 'Choisis l\'artiste et colle ses liens, ou des photos du téléphone.', false);
+    const ok = [], ko = [];
+    for (const t of tous) { try { await post('/photos/nouveau', {lien: t.liens, arriere_plan: true, artiste_id: t.artiste.id, artiste_nom: t.artiste.nom, contexte: t.contexte}); ok.push(t.artiste.nom); }
+      catch (e) { ko.push(t.artiste.nom + ' : ' + e.message); } }
+    ba.lot = []; ba.artiste = null; $('#ba-choisi').innerHTML = ''; $('#ba-liens').value = ''; $('#ba-contexte').value = ''; dessineLot();
+    msg('#ba-msg', (ok.length ? `Tri lancé (${ok.join(', ')}). Les photos arrivent dans « À trier ».` : '') + (ko.length ? ' Pas lancé : ' + ko.join(' · ') : ''), !ko.length); badge();
+  } catch (e) { msg('#ba-msg', e.message, false); } finally { b.disabled = false; }
+};
+async function badge() {
+  let d; try { d = await get('/photos/profils'); } catch (e) { return null; }
+  const n = (d && d.a_trier) || 0; $$('[data-badge]').forEach(b => { b.hidden = !n; b.textContent = n; }); $('[data-badge-tri]').textContent = n ? '(' + n + ')' : '';
+  return d;
+}
+async function profils() {
+  $('#tri-grille').hidden = true; $('#tri-liste').hidden = false;
+  const d = await badge(); const l = (d && d.profils) || [];
+  $('#tri-liste').innerHTML = l.length ? '<h2>À trier</h2>' + l.map(x => { const pret = x.statut === 'pret' && x.n;
+    const info = x.statut === 'attente_pc' ? 'En attente du PC (5 min max)…' : !['pret', 'erreur'].includes(x.statut) ? 'Tri en cours…' : x.statut === 'erreur' ? (x.erreur || 'Échec') : `${x.n} photo(s) · ${x.reconnues} reconnue(s)`;
+    return `<div class="ligne-l">${x.une ? `<img src="${esc(x.une)}" alt="">` : ''}<span class="txt"><b>${esc(x.artiste)}</b><small>${esc(info)}</small></span>${pret ? `<button class="btn second" data-ot="${x.id}" style="padding:9px 14px">Trier</button>` : ''}<button class="lien rouge" data-rt="${x.id}">Retirer</button></div>`; }).join('')
+    : '<div class="vide">Rien à trier. Ajoute des liens dans « Ajouter ».</div>';
+  $$('[data-ot]').forEach(b => b.onclick = () => { const x = l.find(y => y.id == b.dataset.ot); ouvreTri(x.id, null); });
+  $$('[data-rt]').forEach(b => b.onclick = async () => { await post('/photos/tri/' + b.dataset.rt + '/retirer'); profils(); });
+}
+async function ouvreTri(id, artiste) {
+  const j = await get('/job/' + id), p = j.params || {};
+  tri = {job: id, photos: j.photos || [], choix: new Set(p.preselection || []), artiste: artiste || (p.artiste_id ? {id: p.artiste_id, nom: p.artiste_nom} : null), profil: p.mode === 'profil'};
+  $('#tri-liste').hidden = true; $('#tri-grille').hidden = false; $('#tri-publier').hidden = true; $('#tri-valider').hidden = false; msg('#tri-msg', '');
+  quiTri();
+  const rf = p.refus || {};
+  $('#tri-info').textContent = (p.reconnues || []).length ? 'Cochées d\'avance : celles où il est reconnu.' + (rf.pas_lui ? ` ${rf.pas_lui} écartée(s), ce n'est pas lui.` : '') : 'Touche les photos à garder.';
+  const dessine = () => { $('#tri-photos').innerHTML = tri.photos.map((u, i) => `<button data-tp="${i}" class="${tri.choix.has(i) ? 'on' : ''}" style="background-image:url('${esc(u)}')">${(p.reconnues || [])[i] === 'lui' ? '<span class="tag">C\'est lui</span>' : ''}</button>`).join('');
+    $$('#tri-photos [data-tp]').forEach(b => b.onclick = () => { vibre(); const i = +b.dataset.tp; tri.choix.has(i) ? tri.choix.delete(i) : tri.choix.add(i); b.classList.toggle('on'); $('#tri-valider').textContent = `Garder la sélection (${tri.choix.size})`; }); };
+  dessine(); $('#tri-valider').textContent = `Garder la sélection (${tri.choix.size})`; $('#tri-entiere').setAttribute('aria-checked', 'false');
+}
+function quiTri() {
+  $('#tri-qui').hidden = !tri.artiste; $('#tri-cherche-bloc').hidden = !!tri.artiste;
+  $('#tri-qui').innerHTML = tri.artiste ? `${esc(tri.artiste.nom)}<button class="lien" id="tri-changer">Changer</button>` : '';
+  if (tri.artiste) $('#tri-changer').onclick = () => { tri.artiste = null; quiTri(); $('#tri-cherche').focus(); };
+}
+chercheArtiste('#tri-cherche', '#tri-resultats', a => { tri.artiste = a; quiTri(); });
+bascule($('#tri-entiere'));
+$('#tri-valider').onclick = async () => {
+  if (!tri.artiste) return msg('#tri-msg', 'Choisis d\'abord l\'artiste.', false);
+  if (!tri.choix.size) return msg('#tri-msg', 'Touche au moins une photo.', false);
+  const indices = [...tri.choix].sort((a, b) => a - b);
+  try { const r = await post('/photos/' + tri.job + '/enregistrer', {indices, artiste_id: tri.artiste.id, detourable: actif($('#tri-entiere')), note: ''});
+    msg('#tri-msg', r.gardees + ' photo(s) ajoutée(s) à la banque de ' + tri.artiste.nom + '.', true); badge();
+    if (!tri.profil) { tri.indices = indices; $('#tri-valider').hidden = true; $('#tri-publier').hidden = false;
+      try { const s = await post('/photos/' + tri.job + '/suggestions', {indices, contexte: ''}); $('#tp-etiquette').value = s.etiquette || 'PHOTOS'; $('#tp-accroche').value = s.accroche || ''; $('#tp-fr').value = s.legende_fr || ''; $('#tp-en').value = s.legende_en || ''; } catch (e) {} }
+    else setTimeout(profils, 1500);
+  } catch (e) { msg('#tri-msg', e.message, false); }
+};
+$('#tp-publier').onclick = async () => {
+  const c = await demandeReseaux('Publier le carrousel', [{id: 'auto', titre: 'Publier maintenant', sous: 'Carrousel Cauri, dans 2 minutes.', icone: 'envoi'}, {id: 'notif', titre: 'J\'ajoute ma musique', sous: 'Notification Instagram et TikTok.', icone: 'musique'}]);
+  if (!c) return;
+  try { await post('/photos/' + tri.job + '/publier', {indices: tri.indices, notifier: c.choix === 'notif', reseaux: c.reseaux, etiquette: $('#tp-etiquette').value, accroche: $('#tp-accroche').value, legende_fr: $('#tp-fr').value, legende_en: $('#tp-en').value});
+    msg('#tri-msg', 'Carrousel en fabrication (1 à 3 minutes), puis envoyé.', true); $('#tri-publier').hidden = true; } catch (e) { msg('#tri-msg', e.message, false); }
+};
+async function dossiers() {
+  $('#dos-photos').hidden = true; $('#dos-liste').hidden = false;
+  const d = await get('/banque');
+  $('#dos-liste').innerHTML = (d.dossiers || []).length ? d.dossiers.map((x, i) => `<div class="ligne-l"><img src="${esc(x.une)}" alt=""><span class="txt"><b>${esc(x.nom)}</b><small>${x.n} photo(s)</small></span><button class="btn second" data-do="${i}" style="padding:9px 14px">Ouvrir</button></div>`).join('') : '<div class="vide">Aucune photo pour l\'instant.</div>';
+  $$('[data-do]').forEach(b => b.onclick = async () => { const x = d.dossiers[+b.dataset.do]; const r = await get('/banque/' + x.id);
+    $('#dos-liste').hidden = true; $('#dos-photos').hidden = false; $('#dos-titre').textContent = x.nom + ' · ' + x.n + ' photo(s)';
+    $('#dos-grille').innerHTML = (r.photos || []).map(f => `<button style="background-image:url('${esc(f.url)}')"><span class="tag">${f.entiere ? 'Entière · ' : ''}note ${Math.round((f.score || .5) * 100)}</span><span class="x" data-rp="${f.id}" role="button" aria-label="Retirer">×</span></button>`).join('');
+    $$('#dos-grille [data-rp]').forEach(y => y.onclick = async ev => { ev.stopPropagation(); await post('/banque/photo/' + y.dataset.rp + '/retirer'); y.parentElement.remove(); }); });
+}
+$('#dos-retour').onclick = () => dossiers();
+
+// ---------------- RÉGLAGES
+async function reglages() {
+  try { const d = await get('/reglages'); $('#rg-compte').textContent = d.nom + ' · ' + d.email;
+    $('#rg-appareils').innerHTML = (d.appareils || []).length ? d.appareils.map(a => `<div class="ligne-l"><span class="txt"><b>${esc(a.nom)}</b><small>ajouté le ${esc(a.cree_le)}</small></span><button class="lien rouge" data-ra="${a.id}">Retirer</button></div>`).join('') : '<p class="msg" style="margin:0">Aucun appareil : ajoute celui-ci pour déverrouiller d\'un toucher.</p>';
+    $$('[data-ra]').forEach(b => b.onclick = async () => { await post('/appareil/' + b.dataset.ra + '/supprimer'); reglages(); }); } catch (e) {}
+}
+$('#rg-ajouter').onclick = async () => {
+  try { const o = await post('/passkey/inscription/options'); o.challenge = deb64u(o.challenge); o.user.id = deb64u(o.user.id); (o.excludeCredentials || []).forEach(c => c.id = deb64u(c.id));
+    const c = await navigator.credentials.create({publicKey: o});
+    await post('/passkey/inscription', {id: c.id, rawId: b64u(c.rawId), type: c.type, response: {clientDataJSON: b64u(c.response.clientDataJSON), attestationObject: b64u(c.response.attestationObject), transports: c.response.getTransports ? c.response.getTransports() : []}});
+    msg('#rg-msg', 'Appareil ajouté.', true); reglages(); } catch (e) { msg('#rg-msg', e.name === 'NotAllowedError' ? 'Annulé.' : e.message, false); }
+};
+$('#rg-sortie').onclick = async () => { await post('/deconnexion'); location.href = BASE; };
+
+// ---------------- démarrage
 const h = location.hash.slice(1);
-if (h.startsWith('projet-')) ouvreProjet(+h.slice(7)); else if (['outils', 'montage'].includes(h)) { if (h === 'montage') nouveauMontage(); montre(h); } else projets();
+if (h.startsWith('projet-')) ouvreProjet(+h.slice(7)); else if (['creer', 'banque', 'reglages'].includes(h)) montre(h); else accueil();
+badge(); setInterval(badge, 60000);
 </script>
 </body>
 </html>

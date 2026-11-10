@@ -151,7 +151,8 @@ def montage(request, chemin):
     creer_tables()
     nonce = secrets.token_urlsafe(18)
     html = _JINJA.get_template("studio2.html").render(base=f"/studio/{chemin}", nonce=nonce, nom=u.get("name") or "",
-                                                      csrf=get_token(request))
+                                                      csrf=get_token(request),
+                                                      a_passkey=bool(db.value("SELECT 1 FROM studio_passkeys WHERE user_id = ?", [u["id"]])))
     return _reponse(HttpResponse(html), nonce)
 
 
