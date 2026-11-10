@@ -197,7 +197,7 @@ def rendu_2026(name: str, f: dict, slides: list, country: str) -> list:
         n_verre = 0
         for k, s_ in enumerate(slides):
             titre = s_["big"][:1] + s_["big"][1:].lower()       # « Ses titres classés », pas de capitales partout
-            titre = titre.replace(f["name"].lower(), f["name"])
+            titre = re.sub(re.escape(f["name"]), f["name"], titre, flags=re.I)   # « Didi B », pas « Didi b »
             fond = fonds[k % len(fonds)]
             if s_.get("cta"):
                 images.append(C.actu(nettes[(n_verre + 1) % len(nettes)], "SA FICHE", f"Tout sur {f['name']} : classements, titres et clips",
@@ -225,6 +225,24 @@ def rendu_2026(name: str, f: dict, slides: list, country: str) -> list:
             else:
                 out[i]["tiktok"] = chemin.name if hasattr(chemin, "name") else str(chemin).split("/")[-1].split("\\")[-1]
     return out
+
+
+def ecoute_par_pays(artist_id: int) -> list:
+    """Ses premières villes d'écoute sur Spotify (dernier relevé) regroupées par pays, du plus fort au plus faible :
+    [{"code", "nom", "auditeurs", "villes"}]. Vide sans relevé."""
+    r = db.one("SELECT villes FROM spotify_artistes WHERE artist_id = ? AND villes IS NOT NULL ORDER BY releve_le DESC LIMIT 1", [artist_id])
+    try:
+        villes = json.loads(r["villes"]) if r else []
+    except (ValueError, TypeError):
+        villes = []
+    pays = {}
+    for v in villes:
+        if not v.get("pays") or not v.get("auditeurs"):
+            continue
+        p = pays.setdefault(v["pays"], {"code": v["pays"], "nom": country_name(v["pays"]), "auditeurs": 0, "villes": []})
+        p["auditeurs"] += int(v["auditeurs"])
+        p["villes"].append(v["ville"])
+    return sorted(pays.values(), key=lambda p: -p["auditeurs"])
 
 
 def post(day: date, artist_id: int | None = None, remplace: int | None = None) -> dict | None:
@@ -279,6 +297,12 @@ def post(day: date, artist_id: int | None = None, remplace: int | None = None) -
         if sp["jours_cap"] is not None and sp["jours_cap"] <= 60:
             rows.append((5, volume(sp["cap"]), f"le prochain cap, d'ici {sp['jours_cap']} jour{'s' if sp['jours_cap'] > 1 else ''} à ce rythme"))
         slides.append({"bg": E.VIOLET, "fg": E.WHITE, "acc": E.GOLD, "tag": "SPOTIFY EN CHIFFRES", "big": "SES STREAMS", "rows": rows})
+    # Où on l'écoute le plus (10/11/2026) : ses premières villes sur Spotify (relevé Apify), regroupées par pays
+    pays_ecoute = ecoute_par_pays(f["artist_id"])
+    if pays_ecoute:
+        slides.append({"bg": E.VIOLET, "fg": E.WHITE, "acc": E.GOLD, "tag": "SPOTIFY · SES VILLES", "big": "OÙ ON L'ÉCOUTE LE PLUS",
+                       "rows": [(i + 1, f"{p['nom']} · {_n(p['auditeurs'])} auditeurs", ", ".join(p["villes"]))
+                                for i, p in enumerate(pays_ecoute[:4])]})
     if f["bio"]:
         src = "Wikipédia" + ("" if f["bio"]["lang"] == "fr" else ", traduit de l'anglais")
         slides.append({"bg": E.CREAM, "fg": E.INK, "acc": E.VIOLET, "tag": "BIOGRAPHIE", "big": "SON HISTOIRE",
@@ -304,6 +328,9 @@ def post(day: date, artist_id: int | None = None, remplace: int | None = None) -
         bits.append(f"Sur Spotify : {volume(sp['total'])} de streams au total"
                     + (f", {volume(sp['auditeurs'])} d'auditeurs chaque mois" if sp["auditeurs"] else "")
                     + (f" ; son titre le plus écouté, « {sp['titres'][0]['titre']} », dépasse les {volume(sp['titres'][0]['streams'])}" if sp["titres"] else "") + ".")
+    if pays_ecoute:
+        bits.append("Là où on l'écoute le plus sur Spotify : " + " ; ".join(
+            f"{p['nom']} ({', '.join(p['villes'])}), {_n(p['auditeurs'])} auditeurs" for p in pays_ecoute[:4]) + ".")
     if f["awards"]:
         bits.append("Palmarès : " + " ; ".join(f"{a_['award']}" + (f" ({a_['year']})" if a_["year"] else "") for a_ in f["awards"][:3]) + ".")
     bits.append("Sa fiche complète : lien en bio.")
