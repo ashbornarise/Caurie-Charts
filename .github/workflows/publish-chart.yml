@@ -23,7 +23,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 90   # 10/11/2026 : 25 min ne suffisaient plus (pays, genres, visuels), publication coupée 2 mardis de suite
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
