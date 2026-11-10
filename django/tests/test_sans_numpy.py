@@ -12,8 +12,21 @@ class Bloque:
 sys.meta_path.insert(0, Bloque())
 import django; django.setup()
 for m in ("core.studio", "core.services.social.plans", "core.services.social.studio_photos",
-          "core.services.social.studio_montage", "core.services.social.couverture2026", "core.services.buffer"):
+          "core.services.social.studio_montage", "core.services.social.couverture2026", "core.services.buffer",
+          "core.services.social.studio_sequences", "core.services.social.studio_couvertures", "core.services.social.top_titres"):
     importlib.import_module(m)
+# aperçus du Studio rendus par le site : début, fin, couvertures (10/11/2026 : « No module named 'numpy' » à la validation)
+from PIL import Image
+from core.services.social import studio_sequences as SQ, studio_couvertures as SC
+from core.studio import _habillage_valide
+assert _habillage_valide({"debut": "rideau~123", "fin": "iris", "son": "henri", "couverture": "pochette"})["couverture"] == "pochette"
+fond = Image.new("RGB", (540, 960), (90, 60, 40))
+ctx = {"etiquette": "Nouveau son", "accroche": "Un titre", "artiste": "Didi B", "titre": "PARTY", "pays": "ci", "photo": fond, "cover": fond}
+for s, d in (("debut", SQ.DEBUTS), ("fin", SQ.FINS)):
+    for n in d:
+        SQ.image_cle(s, n, (270, 480), ctx, fond)
+for m in SC.MODELES:
+    SC.rendu(m, "story", photo=fond, cover=fond, titre="PARTY", artistes="Didi B", pays="ci", etiquette="Nouveau son")
 print("ok")
 """
 

@@ -14,7 +14,10 @@ import math
 import random
 from functools import lru_cache
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:   # le site (Vercel) n'a pas numpy : les couleurs (FLAGS) restent lisibles, les fonds dégradés non
+    np = None
 from PIL import Image, ImageDraw, ImageFilter
 
 from core.services.social import image as PI

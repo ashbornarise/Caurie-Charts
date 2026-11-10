@@ -71,7 +71,10 @@ def _image_nette(photo) -> Image.Image | None:
     im = _image(photo)
     if im is None:
         return None
-    from core.services.social.ameliore import ameliore
+    try:
+        from core.services.social.ameliore import ameliore
+    except ImportError:   # site (Vercel) sans numpy : aperçus du Studio avec la photo telle quelle
+        return im
     return ameliore(im)
 
 
