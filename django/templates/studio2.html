@@ -959,9 +959,14 @@ function projetClip(j) {
     replie($('#cv-plus'), $('#cv-autres'));
     $('#pj-corps').insertAdjacentHTML('beforeend', `<div class="carte"><h2>Début et fin de la vidéo</h2>
       <div class="seq-tete"><b>Début</b><button id="sq-gen-debut">Générer d'autres</button></div><div class="seqs" id="sq-debut"></div>
-      <div class="seq-tete"><b>Fin</b><button id="sq-gen-fin">Générer d'autres</button></div><div class="seqs" id="sq-fin"></div></div>`);
-    const hab = Object.assign({debut: 'pastille', fin: 'carte-verre'}, p.habillage || {});
+      <div class="seq-tete"><b>Fin</b><button id="sq-gen-fin">Générer d'autres</button></div><div class="seqs" id="sq-fin"></div>
+      <div class="seq-tete"><b>Signature sonore</b></div><div class="puces" id="sq-son"><button class="puce" data-s="henri">Henri</button><button class="puce" data-s="gerard">Gérard</button><button class="puce" data-s="thierry">Thierry</button><button class="puce" data-s="aucune">Aucune</button></div>
+      <audio id="sq-ecoute" preload="none"></audio></div>`);
+    const hab = Object.assign({debut: 'pastille', fin: 'carte-verre', son: 'henri'}, p.habillage || {});
     choixSequences(id, hab);
+    $('#sq-son').querySelectorAll('.puce').forEach(b => { b.classList.toggle('on', b.dataset.s === hab.son);
+      b.onclick = () => { vibre(); hab.son = b.dataset.s; $('#sq-son').querySelectorAll('.puce').forEach(x => x.classList.toggle('on', x === b));
+        const a = $('#sq-ecoute'); if (hab.son !== 'aucune') { a.src = '/assets/studio/sons/signature-' + hab.son + '.m4a'; a.play().catch(() => {}); } else a.pause(); }; });
     const textes = () => ({etiquette: $('#cv-etiquette').value, accroche: $('#cv-accroche').value, artiste: $('#cv-artiste').value, credit: $('#cv-credit').value, legende_fr: $('#cv-fr').value, legende_en: $('#cv-en').value, habillage: hab});
     bouton('Valider et fabriquer', async () => { await post('/job/' + id + '/valider', textes()); ouvreProjet(id); });
     bouton('Revoir l\'aperçu', async () => { const r = await post('/job/' + id + '/apercu', textes()); $('#pj-ecran').innerHTML = `<img src="${esc(r.vignette)}" alt="Aperçu">`; }, true);

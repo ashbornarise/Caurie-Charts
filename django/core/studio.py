@@ -994,6 +994,10 @@ def _habillage_valide(h: dict) -> dict:
         nom, _, graine = v.partition("~")
         if v == rien or (nom in connus and (not graine or graine.isdigit())):
             out[sorte] = v
+    from core.services.social.studio_montage import SIGNATURES
+    son = str(h.get("son") or "")
+    if son in SIGNATURES or son == "aucune":
+        out["son"] = son
     return out
 
 

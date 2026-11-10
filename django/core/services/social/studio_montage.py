@@ -476,6 +476,21 @@ def _anime_logo(logo_icone: Image.Image, pos_finale: tuple[int, int],
     return anim
 
 
+SIGNATURES = ("henri", "gerard", "thierry")
+SIGNATURE_DEFAUT = "henri"
+
+
+def _a_du_son(chemin: str) -> bool:
+    ff = ffmpeg()
+    sonde = os.path.join(os.path.dirname(ff), os.path.basename(ff).replace("ffmpeg", "ffprobe")) if os.path.dirname(ff) else "ffprobe"
+    try:
+        r = subprocess.run([sonde, "-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0",
+                            chemin], capture_output=True, text=True, timeout=60)
+        return bool((r.stdout or "").strip()) if r.returncode == 0 else True
+    except (OSError, subprocess.SubprocessError):
+        return True
+
+
 def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_png: str, zone,
           taille: tuple[int, int] | None = None, titre: dict | None = None, avec_fin: bool = True,
           habillage: dict | None = None) -> None:
@@ -486,6 +501,7 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
     « modele~graine ») ; « pastille » / « carte-verre » ou rien = habillage historique, « aucun » / « aucune » = sans."""
     from core.services.social import studio_habillage as HB
     from core.services.social import studio_sequences as SQ
+    from core.services.social.pourtoi import RES
     hab = habillage or {}
     choix_debut, choix_fin = hab.get("debut") or "pastille", hab.get("fin") or "carte-verre"
     if choix_fin == "aucune":
@@ -497,6 +513,15 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
     dossier = os.path.dirname(sortie)
     t_fin = max(0.0, duree - HB.FIN_AVANCE)              # début de la carte de fin
     total = duree + (HB.FIN_DUREE if avec_fin else 0)
+    # signature sonore de fin (10/11/2026, « journal télé » + voix : « Cori Charts, la référence de la musique
+    # ouest-africaine ») : elle part avec la carte de fin, qui dure alors le temps de la phrase
+    son = (hab.get("son") or SIGNATURE_DEFAUT) if avec_fin else "aucune"
+    signature = RES / "sons" / f"signature-{son}.m4a" if son in SIGNATURES else None
+    if signature and not signature.exists():
+        signature = None
+    t_sig = t_fin + 0.15
+    if signature:
+        total = max(total, t_sig + (_duree_fichier(str(signature)) or 5.7) + 0.1)
 
     # ── base : fond flouté + clip ──
     filtre = ((f"[0:v]crop={rogne},split=2[a][b];" if rogne else "[0:v]split=2[a][b];")
@@ -533,7 +558,7 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
         calque_fin = (HB.fin((W, H), dossier) if choix_fin == "carte-verre"
                       else SQ.video("fin", choix_fin, (W, H), {**(hab.get("ctx") or {}), **(titre or {})}, dossier)[0])
         entrees += ["-itsoffset", f"{t_fin:.3f}", "-i", calque_fin]
-        filtre += (f"[v2]tpad=stop_mode=clone:stop_duration={HB.FIN_DUREE + 1:.2f},trim=duration={total:.3f},split=2[n1][n2];"
+        filtre += (f"[v2]tpad=stop_mode=clone:stop_duration={total - duree + 1:.2f},trim=duration={total:.3f},split=2[n1][n2];"
                    f"[n2]gblur=sigma=26:enable='gte(t,{t_fin:.3f})'[fl];"
                    f"[n1][fl]blend=all_expr='A+(B-A)*clip((T-{t_fin:.3f})/0.6,0,1)':enable='gte(t,{t_fin:.3f})'[nb];"
                    f"[{n}:v]format=yuva444p[cf];[nb][cf]overlay=0:0:eof_action=repeat:format=auto[v3];")
@@ -555,9 +580,21 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
     af = (f"loudnorm=I=-14:TP=-1.5,apad=whole_dur={total:.3f},"
           f"afade=t=out:st={max(0, (t_fin if avec_fin else duree) - 0.2):.2f}:d={0.9 if avec_fin else 0.5}")
     from core.services.social.encodage import AUDIO_HQ, FIN, VIDEO_HQ
+    if signature:
+        entrees += ["-i", str(signature)]
+        ms = int(t_sig * 1000)
+        sg = f"[{n}:a]aresample=48000,adelay={ms}|{ms},apad=whole_dur={total:.3f}[sg];"
+        if _a_du_son(source):
+            filtre += (f";[0:a]aresample=48000,{af}[ac];" + sg
+                       + "[ac][sg]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.79[a]")
+        else:
+            filtre += ";" + sg + "[sg]anull[a]"
+        cartes_son = ["-map", "[a]"]
+    else:
+        cartes_son = ["-map", "0:a?", "-af", af]
     cmd = [ffmpeg(), "-y", "-v", "error", "-ss", f"{debut:.2f}", "-t", f"{duree:.2f}", "-i", source,
            "-loop", "1", "-t", f"{total:.2f}", "-i", calque_png, *entrees,
-           "-filter_complex", filtre, "-map", "[v]", "-map", "0:a?", "-af", af,
+           "-filter_complex", filtre, "-map", "[v]", *cartes_son,
            *VIDEO_HQ, *AUDIO_HQ, *FIN, "-t", f"{total:.3f}", sortie]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=1500)
     if r.returncode != 0:
@@ -571,7 +608,7 @@ def _habillage(p: dict, lien: str, source: str, debut: float, fin: float, tmp: s
     de la vidéo), titre, pays."""
     hab = dict(p.get("habillage") or {})
     if not hab.get("debut") and not hab.get("fin"):
-        return {}
+        return {"son": hab["son"]} if hab.get("son") else {}
     ctx = {"titre": p.get("titre_morceau") or p.get("accroche") or "", "pays": p.get("pays")}
     yt = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", lien or "")
     if yt:
