@@ -39,6 +39,8 @@ urlpatterns = [
     re_path(S + r"/banque/(?P<ident>[0-9]+)$", studio.banque_artiste),
     re_path(S + r"/banque/photo/(?P<ident>[0-9]+)/retirer$", studio.banque_retirer),
     re_path(S + r"/job/(?P<ident>\d+)/apercu$", studio.apercu_job),
+    re_path(S + r"/sequences$", studio.sequences),
+    re_path(S + r"/sequences/apercu$", studio.sequences_apercu),
     re_path(S + r"/job/(?P<ident>\d+)/valider$", studio.valider_job),
     re_path(S + r"/photos/nouveau$", studio.photos_nouveau),
     re_path(S + r"/photos/profils$", studio.photos_profils),

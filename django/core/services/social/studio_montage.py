@@ -477,11 +477,19 @@ def _anime_logo(logo_icone: Image.Image, pos_finale: tuple[int, int],
 
 
 def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_png: str, zone,
-          taille: tuple[int, int] | None = None, titre: dict | None = None, avec_fin: bool = True) -> None:
+          taille: tuple[int, int] | None = None, titre: dict | None = None, avec_fin: bool = True,
+          habillage: dict | None = None) -> None:
     """Montage final : fond flouté + clip + calque fixe + titre animé (studio_habillage) + carte de fin.
     ``titre`` : {etiquette, accroche, artiste, credit}. La carte de fin (08/11/2026) remplace l'ancien clip After Effects :
-    la dernière image se fige et se floute sous un voile blanc, la carte en verre arrive par-dessus."""
+    la dernière image se fige et se floute sous un voile blanc, la carte en verre arrive par-dessus.
+    ``habillage`` (10/11/2026) : {debut, fin, ctx} — modèles de studio_sequences choisis dans le Studio (« modele » ou
+    « modele~graine ») ; « pastille » / « carte-verre » ou rien = habillage historique, « aucun » / « aucune » = sans."""
     from core.services.social import studio_habillage as HB
+    from core.services.social import studio_sequences as SQ
+    hab = habillage or {}
+    choix_debut, choix_fin = hab.get("debut") or "pastille", hab.get("fin") or "carte-verre"
+    if choix_fin == "aucune":
+        avec_fin = False
     W, H = taille or FORMATS[fmt]
     x, y, w, h = zone
     duree = max(1.0, fin - debut)
@@ -504,7 +512,12 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
     n = 2
 
     # ── titre animé : pastille, accroche mot par mot ──
-    if titre:
+    if titre and choix_debut not in ("pastille", "aucun"):
+        anim, _d = SQ.video("debut", choix_debut, (W, H), {**(hab.get("ctx") or {}), **titre}, dossier)
+        entrees += ["-i", anim]
+        filtre += f"[{n}:v]format=yuva444p[ti];[v1][ti]overlay=0:0:eof_action=pass:format=auto[v2];"
+        n += 1
+    elif titre and choix_debut == "pastille":
         haut_bloc = _geometrie(fmt, W, H, "")[2] - HB.hauteur_ouverture(
             W, titre.get("etiquette") or "", titre.get("accroche") or "", titre.get("artiste") or "")
         anim, y_anim = HB.ouverture((W, H), haut_bloc, titre.get("etiquette") or "", titre.get("accroche") or "",
@@ -517,7 +530,9 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
 
     # ── carte de fin : image figée, flou progressif, carte en verre ──
     if avec_fin:
-        entrees += ["-itsoffset", f"{t_fin:.3f}", "-i", HB.fin((W, H), dossier)]
+        calque_fin = (HB.fin((W, H), dossier) if choix_fin == "carte-verre"
+                      else SQ.video("fin", choix_fin, (W, H), {**(hab.get("ctx") or {}), **(titre or {})}, dossier)[0])
+        entrees += ["-itsoffset", f"{t_fin:.3f}", "-i", calque_fin]
         filtre += (f"[v2]tpad=stop_mode=clone:stop_duration={HB.FIN_DUREE + 1:.2f},trim=duration={total:.3f},split=2[n1][n2];"
                    f"[n2]gblur=sigma=26:enable='gte(t,{t_fin:.3f})'[fl];"
                    f"[n1][fl]blend=all_expr='A+(B-A)*clip((T-{t_fin:.3f})/0.6,0,1)':enable='gte(t,{t_fin:.3f})'[nb];"
@@ -550,6 +565,26 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
 
 
 # ---------------------------------------------------------------- ensemble
+
+def _habillage(p: dict, lien: str, source: str, debut: float, fin: float, tmp: str) -> dict:
+    """Début et fin choisis dans le Studio, avec ce qu'il leur faut : pochette (vignette YouTube), photo (une image
+    de la vidéo), titre, pays."""
+    hab = dict(p.get("habillage") or {})
+    if not hab.get("debut") and not hab.get("fin"):
+        return {}
+    ctx = {"titre": p.get("titre_morceau") or p.get("accroche") or "", "pays": p.get("pays")}
+    yt = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", lien or "")
+    if yt:
+        ctx["cover"] = f"https://i.ytimg.com/vi/{yt.group(1)}/maxresdefault.jpg"
+    image = os.path.join(tmp, "habillage.jpg")
+    subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", f"{debut + (fin - debut) / 2:.2f}", "-i", source, "-frames:v", "1",
+                    "-q:v", "2", image], capture_output=True, timeout=60)
+    if os.path.exists(image):
+        ctx["photo"] = image
+        ctx.setdefault("cover", image)
+    hab["ctx"] = ctx
+    return hab
+
 
 def traite(job_id: int) -> dict:
     job = db.one("SELECT * FROM studio_jobs WHERE id = ?", [job_id])
@@ -644,7 +679,8 @@ def traite(job_id: int) -> dict:
             nom = f"studio-{job_id}-{os.urandom(3).hex()}"
             video = os.path.join(tmp, nom + ".mp4"); vignette = os.path.join(tmp, nom + ".jpg")
             monte(source, video, fmt, debut, fin, png, zone, taille,
-                  {"etiquette": etiquette, "accroche": accroche, "artiste": artiste, "credit": credit})
+                  {"etiquette": etiquette, "accroche": accroche, "artiste": artiste, "credit": credit},
+                  habillage=_habillage(p, job["lien"], source, debut, fin, tmp))
             subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3", vignette],
                            capture_output=True, timeout=60)
             storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")

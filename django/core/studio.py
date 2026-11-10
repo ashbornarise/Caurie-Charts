@@ -976,12 +976,78 @@ def valider_job(request, chemin, ident):
     p = _textes(json.loads(j["params"] or "{}"), c)
     if isinstance(c.get("paroles"), list):   # vidéo paroles : lignes corrigées par le fondateur
         p["paroles"] = [str(x).strip()[:200] for x in c["paroles"]][:80]
+    if isinstance(c.get("habillage"), dict):   # début et fin choisis (studio_sequences, 10/11/2026)
+        p["habillage"] = _habillage_valide(c["habillage"])
     p["valide"] = True
     db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False), "statut": "attente"}, "id = :id", {"id": j["id"]})
     erreur = _lance(j["id"])
     if erreur:
         db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": j["id"]})
     return _json({"ok": not erreur, "erreur": erreur})
+
+
+def _habillage_valide(h: dict) -> dict:
+    from core.services.social import studio_sequences as SQ
+    out = {}
+    for sorte, connus, rien in (("debut", SQ.DEBUTS, "aucun"), ("fin", SQ.FINS, "aucune")):
+        v = str(h.get(sorte) or "")[:40]
+        nom, _, graine = v.partition("~")
+        if v == rien or (nom in connus and (not graine or graine.isdigit())):
+            out[sorte] = v
+    return out
+
+
+def sequences(request, chemin):
+    """Débuts et fins au choix : la liste des modèles, ou trois variantes neuves (?generer=debut|fin)."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_sequences as SQ
+    sorte = request.GET.get("generer")
+    if sorte in ("debut", "fin"):
+        vus = set(request.GET.get("exclus", "").split(","))
+        ids = []
+        for _ in range(3):
+            ids.append(SQ.genere(sorte, None, vus | set(ids)))
+        return _json({"variantes": ids})
+    return _json({"debuts": SQ.DEBUTS, "fins": SQ.FINS})
+
+
+def sequences_apercu(request, chemin):
+    """L'image clé d'un début ou d'une fin (modèle ou variante) posée sur une image de la vidéo du projet."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    import io
+
+    import requests
+    from PIL import Image
+    from core import storage
+    from core.services.social import studio_sequences as SQ
+    sorte = "fin" if request.GET.get("sorte") == "fin" else "debut"
+    ident = _habillage_valide({sorte: request.GET.get("id", "")}).get(sorte)
+    if not ident or ident in ("aucun", "aucune"):
+        raise Http404
+    j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(request.GET.get("job") or 0)]) if request.GET.get("job", "").isdigit() else None
+    p = json.loads(j["params"] or "{}") if j else {}
+    fond = None
+    if p.get("cle"):
+        try:
+            r = requests.get(f"{storage.blob_public_url()}/media/social/{p['cle']}", timeout=15)
+            fond = Image.open(io.BytesIO(r.content)).convert("RGB")
+        except Exception:  # noqa: BLE001
+            fond = None
+    ctx = {"etiquette": p.get("etiquette") or "Nouveau son", "accroche": p.get("accroche") or "Cauri Charts",
+           "artiste": p.get("artiste") or "", "titre": p.get("titre_morceau") or p.get("accroche") or "", "pays": p.get("pays"),
+           "photo": fond, "cover": fond}
+    yt = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", (j or {}).get("lien") or "")
+    if yt:
+        ctx["cover"] = f"https://i.ytimg.com/vi/{yt.group(1)}/maxresdefault.jpg"
+    im = SQ.image_cle(sorte, ident, (540, 960), ctx, fond)
+    out = io.BytesIO(); im.save(out, format="JPEG", quality=84)
+    rep = HttpResponse(out.getvalue(), content_type="image/jpeg")
+    rep["Cache-Control"] = "private, max-age=86400"
+    return rep
 
 
 # ---------------------------------------------------------------- dossiers des artistes (banque de photos)
