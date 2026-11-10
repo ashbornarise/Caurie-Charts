@@ -1,0 +1,24 @@
+<h1>Journal des erreurs</h1>
+<p class="muted">Chaque erreur du site et des automatismes, regroupée (la même erreur répétée n'a qu'une ligne, avec son nombre). Elle est signalée par e-mail et Telegram à sa première apparition, puis au plus toutes les 6 heures.</p>
+<div class="toolbar">
+    <a class="button button--small {{ '' if voir == 'ouvertes' else 'button--ghost' }}" href="{{ path('admin/erreurs') }}">Ouvertes ({{ ouvertes }})</a>
+    <a class="button button--small {{ '' if voir == 'toutes' else 'button--ghost' }}" href="{{ path('admin/erreurs', {'voir': 'toutes'}) }}">Toutes</a>
+</div>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>Dernière fois</th><th>Où</th><th>Erreur</th><th>Fois</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+        <tr>
+            <td><small>{{ r.derniere }}<br>depuis {{ r.premiere }}</small></td>
+            <td><code>{{ r.canal }}</code></td>
+            <td>{{ r.message[:400] }}{% if r.contexte %}<details><summary><small>Détails</small></summary><pre class="json">{{ r.contexte }}</pre></details>{% endif %}</td>
+            <td><b>{{ r.occurrences }}</b></td>
+            <td>{% if not r.resolue %}<form method="post" action="{{ path('admin/erreurs') }}">{{ csrf_field() }}<input type="hidden" name="resolue" value="{{ r.id }}"><button class="button button--small button--ghost">Résolue</button></form>{% else %}<small>résolue</small>{% endif %}</td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5">Aucune erreur. Tout va bien.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>

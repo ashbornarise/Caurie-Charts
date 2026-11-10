@@ -178,6 +178,7 @@ urlpatterns = [
     re_path(r"^admin/partenaires/(?P<pid>\d+|nouveau)$", admin.partner_form),
     re_path(r"^admin/partenaires/(?P<pid>\d+)/supprimer$", admin.partner_delete),
     path("admin/journal", admin.audit_log),
+    path("admin/erreurs", admin.erreurs),
     path("admin/analyses", analytics_views.analyses),
     path("admin/controles", analytics_views.controles),
     path("admin/actu-artistes", analytics_views.artist_news),

@@ -190,6 +190,22 @@ def audit_log(request):
 
 
 @admin_view()
+def erreurs(request):
+    """Journal des erreurs (10/11/2026) : erreurs regroupées, à marquer résolues une fois corrigées."""
+    from core.services import erreurs as E
+    E.creer_table()
+    if request.method == "POST" and req_str(request, "resolue"):
+        db.run("UPDATE journal_erreurs SET resolue = TRUE WHERE id = ?", [int(req_str(request, "resolue"))])
+        audit.log(uid(request), "erreur.resolue", "journal_erreurs", int(req_str(request, "resolue")), None, None, ip(request))
+        return back(request, path("admin/erreurs"), "success", "Erreur marquée résolue.")
+    voir = req_str(request, "voir", "ouvertes")
+    filtre = "" if voir == "toutes" else "WHERE NOT resolue"
+    rows = db.all(f"SELECT * FROM journal_erreurs {filtre} ORDER BY derniere DESC LIMIT 200")
+    return admin_render(request, "erreurs", {"rows": rows, "voir": voir,
+                                             "ouvertes": db.value("SELECT COUNT(*) FROM journal_erreurs WHERE NOT resolue")})
+
+
+@admin_view()
 def messages(request):
     return admin_render(request, "messages", {"rows": db.all("SELECT * FROM contact_messages ORDER BY status = 'new' DESC, id DESC LIMIT 200")})
 

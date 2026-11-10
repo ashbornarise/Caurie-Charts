@@ -106,3 +106,11 @@ MEDIA_ROOT = REPO_DIR / "public" / "media"
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Journal des erreurs (10/11/2026) : les plantages des pages vont en base (journal_erreurs) et alertent le fondateur
+LOGGING = {
+    "version": 1, "disable_existing_loggers": False,
+    "handlers": {"journal": {"()": "core.services.erreurs.JournalHandler"}, "console": {"class": "logging.StreamHandler"}},
+    "loggers": {"django.request": {"handlers": ["journal", "console"], "level": "ERROR", "propagate": False}},
+}

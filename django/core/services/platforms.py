@@ -27,6 +27,9 @@ def log_write(channel: str, level: str, message: str, context: dict | None = Non
     line = f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {channel}.{level.upper()} {message}" + (
         " " + json.dumps(context, ensure_ascii=False) if context else "")
     log.info(line)
+    if level.lower() in ("error", "critical"):   # journal des erreurs en base + alerte au fondateur (10/11/2026)
+        from core.services import erreurs
+        erreurs.note(channel, level.lower(), message, context)
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         with open(LOG_DIR / f"{channel}-{datetime.now():%Y-%m}.log", "a", encoding="utf-8") as f:
