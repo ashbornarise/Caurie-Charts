@@ -116,3 +116,12 @@ def rendu(modele: str, fmt: str = "story", photo=None, cover=None, titre="", art
     if modele == "gros-titre":
         return gros_titre(photo or cover, titre, artistes, pays, fmt, etiquette)
     return accroche(photo or cover, titre, etiquette, artistes.split(" ft")[0] if artistes else "", pays, fmt)
+
+
+def pour_taille(modele: str, taille, **kw) -> Image.Image:
+    """La couverture à la taille exacte de la vidéo (format « origine » compris) : modèle 9:16 ou 4:5 le plus proche,
+    recadré au centre."""
+    w, h = taille
+    fmt = "story" if h / w > 1.5 else "feed"
+    im = rendu(modele, fmt, **kw)
+    return ImageOps.fit(im, (w, h), Image.LANCZOS) if im.size != (w, h) else im

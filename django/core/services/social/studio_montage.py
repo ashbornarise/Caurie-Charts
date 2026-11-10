@@ -477,6 +477,8 @@ def _anime_logo(logo_icone: Image.Image, pos_finale: tuple[int, int],
 
 
 SIGNATURES = ("henri", "gerard", "thierry")
+COUVERTURE_S = 0.17          # durée de la couverture en tête de vidéo
+COUVERTURE_MS = 60           # instant pris comme couverture par TikTok et Buffer
 SIGNATURE_DEFAUT = "henri"
 
 
@@ -573,8 +575,14 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
     # ── finition : netteté, fondus (entrée au noir, sortie au blanc : la fin est claire) ──
     # netteté seule (07/11/2026) : le débruitage temporel (hqdn3d 5:5) lissait le mouvement ; mesuré sur la source du
     # reel Sethlo (n° 296), netteté 302 avec l'ancien réglage, 334 sans débruitage (source brute : 202)
+    couverture = hab.get("couverture_png")
     filtre += (f"[v4]unsharp=5:5:0.5:5:5:0,format=yuv420p,fade=t=in:d=0.25,"
-               f"fade=t=out:st={max(0, total - 0.35):.2f}:d=0.35:color=white[v]")
+               f"fade=t=out:st={max(0, total - 0.35):.2f}:d=0.35:color=white" + ("[vc]" if couverture else "[v]"))
+    if couverture:   # couverture choisie (10/11/2026) : les 5 premières images ; TikTok et Buffer la prennent à 60 ms
+        entrees += ["-loop", "1", "-t", "0.3", "-i", couverture]
+        filtre += (f";[{n}:v]scale={W}:{H},format=yuv420p[cv];"
+                   f"[vc][cv]overlay=0:0:enable='lt(t,{COUVERTURE_S})':eof_action=pass[v]")
+        n += 1
 
     # son : le clip s'éteint quand la carte arrive
     af = (f"loudnorm=I=-14:TP=-1.5,apad=whole_dur={total:.3f},"
@@ -603,11 +611,30 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
 
 # ---------------------------------------------------------------- ensemble
 
+def _couverture(p: dict, hab: dict, taille, tmp: str) -> str | None:
+    """Couverture choisie dans le Studio (studio_couvertures : accroche, pochette, gros-titre), en PNG à la taille de la vidéo."""
+    from core.services.social import studio_couvertures as SC
+    modele = (p.get("habillage") or {}).get("couverture")
+    if modele not in SC.MODELES:
+        return None
+    ctx = hab.get("ctx") or {}
+    try:
+        im = SC.pour_taille(modele, taille, photo=ctx.get("photo"), cover=ctx.get("cover"),
+                            titre=p.get("titre_morceau") or p.get("accroche") or "", artistes=p.get("artiste") or "",
+                            pays=p.get("pays"), etiquette=p.get("etiquette") or "")
+    except Exception as exc:  # noqa: BLE001 — sans couverture plutôt qu'un montage en échec
+        log_write("studio", "warning", f"couverture {modele} impossible : {str(exc)[:200]}")
+        return None
+    chemin = os.path.join(tmp, "couverture.png")
+    im.convert("RGB").save(chemin)
+    return chemin
+
+
 def _habillage(p: dict, lien: str, source: str, debut: float, fin: float, tmp: str) -> dict:
     """Début et fin choisis dans le Studio, avec ce qu'il leur faut : pochette (vignette YouTube), photo (une image
     de la vidéo), titre, pays."""
     hab = dict(p.get("habillage") or {})
-    if not hab.get("debut") and not hab.get("fin"):
+    if not hab.get("debut") and not hab.get("fin") and not hab.get("couverture"):
         return {"son": hab["son"]} if hab.get("son") else {}
     ctx = {"titre": p.get("titre_morceau") or p.get("accroche") or "", "pays": p.get("pays")}
     yt = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", lien or "")
@@ -715,11 +742,20 @@ def traite(job_id: int) -> dict:
             png = os.path.join(tmp, "calque.png"); img.save(png)
             nom = f"studio-{job_id}-{os.urandom(3).hex()}"
             video = os.path.join(tmp, nom + ".mp4"); vignette = os.path.join(tmp, nom + ".jpg")
+            hab = _habillage(p, job["lien"], source, debut, fin, tmp)
+            couv = _couverture(p, hab, taille, tmp)
+            if couv:
+                hab["couverture_png"] = couv
+                p["couverture_ms"] = COUVERTURE_MS
+            else:
+                p.pop("couverture_ms", None)
             monte(source, video, fmt, debut, fin, png, zone, taille,
-                  {"etiquette": etiquette, "accroche": accroche, "artiste": artiste, "credit": credit},
-                  habillage=_habillage(p, job["lien"], source, debut, fin, tmp))
-            subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3", vignette],
-                           capture_output=True, timeout=60)
+                  {"etiquette": etiquette, "accroche": accroche, "artiste": artiste, "credit": credit}, habillage=hab)
+            if couv:   # la vignette (couverture Instagram / Facebook en direct, aperçu du Studio) = la couverture choisie
+                Image.open(couv).convert("RGB").save(vignette, quality=92)
+            else:
+                subprocess.run([ffmpeg(), "-v", "error", "-y", "-ss", "1.5", "-i", video, "-frames:v", "1", "-q:v", "3",
+                                vignette], capture_output=True, timeout=60)
             storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")
             _verifie_en_ligne(nom + ".mp4")   # le relais du PC déclarait « prête » une vidéo jamais mise en ligne (29/10/2026)
             from core.services.social.encodage import copie_tiktok

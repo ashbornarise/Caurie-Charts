@@ -498,6 +498,7 @@ def _tiktok_direct(post: dict, c: dict, pid: int) -> str:
     reglages = {"privacy_level": t.get("privacy_level"), "disable_comment": not t.get("commentaires"),
                 "disable_duet": not t.get("duos"), "disable_stitch": not t.get("collages"),
                 "brand_organic_toggle": bool(t.get("ma_marque")), "brand_content_toggle": bool(t.get("contenu_marque"))}
+    reglages["couverture_ms"] = buffer.couverture_ms(post)
     try:
         pub = tiktok_publie.publier(buffer.video_url(post, "tiktok"), buffer.text(post, "tiktok"), reglages, brouillon)
     except Exception as exc:  # noqa: BLE001
@@ -612,6 +613,8 @@ def _envoyer(request, ident):
     faits = {"kind": "format-video" if muette else "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
              "source": j["lien"], "notifier": bool(c.get("notifier")), "reseaux": reseaux, "artiste": artiste,
              "legende": mode}
+    if p.get("couverture_ms") is not None:   # couverture choisie, en tête de vidéo (studio_couvertures)
+        faits["couverture_ms"] = int(p["couverture_ms"])
     if en:
         faits["en"] = {"title": accroche, "caption": en + (f"\n\n🎥 Source: {credit}" if credit else "")}
     pid = db.insert("social_posts", {"slot_date": maintenant.date().isoformat(), "theme": theme_libre(j["id"], maintenant),
@@ -998,6 +1001,10 @@ def _habillage_valide(h: dict) -> dict:
     son = str(h.get("son") or "")
     if son in SIGNATURES or son == "aucune":
         out["son"] = son
+    from core.services.social.studio_couvertures import MODELES
+    couv = str(h.get("couverture") or "")
+    if couv in MODELES or couv == "aucune":
+        out["couverture"] = couv
     return out
 
 
@@ -1028,7 +1035,7 @@ def sequences_apercu(request, chemin):
     from PIL import Image
     from core import storage
     from core.services.social import studio_sequences as SQ
-    sorte = "fin" if request.GET.get("sorte") == "fin" else "debut"
+    sorte = request.GET.get("sorte") if request.GET.get("sorte") in ("fin", "couverture") else "debut"
     ident = _habillage_valide({sorte: request.GET.get("id", "")}).get(sorte)
     if not ident or ident in ("aucun", "aucune"):
         raise Http404
@@ -1047,7 +1054,12 @@ def sequences_apercu(request, chemin):
     yt = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", (j or {}).get("lien") or "")
     if yt:
         ctx["cover"] = f"https://i.ytimg.com/vi/{yt.group(1)}/maxresdefault.jpg"
-    im = SQ.image_cle(sorte, ident, (540, 960), ctx, fond)
+    if sorte == "couverture":
+        from core.services.social import studio_couvertures as SC
+        im = SC.rendu(ident, "story", photo=fond, cover=ctx["cover"], titre=ctx["titre"], artistes=ctx["artiste"],
+                      pays=ctx["pays"], etiquette=ctx["etiquette"]).resize((540, 960))
+    else:
+        im = SQ.image_cle(sorte, ident, (540, 960), ctx, fond)
     out = io.BytesIO(); im.save(out, format="JPEG", quality=84)
     rep = HttpResponse(out.getvalue(), content_type="image/jpeg")
     rep["Cache-Control"] = "private, max-age=86400"

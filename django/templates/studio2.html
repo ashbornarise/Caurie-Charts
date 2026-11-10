@@ -960,10 +960,15 @@ function projetClip(j) {
     $('#pj-corps').insertAdjacentHTML('beforeend', `<div class="carte"><h2>Début et fin de la vidéo</h2>
       <div class="seq-tete"><b>Début</b><button id="sq-gen-debut">Générer d'autres</button></div><div class="seqs" id="sq-debut"></div>
       <div class="seq-tete"><b>Fin</b><button id="sq-gen-fin">Générer d'autres</button></div><div class="seqs" id="sq-fin"></div>
+      <div class="seq-tete"><b>Couverture</b></div><div class="seqs" id="sq-couverture"></div>
       <div class="seq-tete"><b>Signature sonore</b></div><div class="puces" id="sq-son"><button class="puce" data-s="henri">Henri</button><button class="puce" data-s="gerard">Gérard</button><button class="puce" data-s="thierry">Thierry</button><button class="puce" data-s="aucune">Aucune</button></div>
       <audio id="sq-ecoute" preload="none"></audio></div>`);
-    const hab = Object.assign({debut: 'pastille', fin: 'carte-verre', son: 'henri'}, p.habillage || {});
+    const hab = Object.assign({debut: 'pastille', fin: 'carte-verre', son: 'henri', couverture: 'aucune'}, p.habillage || {});
     choixSequences(id, hab);
+    const bc = $('#sq-couverture');
+    bc.innerHTML = [['aucune', 'Image de la vidéo'], ['accroche', 'Accroche'], ['pochette', 'Pochette'], ['gros-titre', 'Gros titre']].map(([c, nom]) =>
+      `<button class="seq${hab.couverture === c ? ' on' : ''}" data-id="${c}">${c === 'aucune' ? '<span class="vide">Sans</span>' : `<img loading="lazy" alt="" src="${BASE}/sequences/apercu?sorte=couverture&id=${c}&job=${id}">`}<small>${nom}</small></button>`).join('');
+    bc.onclick = e => { const b = e.target.closest('.seq'); if (!b) return; vibre(); hab.couverture = b.dataset.id; bc.querySelectorAll('.seq').forEach(x => x.classList.toggle('on', x === b)); };
     $('#sq-son').querySelectorAll('.puce').forEach(b => { b.classList.toggle('on', b.dataset.s === hab.son);
       b.onclick = () => { vibre(); hab.son = b.dataset.s; $('#sq-son').querySelectorAll('.puce').forEach(x => x.classList.toggle('on', x === b));
         const a = $('#sq-ecoute'); if (hab.son !== 'aucune') { a.src = '/assets/studio/sons/signature-' + hab.son + '.m4a'; a.play().catch(() => {}); } else a.pause(); }; });

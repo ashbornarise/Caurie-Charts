@@ -59,6 +59,8 @@ class Command(BaseCommand):
                     "source": j["lien"],
                     "artiste": artiste,   # collaboration Instagram (meta.collaborateurs)
                 }
+                if p.get("couverture_ms") is not None:
+                    faits["couverture_ms"] = int(p["couverture_ms"])
                 if en_txt:
                     faits["en"] = {"title": accroche, "caption": en_txt + (f"\n\n🎥 Source: {credit}" if credit else "")}
 
