@@ -217,8 +217,11 @@ def rendu(source_audio: str, cover, lignes: list, t0: float, t1: float, titre: s
     cmd = [_ffmpeg(), "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{w}x{h}", "-r", str(FPS), "-i", "-",
            "-ss", f"{t0:.2f}", "-t", f"{dur:.2f}", "-i", source_audio, "-map", "0:v", "-map", "1:a",
            "-af", f"loudnorm=I=-14:TP=-1.5,afade=t=in:d=0.4,afade=t=out:st={dur - .8:.2f}:d=0.8",
-           "-vf", f"fade=t=out:st={dur - .5:.2f}:d=0.5",
-           "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+           # 10/11/2026 (PARTY abîmée sur TikTok) : une photo fixe sortait à 1 Mb/s et ses dégradés sombres se cassaient
+           # en pavés à la recompression ; grain léger + débit plancher élevé pour qu'Instagram / TikTok gardent la matière
+           "-vf", f"noise=alls=5:allf=t,fade=t=out:st={dur - .5:.2f}:d=0.5",
+           "-c:v", "libx264", "-preset", "slow", "-tune", "film", "-crf", "15", "-b:v", "10M", "-minrate", "8M",
+           "-maxrate", "16M", "-bufsize", "24M", "-profile:v", "high", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
            "-ar", "48000", "-movflags", "+faststart", "-shortest", sortie]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
