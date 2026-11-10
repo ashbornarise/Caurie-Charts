@@ -556,8 +556,11 @@ def _envoyer(request, ident):
     # publication directe sur un compte public, 25/10/2026). La publication directe passe par Buffer, déjà validé
     # par TikTok ; TIKTOK_AUDITE=1 basculera la publication directe sur notre API après l'audit.
     audite = env.get("TIKTOK_AUDITE", "") in ("1", "oui", "true")
+    # 10/11/2026 : avant l'audit, TikTok n'autorise que les publications privées par notre application (« Moi uniquement ») :
+    # c'est le parcours à montrer dans la vidéo de démonstration de l'audit
+    prive = (c.get("tiktok") or {}).get("privacy_level") == "SELF_ONLY"
     tiktok_direct = (bool(c.get("tiktok")) and (reseaux is None or "tiktok" in reseaux)
-                     and ((c.get("tiktok") or {}).get("mode") == "brouillon" or audite))
+                     and ((c.get("tiktok") or {}).get("mode") == "brouillon" or audite or prive))
     # Une même vidéo ne part qu'une fois sur TikTok (Burna Boy envoyé 3 fois le 26/10/2026, faute de le voir en ligne)
     deja_tiktok = bool(db.value("""SELECT 1 FROM audit_log a JOIN social_posts p ON a.entity_id = CAST(p.id AS TEXT)
                                    WHERE a.action = 'buffer.post' AND a.reason LIKE 'post-%-tiktok%'
