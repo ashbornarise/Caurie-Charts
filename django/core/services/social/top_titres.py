@@ -158,7 +158,8 @@ def _logo_sombre(c: Image.Image, x: int, y: int, d_: int) -> None:
     ImageDraw.Draw(c).text((x + d_ + 16, y + d_ * .28), "cauricharts", font=C.police("Jost.ttf", int(d_ * .42), "SemiBold"), fill=NUIT)
 
 
-def liste(lignes: list, artiste: str, pays: str | None, fmt: str = "feed", titre: str = "") -> Image.Image:
+def liste(lignes: list, artiste: str, pays: str | None, fmt: str = "feed", titre: str = "",
+          etiquette: str = "CLASSÉS PAR ÉCOUTES SPOTIFY", source: str = "Spotify (compteurs publics relevés par Kworb)") -> Image.Image:
     """Une diapo de la liste. lignes : [(rang, {titre, streams, spotify_id, feat})] dans l'ordre affiché.
     Le N°1 (s'il est sur la diapo) a une grande carte ; les barres des autres lignes se mesurent au plus écouté d'entre
     elles (face aux milliards d'un N°1 elles restaient vides)."""
@@ -177,7 +178,7 @@ def liste(lignes: list, artiste: str, pays: str | None, fmt: str = "feed", titre
     d = ImageDraw.Draw(c)
     # en-tête : pastille (à droite du logo), titre, artiste + drapeau + pays
     fe = C.police("Montserrat.ttf", int(23 * u), "ExtraBold")
-    eti = "CLASSÉS PAR ÉCOUTES SPOTIFY"
+    eti = etiquette
     tw = d.textlength(eti, font=fe)
     ye = haut + int(60 * u)
     d.rounded_rectangle((w - m - tw - 40 * u, ye, w - m, ye + 50 * u), radius=int(25 * u), fill=at)
@@ -204,8 +205,11 @@ def liste(lignes: list, artiste: str, pays: str | None, fmt: str = "feed", titre
     hl = min(int((176 if fmt == "feed" else 250) * u), (place - gap * (len(autres) - 1)) // max(1, len(autres)))
     ordre = ([(1, premier[0])] if premier else []) + autres
     for rang, t in ordre:
-        nom, avec = nettoie(t["titre"], artiste, bool(t.get("feat")))
-        im = pochette(t.get("spotify_id") or "")
+        if "sous" in t:   # albums (10/11/2026) : nom tel quel, 2e ligne fournie (année, titre phare), pochette par URL
+            nom, avec = C.propre(t["titre"]), t["sous"]
+        else:
+            nom, avec = nettoie(t["titre"], artiste, bool(t.get("feat")))
+        im = C._image(t["image"]) if t.get("image") else pochette(t.get("spotify_id") or "")
         if rang == 1:
             box = (m - 16 * u, y, w - m + 16 * u, y + h1)
             _carte(c, box, int(44 * u), u, BLANC, .70)
@@ -249,9 +253,12 @@ def liste(lignes: list, artiste: str, pays: str | None, fmt: str = "feed", titre
         chiffre = court(t["streams"])
         cw = d.textlength(chiffre, font=fs)
         lx = box[2] - 34 * u - cw - 30 * u - x
-        fn = C.police("Montserrat.ttf", int(34 * u), "ExtraBold")
+        for taille in (34, 31, 28, 26):   # un nom long rétrécit avant d'être coupé (albums, 10/11/2026)
+            fn = C.police("Montserrat.ttf", int(taille * u), "ExtraBold")
+            if d.textlength(nom, font=fn) <= lx:
+                break
         fv = C.police("Montserrat.ttf", int(24 * u), "Medium")
-        by = int(y + hl - max(26, min(34, hl / u * .22)) * u)          # barre en bas de la carte
+        by =int(y + hl - max(26, min(34, hl / u * .22)) * u)          # barre en bas de la carte
         ligne_nom = y + (hl * .12 if avec else (by - y - 44 * u) / 2 - 2 * u)
         d.text((x, ligne_nom), _coupe(d, nom, fn, lx), font=fn, fill=NUIT)
         if avec:
@@ -274,7 +281,7 @@ def liste(lignes: list, artiste: str, pays: str | None, fmt: str = "feed", titre
     # pied : source et site
     fpied = C.police("Montserrat.ttf", int(24 * u), "Medium")
     yb = h - (int(70 * u) if fmt == "feed" else int(270 * u))
-    d.text((m, yb), "Source : Spotify (compteurs publics relevés par Kworb)", font=fpied, fill=GRIS)
+    d.text((m, yb), "Source : " + source, font=fpied, fill=GRIS)
     fsite = C.police("Jost.ttf", int(28 * u), "SemiBold")
     d.text((w - m, yb - 2 * u), "cauricharts.com", font=fsite, fill=at, anchor="ra")
     return c
