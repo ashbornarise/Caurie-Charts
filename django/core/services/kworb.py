@@ -14,7 +14,14 @@ _PAGES: dict = {}
 
 def _page(url: str) -> str:
     if url not in _PAGES:
-        _PAGES[url] = http_get(url) or ""
+        texte = http_get(url) or ""
+        # Kworb sert de l'UTF-8 sans le déclarer : le texte arrivait lu en latin-1 (« LÃ©gendes », 10/11/2026)
+        if "Ã" in texte or "Â" in texte:
+            try:
+                texte = texte.encode("latin-1").decode("utf-8")
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                pass
+        _PAGES[url] = texte
     return _PAGES[url]
 
 
