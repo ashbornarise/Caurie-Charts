@@ -113,8 +113,8 @@ h1 { margin: 0; font: 700 26px/1.2 Unbounded, sans-serif; text-wrap: balance }
     <button data-vue="projets" class="actif"><svg class="i"><use href="#i-projets"/></svg>Projets</button>
     <button data-vue="montage"><svg class="i"><use href="#i-montage"/></svg>Table de montage</button>
     <button data-vue="outils"><svg class="i"><use href="#i-outils"/></svg>Boîte à outils</button>
-    <a href="{{ base }}#photos"><svg class="i"><use href="#i-photo"/></svg>Banque de photos</a>
-    <a href="{{ base }}"><svg class="i"><use href="#i-ancien"/></svg>Studio d'avant</a>
+    <a href="{{ base }}?classique=1#photos"><svg class="i"><use href="#i-photo"/></svg>Banque de photos</a>
+    <a href="{{ base }}?classique=1"><svg class="i"><use href="#i-ancien"/></svg>Studio d'avant</a>
     <div class="pied"><b style="color:var(--encre)">Vidéos lourdes</b><br>Paroles et liens YouTube se fabriquent sur le PC : laisse-le allumé.</div>
   </nav>
 
@@ -290,7 +290,7 @@ function liste() {
       <div style="min-width:0"><b>${esc(nom)}</b><small>${esc(detail)}</small></div><span>${esc(outil)}</span>
       <span class="etat e-${e[1]}">${esc(e[0])}</span><small>${esc((j.cree_le || '').replace('T', ' '))}</small>
       <button class="btn second" data-ouvre="${j.id}" data-type="${esc(p.type || '')}" style="justify-self:end;padding:8px 14px">Ouvrir</button></div>`; }).join('');
-  $$('[data-ouvre]').forEach(b => b.onclick = () => b.dataset.type === 'paroles' ? ouvreProjet(+b.dataset.ouvre) : (location.href = BASE + '#videos'));
+  $$('[data-ouvre]').forEach(b => b.onclick = () => b.dataset.type === 'paroles' ? ouvreProjet(+b.dataset.ouvre) : (location.href = BASE + '?classique=1#videos'));
 }
 $('#q').oninput = liste;
 
@@ -312,7 +312,7 @@ async function boite() {
   $$('[data-outil]').forEach(b => b.onclick = () => {
     const base = b.dataset.base || b.dataset.outil, def = BASES.find(x => x.id === base) || {};
     if (base === 'paroles') { nouveauMontage(b.dataset.reglages ? JSON.parse(b.dataset.reglages) : {}); montre('montage'); }
-    else location.href = BASE + (def.va || '');
+    else location.href = BASE + '?classique=1' + (def.va || '');
   });
   dessineEtapes();
 }

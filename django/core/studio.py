@@ -129,6 +129,9 @@ def studio(request, chemin):
     u = _utilisateur(request)
     if u:
         creer_tables()
+        # 10/11/2026 : le Studio v2 (table de montage) devient l'accueil ; l'ancien reste sur ?classique=1
+        if not request.GET.get("classique"):
+            return montage(request, chemin)
     nonce = secrets.token_urlsafe(18)
     html = _JINJA.get_template("studio.html").render(
         base=f"/studio/{chemin}", connecte=bool(u), nonce=nonce, nom=(u or {}).get("name") or "", csrf=get_token(request),
