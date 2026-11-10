@@ -1048,8 +1048,11 @@ def sequences_apercu(request, chemin):
             fond = Image.open(io.BytesIO(r.content)).convert("RGB")
         except Exception:  # noqa: BLE001
             fond = None
-    ctx = {"etiquette": p.get("etiquette") or "Nouveau son", "accroche": p.get("accroche") or "Cauri Charts",
-           "artiste": p.get("artiste") or "", "titre": p.get("titre_morceau") or p.get("accroche") or "", "pays": p.get("pays"),
+    # textes en cours de saisie dans l'écran de validation (10/11/2026 : les aperçus gardaient les anciens textes)
+    g = {k: str(request.GET.get(k) or "").strip()[:160] for k in ("etiquette", "accroche", "artiste")}
+    accroche = g["accroche"] or p.get("accroche") or "Cauri Charts"
+    ctx = {"etiquette": g["etiquette"] or p.get("etiquette") or "Nouveau son", "accroche": accroche,
+           "artiste": g["artiste"] or p.get("artiste") or "", "titre": p.get("titre_morceau") or accroche, "pays": p.get("pays"),
            "photo": fond, "cover": fond}
     yt = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", (j or {}).get("lien") or "")
     if yt:
@@ -1062,7 +1065,7 @@ def sequences_apercu(request, chemin):
         im = SQ.image_cle(sorte, ident, (540, 960), ctx, fond)
     out = io.BytesIO(); im.save(out, format="JPEG", quality=84)
     rep = HttpResponse(out.getvalue(), content_type="image/jpeg")
-    rep["Cache-Control"] = "private, max-age=86400"
+    rep["Cache-Control"] = "private, max-age=600"   # l'adresse change avec les textes : jamais d'aperçu périmé
     return rep
 
 

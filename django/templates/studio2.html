@@ -927,6 +927,20 @@ function bouton(texte, action, second) {
 }
 const champ = (id, lab, val, long) => `<label class="champ">${lab}${long ? `<textarea id="${id}">${esc(val)}</textarea>` : `<input id="${id}" value="${esc(val)}">`}</label>`;
 
+// aperçus faits avec les textes en cours de saisie ; refaits quand on les modifie
+const urlApercu = (sorte, ident, job) => {
+  const v = s => (document.querySelector(s) || {}).value || '';
+  return `${BASE}/sequences/apercu?sorte=${sorte}&id=${encodeURIComponent(ident)}&job=${job}`
+    + `&accroche=${encodeURIComponent(v('#cv-accroche'))}&etiquette=${encodeURIComponent(v('#cv-etiquette'))}&artiste=${encodeURIComponent(v('#cv-artiste'))}`;
+};
+let minuteurApercus = null;
+function suitTextes(job) {
+  ['#cv-accroche', '#cv-etiquette', '#cv-artiste'].forEach(sel => { const el = $(sel); if (el) el.addEventListener('input', () => {
+    clearTimeout(minuteurApercus);
+    minuteurApercus = setTimeout(() => document.querySelectorAll('img[data-sorte]').forEach(i => { i.src = urlApercu(i.dataset.sorte, i.dataset.ident, job); }), 700);
+  }); });
+}
+
 // ---- début et fin au choix (studio_sequences) : aperçus qui se jouent, variantes générées à la demande
 let SEQS = null;
 async function choixSequences(job, hab) {
@@ -935,7 +949,7 @@ async function choixSequences(job, hab) {
     const boite = $('#sq-' + sorte);
     const tuile = (ident, nom, media) => `<button class="seq${hab[sorte] === ident ? ' on' : ''}" data-id="${esc(ident)}">${media}<small>${esc(nom)}</small></button>`;
     const video = n => `<video src="/assets/studio/sequences/${sorte}-${n}.mp4" muted loop playsinline autoplay preload="metadata"></video>`;
-    const image = ident => `<img loading="lazy" alt="" src="${BASE}/sequences/apercu?sorte=${sorte}&id=${encodeURIComponent(ident)}&job=${job}">`;
+    const image = ident => `<img loading="lazy" alt="" data-sorte="${sorte}" data-ident="${esc(ident)}" src="${urlApercu(sorte, ident, job)}">`;
     let html = Object.entries(liste).map(([n, nom]) => tuile(n, nom, video(n))).join('') + tuile(rien, sorte === 'debut' ? 'Aucun' : 'Aucune', '<span class="vide">Sans</span>');
     if (hab[sorte] && hab[sorte].includes('~')) html = tuile(hab[sorte], 'Variante choisie', image(hab[sorte])) + html;
     boite.innerHTML = html;
@@ -967,7 +981,8 @@ function projetClip(j) {
     choixSequences(id, hab);
     const bc = $('#sq-couverture');
     bc.innerHTML = [['aucune', 'Image de la vidéo'], ['accroche', 'Accroche'], ['pochette', 'Pochette'], ['gros-titre', 'Gros titre']].map(([c, nom]) =>
-      `<button class="seq${hab.couverture === c ? ' on' : ''}" data-id="${c}">${c === 'aucune' ? '<span class="vide">Sans</span>' : `<img loading="lazy" alt="" src="${BASE}/sequences/apercu?sorte=couverture&id=${c}&job=${id}">`}<small>${nom}</small></button>`).join('');
+      `<button class="seq${hab.couverture === c ? ' on' : ''}" data-id="${c}">${c === 'aucune' ? '<span class="vide">Sans</span>' : `<img loading="lazy" alt="" data-sorte="couverture" data-ident="${c}" src="${urlApercu('couverture', c, id)}">`}<small>${nom}</small></button>`).join('');
+    suitTextes(id);
     bc.onclick = e => { const b = e.target.closest('.seq'); if (!b) return; vibre(); hab.couverture = b.dataset.id; bc.querySelectorAll('.seq').forEach(x => x.classList.toggle('on', x === b)); };
     $('#sq-son').querySelectorAll('.puce').forEach(b => { b.classList.toggle('on', b.dataset.s === hab.son);
       b.onclick = () => { vibre(); hab.son = b.dataset.s; $('#sq-son').querySelectorAll('.puce').forEach(x => x.classList.toggle('on', x === b));
