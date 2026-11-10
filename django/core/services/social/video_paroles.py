@@ -71,11 +71,29 @@ def _coupe_lignes(d, mots: list, f, largeur: float) -> list:
     return lignes
 
 
+# couleurs du texte : sur fond clair (pochette floutée) ou sur photo de l'artiste assombrie (10/11/2026)
+CLAIR = {"encre": NUIT, "attente": (118, 118, 140), "autre": (120, 120, 142)}
+SOMBRE = {"encre": BLANC, "attente": (196, 196, 210), "autre": (225, 225, 235)}
+
+
+def _fond_photo(photo, w: int, h: int) -> Image.Image:
+    """Photo de l'artiste en plein cadre (recadrée sur la personne), assombrie vers le bas pour les paroles."""
+    im = C._image_nette(photo) if not isinstance(photo, Image.Image) else photo.convert("RGB")
+    c = C.cadre_personne(im, w, h).convert("RGB")
+    voile = Image.new("L", (1, h))
+    for y in range(h):
+        k = y / h
+        voile.putpixel((0, y), int(255 * (.25 + .62 * max(0, (k - .30) / .70) ** 1.1)))
+    c.paste(Image.new("RGB", (w, h), (6, 6, 14)), (0, 0), voile.resize((w, h)))
+    return c
+
+
 def _phrase(d, mots: list, t: float, f, x_centre: float, y: int, couleur, largeur: float, opacite: float = 1.0,
-            active: bool = True, lum=None, toile=None) -> int:
+            active: bool = True, lum=None, toile=None, pal: dict | None = None) -> int:
     """Dessine une phrase centrée et rend sa hauteur.
     Phrase en cours (active) : chaque mot se remplit de couleur de gauche à droite pendant qu'il est chanté (karaoké),
     puis reste en encre ; à venir en gris clair. lum : calque où sont dessinés les mots allumés (halo lumineux)."""
+    pal = pal or CLAIR
     lignes = _coupe_lignes(d, mots, f, largeur)
     hl = int(f.size * 1.28)
     a = int(255 * opacite)
@@ -86,14 +104,14 @@ def _phrase(d, mots: list, t: float, f, x_centre: float, y: int, couleur, largeu
         for w, s in zip(ligne, txt):
             lw = d.textlength(s, font=f)
             if not active:
-                d.text((x, y), s, font=f, fill=(120, 120, 142, int(a * .8)))
+                d.text((x, y), s, font=f, fill=pal["autre"] + (int(a * .8),))
             elif t >= w["f"]:                                   # déjà chanté : encre, lueur douce
-                d.text((x, y), s, font=f, fill=NUIT + (a,))
+                d.text((x, y), s, font=f, fill=pal["encre"] + (a,))
                 if lum is not None:
                     lum.text((x, y), s, font=f, fill=couleur + (int(70 * opacite),))
             elif t >= w["d"]:                                   # en cours : remplissage progressif + halo fort
                 k = (t - w["d"]) / max(.08, w["f"] - w["d"])
-                d.text((x, y), s, font=f, fill=(118, 118, 140, a))
+                d.text((x, y), s, font=f, fill=pal["attente"] + (a,))
                 calque = Image.new("RGBA", (int(lw) + 4, int(f.size * 1.4)), (0, 0, 0, 0))
                 ImageDraw.Draw(calque).text((0, 0), s, font=f, fill=couleur + (a,))
                 calque = calque.crop((0, 0, max(1, int(calque.width * min(1, k))), calque.height))
@@ -101,40 +119,53 @@ def _phrase(d, mots: list, t: float, f, x_centre: float, y: int, couleur, largeu
                 if lum is not None:
                     lum.text((x, y), s, font=f, fill=couleur + (255,))
             else:
-                d.text((x, y), s, font=f, fill=(118, 118, 140, a))
+                d.text((x, y), s, font=f, fill=pal["attente"] + (a,))
             x += d.textlength(s + " ", font=f)
         y += hl
     return hl * len(lignes)
 
 
 def rendu(source_audio: str, cover, lignes: list, t0: float, t1: float, titre: str, artistes: str, album: str,
-          pays: str | None, sortie: str, fmt: str = "story") -> str:
+          pays: str | None, sortie: str, fmt: str = "story", photo=None) -> str:
+    """photo : la photo de l'artiste en plein fond (paroles en blanc, petite pochette à côté du titre) ;
+    sans photo : la pochette en grand sur fond clair."""
     w, h = TAILLES[fmt]
     u = w / 1080
     a, b, _bandes = T.couleurs(pays)
     at = T.accent_texte(a)
     cov = C._image(cover) if not isinstance(cover, Image.Image) else cover
-    fond = _decor(cov, w, h, a, b)
-    cote = int((720 if fmt == "story" else 480) * u)
-    carte = _carte_pochette(cov, cote)
-    y_cov = int((290 if fmt == "story" else 100) * u)
+    pal = SOMBRE if photo is not None else CLAIR
+    if photo is not None:
+        at = a                                   # couleur vive du pays : elle ressort sur la photo sombre
+        fond = _fond_photo(photo, w, h)
+        cote = int(130 * u)
+        carte = _carte_pochette(cov, cote)
+        y_cov = 0
+    else:
+        fond = _decor(cov, w, h, a, b)
+        cote = int((720 if fmt == "story" else 480) * u)
+        carte = _carte_pochette(cov, cote)
+        y_cov = int((290 if fmt == "story" else 100) * u)
     ft = C.police("Montserrat.ttf", int((64 if fmt == "story" else 54) * u), "ExtraBold")
     fv = C.police("Montserrat.ttf", int((40 if fmt == "story" else 34) * u), "Bold")
     fti = C.police("Montserrat.ttf", int(40 * u), "ExtraBold")
     fa = C.police("Montserrat.ttf", int(28 * u), "SemiBold")
     largeur = w - 2 * int(80 * u)
-    y_par = y_cov + cote + int((110 if fmt == "story" else 70) * u)
+    y_par = (y_cov + cote + int((110 if fmt == "story" else 70) * u)) if photo is None else int(h * (.54 if fmt == "story" else .50))
     dur = t1 - t0
     phr = [l for l in lignes if l["fin"] > t0 - 4 and l["debut"] < t1 + 1 and l["mots"]]
 
     def image(i: int) -> Image.Image:
         t = t0 + i / FPS
-        c = fond.copy()
-        # pochette : respiration lente
         k = 1 + .025 * (i / max(1, dur * FPS))
-        cw = int(carte.width * k)
-        cc = carte.resize((cw, cw), Image.BILINEAR) if k != 1 else carte
-        c.paste(cc, ((w - cw) // 2, y_cov - int(cote * .12) - (cw - carte.width) // 2), cc)
+        if photo is not None:                    # photo : zoom lent (effet Ken Burns)
+            zw, zh = int(w * k), int(h * k)
+            c = fond.resize((zw, zh), Image.BILINEAR).crop(((zw - w) // 2, (zh - h) // 3, (zw - w) // 2 + w, (zh - h) // 3 + h))
+        else:                                    # pochette : respiration lente
+            c = fond.copy()
+            cw = int(carte.width * k)
+            cc = carte.resize((cw, cw), Image.BILINEAR) if k != 1 else carte
+            c.paste(cc, ((w - cw) // 2, y_cov - int(cote * .12) - (cw - carte.width) // 2), cc)
         # paroles sur un calque transparent ; les mots allumés sur un 2e calque flouté (halo lumineux)
         texte = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         d = ImageDraw.Draw(texte)
@@ -147,14 +178,14 @@ def rendu(source_audio: str, cover, lignes: list, t0: float, t1: float, titre: s
             entree = _sortie((t - (cur["debut"] - .15)) / .3)
             dy = int(40 * u * (1 - entree))
             if idx > 0:
-                _phrase(d, phr[idx - 1]["mots"], t, fv, w / 2, y_par - int(10 * u) + dy, at, largeur, .35, False)
+                _phrase(d, phr[idx - 1]["mots"], t, fv, w / 2, y_par - int(10 * u) + dy, at, largeur, .35, False, pal=pal)
             y = y_par + int(80 * u) + dy
-            hcur = _phrase(d, cur["mots"], t, ft, w / 2, y, at, largeur, entree, True, lum, texte)
+            hcur = _phrase(d, cur["mots"], t, ft, w / 2, y, at, largeur, entree, True, lum, texte, pal)
             # la phrase suivante seulement si elle tient au-dessus du titre (jamais de texte sur le bas de l'écran)
             y_suiv = y + hcur + int(30 * u)
             if idx + 1 < len(phr) and y_suiv + len(_coupe_lignes(d, phr[idx + 1]["mots"], fv, largeur)) * fv.size * 1.28 \
                     < h - int((330 if fmt == "story" else 170) * u) - int(50 * u):
-                _phrase(d, phr[idx + 1]["mots"], -1, fv, w / 2, y_suiv, at, largeur, .5, False)
+                _phrase(d, phr[idx + 1]["mots"], -1, fv, w / 2, y_suiv, at, largeur, .5, False, pal=pal)
         c = c.convert("RGBA")
         y_b0, y_b1 = max(0, y_par - int(120 * u)), min(h, y_par + int(760 * u))   # halo : seulement la bande des paroles
         halo = lum_im.crop((0, y_b0, w, y_b1)).filter(ImageFilter.GaussianBlur(int(22 * u)))
@@ -164,12 +195,22 @@ def rendu(source_audio: str, cover, lignes: list, t0: float, t1: float, titre: s
         d = ImageDraw.Draw(c)
         # bas : titre, artistes · album, logo
         yb = h - int((330 if fmt == "story" else 170) * u)
-        d.text((w / 2, yb), titre, font=fti, fill=NUIT, anchor="mm")
-        d.text((w / 2, yb + 50 * u), f"{artistes}  ·  {album}", font=fa, fill=(90, 90, 112), anchor="mm")
-        d.rounded_rectangle((w / 2 - 60 * u, yb + 86 * u, w / 2 + 60 * u, yb + 92 * u), radius=int(3 * u), fill=at)
-        T._logo_sombre(c, int(50 * u), int((150 if fmt == "story" else 30) * u), int(60 * u))
-        if i < 8:   # ouverture en fondu depuis le blanc
-            c = Image.blend(Image.new("RGB", (w, h), BLANC), c, i / 8)
+        if photo is not None:                    # petite pochette à gauche, titre et artistes à côté
+            xm = int(70 * u)
+            c.paste(carte, (xm - int(cote * .12), int(yb - cote / 2) - int(cote * .12)), carte)
+            d = ImageDraw.Draw(c)
+            xt = xm + cote + int(26 * u)
+            d.text((xt, yb - 6 * u), titre, font=fti, fill=BLANC, anchor="ls")
+            d.text((xt, yb + 10 * u), f"{artistes}  ·  {album}", font=fa, fill=(225, 225, 235), anchor="lt")
+            d.rounded_rectangle((xt, yb + 56 * u, xt + 120 * u, yb + 62 * u), radius=int(3 * u), fill=at)
+            C._logo(c, int(50 * u), int((150 if fmt == "story" else 30) * u), int(60 * u))
+        else:
+            d.text((w / 2, yb), titre, font=fti, fill=NUIT, anchor="mm")
+            d.text((w / 2, yb + 50 * u), f"{artistes}  ·  {album}", font=fa, fill=(90, 90, 112), anchor="mm")
+            d.rounded_rectangle((w / 2 - 60 * u, yb + 86 * u, w / 2 + 60 * u, yb + 92 * u), radius=int(3 * u), fill=at)
+            T._logo_sombre(c, int(50 * u), int((150 if fmt == "story" else 30) * u), int(60 * u))
+        if i < 8:   # ouverture en fondu (depuis le noir sur photo, le blanc sinon)
+            c = Image.blend(Image.new("RGB", (w, h), (0, 0, 0) if photo is not None else BLANC), c, i / 8)
         return c
 
     n = int(dur * FPS)

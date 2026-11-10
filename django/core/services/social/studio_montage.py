@@ -556,6 +556,15 @@ def traite(job_id: int) -> dict:
     if p.get("type") == "vedette":   # mise en valeur d'un artiste (02/11/2026) : aperçus des modèles, puis publication
         from core.services.social import vedette
         return vedette.publie(job_id, job, p, _maj) if p.get("choix") else vedette.traite(job_id, job, p, _maj)
+    if p.get("type") == "paroles":   # vidéo paroles (10/11/2026), sur le PC
+        from core.services.social import studio_paroles
+        try:
+            return studio_paroles.traite(job_id, job, p, _maj)
+        except TacheAnnulee:
+            return {"statut": "annule"}
+        except Exception as exc:  # noqa: BLE001
+            _maj(job_id, statut="erreur", erreur=str(exc)[:500])
+            raise
     if p.get("type") == "photos":   # section Photos : récupérer les images d'un post pour la banque de l'artiste
         from core.services.social import studio_photos
         try:

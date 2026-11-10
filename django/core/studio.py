@@ -250,9 +250,10 @@ def _lance(job_id: int) -> str | None:
     pour les serveurs (« not a bot », 20/10/2026) -> fabriqué par le relais du PC (manage.py relais_profils)."""
     import requests
     from core.views_cron import REPO
-    j = db.one("SELECT lien FROM studio_jobs WHERE id = ?", [job_id])
+    j = db.one("SELECT lien, params FROM studio_jobs WHERE id = ?", [job_id])
     hote = (urlparse((j or {}).get("lien") or "").hostname or "").lower()
-    if hote.endswith("youtube.com") or hote.endswith("youtu.be"):
+    paroles = '"type": "paroles"' in str((j or {}).get("params") or "")   # iZotope RX et rendu lourd : sur le PC
+    if hote.endswith("youtube.com") or hote.endswith("youtu.be") or paroles:
         from core import storage
         db.update("studio_jobs", {"statut": "attente_pc"}, "id = :id", {"id": job_id})
         storage.blob_put(f"relais/studio/job-{job_id}.json", json.dumps({"job": job_id}).encode(), "application/json")
@@ -517,7 +518,10 @@ def _envoyer(request, ident):
         deja_tiktok = False
     if tiktok_direct:   # TikTok part par sa propre API avec les réglages de l'écran ; Buffer ne s'en occupe plus
         reseaux = [r for r in (reseaux or ["instagram", "facebook", "tiktok", "telegram"]) if r != "tiktok"]
-    faits = {"kind": "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
+    # vidéo paroles (10/11/2026) : « son » = « avec » (la vidéo et sa chanson) ou « muette » (notification : le son
+    # officiel s'ajoute dans l'appli Instagram / TikTok)
+    muette = p.get("type") == "paroles" and c.get("son") == "muette" and p.get("video_muette")
+    faits = {"kind": "format-video" if muette else "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
              "source": j["lien"], "notifier": bool(c.get("notifier")), "reseaux": reseaux, "artiste": artiste,
              "legende": mode}
     if en:
@@ -525,7 +529,8 @@ def _envoyer(request, ident):
     pid = db.insert("social_posts", {"slot_date": maintenant.date().isoformat(), "theme": theme_libre(j["id"], maintenant),
                                      "title": accroche[:160] or "Vidéo Cauri Studio", "caption": legende, "hashtags": tags[:300],
                                      "image_square": j["vignette"], "image_story": j["vignette"], "carousel": "[]",
-                                     "video": j["video"], "status": "approved", "facts": json.dumps(faits, ensure_ascii=False)})
+                                     "video": p["video_muette"] if muette else j["video"], "status": "approved",
+                                     "facts": json.dumps(faits, ensure_ascii=False)})
     post = db.one("SELECT * FROM social_posts WHERE id = ?", [pid])
     from core.services import buffer
     from core.services.social import hashtags
@@ -678,6 +683,64 @@ def photos_nouveau(request, chemin):
     return _json({"id": job_id, "erreur": None})
 
 
+def paroles_nouveau(request, chemin):
+    """Vidéo paroles (10/11/2026) : la tâche est créée, l'appli envoie ensuite photos, captures ou son, puis « lancer »."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    c = _corps(request)
+    lien = str(c.get("lien") or "").strip()
+    if lien and not urlparse(lien).hostname:
+        return _json({"erreur": "lien invalide"}, 400)
+    params = {"type": "paroles", "titre": str(c.get("titre") or "").strip()[:120], "artistes": str(c.get("artistes") or "").strip()[:160],
+              "album": str(c.get("album") or "").strip()[:120], "pays": str(c.get("pays") or "").strip()[:2].upper() or None,
+              "texte": str(c.get("texte") or "")[:6000], "photo_id": c.get("photo_id"), "artiste": str(c.get("artistes") or "")[:120],
+              "accroche": str(c.get("titre") or "")[:160]}
+    for k in ("debut", "fin"):
+        try:
+            if c.get(k) not in (None, ""):
+                params[k] = float(c[k])
+        except (TypeError, ValueError):
+            return _json({"erreur": "début et fin en secondes"}, 400)
+    creer_tables()
+    job_id = db.insert("studio_jobs", {"lien": (lien or "téléphone")[:1000], "params": json.dumps(params, ensure_ascii=False),
+                                       "auteur": u["id"], "statut": "telechargement"})
+    return _json({"id": job_id})
+
+
+def paroles_fichier(request, chemin, ident):
+    """Un fichier de la vidéo paroles envoyé depuis le téléphone : ?genre=photo|capture|son (corps brut)."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_paroles
+    genre = request.GET.get("genre", "")
+    if genre not in ("photo", "capture", "son"):
+        return _json({"erreur": "genre inconnu"}, 400)
+    if len(request.body) > (40_000_000 if genre == "son" else 4_300_000):
+        return _json({"erreur": "fichier trop lourd"}, 413)
+    ext = re.sub(r"[^a-z0-9]", "", request.GET.get("ext", "jpg").lower())[:4] or "jpg"
+    return _json({"nom": studio_paroles.importe(int(ident), genre, request.body, ext)})
+
+
+def paroles_lancer(request, chemin, ident):
+    """Fichiers envoyés : la préparation part sur le PC (son, passage, paroles calées, image d'essai)."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
+    if not j:
+        raise Http404
+    p = json.loads(j["params"] or "{}")
+    if j["lien"] == "téléphone" and not p.get("sons"):
+        return _json({"erreur": "ajoute un lien ou un fichier son"}, 400)
+    erreur = _lance(j["id"])
+    if erreur:
+        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": j["id"]})
+    return _json({"ok": not erreur, "erreur": erreur})
+
+
 def photos_importer(request, chemin, ident):
     """Une photo envoyée depuis le téléphone (corps brut, réduite à 2 400 px par l'appli : < 4 Mo)."""
     _verifie(chemin)
@@ -821,7 +884,10 @@ def valider_job(request, chemin, ident):
     j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
     if not j or j["statut"] != "a_valider":
         return _json({"erreur": "rien à valider"}, 400)
-    p = _textes(json.loads(j["params"] or "{}"), _corps(request))
+    c = _corps(request)
+    p = _textes(json.loads(j["params"] or "{}"), c)
+    if isinstance(c.get("paroles"), list):   # vidéo paroles : lignes corrigées par le fondateur
+        p["paroles"] = [str(x).strip()[:200] for x in c["paroles"]][:80]
     p["valide"] = True
     db.update("studio_jobs", {"params": json.dumps(p, ensure_ascii=False), "statut": "attente"}, "id = :id", {"id": j["id"]})
     erreur = _lance(j["id"])

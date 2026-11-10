@@ -50,8 +50,10 @@ class Command(BaseCommand):
                 legende = fr + (f"\n\n🎥 Source : {credit}" if credit else "")
                 tags = str(p.get("hashtags") or "").strip() or ("#CauriCharts" + (" #" + "".join(ch for ch in artiste if ch.isalnum()) if artiste else "") + " #Afrobeats #MusiqueAfricaine")
 
+                muette = p.get("type") == "paroles" and p.get("son") == "muette" and p.get("video_muette")
                 faits = {
-                    "kind": "format-clip",
+                    # vidéo paroles muette : « format-video » = notification, le son officiel s'ajoute dans l'appli
+                    "kind": "format-video" if muette else "format-clip",
                     "studio_job": j["id"],
                     "due": (maintenant + timedelta(minutes=2)).isoformat(),
                     "source": j["lien"],
@@ -69,7 +71,7 @@ class Command(BaseCommand):
                     "image_square": j["vignette"],
                     "image_story": j["vignette"],
                     "carousel": "[]",
-                    "video": j["video"],
+                    "video": p["video_muette"] if muette else j["video"],
                     "status": "approved",
                     "facts": json.dumps(faits, ensure_ascii=False),
                 })
