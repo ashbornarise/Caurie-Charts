@@ -117,6 +117,16 @@ h1,h2,h3 { text-wrap:balance; margin:0 }
   100% { transform:translate(-40px,70px) rotate(80deg) scale(.95); border-radius:38% 62% 56% 44% / 63% 37% 63% 37% } }
 @keyframes tourne { to { transform:rotate(360deg) } }
 @media (prefers-reduced-motion:reduce) { .fond i, .vedette::before, .porte__marque::before { animation:none } }
+/* 10/11/2026 : la page ramait sur téléphone (gouttes floues animées + une quinzaine de cartes au flou recalculé à
+   chaque image et à chaque défilement). Sur écran tactile / petit écran : gouttes immobiles, verre imité par un blanc
+   translucide plus couvrant (même rendu à l'œil, sans calcul de flou), halo de la carte vedette immobile. */
+@media (max-width:900px), (hover:none) {
+  .fond i, .vedette::before, .porte__marque::before { animation:none !important }
+  .fond { contain:strict; transform:translateZ(0) }
+  .fond i { filter:blur(48px) }
+  :root { --verre:rgba(255,255,255,.84); --verre2:rgba(255,255,255,.9) }
+  *, *::before, *::after { backdrop-filter:none !important; -webkit-backdrop-filter:none !important }
+}
 
 /* en-tête flottant */
 .tete { position:sticky; top:0; z-index:10; padding-block:14px 6px; display:grid; gap:10px }
