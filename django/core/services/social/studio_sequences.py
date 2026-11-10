@@ -235,10 +235,16 @@ def d_rideau(W, H, ctx, st):
     fond_mid = bandes[1]
     clair = T._clair(fond_mid) > .6
     coul = (st["at"] if clair else BLANC) + (255,)
-    f, l = _ajuste(_txt_principal(ctx).upper(), st, u, W - 120 * u, 120, 60, 3)
-    bloc = _bloc(l, f, coul)
     fe = C.police("Montserrat.ttf", int(28 * u), "ExtraBold")
     eti = _texte(" ".join(_eti(ctx)), fe, coul)
+    place = hb - eti.height - 110 * u          # hauteur libre dans la bande du milieu
+    for depart in range(120, 40, -8):
+        f, l = _ajuste(_txt_principal(ctx).upper(), st, u, W - 120 * u, depart, 40, 3)
+        bloc = _bloc(l, f, coul)
+        if bloc.height <= place:
+            break
+    y_eti = hb + (hb - eti.height - 24 * u - bloc.height) / 2 + eti.height / 2
+    y_bloc = y_eti + eti.height / 2 + 24 * u + bloc.height / 2
     def image(t):
         t *= st["vitesse"]
         c = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -252,8 +258,8 @@ def d_rideau(W, H, ctx, st):
         k = _sortie((t - .5) / .4)
         ko = _sortie((t - 1.7) / .35)
         cx = W / 2 + W * ko
-        _centre(c, eti, cx, H / 2 - bloc.height / 2 - 50 * u, a=k * (1 - ko))
-        _centre(c, bloc, cx, H / 2 + 20 * u + 30 * u * (1 - k), a=k)
+        _centre(c, eti, cx, y_eti, a=k * (1 - ko))
+        _centre(c, bloc, cx, y_bloc + 30 * u * (1 - k), a=k)
         return c
     return 2.45 / st["vitesse"], image
 

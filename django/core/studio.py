@@ -1052,7 +1052,8 @@ def sequences_apercu(request, chemin):
     g = {k: str(request.GET.get(k) or "").strip()[:160] for k in ("etiquette", "accroche", "artiste")}
     accroche = g["accroche"] or p.get("accroche") or "Cauri Charts"
     ctx = {"etiquette": g["etiquette"] or p.get("etiquette") or "Nouveau son", "accroche": accroche,
-           "artiste": g["artiste"] or p.get("artiste") or "", "titre": p.get("titre_morceau") or accroche, "pays": p.get("pays"),
+           "artiste": g["artiste"] or p.get("artiste") or "", "titre": p.get("titre_morceau") or accroche,
+           "pays": p.get("pays") or __import__("core.services.social.studio_montage", fromlist=["x"]).pays_artiste(g["artiste"] or p.get("artiste")),
            "photo": fond, "cover": fond}
     yt = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", (j or {}).get("lien") or "")
     if yt:

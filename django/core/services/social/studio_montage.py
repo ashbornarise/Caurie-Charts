@@ -611,6 +611,20 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
 
 # ---------------------------------------------------------------- ensemble
 
+def pays_artiste(nom: str | None) -> str | None:
+    """Pays de l'artiste (code ISO en minuscules) d'après la base : couleurs du drapeau pour l'habillage (10/11/2026,
+    vidéo Himra en violet faute de pays)."""
+    if not nom:
+        return None
+    try:
+        r = db.one("""SELECT origin_country, base_country FROM artists WHERE LOWER(name) = LOWER(?)
+                      ORDER BY (status = 'active') DESC, fans DESC NULLS LAST LIMIT 1""", [nom.strip()])
+    except Exception:  # noqa: BLE001
+        return None
+    code = (r or {}).get("origin_country") or (r or {}).get("base_country")
+    return code.lower() if code else None
+
+
 def _couverture(p: dict, hab: dict, taille, tmp: str) -> str | None:
     """Couverture choisie dans le Studio (studio_couvertures : accroche, pochette, gros-titre), en PNG à la taille de la vidéo."""
     from core.services.social import studio_couvertures as SC
@@ -636,7 +650,8 @@ def _habillage(p: dict, lien: str, source: str, debut: float, fin: float, tmp: s
     hab = dict(p.get("habillage") or {})
     if not hab.get("debut") and not hab.get("fin") and not hab.get("couverture"):
         return {"son": hab["son"]} if hab.get("son") else {}
-    ctx = {"titre": p.get("titre_morceau") or p.get("accroche") or "", "pays": p.get("pays")}
+    ctx = {"titre": p.get("titre_morceau") or p.get("accroche") or "", "pays": p.get("pays") or pays_artiste(p.get("artiste"))}
+    p["pays"] = ctx["pays"]
     yt = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", lien or "")
     if yt:
         ctx["cover"] = f"https://i.ytimg.com/vi/{yt.group(1)}/maxresdefault.jpg"
