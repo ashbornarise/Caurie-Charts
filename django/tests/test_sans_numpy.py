@@ -19,6 +19,8 @@ print("ok")
 
 
 def test_modules_du_studio_sans_numpy():
+    from pathlib import Path
     r = subprocess.run([sys.executable, "-c", CODE], capture_output=True, text=True, timeout=120,
+                       cwd=str(Path(__file__).resolve().parent.parent),   # dossier django : « cauri » importable (GitHub)
                        env={**__import__("os").environ, "DJANGO_SETTINGS_MODULE": "cauri.settings"})
     assert r.stdout.strip().endswith("ok"), r.stderr[-500:]
