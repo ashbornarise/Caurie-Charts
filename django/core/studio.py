@@ -37,6 +37,10 @@ def creer_tables() -> None:
         sign_count BIGINT NOT NULL DEFAULT 0, nom TEXT, cree_le TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
     db.run("""CREATE TABLE IF NOT EXISTS studio_brouillons (
         user_id BIGINT PRIMARY KEY, donnees TEXT NOT NULL, maj TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
+    # outils maison (Studio v2, 10/11/2026) : une recette = un outil de base + des étapes et des réglages par défaut
+    db.run("""CREATE TABLE IF NOT EXISTS studio_outils (
+        id BIGSERIAL PRIMARY KEY, nom TEXT NOT NULL, base VARCHAR(30) NOT NULL, etapes TEXT NOT NULL DEFAULT '[]',
+        reglages TEXT NOT NULL DEFAULT '{}', auteur BIGINT, cree_le TIMESTAMPTZ NOT NULL DEFAULT NOW())""")
 
 
 def _verifie(chemin: str) -> None:
@@ -131,6 +135,50 @@ def studio(request, chemin):
         formats=[("story", "9:16 · Reels / TikTok / Story"), ("feed", "4:5 · fil Instagram"), ("square", "1:1 · carré")],
         max_duree=MAX_DUREE, a_passkey=bool(u and db.value("SELECT 1 FROM studio_passkeys WHERE user_id = ?", [u["id"]])))
     return _reponse(HttpResponse(html), nonce)
+
+
+def montage(request, chemin):
+    """Studio v2 (10/11/2026) : table de montage, projets, boîte à outils et outils maison. La connexion (empreinte)
+    reste sur la page d'origine : sans session, on y renvoie."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u:
+        from django.shortcuts import redirect
+        return redirect(f"/studio/{chemin}")
+    creer_tables()
+    nonce = secrets.token_urlsafe(18)
+    html = _JINJA.get_template("studio2.html").render(base=f"/studio/{chemin}", nonce=nonce, nom=u.get("name") or "",
+                                                      csrf=get_token(request))
+    return _reponse(HttpResponse(html), nonce)
+
+
+OUTILS_BASE = ("clip", "paroles", "annonce", "vedette", "photos")
+
+
+def outils(request, chemin):
+    """GET : les outils maison ; POST : en enregistre un ({nom, base, etapes, reglages}) ; POST {supprimer: id}."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u:
+        return _json({"erreur": "connexion requise"}, 401)
+    creer_tables()
+    if request.method == "POST":
+        c = _corps(request)
+        if c.get("supprimer"):
+            db.run("DELETE FROM studio_outils WHERE id = ?", [int(c["supprimer"])])
+            return _json({"ok": True})
+        nom = str(c.get("nom") or "").strip()[:80]
+        base = c.get("base") if c.get("base") in OUTILS_BASE else None
+        if not nom or not base:
+            return _json({"erreur": "donne un nom et choisis l'outil de départ"}, 400)
+        etapes = [str(x)[:60] for x in (c.get("etapes") or [])][:20]
+        reglages = {k: v for k, v in (c.get("reglages") or {}).items() if isinstance(v, (str, int, float, bool))}
+        oid = db.insert("studio_outils", {"nom": nom, "base": base, "etapes": json.dumps(etapes, ensure_ascii=False),
+                                          "reglages": json.dumps(reglages, ensure_ascii=False), "auteur": u["id"]})
+        return _json({"id": oid})
+    lignes = db.all("SELECT * FROM studio_outils ORDER BY id DESC")
+    return _json({"outils": [{"id": r["id"], "nom": r["nom"], "base": r["base"], "etapes": json.loads(r["etapes"] or "[]"),
+                              "reglages": json.loads(r["reglages"] or "{}")} for r in lignes]})
 
 
 def manifest(request, chemin):

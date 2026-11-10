@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Cauri Studio · Montage</title>
+<link rel="manifest" href="{{ base }}/manifest.json">
+<link rel="icon" href="/assets/marque/studio-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Cauri Studio v2 (10/11/2026) : table de montage, projets, boîte à outils — maquette validée par le fondateur */
+:root { --fond:#F6F6FB; --carte:#FFFFFF; --encre:#12121F; --doux:#3A3A50; --faible:#5B5B72; --trait:#E6E6F0; --trait2:#D9D9E6;
+  --violet:#7C3AED; --violet-fonce:#5B21B6; --violet-clair:#F1EAFE; --ciel:#38BDF8; --ciel-clair:#E0F4FE; --orange:#F77F00; }
+* { box-sizing: border-box }
+html, body { margin: 0; background: var(--fond); color: var(--encre); font: 15px/1.45 Inter, system-ui, sans-serif }
+button, input, select, textarea { font: inherit; color: inherit }
+a { color: var(--violet-fonce) }
+.app { display: flex; min-height: 100vh }
+.menu { width: 232px; flex-shrink: 0; background: var(--carte); border-right: 1px solid var(--trait); padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh }
+.marque { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px }
+.marque .c { width: 36px; height: 36px; border-radius: 10px; background: var(--violet); color: #fff; display: grid; place-items: center; font: 700 15px Unbounded, sans-serif }
+.marque b { font: 700 14px Unbounded, sans-serif; display: block } .marque span { font-size: 12px; color: var(--faible) }
+.menu button, .menu a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 0; background: none; text-align: left; font-weight: 500; font-size: 14px; color: var(--doux); cursor: pointer; text-decoration: none }
+.menu .actif { background: var(--violet-clair); color: var(--violet-fonce); font-weight: 600 }
+.menu .pied { margin-top: auto; padding: 14px; border-radius: 14px; background: linear-gradient(135deg, #EDE4FF, #E0F4FE); font-size: 13px; color: var(--doux) }
+svg.i { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round }
+main { flex: 1; min-width: 0; padding: 28px 32px 90px }
+.vue { display: none } .vue.vu { display: block }
+h1 { margin: 0; font: 700 26px/1.2 Unbounded, sans-serif; text-wrap: balance }
+.sous { color: var(--faible); margin: 6px 0 20px; max-width: 70ch }
+.entete { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px } .entete > div { flex: 1; min-width: 240px }
+.btn { border: 0; border-radius: 12px; padding: 11px 16px; font-weight: 600; font-size: 14px; cursor: pointer; background: var(--violet); color: #fff; display: inline-flex; align-items: center; gap: 8px; text-decoration: none }
+.btn.second { background: var(--carte); color: var(--encre); border: 1px solid var(--trait2) } .btn:disabled { opacity: .5; cursor: default }
+.carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; padding: 16px 18px }
+.compteurs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px }
+.compteurs b { display: block; font: 700 26px Unbounded, sans-serif } .compteurs span { font-size: 13px; color: var(--faible) }
+.filtres { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px }
+.puce { border: 1px solid var(--trait2); background: var(--carte); padding: 8px 14px; border-radius: 99px; font-weight: 600; font-size: 13px; cursor: pointer; color: var(--doux) }
+.puce.on { background: var(--encre); color: #fff; border-color: var(--encre) }
+.recherche { display: flex; align-items: center; gap: 8px; background: var(--carte); border: 1px solid var(--trait2); border-radius: 12px; padding: 0 12px; min-width: 260px }
+.recherche input { border: 0; outline: 0; padding: 10px 0; width: 100%; background: none }
+.table { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; overflow: hidden }
+.ligne { display: grid; grid-template-columns: 56px minmax(0, 2.2fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, .9fr) 110px; gap: 14px; padding: 12px 18px; align-items: center; border-bottom: 1px solid #F1F1F7 }
+.ligne.titres { font-size: 12px; font-weight: 700; letter-spacing: .05em; color: var(--faible); border-bottom-color: #EEEEF4 }
+.vign { width: 48px; height: 60px; border-radius: 10px; background: #E9E9F2 center/cover no-repeat }
+.etat { justify-self: start; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 99px; white-space: nowrap }
+.e-cours { background: var(--ciel-clair); color: #075985 } .e-valider { background: #FFEDD5; color: #9A3412 } .e-pret { background: #DCFCE7; color: #166534 }
+.e-publie { background: #EDE4FF; color: var(--violet-fonce) } .e-erreur { background: #FEE2E2; color: #991B1B } .e-autre { background: #F1F1F7; color: var(--doux) }
+.ligne small { display: block; color: var(--faible); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.vide { padding: 40px; text-align: center; color: var(--faible) }
+.grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px }
+.outil { background: var(--carte); border: 1px solid var(--trait); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; text-align: left; color: var(--encre); text-decoration: none }
+.outil:hover { border-color: #C9B6FA; box-shadow: 0 6px 20px rgba(76, 29, 149, .08) }
+.outil .tete { display: flex; align-items: center; gap: 10px } .outil b { font-size: 15px }
+.pastille { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-weight: 800 }
+.outil small { color: var(--faible); font-size: 13px } .outil em { font-style: normal; color: var(--violet-fonce); font-size: 12px; font-weight: 600 }
+.cote { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 18px; align-items: start }
+.champ { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; margin-bottom: 12px }
+.champ input, .champ select, .champ textarea { border: 1px solid var(--trait2); border-radius: 10px; padding: 10px 12px; font-weight: 500; font-size: 14px; background: #fff; width: 100% }
+.champ textarea { min-height: 120px; resize: vertical }
+.deux { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+.briques { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px }
+.brique { border: 1px dashed #B9B9CC; background: #FAFAFD; padding: 8px 12px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; color: var(--doux) }
+.etape { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #F6F3FF; border: 1px solid #E7DEFF; margin-bottom: 8px }
+.etape .n { width: 24px; height: 24px; border-radius: 99px; background: var(--violet); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; flex-shrink: 0 }
+.etape button { margin-left: auto; border: 0; background: none; font-size: 18px; color: var(--faible); cursor: pointer }
+/* table de montage */
+.montage { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 0; background: var(--carte); border: 1px solid var(--trait); border-radius: 18px; overflow: hidden }
+.scene { background: var(--fond); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; min-height: 480px }
+.ecran { width: min(360px, 100%); aspect-ratio: 4/5; border-radius: 18px; overflow: hidden; box-shadow: 0 24px 60px rgba(30, 20, 70, .25); background: #1B1B2B center/cover no-repeat; display: grid; place-items: center; color: #fff; text-align: center; padding: 20px }
+.ecran video { width: 100%; height: 100%; object-fit: cover }
+.inspecteur { border-left: 1px solid var(--trait); padding: 18px; max-height: 640px; overflow: auto }
+.inspecteur h3 { margin: 0 0 4px; font-size: 12px; letter-spacing: .06em; color: var(--faible) }
+.pl { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 8px; align-items: center; margin-bottom: 6px }
+.pl span { font-size: 11px; color: var(--faible); font-variant-numeric: tabular-nums }
+.pl input { border: 1px solid var(--trait2); border-radius: 8px; padding: 7px 9px; font-size: 13px; width: 100% }
+.frise { grid-column: 1 / -1; border-top: 1px solid var(--trait); padding: 12px 18px 16px; display: flex; flex-direction: column; gap: 8px }
+.piste { display: flex; align-items: center; gap: 10px } .piste > span { width: 76px; font-size: 12px; font-weight: 600; color: var(--doux); flex-shrink: 0 }
+.piste > div { flex: 1; height: 32px; border-radius: 9px; display: flex; gap: 3px; overflow: hidden; position: relative }
+.bloc { border-radius: 8px; background: #EDE4FF; color: #3B1F75; font-size: 11px; font-weight: 600; padding: 0 6px; display: flex; align-items: center; overflow: hidden; white-space: nowrap; position: absolute; top: 0; bottom: 0 }
+.photos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px }
+.photos button { aspect-ratio: 4/5; border-radius: 9px; border: 0; background: #EEE center/cover no-repeat; cursor: pointer }
+.photos button.on { outline: 3px solid var(--violet); outline-offset: 1px }
+.choix { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px }
+.resultats button { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; padding: 8px; border-radius: 10px; cursor: pointer; text-align: left }
+.resultats button:hover { background: var(--fond) } .resultats img { width: 32px; height: 32px; border-radius: 99px; object-fit: cover }
+.msg { font-size: 13px; margin-top: 10px; color: var(--faible) } .msg.err { color: #B91C1C } .msg.ok { color: #166534 }
+.barre-bas { display: none }
+@media (max-width: 900px) {
+  .menu { display: none } main { padding: 18px max(16px, env(safe-area-inset-left)) 96px }
+  .compteurs { grid-template-columns: repeat(2, minmax(0, 1fr)) } .cote, .montage { grid-template-columns: minmax(0, 1fr) }
+  .inspecteur { border-left: 0; border-top: 1px solid var(--trait); max-height: none }
+  .ligne { grid-template-columns: 48px minmax(0, 1fr) auto; } .ligne > :nth-child(3), .ligne > :nth-child(5), .ligne.titres { display: none }
+  .barre-bas { display: flex; position: fixed; left: 0; right: 0; bottom: 0; background: var(--carte); border-top: 1px solid var(--trait); padding: 8px 6px calc(10px + env(safe-area-inset-bottom)) }
+  .barre-bas button { flex: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--faible) }
+  .barre-bas button.actif { color: var(--violet-fonce) }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-montage" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M3 20h18M7 20v-4M17 20v-4"/></symbol>
+  <symbol id="i-projets" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v10H3z"/></symbol>
+  <symbol id="i-outils" viewBox="0 0 24 24"><path d="M14 7l3-3 3 3-3 3M4 20l10-10"/><rect x="3" y="3" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-photo" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></symbol>
+  <symbol id="i-ancien" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-cherche" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+</svg>
+<div class="app">
+  <nav class="menu" aria-label="Menu du Studio">
+    <div class="marque"><div class="c">C</div><div><b>Cauri Studio</b><span>{{ nom.split(' ')[0] if nom else '' }}</span></div></div>
+    <button data-vue="projets" class="actif"><svg class="i"><use href="#i-projets"/></svg>Projets</button>
+    <button data-vue="montage"><svg class="i"><use href="#i-montage"/></svg>Table de montage</button>
+    <button data-vue="outils"><svg class="i"><use href="#i-outils"/></svg>Boîte à outils</button>
+    <a href="{{ base }}#photos"><svg class="i"><use href="#i-photo"/></svg>Banque de photos</a>
+    <a href="{{ base }}"><svg class="i"><use href="#i-ancien"/></svg>Studio d'avant</a>
+    <div class="pied"><b style="color:var(--encre)">Vidéos lourdes</b><br>Paroles et liens YouTube se fabriquent sur le PC : laisse-le allumé.</div>
+  </nav>
+
+  <main>
+    <!-- PROJETS -->
+    <section class="vue vu" id="v-projets" aria-label="Projets">
+      <div class="entete"><div><h1>Projets</h1><p class="sous" style="margin-bottom:0">Chaque création reste un projet : tu le rouvres, tu le valides, tu le publies.</p></div>
+        <button class="btn" data-va="outils">+ Nouveau projet</button></div>
+      <div class="compteurs" id="compteurs"></div>
+      <div class="filtres" id="filtres">
+        <label class="recherche"><svg class="i"><use href="#i-cherche"/></svg><input id="q" placeholder="Chercher un projet, un artiste…" aria-label="Chercher"></label>
+      </div>
+      <div class="table" id="liste"><div class="vide">Chargement…</div></div>
+    </section>
+
+    <!-- OUTILS -->
+    <section class="vue" id="v-outils" aria-label="Boîte à outils">
+      <div class="entete"><div><h1>Boîte à outils</h1><p class="sous" style="margin-bottom:0">Un outil = une recette. Ouvre-en un pour créer un projet, ou assemble le tien.</p></div></div>
+      <div class="cote">
+        <div class="grille" id="outils"></div>
+        <div class="carte" aria-label="Créer un outil">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--violet)">CRÉER UN OUTIL</div>
+          <h2 style="margin:4px 0 14px;font:700 19px Unbounded,sans-serif">Assemble ta recette</h2>
+          <label class="champ">Nom de l'outil<input id="co-nom" placeholder="Ex. : N°1 de la semaine en paroles"></label>
+          <label class="champ">Outil de départ<select id="co-base">
+            <option value="paroles">Vidéo paroles</option><option value="clip">Vidéo de clip</option><option value="annonce">Annonce en images</option>
+            <option value="vedette">Mettre en valeur un artiste</option><option value="photos">Photos d'artistes</option></select></label>
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">Briques · touche pour ajouter</div>
+          <div class="briques" id="co-briques"></div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">Les étapes de ton outil</div>
+          <div id="co-etapes"></div>
+          <label class="champ">Réglages par défaut (facultatif)<input id="co-artistes" placeholder="Artiste ou pays par défaut, ex. : Didi B"></label>
+          <button class="btn" id="co-enregistrer" style="width:100%;justify-content:center">Enregistrer dans ma boîte</button>
+          <div class="msg" id="co-msg"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABLE DE MONTAGE : vidéo paroles -->
+    <section class="vue" id="v-montage" aria-label="Table de montage">
+      <div class="entete"><div><h1 id="m-titre">Nouvelle vidéo paroles</h1><p class="sous" id="m-sous" style="margin-bottom:0">Un son, une photo, les paroles : le Studio cale chaque mot sur la voix.</p></div>
+        <span class="etat e-autre" id="m-etat" style="display:none"></span></div>
+
+      <!-- 1) création -->
+      <div id="m-nouveau" class="cote">
+        <div class="carte">
+          <label class="champ">Lien du son (YouTube, Instagram, TikTok…)<input id="p-lien" type="url" placeholder="https://www.youtube.com/watch?v=…"></label>
+          <label class="champ">… ou un fichier son depuis le téléphone<input id="p-son" type="file" accept="audio/*,video/*"></label>
+          <div class="deux">
+            <label class="champ">Titre<input id="p-titre" placeholder="PARTY"></label>
+            <label class="champ">Artistes<input id="p-artistes" placeholder="Didi B ft. Davido"></label>
+          </div>
+          <div class="deux">
+            <label class="champ">Album ou projet<input id="p-album" placeholder="SHOGUN IN LAGOS"></label>
+            <label class="champ">Pays (couleurs)<select id="p-pays">
+              <option value="CI">Côte d'Ivoire</option><option value="NG">Nigeria</option><option value="GH">Ghana</option><option value="SN">Sénégal</option>
+              <option value="BJ">Bénin</option><option value="TG">Togo</option><option value="BF">Burkina Faso</option><option value="ML">Mali</option>
+              <option value="GN">Guinée</option><option value="CV">Cap-Vert</option><option value="NE">Niger</option><option value="">Couleurs Cauri</option></select></label>
+          </div>
+          <div class="deux">
+            <label class="champ">Début du passage (secondes, facultatif)<input id="p-debut" inputmode="decimal" placeholder="refrain trouvé tout seul"></label>
+            <label class="champ">Fin du passage<input id="p-fin" inputmode="decimal" placeholder="ex. 67"></label>
+          </div>
+        </div>
+        <div class="carte">
+          <div class="champ" style="margin-bottom:6px">Photo de fond · banque de l'artiste</div>
+          <label class="recherche" style="margin-bottom:8px"><svg class="i"><use href="#i-cherche"/></svg><input id="p-cherche" placeholder="Chercher l'artiste…" aria-label="Chercher l'artiste"></label>
+          <div class="resultats" id="p-resultats"></div>
+          <div class="photos" id="p-photos"></div>
+          <label class="champ">… ou une photo du téléphone<input id="p-photo" type="file" accept="image/*"></label>
+          <label class="champ">Paroles (colle le texte, une ligne par ligne chantée)<textarea id="p-texte" placeholder="Laisse vide si tu ajoutes des captures, ou pour les chercher en ligne"></textarea></label>
+          <label class="champ">… ou des captures d'écran des paroles (Spotify), dans l'ordre<input id="p-captures" type="file" accept="image/*" multiple></label>
+          <button class="btn" id="p-creer" style="width:100%;justify-content:center">Préparer la vidéo</button>
+          <div class="msg" id="p-msg"></div>
+        </div>
+      </div>
+
+      <!-- 2) projet ouvert -->
+      <div id="m-projet" style="display:none">
+        <div class="montage">
+          <div class="scene">
+            <div class="ecran" id="m-ecran">Préparation en cours…</div>
+            <div id="m-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div>
+            <div class="msg" id="m-msg"></div>
+          </div>
+          <aside class="inspecteur" aria-label="Paroles">
+            <h3>PAROLES · À RELIRE</h3>
+            <p style="font-size:13px;color:var(--faible);margin:0 0 12px" id="m-origine"></p>
+            <div id="m-lignes"></div>
+          </aside>
+          <div class="frise" aria-label="Frise du temps">
+            <div class="piste"><span>Passage</span><div id="f-passage" style="background:var(--violet-clair)"></div></div>
+            <div class="piste"><span>Paroles</span><div id="f-paroles"></div></div>
+            <div class="piste"><span>Habillage</span><div><span class="bloc" style="left:0;right:0;background:var(--ciel-clair);color:#075985">Photo en fond · logo · titre et pochette, toute la durée</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<nav class="barre-bas" aria-label="Navigation">
+  <button data-vue="projets" class="actif"><svg class="i"><use href="#i-projets"/></svg>Projets</button>
+  <button data-vue="montage"><svg class="i"><use href="#i-montage"/></svg>Montage</button>
+  <button data-vue="outils"><svg class="i"><use href="#i-outils"/></svg>Outils</button>
+</nav>
+
+<script nonce="{{ nonce }}">
+const BASE = {{ base|tojson }}, CSRF = {{ csrf|tojson }};
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function post(url, data) {
+  const r = await fetch(BASE + url, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF}, body: JSON.stringify(data || {})});
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  if (r.status === 401) { location.href = BASE; return new Promise(() => {}); }
+  if (!r.ok) throw new Error(j.erreur || ('Erreur ' + r.status));
+  return j;
+}
+async function get(url) { const r = await fetch(BASE + url); if (r.status === 401) { location.href = BASE; return new Promise(() => {}); } return r.json(); }
+async function envoieFichier(url, corps) {
+  const r = await fetch(BASE + url, {method: 'POST', headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/octet-stream'}, body: corps});
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.erreur || ('Erreur ' + r.status)); return j;
+}
+function msg(sel, texte, ok) { const el = $(sel); el.className = 'msg' + (texte ? (ok ? ' ok' : ok === false ? ' err' : '') : ''); el.textContent = texte || ''; }
+const mmss = s => { s = Math.max(0, +s || 0); return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
+// image réduite à 2 000 px (moins de 4 Mo à envoyer)
+function reduit(fichier) {
+  return new Promise((ok, ko) => { const img = new Image(); img.onload = () => {
+    const k = Math.min(1, 2000 / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    c.toBlob(b => b ? ok(b) : ko(new Error('image illisible')), 'image/jpeg', .9); }; img.onerror = () => ko(new Error('image illisible'));
+    img.src = URL.createObjectURL(fichier); });
+}
+
+// ---------------- navigation
+let vue = 'projets';
+function montre(nom) {
+  vue = nom; $$('.vue').forEach(v => v.classList.toggle('vu', v.id === 'v-' + nom));
+  $$('[data-vue]').forEach(b => b.classList.toggle('actif', b.dataset.vue === nom));
+  window.scrollTo({top: 0}); if (nom === 'projets') projets(); if (nom === 'outils') boite();
+}
+$$('[data-vue]').forEach(b => b.onclick = () => { if (b.dataset.vue === 'montage') nouveauMontage(); montre(b.dataset.vue); });
+$$('[data-va]').forEach(b => b.onclick = () => montre(b.dataset.va));
+
+// ---------------- projets
+const ETATS = {attente: ['En cours', 'cours'], telechargement: ['En cours', 'cours'], analyse: ['En cours', 'cours'], montage: ['En cours', 'cours'],
+  attente_pc: ['Sur le PC', 'cours'], a_valider: ['À valider', 'valider'], pret: ['Prêt', 'pret'], envoye: ['Publié', 'publie'],
+  erreur: ['Erreur', 'erreur'], annule: ['Annulé', 'autre']};
+const OUTIL_NOM = {paroles: 'Vidéo paroles', vedette: 'Mise en valeur', extrait: 'Vidéo de clip', refrain: 'Vidéo de clip', resume: 'Vidéo de clip'};
+let tousJobs = [], filtre = 'Tous';
+async function projets() {
+  let r; try { r = await get('/historique'); } catch (e) { $('#liste').innerHTML = '<div class="vide">Liste indisponible.</div>'; return; }
+  tousJobs = r.jobs || [];
+  const n = k => tousJobs.filter(j => (ETATS[j.statut] || ['', 'autre'])[1] === k).length;
+  $('#compteurs').innerHTML = [['En cours', n('cours'), '#075985'], ['À valider', n('valider'), '#9A3412'], ['Prêts à publier', n('pret'), '#166534'], ['Publiés', n('publie'), '#5B21B6']]
+    .map(([l, v, c]) => `<div class="carte"><span>${l}</span><b style="color:${c}">${v}</b></div>`).join('');
+  const f = $('#filtres'); $$('#filtres .puce').forEach(p => p.remove());
+  ['Tous', 'En cours', 'À valider', 'Prêt', 'Publié', 'Erreur'].forEach(l => { const b = document.createElement('button');
+    b.className = 'puce' + (l === filtre ? ' on' : ''); b.textContent = l; b.onclick = () => { filtre = l; liste(); projets(); }; f.appendChild(b); });
+  liste();
+}
+function liste() {
+  const q = ($('#q').value || '').toLowerCase();
+  const l = tousJobs.filter(j => { const e = (ETATS[j.statut] || [j.statut])[0];
+    const txt = [j.params.titre, j.params.artistes, j.params.accroche, j.params.artiste, j.lien].join(' ').toLowerCase();
+    return (filtre === 'Tous' || e === filtre || (filtre === 'En cours' && e === 'Sur le PC')) && (!q || txt.includes(q)); });
+  if (!l.length) { $('#liste').innerHTML = '<div class="vide">Aucun projet ici pour l\'instant.</div>'; return; }
+  $('#liste').innerHTML = '<div class="ligne titres"><span></span><span>PROJET</span><span>OUTIL</span><span>ÉTAT</span><span>CRÉÉ</span><span></span></div>' + l.map(j => {
+    const p = j.params, e = ETATS[j.statut] || [j.statut, 'autre'];
+    const nom = p.type === 'paroles' ? `${p.titre || 'Sans titre'} · ${p.artistes || ''}` : (p.accroche || p.artiste_nom || p.artiste || 'Vidéo');
+    const outil = OUTIL_NOM[p.type] || (p.type === 'vedette' ? 'Mise en valeur' : 'Vidéo de clip');
+    const detail = p.type === 'paroles' ? (p.album || 'Vidéo paroles') : (p.etiquette || j.lien || '');
+    return `<div class="ligne"><div class="vign" style="background-image:url('${esc(j.vignette || '')}')"></div>
+      <div style="min-width:0"><b>${esc(nom)}</b><small>${esc(detail)}</small></div><span>${esc(outil)}</span>
+      <span class="etat e-${e[1]}">${esc(e[0])}</span><small>${esc((j.cree_le || '').replace('T', ' '))}</small>
+      <button class="btn second" data-ouvre="${j.id}" data-type="${esc(p.type || '')}" style="justify-self:end;padding:8px 14px">Ouvrir</button></div>`; }).join('');
+  $$('[data-ouvre]').forEach(b => b.onclick = () => b.dataset.type === 'paroles' ? ouvreProjet(+b.dataset.ouvre) : (location.href = BASE + '#videos'));
+}
+$('#q').oninput = liste;
+
+// ---------------- boîte à outils
+const BASES = [
+  {id: 'paroles', nom: 'Vidéo paroles', l: 'P', fond: '#FFEDD5', encre: '#9A3412', d: 'Un son et une photo : les mots qui s\'allument au rythme de la voix.', e: 'Son · Paroles · Photo · Rendu'},
+  {id: 'clip', nom: 'Vidéo de clip', l: 'V', fond: '#EDE4FF', encre: '#5B21B6', d: 'Un lien : le meilleur passage, habillé aux couleurs Cauri.', e: 'Lien · Passage · Habillage', va: '#creer'},
+  {id: 'annonce', nom: 'Annonce en images', l: 'A', fond: '#E0F4FE', encre: '#075985', d: 'Une actu chaude en carrousel, avec accroche.', e: 'Images · Accroche · Carrousel', va: '#annonce'},
+  {id: 'vedette', nom: 'Mettre en valeur', l: 'M', fond: '#EDE4FF', encre: '#5B21B6', d: 'Les plus belles photos d\'un artiste, 10 modèles.', e: 'Artiste · Photos · Modèle', va: '#vedette'},
+  {id: 'photos', nom: 'Photos d\'artistes', l: 'B', fond: '#DCFCE7', encre: '#166534', d: 'Ajouter ou trier les photos de la banque.', e: 'Liens · Tri · Banque', va: '#photos'}];
+const BRIQUES = ['Un titre du classement', 'Son du clip', 'Paroles', 'Photo de la banque', 'Couleurs du pays', 'Accroche IA', 'Modèle visuel',
+  'Rendu 4:5 + 9:16', 'Version muette', 'Programmer', 'Publier après validation'];
+let etapes = ['Son du clip', 'Paroles', 'Photo de la banque', 'Rendu 4:5 + 9:16', 'Publier après validation'];
+async function boite() {
+  let maison = []; try { maison = (await get('/outils')).outils || []; } catch (e) {}
+  const carte = (o, extra) => `<button class="outil" data-outil="${esc(o.id)}" ${extra || ''}><div class="tete"><span class="pastille" style="background:${o.fond};color:${o.encre}">${esc(o.l)}</span><b>${esc(o.nom)}</b></div><small>${esc(o.d)}</small><em>${esc(o.e)}</em></button>`;
+  $('#outils').innerHTML = BASES.map(o => carte(o)).join('') + maison.map(m => carte({id: 'm' + m.id, nom: m.nom, l: '★', fond: '#12121F', encre: '#fff',
+    d: 'Ton outil · départ : ' + ((BASES.find(b => b.id === m.base) || {}).nom || m.base), e: (m.etapes || []).join(' · ')}, `data-base="${esc(m.base)}" data-reglages="${esc(JSON.stringify(m.reglages || {}))}"`)).join('');
+  $$('[data-outil]').forEach(b => b.onclick = () => {
+    const base = b.dataset.base || b.dataset.outil, def = BASES.find(x => x.id === base) || {};
+    if (base === 'paroles') { nouveauMontage(b.dataset.reglages ? JSON.parse(b.dataset.reglages) : {}); montre('montage'); }
+    else location.href = BASE + (def.va || '');
+  });
+  dessineEtapes();
+}
+function dessineEtapes() {
+  $('#co-briques').innerHTML = BRIQUES.map((x, i) => `<button class="brique" data-b="${i}">+ ${esc(x)}</button>`).join('');
+  $$('#co-briques .brique').forEach(b => b.onclick = () => { etapes.push(BRIQUES[+b.dataset.b]); dessineEtapes(); });
+  $('#co-etapes').innerHTML = etapes.map((x, i) => `<div class="etape"><span class="n">${i + 1}</span><b style="font-size:14px">${esc(x)}</b><button data-retire="${i}" aria-label="Retirer l'étape">×</button></div>`).join('')
+    || '<p class="msg">Ajoute des briques.</p>';
+  $$('[data-retire]').forEach(b => b.onclick = () => { etapes.splice(+b.dataset.retire, 1); dessineEtapes(); });
+}
+$('#co-enregistrer').onclick = async () => {
+  try { await post('/outils', {nom: $('#co-nom').value, base: $('#co-base').value, etapes, reglages: $('#co-artistes').value ? {artistes: $('#co-artistes').value} : {}});
+    msg('#co-msg', 'Outil enregistré dans ta boîte.', true); $('#co-nom').value = ''; boite(); }
+  catch (e) { msg('#co-msg', e.message, false); }
+};
+
+// ---------------- table de montage (vidéo paroles)
+let jobOuvert = null, photoChoisie = null, minuteur = null;
+function nouveauMontage(reglages) {
+  jobOuvert = null; clearTimeout(minuteur);
+  $('#m-nouveau').style.display = ''; $('#m-projet').style.display = 'none'; $('#m-etat').style.display = 'none';
+  $('#m-titre').textContent = 'Nouvelle vidéo paroles'; msg('#p-msg', '');
+  if (reglages && reglages.artistes) $('#p-artistes').value = reglages.artistes;
+}
+let attente = null;
+$('#p-cherche').oninput = () => { clearTimeout(attente); attente = setTimeout(async () => {
+  const q = $('#p-cherche').value.trim(); if (q.length < 2) { $('#p-resultats').innerHTML = ''; return; }
+  const r = await get('/artistes?q=' + encodeURIComponent(q));
+  $('#p-resultats').innerHTML = (r.artistes || []).map(a => `<button data-art="${a.id}" data-nom="${esc(a.nom)}" data-pays="${esc(a.pays)}"><img src="${esc(a.photo)}" alt=""><span>${esc(a.nom)} <small style="color:var(--faible)">${esc(a.pays)}</small></span></button>`).join('');
+  $$('[data-art]').forEach(b => b.onclick = async () => {
+    $('#p-resultats').innerHTML = ''; $('#p-cherche').value = b.dataset.nom;
+    if (!$('#p-artistes').value) $('#p-artistes').value = b.dataset.nom;
+    if (b.dataset.pays && [...$('#p-pays').options].some(o => o.value === b.dataset.pays)) $('#p-pays').value = b.dataset.pays;
+    const ph = (await get('/banque/' + b.dataset.art)).photos || [];
+    $('#p-photos').innerHTML = ph.slice(0, 16).map(p => `<button data-ph="${p.id}" style="background-image:url('${esc(p.url)}')" aria-label="Choisir cette photo"></button>`).join('') || '<p class="msg">Pas encore de photo dans sa banque.</p>';
+    $$('[data-ph]').forEach(x => x.onclick = () => { photoChoisie = +x.dataset.ph; $$('[data-ph]').forEach(y => y.classList.toggle('on', y === x)); });
+  }); }, 250); };
+
+$('#p-creer').onclick = async () => {
+  const lien = $('#p-lien').value.trim(), son = $('#p-son').files[0];
+  if (!lien && !son) { msg('#p-msg', 'Ajoute un lien ou un fichier son.', false); return; }
+  if (!$('#p-titre').value.trim()) { msg('#p-msg', 'Donne le titre du morceau.', false); return; }
+  const btn = $('#p-creer'); btn.disabled = true;
+  try {
+    msg('#p-msg', 'Création du projet…');
+    const r = await post('/paroles/nouveau', {lien, titre: $('#p-titre').value, artistes: $('#p-artistes').value, album: $('#p-album').value,
+      pays: $('#p-pays').value, texte: $('#p-texte').value, photo_id: photoChoisie, debut: $('#p-debut').value, fin: $('#p-fin').value});
+    const id = r.id;
+    if (son) { msg('#p-msg', 'Envoi du son…'); const ext = (son.name.split('.').pop() || 'mp3').toLowerCase(); await envoieFichier(`/paroles/${id}/fichier?genre=son&ext=${ext}`, son); }
+    if ($('#p-photo').files[0]) { msg('#p-msg', 'Envoi de la photo…'); await envoieFichier(`/paroles/${id}/fichier?genre=photo&ext=jpg`, await reduit($('#p-photo').files[0])); }
+    const caps = [...$('#p-captures').files];
+    for (let i = 0; i < caps.length; i++) { msg('#p-msg', `Envoi des captures (${i + 1}/${caps.length})…`); await envoieFichier(`/paroles/${id}/fichier?genre=capture&ext=jpg`, await reduit(caps[i])); }
+    await post(`/paroles/${id}/lancer`);
+    ouvreProjet(id);
+  } catch (e) { msg('#p-msg', e.message, false); } finally { btn.disabled = false; }
+};
+
+async function ouvreProjet(id) {
+  montre('montage'); jobOuvert = id; clearTimeout(minuteur);
+  $('#m-nouveau').style.display = 'none'; $('#m-projet').style.display = '';
+  let j; try { j = await get('/job/' + id); } catch (e) { msg('#m-msg', 'Projet introuvable.', false); return; }
+  if (jobOuvert !== id) return;
+  const p = j.params, e = ETATS[j.statut] || [j.statut, 'autre'];
+  $('#m-titre').textContent = `${p.titre || 'Vidéo paroles'} · ${p.artistes || ''}`;
+  $('#m-sous').textContent = p.album ? `${p.album} · vidéo paroles` : 'Vidéo paroles';
+  const et = $('#m-etat'); et.style.display = ''; et.className = 'etat e-' + e[1]; et.textContent = e[0];
+  const ecran = $('#m-ecran'), act = $('#m-actions');
+  act.innerHTML = ''; msg('#m-msg', '');
+  if (j.statut === 'pret' || j.statut === 'envoye') {
+    ecran.style.backgroundImage = ''; ecran.innerHTML = `<video src="${esc(j.video)}" controls playsinline poster="${esc(j.vignette || '')}"></video>`;
+  } else if (j.vignette) { ecran.innerHTML = ''; ecran.style.backgroundImage = `url('${j.vignette}')`; }
+  else { ecran.style.backgroundImage = ''; ecran.textContent = j.statut === 'erreur' ? 'Erreur' : 'Préparation sur le PC…'; }
+  // paroles et frise
+  const lignes = p.lignes || [], textes = p.paroles || lignes.map(l => l.mots.map(w => w.m).join(' '));
+  $('#m-origine').textContent = lignes.length ? `${lignes.length} lignes · source : ${p.origine_paroles || '—'}. Corrige un mot si besoin : les temps restent.` : 'Les paroles apparaîtront ici après la préparation.';
+  $('#m-lignes').innerHTML = lignes.map((l, i) => `<div class="pl"><span>${mmss(l.debut)}</span><input data-l="${i}" value="${esc(textes[i] || '')}" ${j.statut === 'a_valider' ? '' : 'disabled'} aria-label="Ligne ${i + 1}"></div>`).join('');
+  const t0 = +p.debut || 0, t1 = +p.fin || (t0 + 30), d = Math.max(1, t1 - t0);
+  $('#f-passage').innerHTML = `<span class="bloc" style="left:0;right:0;background:#8B5CF6;color:#fff">${mmss(t0)} → ${mmss(t1)} · ${Math.round(d)} s</span>`;
+  $('#f-paroles').innerHTML = lignes.map((l, i) => `<span class="bloc" style="left:${Math.max(0, (l.debut - t0) / d * 100)}%;width:${Math.max(1, (l.fin - l.debut) / d * 100)}%">${esc((textes[i] || '').slice(0, 24))}</span>`).join('');
+  if (j.statut === 'erreur') {
+    msg('#m-msg', j.erreur || 'Erreur', false);
+    const b = document.createElement('button'); b.className = 'btn second'; b.textContent = 'Relancer';
+    b.onclick = async () => { await post(`/job/${id}/relancer`); ouvreProjet(id); }; act.appendChild(b);
+  } else if (j.statut === 'a_valider') {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Valider et fabriquer';
+    b.onclick = async () => { b.disabled = true; try { await post(`/job/${id}/valider`, {paroles: $$('#m-lignes input').map(x => x.value)}); ouvreProjet(id); } catch (e) { msg('#m-msg', e.message, false); b.disabled = false; } };
+    act.appendChild(b);
+  } else if (j.statut === 'pret') {
+    act.innerHTML = `<div class="choix"><button class="puce on" data-son="avec">Avec le son</button><button class="puce" data-son="muette">Muette (son officiel dans l'appli)</button></div>`;
+    let son = 'avec';
+    $$('[data-son]').forEach(b => b.onclick = () => { son = b.dataset.son; $$('[data-son]').forEach(x => x.classList.toggle('on', x === b)); });
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Publier sur les réseaux';
+    b.onclick = async () => { b.disabled = true; try { const r = await post(`/job/${id}/envoyer`, {son, accroche: `${p.titre} · ${p.artistes}`, legende_fr: `${p.artistes}, « ${p.titre} »` + (p.album ? `\nExtrait de ${p.album}.` : '') + '\n\nTa phrase préférée en commentaire ‼️'});
+      msg('#m-msg', 'Envoyé : ' + (r.recus || []).join(', ') + (son === 'muette' ? ' — termine dans l\'appli Buffer pour ajouter le son.' : ''), true); ouvreProjet(id); }
+      catch (e) { msg('#m-msg', e.message, false); b.disabled = false; } };
+    act.appendChild(b);
+  }
+  if (['attente', 'attente_pc', 'telechargement', 'analyse', 'montage'].includes(j.statut)) {
+    msg('#m-msg', j.statut === 'attente_pc' ? 'En attente du PC (relais toutes les 5 min)…' : 'Le PC travaille… (rendu de 5 à 15 min)');
+    minuteur = setTimeout(() => { if (jobOuvert === id && vue === 'montage') ouvreProjet(id); }, 8000);
+  }
+}
+
+// ouverture directe : #projet-123 ou #outils
+const h = location.hash.slice(1);
+if (h.startsWith('projet-')) ouvreProjet(+h.slice(7)); else if (['outils', 'montage'].includes(h)) { if (h === 'montage') nouveauMontage(); montre(h); } else projets();
+</script>
+</body>
+</html>

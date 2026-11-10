@@ -272,6 +272,7 @@ code{background:#F2F7FD;color:#3E1A9E}
       <button class="tuile" data-va="annonce"><span class="ic ciel"><svg class="i"><use href="#i-annonce"/></svg></span><span><b>Annonce en images</b><small>Une actu chaude : les images d'un post ou de ton téléphone, en carrousel.</small></span><svg class="i fl"><use href="#i-plus"/></svg></button>
       <button class="tuile" data-va="vedette"><span class="ic"><svg class="i"><use href="#i-magie"/></svg></span><span><b>Mettre en valeur un artiste</b><small>Ses plus belles photos de la banque, 10 modèles de visuels, en un post ou un carrousel.</small></span><svg class="i fl"><use href="#i-plus"/></svg></button>
       <button class="tuile" data-va="photos"><span class="ic ciel"><svg class="i"><use href="#i-photo"/></svg></span><span><b>Photos d'artistes</b><small>Ajouter des photos à la banque d'un artiste, ou trier celles qui attendent.</small></span><svg class="i fl"><use href="#i-plus"/></svg></button>
+      <a class="tuile" href="{{ base }}/montage" style="text-decoration:none;color:inherit"><span class="ic ciel"><svg class="i"><use href="#i-magie"/></svg></span><span><b>Nouveau Studio · table de montage</b><small>Projets, vidéo paroles, boîte à outils et outils maison.</small></span><svg class="i fl"><use href="#i-plus"/></svg></a>
       <button class="tuile" data-va="videos"><span class="ic"><svg class="i"><use href="#i-film"/></svg></span><span><b>Mes créations</b><small>Tout ce que tu as lancé, avec son état : en cours, prête, à choisir, publiée.</small></span><svg class="i fl"><use href="#i-plus"/></svg></button>
     </div>
   </section>
@@ -714,6 +715,8 @@ if ($('.app') && !sessionStorage.getItem('studio-ouvert') && {{ 'true' if a_pass
     });
   }
   alertes();
+  // ouvert depuis le nouveau Studio (boîte à outils) : #creer, #annonce, #vedette, #photos, #videos (10/11/2026)
+  { const h = location.hash.slice(1); if (['creer', 'annonce', 'vedette', 'photos', 'videos'].includes(h)) setTimeout(() => montre(h), 0); }
   // accueil : tuiles et compteurs (03/11/2026)
   $$('#e-accueil .tuile').forEach(b => b.onclick = () => { vibre(); montre(b.dataset.va); });
   async function compteurs() {
