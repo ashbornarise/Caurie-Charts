@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#FFFFFF">
 <title>Cauri Studio</title>
 <link rel="manifest" href="{{ base }}/manifest.json">
-<link rel="icon" href="/assets/marque/studio-192.png">
-<link rel="apple-touch-icon" href="/assets/marque/studio-192.png">
+<link rel="icon" href="/assets/marque/studio-v2-192.png">
+<link rel="apple-touch-icon" href="/assets/marque/studio-v2-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* Cauri Studio v2 (10/11/2026) — un seul geste principal par écran, les options avancées repliées, des assistants en étapes */
@@ -132,10 +132,19 @@ h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
 .resultats button:hover { background: var(--fond) } .resultats img { width: 34px; height: 34px; border-radius: 99px; object-fit: cover; background: #E9E9F2 }
 .choisi { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--violet-clair); margin-bottom: 14px; font-weight: 600 }
 .choisi button { margin-left: auto }
+.cases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+.case { border: 1px solid var(--trait); background: var(--carte); border-radius: 20px; padding: 16px; text-align: left; display: flex; flex-direction: column; gap: 12px; min-height: 132px; position: relative }
+.case:hover { border-color: #C9B6FA; box-shadow: 0 8px 24px rgba(76, 29, 149, .08) }
+.case .ic { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center }
+.case .ic svg { width: 22px; height: 22px }
+.case b { font-size: 16px; display: block } .case small { color: var(--faible); font-size: 13px }
+.case .nb { position: absolute; top: 14px; right: 14px; font: 700 22px Unbounded, sans-serif }
 .barre-bas { display: none }
+.toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; background: var(--encre); color: #fff; padding: 12px 18px; border-radius: 14px; font-weight: 600; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.25); max-width: calc(100% - 32px); text-align: center }
 @media (max-width: 900px) {
   .menu { display: none } main { padding: 18px max(16px, env(safe-area-inset-left)) 190px max(16px, env(safe-area-inset-right)) }
   .projet-grille { grid-template-columns: minmax(0, 1fr) } h1 { font-size: 22px }
+  .cases { grid-template-columns: repeat(2, minmax(0, 1fr)) } .case { min-height: 118px }
   .barre-bas { display: flex; position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; background: var(--carte); border-top: 1px solid var(--trait); padding: 8px 6px calc(10px + env(safe-area-inset-bottom)) }
   .barre-bas button { flex: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--faible); position: relative }
   .barre-bas button.actif { color: var(--violet-fonce) }
@@ -156,6 +165,11 @@ h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
   <symbol id="i-envoi" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></symbol>
   <symbol id="i-musique" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
   <symbol id="i-cherche" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-tache" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11l2 2 4-4M9 17h6"/></symbol>
+  <symbol id="i-cours" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-dossier" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-idee" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-cloche" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a2 2 0 0 0 3.4 0"/></symbol>
 </svg>
 
 <div class="app">
@@ -171,13 +185,38 @@ h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
     <!-- ACCUEIL -->
     <section class="vue vu" id="v-accueil">
       <h1>Bonjour {{ nom.split(' ')[0] if nom else '' }}</h1>
-      <p class="sous">Ce qui t'attend, puis tous tes projets.</p>
-      <div id="alertes"></div>
-      <div id="bloc-attente" hidden><h2>À faire maintenant</h2><div class="attente" id="attente"></div></div>
-      <div class="carte" id="bloc-idees" hidden><h2>Idées du jour</h2><p class="msg" style="margin:-4px 0 6px">Vrais clips officiels, souvenirs et records. Un toucher : la vidéo se fabrique au refrain.</p><div id="idees"></div></div>
-      <h2 style="margin-top:6px">Projets</h2>
+      <p class="sous">Que veux-tu faire ?</p>
+      <div class="cases">
+        <button class="case" data-case="afaire"><span class="ic" style="background:#FFEDD5;color:#9A3412"><svg class="i"><use href="#i-tache"/></svg></span><span class="nb" id="nb-afaire" style="color:#9A3412"></span><span><b>À faire</b><small>Valider, choisir, publier</small></span></button>
+        <button class="case" data-case="encours"><span class="ic" style="background:var(--ciel-clair);color:#075985"><svg class="i"><use href="#i-cours"/></svg></span><span class="nb" id="nb-encours" style="color:#075985"></span><span><b>En cours</b><small>En fabrication</small></span></button>
+        <button class="case" data-case="creer"><span class="ic" style="background:var(--violet);color:#fff"><svg class="i"><use href="#i-plus"/></svg></span><span><b>Créer</b><small>Clip, paroles, annonce…</small></span></button>
+        <button class="case" data-case="historique"><span class="ic" style="background:var(--violet-clair);color:var(--violet-fonce)"><svg class="i"><use href="#i-dossier"/></svg></span><span class="nb" id="nb-historique" style="color:var(--violet-fonce)"></span><span><b>Historique</b><small>Tous tes projets</small></span></button>
+        <button class="case" data-case="suggestions"><span class="ic" style="background:#FEF9C3;color:#854D0E"><svg class="i"><use href="#i-idee"/></svg></span><span class="nb" id="nb-suggestions" style="color:#854D0E"></span><span><b>Suggestions</b><small>Idées du jour</small></span></button>
+        <button class="case" data-case="rappels"><span class="ic" style="background:#FEE2E2;color:#991B1B"><svg class="i"><use href="#i-cloche"/></svg></span><span class="nb" id="nb-rappels" style="color:#991B1B"></span><span><b>Rappels</b><small>Photos à trouver</small></span></button>
+      </div>
+      <div class="carte" id="carte-notif" hidden style="margin-top:16px;display:flex;gap:12px;align-items:center"><span class="ic" style="width:40px;height:40px;border-radius:12px;background:var(--violet-clair);color:var(--violet-fonce);display:grid;place-items:center;flex-shrink:0"><svg class="i"><use href="#i-cloche"/></svg></span><span style="flex:1"><b>Notifications</b><br><small style="color:var(--faible)">Être prévenu sur ce téléphone quand un projet t'attend.</small></span><button class="btn" id="notif-activer" style="padding:10px 14px">Activer</button></div>
+    </section>
+
+    <section class="vue" id="v-liste">
+      <button class="retour" data-nav="accueil"><svg class="i"><use href="#i-gauche"/></svg>Accueil</button>
+      <h1 id="liste-titre">Projets</h1>
+      <p class="sous" id="liste-sous"></p>
       <div class="puces" id="filtres"></div>
       <div class="liste" id="projets"><div class="vide">Chargement…</div></div>
+    </section>
+
+    <section class="vue" id="v-suggestions">
+      <button class="retour" data-nav="accueil"><svg class="i"><use href="#i-gauche"/></svg>Accueil</button>
+      <h1>Suggestions</h1>
+      <p class="sous">Vrais clips officiels, souvenirs et records. « Fabriquer » : la vidéo se coupe au refrain et s'habille toute seule.</p>
+      <div class="carte" id="idees"><div class="vide">Chargement…</div></div>
+    </section>
+
+    <section class="vue" id="v-rappels">
+      <button class="retour" data-nav="accueil"><svg class="i"><use href="#i-gauche"/></svg>Accueil</button>
+      <h1>Rappels</h1>
+      <p class="sous">Les artistes qui n'ont pas encore de belle photo : touche pour en chercher.</p>
+      <div id="alertes"><div class="vide">Chargement…</div></div>
     </section>
 
     <!-- CRÉER -->
@@ -343,7 +382,7 @@ h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
 
     <!-- PROJET (toutes les créations) -->
     <section class="vue" id="v-projet">
-      <button class="retour" data-nav="accueil"><svg class="i"><use href="#i-gauche"/></svg>Projets</button>
+      <button class="retour" data-nav="accueil"><svg class="i"><use href="#i-gauche"/></svg>Retour</button>
       <h1 id="pj-titre">Projet</h1>
       <p class="sous" id="pj-sous"></p>
       <div class="projet-grille">
@@ -416,6 +455,7 @@ h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
   <button data-nav="reglages"><svg class="i"><use href="#i-reglages"/></svg>Réglages</button>
 </nav>
 
+<div class="toast" id="toast" hidden role="status"></div>
 <div class="voile" id="voile" hidden></div>
 <div class="feuille" id="feuille" role="dialog" aria-modal="true" aria-labelledby="fe-titre" hidden>
   <h2 id="fe-titre">Publier</h2>
@@ -503,8 +543,12 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register(BASE + '/sw.j
 
 // ---------------- navigation
 let vue = 'accueil';
-const NAV = {accueil: 'accueil', creer: 'creer', clip: 'creer', paroles: 'creer', annonce: 'creer', vedette: 'creer', projet: 'accueil', banque: 'banque', reglages: 'reglages'};
-function montre(nom) {
+const NAV = {liste: 'accueil', suggestions: 'accueil', rappels: 'accueil', accueil: 'accueil', creer: 'creer', clip: 'creer', paroles: 'creer', annonce: 'creer', vedette: 'creer', projet: 'accueil', banque: 'banque', reglages: 'reglages'};
+// 10/11/2026 : le geste « retour » du téléphone revient à l'écran précédent du Studio ; sur l'accueil, il faut le refaire
+// pour quitter (« Refais le geste pour quitter »)
+function toast(t, ms) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.m); toast.m = setTimeout(() => el.hidden = true, ms || 2200); }
+function montre(nom, sansHistorique) {
+  if (!sansHistorique && !(history.state && history.state.vue === nom && nom !== 'projet')) history.pushState({vue: nom, id: nom === 'projet' ? pj.id : null}, '', '');
   vue = nom; $$('.vue').forEach(v => v.classList.toggle('vu', v.id === 'v-' + nom));
   $$('[data-nav]').forEach(b => b.classList.toggle('actif', b.dataset.nav === NAV[nom] && !b.classList.contains('retour')));
   window.scrollTo({top: 0});
@@ -512,6 +556,8 @@ function montre(nom) {
   if (nom !== 'projet') clearTimeout(pj.minuteur);
 }
 $$('[data-nav]').forEach(b => b.onclick = () => { vibre(); montre(b.dataset.nav); });
+// les boutons « Retour » des écrans reviennent à l'écran d'où l'on vient (comme le geste retour)
+$$('.retour[data-nav]').forEach(b => b.onclick = () => { vibre(); if (history.state && history.state.vue && history.state.vue !== 'racine' && vue !== 'accueil') history.back(); else montre(b.dataset.nav); });
 
 // ---------------- états
 const ETATS = {attente: ['En file', 'cours'], telechargement: ['En cours', 'cours'], analyse: ['En cours', 'cours'], montage: ['En fabrication', 'cours'],
@@ -526,36 +572,45 @@ function nomProjet(j) {
   return [p.accroche || (j.lien || '').replace(/^https?:\/\/(www\.)?/, '').slice(0, 48) || 'Vidéo', 'Vidéo de clip'];
 }
 
-// ---------------- ACCUEIL
-let jobs = [], filtre = 'Tous';
+// ---------------- ACCUEIL : six cases, chacune ouvre son écran (10/11/2026 : « l'accueil est trop long »)
+let jobs = [], filtre = 'Tous', idees_ = null, alertes_ = null;
+const garde = j => filtre === 'Tous' || (filtre === 'En cours' && EN_COURS.includes(j.statut)) || (filtre === 'À faire' && ['a_valider', 'a_choisir', 'pret'].includes(j.statut))
+  || (filtre === 'Publiés' && j.statut === 'envoye') || (filtre === 'Échecs' && ['erreur', 'annule'].includes(j.statut));
+const nb = (id, n) => { $('#nb-' + id).textContent = n ? n : ''; };
 async function accueil() {
-  alertes(); idees();
-  let r; try { r = await get('/historique'); } catch (e) { $('#projets').innerHTML = '<div class="vide">Liste indisponible.</div>'; return; }
-  jobs = r.jobs || [];
-  const aFaire = jobs.filter(j => ['a_valider', 'a_choisir', 'pret'].includes(j.statut));
-  $('#bloc-attente').hidden = !aFaire.length;
-  $('#attente').innerHTML = aFaire.slice(0, 6).map(j => { const [n, o] = nomProjet(j), e = etat(j.statut);
-    return `<button data-pj="${j.id}">${j.vignette ? `<img src="${esc(j.vignette)}" alt="">` : '<span class="vg"></span>'}<span style="min-width:0"><b>${esc(n)}</b><small>${esc(o)} · <span class="etat e-${e[1]}" style="padding:2px 8px">${esc(e[0])}</span></small></span></button>`; }).join('');
+  try { jobs = (await get('/historique')).jobs || []; } catch (e) {}
+  nb('afaire', jobs.filter(j => ['a_valider', 'a_choisir', 'pret'].includes(j.statut)).length);
+  nb('encours', jobs.filter(j => EN_COURS.includes(j.statut)).length); nb('historique', jobs.length);
+  get('/idees').then(d => { idees_ = (d && d.idees) || []; nb('suggestions', idees_.length); }).catch(() => {});
+  get('/alertes').then(d => { alertes_ = (d && d.alertes) || []; nb('rappels', alertes_.length); }).catch(() => {});
+  etatNotif();
+}
+$$('[data-case]').forEach(b => b.onclick = () => { vibre(); const c = b.dataset.case;
+  if (c === 'creer') montre('creer'); else if (c === 'suggestions') { montre('suggestions'); idees(); } else if (c === 'rappels') { montre('rappels'); alertes(); }
+  else { filtre = {afaire: 'À faire', encours: 'En cours', historique: 'Tous'}[c]; montre('liste'); liste(); } });
+async function liste() {
+  const titres = {'À faire': ['À faire', 'Ce qui attend ta validation ou ta publication.'], 'En cours': ['En cours', 'En fabrication : tu peux fermer l\'appli, ils t\'attendront ici.'],
+    'Tous': ['Historique', 'Tous tes projets, les plus récents d\'abord.'], 'Publiés': ['Historique', 'Les projets publiés.'], 'Échecs': ['Historique', 'Les projets en échec ou annulés.']};
+  $('#liste-titre').textContent = titres[filtre][0]; $('#liste-sous').textContent = titres[filtre][1];
+  if (!jobs.length) { try { jobs = (await get('/historique')).jobs || []; } catch (e) {} }
   $('#filtres').innerHTML = ['Tous', 'En cours', 'À faire', 'Publiés', 'Échecs'].map(f => `<button class="puce${f === filtre ? ' on' : ''}" data-f="${f}">${f}</button>`).join('');
-  $$('#filtres .puce').forEach(b => b.onclick = () => { filtre = b.dataset.f; accueil(); });
-  const garde = j => filtre === 'Tous' || (filtre === 'En cours' && EN_COURS.includes(j.statut)) || (filtre === 'À faire' && ['a_valider', 'a_choisir', 'pret'].includes(j.statut))
-    || (filtre === 'Publiés' && j.statut === 'envoye') || (filtre === 'Échecs' && ['erreur', 'annule'].includes(j.statut));
+  $$('#filtres .puce').forEach(b => b.onclick = () => { filtre = b.dataset.f; liste(); });
   const l = jobs.filter(garde);
   $('#projets').innerHTML = l.length ? l.map(j => { const [n, o] = nomProjet(j), e = etat(j.statut);
     return `<button class="projet" data-pj="${j.id}"><span class="vg" style="background-image:url('${esc(j.vignette || '')}')"></span><span class="txt"><b>${esc(n)}</b><small>${esc(o)} · ${esc((j.cree_le || '').replace('T', ' ').slice(0, 16))}</small></span><span class="etat e-${e[1]}">${esc(e[0])}</span></button>`; }).join('')
-    : '<div class="vide">Rien ici pour l\'instant. Touche « Créer » pour commencer.</div>';
+    : '<div class="vide">Rien ici pour l\'instant.</div>';
   $$('[data-pj]').forEach(b => b.onclick = () => { vibre(); ouvreProjet(+b.dataset.pj); });
 }
 async function alertes() {
   let r; try { r = await get('/alertes'); } catch (e) { return; }
-  $('#alertes').innerHTML = (r.alertes || []).map(a => `<button class="alerte" data-al="${a.id}" data-nom="${esc(a.nom)}"><svg class="i"><use href="#i-photo"/></svg><span><b>Photos à trouver : ${esc(a.nom)}</b><small>${esc(a.motif)}</small></span><em>Chercher</em></button>`).join('');
+  $('#alertes').innerHTML = (r.alertes || []).length ? '' : '<div class="vide">Aucun rappel : toutes les photos sont trouvées.</div>';
+  $('#alertes').innerHTML += (r.alertes || []).map(a => `<button class="alerte" data-al="${a.id}" data-nom="${esc(a.nom)}"><svg class="i"><use href="#i-photo"/></svg><span><b>Photos à trouver : ${esc(a.nom)}</b><small>${esc(a.motif)}</small></span><em>Chercher</em></button>`).join('');
   $$('[data-al]').forEach(b => b.onclick = async () => { vibre(); await post('/alertes/' + b.dataset.al + '/vue').catch(() => {}); montre('banque'); ongletBanque('ajouter'); $('#ba-cherche').value = b.dataset.nom; $('#ba-cherche').dispatchEvent(new Event('input')); });
 }
-let ideesChargees = false;
 async function idees() {
-  if (ideesChargees) return; ideesChargees = true;
   let d; try { d = await get('/idees'); } catch (e) { return; }
-  const l = (d && d.idees) || []; $('#bloc-idees').hidden = !l.length;
+  const l = (d && d.idees) || [];
+  if (!l.length) { $('#idees').innerHTML = '<div class="vide">Pas de suggestion aujourd\'hui.</div>'; return; }
   $('#idees').innerHTML = l.map((x, i) => `<div class="idee">${(x.elements[0] || {}).vignette ? `<img src="${esc(x.elements[0].vignette)}" alt="">` : ''}<span class="txt"><b>${esc(x.titre)}</b><small>${esc(x.sous_titre)}${x.mode === 'compilation' ? ' · ' + x.elements.length + ' vidéos' : ''}</small></span><button class="btn second" data-idee="${i}" style="padding:9px 14px">Fabriquer</button></div>`).join('');
   $$('[data-idee]').forEach(b => b.onclick = async () => { b.disabled = true; vibre();
     try { const j = await post('/idees/fabriquer', {cle: l[+b.dataset.idee].cle, droits: true}); ouvreProjet(j.id); } catch (e) { b.disabled = false; b.textContent = e.message.slice(0, 30); } });
@@ -834,8 +889,8 @@ function dessineSuivi(etapes, statut) {
   if (statut === 'envoye') n = ordre.length; if (['attente', 'attente_pc'].includes(statut)) n = 0;
   $('#pj-suivi').innerHTML = etapes.map((e, k) => `<div class="${k < n || (statut === 'pret' && k === n) ? 'fait' : k === n && !['erreur', 'annule'].includes(statut) ? 'cours' : ''}"><i></i>${esc(e[1])}</div>`).join('');
 }
-async function ouvreProjet(id) {
-  if (vue !== 'projet') montre('projet'); clearTimeout(pj.minuteur); pj.id = id;
+async function ouvreProjet(id, sansHistorique) {
+  clearTimeout(pj.minuteur); pj.id = id; if (vue !== 'projet') montre('projet', sansHistorique);
   let j; try { j = await get('/job/' + id); } catch (e) { msg('#pj-msg', 'Projet introuvable.', false); return; }
   if (pj.id !== id) return; pj.j = j;
   const p = j.params || {}, [nom, outil] = nomProjet(j), e = etat(j.statut);
@@ -1060,6 +1115,41 @@ $('#rg-ajouter').onclick = async () => {
     msg('#rg-msg', 'Appareil ajouté.', true); reglages(); } catch (e) { msg('#rg-msg', e.name === 'NotAllowedError' ? 'Annulé.' : e.message, false); }
 };
 $('#rg-sortie').onclick = async () => { await post('/deconnexion'); location.href = BASE; };
+
+// ---------------- geste retour
+let dernierRetour = 0;
+history.replaceState({vue: 'racine'}, '', ''); history.pushState({vue: 'accueil'}, '', '');
+window.addEventListener('popstate', ev => {
+  const st = ev.state || {};
+  if (!$('#feuille').hidden) { $('#fe-annuler').click(); history.pushState({vue: vue, id: pj.id}, '', ''); return; }   // ferme d'abord la feuille
+  if (st.vue === 'racine') {
+    if (Date.now() - dernierRetour < 2500) { history.back(); return; }   // 2e geste : on quitte vraiment
+    dernierRetour = Date.now(); toast('Refais le geste pour quitter le Studio'); history.pushState({vue: 'accueil'}, '', '');
+    if (vue !== 'accueil') montre('accueil', true);
+    return;
+  }
+  if (st.vue === 'projet' && st.id) ouvreProjet(st.id, true); else montre(st.vue || 'accueil', true);
+});
+
+// ---------------- notifications sur le téléphone (Web Push)
+const peutNotifier = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+async function etatNotif() {
+  const c = $('#carte-notif'); if (!peutNotifier()) { c.hidden = true; return; }
+  let abonne = false; try { const reg = await navigator.serviceWorker.ready; abonne = !!(await reg.pushManager.getSubscription()); } catch (e) {}
+  c.hidden = abonne && Notification.permission === 'granted'; c.style.display = c.hidden ? 'none' : 'flex';
+}
+const b64ab = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), x => x.charCodeAt(0));
+$('#notif-activer').onclick = async () => {
+  const b = $('#notif-activer'); b.disabled = true;
+  try {
+    if (await Notification.requestPermission() !== 'granted') throw new Error('Notifications refusées : autorise-les dans les réglages du téléphone.');
+    const reg = await navigator.serviceWorker.ready, {cle} = await get('/push/cle');
+    const ab = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64ab(cle)});
+    await post('/push/abonner', {abonnement: ab.toJSON(), essai: true});
+    toast('Notifications activées sur ce téléphone'); etatNotif();
+  } catch (e) { toast(e.message, 4000); } finally { b.disabled = false; }
+};
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', ev => { if (ev.data && ev.data.projet) ouvreProjet(ev.data.projet); });
 
 // ---------------- démarrage
 const h = location.hash.slice(1);

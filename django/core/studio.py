@@ -185,14 +185,40 @@ def outils(request, chemin):
                               "reglages": json.loads(r["reglages"] or "{}")} for r in lignes]})
 
 
+def push_cle(request, chemin):
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services import notif
+    return _json({"cle": notif.cles()[1]})
+
+
+def push_abonner(request, chemin):
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services import notif
+    c = _corps(request)
+    try:
+        notif.abonne(u["id"], c.get("abonnement") or {}, request.META.get("HTTP_USER_AGENT", ""))
+    except ValueError as exc:
+        return _json({"erreur": str(exc)}, 400)
+    if c.get("essai"):
+        notif.envoie("Cauri Studio", "Les notifications sont activées sur ce téléphone.", etiquette="essai")
+    return _json({"ok": True})
+
+
 def manifest(request, chemin):
     _verifie(chemin)
     base = f"/studio/{chemin}"
     return _reponse(HttpResponse(json.dumps({
         "name": "Cauri Studio", "short_name": "Cauri Studio", "start_url": base, "scope": base,
-        "display": "standalone", "background_color": "#0a0814", "theme_color": "#2a1460", "lang": "fr",
-        "icons": [{"src": "/assets/marque/studio-192.png", "sizes": "192x192", "type": "image/png"},
-                  {"src": "/assets/marque/studio-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}]}),
+        "display": "standalone", "background_color": "#FFFFFF", "theme_color": "#FFFFFF", "lang": "fr",
+        # 10/11/2026 : nouvelle icône (symbole seul + pastille lecture), nouveaux noms : les téléphones gardaient l'ancienne en cache
+        "icons": [{"src": "/assets/marque/studio-v2-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+                  {"src": "/assets/marque/studio-v2-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+                  {"src": "/assets/marque/studio-v2-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}),
         content_type="application/manifest+json"))
 
 
@@ -202,7 +228,14 @@ def service_worker(request, chemin):
     js = ("const C='cauri-studio-v1';self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C)"
           f".then(c=>c.add('{hors}')))}});self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));"
           "self.addEventListener('fetch',e=>{if(e.request.mode==='navigate'){e.respondWith(fetch(e.request)"
-          f".catch(()=>caches.match('{hors}')))}}}});")
+          f".catch(()=>caches.match('{hors}')))}}}});"
+          # notifications (10/11/2026) : restent affichées jusqu'au toucher ; le toucher ouvre le projet
+          "self.addEventListener('push',e=>{let d={};try{d=e.data.json()}catch(x){d={titre:'Cauri Studio',texte:e.data?e.data.text():''}}"
+          "e.waitUntil(self.registration.showNotification(d.titre||'Cauri Studio',{body:d.texte||'',icon:'/assets/marque/studio-v2-192.png',"
+          "badge:'/assets/marque/studio-v2-192.png',tag:d.tag||undefined,renotify:true,requireInteraction:true,data:{projet:d.projet||null}}))});"
+          "self.addEventListener('notificationclick',e=>{e.notification.close();const p=e.notification.data&&e.notification.data.projet;"
+          "const u=self.registration.scope+(p?'#projet-'+p:'');e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(l=>{"
+          "for(const c of l){if(c.url.startsWith(self.registration.scope)){c.focus();c.postMessage({projet:p});return}}return clients.openWindow(u)}))});")
     r = HttpResponse(js, content_type="application/javascript")
     r["Service-Worker-Allowed"] = f"/studio/{chemin}"
     return _reponse(r)

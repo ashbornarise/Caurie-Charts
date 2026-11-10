@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Cauri Studio">
 <link rel="manifest" href="{{ base }}/manifest.json">
-<link rel="apple-touch-icon" href="/assets/marque/studio-192.png">
-<link rel="icon" href="/assets/marque/studio-192.png">
+<link rel="apple-touch-icon" href="/assets/marque/studio-v2-180.png">
+<link rel="icon" href="/assets/marque/studio-v2-192.png">
 <title>Cauri Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -246,7 +246,7 @@ code{background:#F2F7FD;color:#3E1A9E}
 
 {% if not connecte %}
 <div class="verrou">
-  <img src="/assets/marque/studio-512.png" alt="">
+  <img src="/assets/marque/studio-v2-512.png" alt="">
   <h1>Cauri Studio</h1>
   <p>Accès privé. Déverrouille avec l'empreinte, Face ID ou le code de cet appareil.</p>
   <button class="empreinte" id="btn-connexion" aria-label="Déverrouiller"><svg class="i"><use href="#i-empreinte"/></svg></button>
@@ -256,7 +256,7 @@ code{background:#F2F7FD;color:#3E1A9E}
 {% else %}
 <div class="app">
   <div class="barre-haut">
-    <div class="marque"><img src="/assets/marque/studio-192.png" alt=""><div><b>Cauri Studio</b><span>Bonjour {{ nom.split(' ')[0] if nom else '' }}</span></div></div>
+    <div class="marque"><img src="/assets/marque/studio-v2-192.png" alt=""><div><b>Cauri Studio</b><span>Bonjour {{ nom.split(' ')[0] if nom else '' }}</span></div></div>
   </div>
 
   <!-- Alertes « photo à trouver » : restent jusqu'au clic (02/11/2026) -->

@@ -14,3 +14,4 @@ defusedxml==0.7.1
 Unidecode==1.4.0
 fpdf2==2.8.9
 webauthn>=3.0
+pywebpush==2.0.3   # notifications du Studio sur le téléphone (10/11/2026)

@@ -53,6 +53,8 @@ urlpatterns = [
     re_path(S + r"/historique$", studio.historique),
     re_path(S + r"/montage$", studio.montage),
     re_path(S + r"/outils$", studio.outils),
+    re_path(S + r"/push/cle$", studio.push_cle),
+    re_path(S + r"/push/abonner$", studio.push_abonner),
     re_path(S + r"/paroles/nouveau$", studio.paroles_nouveau),
     re_path(S + r"/paroles/(?P<ident>\d+)/fichier$", studio.paroles_fichier),
     re_path(S + r"/paroles/(?P<ident>\d+)/lancer$", studio.paroles_lancer),

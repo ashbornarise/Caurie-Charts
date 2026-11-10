@@ -76,6 +76,11 @@ def alerte(canal: str, niveau: str, message: str, contexte: dict | None, nouvell
             mail.notify_admin(titre, texte)
     except Exception:  # noqa: BLE001
         pass
+    try:
+        from core.services import notif
+        notif.envoie(titre, message[:240], etiquette="erreur-" + canal)
+    except Exception:  # noqa: BLE001
+        pass
     chat = env.get("TELEGRAM_ADMIN_CHAT_ID", "")
     jeton = env.get("TELEGRAM_FILES_BOT_TOKEN", "") or env.get("TELEGRAM_BOT_TOKEN", "")
     if chat and jeton:
