@@ -34,7 +34,7 @@ def youtube_responder(method, url, headers=None, body=None):
 
 # 10/11/2026 : sur GitHub il n'y a pas de base PostgreSQL ; les tests qui lisent la vraie base sont ignorés (avec la
 # raison) au lieu d'échouer, et tournent normalement sur le PC où la base existe.
-BASE_REQUISE = ("test_pages_publiques.py", "test_redaction.py")
+BASE_REQUISE = ("test_pages_publiques.py", "test_redaction.py", "test_newsletter.py", "test_guet.py")
 
 
 def _base_disponible() -> bool:
