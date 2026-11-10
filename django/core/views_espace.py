@@ -641,13 +641,19 @@ def _pager(total: int, par: int, page: int, u) -> str:
         for k in range(1, n + 1)) + "</nav>"
 
 
+def _date(v):
+    """La base renvoie parfois la date en texte (« 2026-11-09 18:02:11 ») : l'onglet Téléchargements plantait (10/11/2026)."""
+    from datetime import datetime
+    return v if hasattr(v, "strftime") else datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+
+
 def _fichiers(editions: list[dict], choisie: str) -> str:
     if not editions:
         return ('<div class="vide">Le dossier de chaque semaine (PDF, Excel, visuels pour l\'antenne) arrive ici dès la publication '
                 'du vendredi soir.</div>')
     blocs = []
     for ed in editions[:20]:
-        date = f"Envoyée le {ed['envoye_le']:%d/%m/%Y}" if ed.get("envoye_le") else "Préparée"
+        date = f"Envoyée le {_date(ed['envoye_le']):%d/%m/%Y}" if ed.get("envoye_le") else "Préparée"
         blocs.append(f'<div class="edition{" edition--courante" if ed["semaine"] == choisie else ""}"><div><h3>Semaine {e(ed["semaine"][-2:])}'
                      f'</h3><p>{e(ed["semaine"][:4])} · {date}</p></div><div class="actions">{_boutons(ed)}</div></div>')
     return f'<div class="editions">{"".join(blocs)}</div>'

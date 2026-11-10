@@ -5,6 +5,7 @@ import html
 from django.http import Http404, HttpResponse
 
 from core.services import partenaires as P
+from core.views_espace import _date
 
 LIBELLES = {".pdf": ("Dossier PDF", "le dossier complet, faits marquants et classements"),
             ".xlsx": ("Tableau Excel", "tous les classements, une feuille par classement"),
@@ -23,7 +24,7 @@ def page(request, jeton: str):
             ext = "." + nom.rsplit(".", 1)[-1]
             titre, detail = LIBELLES.get(ext, (nom, ""))
             liens.append(f'<a class="fichier" href="{e(url)}" download><strong>{titre}</strong><span>{detail}</span></a>')
-        date = f"envoyée le {ed['envoye_le']:%d/%m/%Y à %H h %M} UTC" if ed.get("envoye_le") else "préparée"
+        date = f"envoyée le {_date(ed['envoye_le']):%d/%m/%Y à %H h %M} UTC" if ed.get("envoye_le") else "préparée"
         blocs.append(f'<section class="edition{" edition--derniere" if i == 0 else ""}"><h2>Semaine {e(ed["semaine"][-2:])} '
                      f'<small>{e(ed["semaine"][:4])} · {date}</small></h2><div class="fichiers">{"".join(liens)}</div></section>')
     corps = "".join(blocs) or '<p class="vide">La première édition arrivera ici dès la publication du vendredi soir (19 h GMT).</p>'
