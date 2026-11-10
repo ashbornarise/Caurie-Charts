@@ -136,7 +136,8 @@ h1,h2,h3 { text-wrap:balance; margin:0 }
 .duo__x { font:500 .9rem var(--titre); color:var(--doux) }
 .duo__nec { display:inline-flex; align-items:center; padding:8px 14px; border-radius:12px; background:var(--nec); color:var(--or);
   font:700 .74rem/1 var(--titre); letter-spacing:.08em; white-space:nowrap; box-shadow:0 6px 18px rgba(13,19,48,.25), inset 0 1px 0 rgba(255,255,255,.12) }
-.duo__nec img { height:24px; width:auto; display:block }
+.duo__nec img { height:40px; width:auto; display:block; border-radius:6px }
+.duo__nec:has(img) { padding:4px; background:#000 }
 .tete__droite { display:flex; align-items:center; gap:10px }
 .sortir { display:inline-flex; align-items:center; gap:6px; text-decoration:none; font-weight:600; font-size:.84rem; padding:9px 14px; border-radius:12px;
   background:var(--fond); box-shadow:var(--neo) }
@@ -338,7 +339,7 @@ button:hover { transform:translateY(-1px) }
 .erreur { background:var(--baisse-fond); color:var(--baisse); font-weight:600; padding:10px 14px; border-radius:12px; margin:0 0 16px }
 :focus-visible { outline:3px solid var(--ciel); outline-offset:2px }
 @media (max-width:640px) { .tete__barre { padding:8px 8px 8px 12px; gap:8px } .duo { gap:7px } .duo__cauri { height:22px } .duo__x { display:none }
-  .duo__nec { padding:6px 8px; font-size:.56rem } .sortir { padding:8px 9px } .sortir span { display:none }
+  .duo__nec { padding:6px 8px; font-size:.56rem } .duo__nec img { height:30px } .sortir { padding:8px 9px } .sortir span { display:none }
   .semaine strong { font-size:.62rem; padding:0 3px } .semaine a,.semaine span.off { width:26px; height:26px } .tete__droite { gap:6px }
   .onglets a { padding:9px 12px; font-size:.84rem } }
 """
