@@ -58,16 +58,24 @@ def _url(nom: str) -> str:
 
 # ---------------------------------------------------------------- paroles
 
+def _sans_feat(titre: str) -> str:
+    """« Gaou la (feat. 6uff) » -> « Gaou la » : LRCLIB et Spotify écrivent souvent les invités dans le titre."""
+    return re.sub(r"\s*[\(\[]\s*(feat|ft|with|avec)\b.*?[\)\]]|\s+(feat|ft)\.?\s.*$", "", titre or "", flags=re.I).strip()
+
+
 def _lrclib(artistes: str, titre: str) -> list | None:
-    """Paroles minutées de LRCLIB : [{"debut", "texte"}] ou None."""
-    try:
-        r = requests.get("https://lrclib.net/api/search", params={"artist_name": artistes.split(",")[0].split(" ft")[0],
-                                                                    "track_name": titre},
-                         timeout=20, headers={"User-Agent": "CauriCharts/1.0"}).json()
-    except (requests.RequestException, ValueError):
-        return None
-    for x in r or []:
-        if x.get("syncedLyrics") and _norm(x.get("trackName")) == _norm(titre):
+    """Paroles minutées de LRCLIB : [{"debut", "texte"}] ou None. Recherche par titre et artiste, puis recherche
+    libre ; titres comparés sans les invités (11/11/2026 : « Gaou la (feat. 6uff) » était manqué)."""
+    artiste = artistes.split(",")[0].split(" ft")[0].strip()
+    resultats = []
+    for params in ({"artist_name": artiste, "track_name": _sans_feat(titre)}, {"q": f"{_sans_feat(titre)} {artiste}"}):
+        try:
+            resultats += requests.get("https://lrclib.net/api/search", params=params, timeout=20,
+                                      headers={"User-Agent": "CauriCharts/1.0"}).json() or []
+        except (requests.RequestException, ValueError):
+            continue
+    for x in resultats:
+        if x.get("syncedLyrics") and _norm(_sans_feat(x.get("trackName"))) == _norm(_sans_feat(titre)):
             lignes = []
             for m in re.finditer(r"\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)", x["syncedLyrics"]):
                 if m.group(3).strip():
