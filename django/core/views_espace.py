@@ -116,6 +116,22 @@ h1,h2,h3 { text-wrap:balance; margin:0 }
   50% { transform:translate(60px,40px) rotate(40deg) scale(1.08); border-radius:58% 42% 35% 65% / 55% 62% 38% 45% }
   100% { transform:translate(-40px,70px) rotate(80deg) scale(.95); border-radius:38% 62% 56% 44% / 63% 37% 63% 37% } }
 @keyframes tourne { to { transform:rotate(360deg) } }
+.partenariat { margin-top:22px; border-radius:28px; padding:22px; background:linear-gradient(150deg,var(--nec),#05050a); color:#f4efe2;
+  border:1px solid rgba(201,162,39,.45); box-shadow:0 18px 50px rgba(13,13,20,.28) }
+.partenariat__tete { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:16px }
+.partenariat__eti { font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; color:var(--or); font-weight:700 }
+.partenariat h2 { font:700 clamp(1.15rem,2.4vw,1.5rem)/1.2 var(--titre); margin-top:4px; color:#fff }
+.partenariat__statut { font-size:.75rem; font-weight:700; padding:6px 12px; border-radius:999px; color:#2a1600;
+  background:linear-gradient(120deg,#FFD66B,var(--or)) }
+.partenariat ul { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px }
+.partenariat li { display:flex; gap:12px; align-items:flex-start; padding:12px; border-radius:16px; background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08) }
+.partenariat li strong { display:block; color:#fff; font-size:.95rem }
+.partenariat li span { display:block; color:rgba(244,239,226,.72); font-size:.82rem; line-height:1.4; margin-top:2px }
+.partenariat .cadenas { flex:0 0 20px; width:20px; height:20px; margin-top:2px; fill:none; stroke:var(--or); stroke-width:1.8;
+  stroke-linecap:round; stroke-linejoin:round }
+.partenariat p { margin:14px 0 0; font-size:.82rem; color:rgba(244,239,226,.72) }
+.partenariat p strong { color:var(--or) }
 @media (prefers-reduced-motion:reduce) { .fond i, .vedette::before, .porte__marque::before { animation:none } }
 /* 10/11/2026 : la page ramait sur téléphone (gouttes floues animées + une quinzaine de cartes au flou recalculé à
    chaque image et à chaque défilement). Sur écran tactile / petit écran : gouttes immobiles, verre imité par un blanc
@@ -475,6 +491,8 @@ def _espace(request, p: dict) -> str:
         html_.append('<div class="vide">Aucun classement publié pour le moment. La première édition arrive vendredi soir.</div>')
     elif vue == "accueil":
         html_.append(_accueil(local, u, edition))
+        if not p.get("contrat_signe"):   # tant que le contrat n'est pas signé : ce que la signature apporte (11/11/2026)
+            html_.append(_partenariat())
     elif vue == "classements":
         html_.append(_classements(local, request.GET.get("c"), u, nom_pays))
     elif vue == "top100":
@@ -486,6 +504,27 @@ def _espace(request, p: dict) -> str:
 mention à l'antenne : « Source : Cauri Charts »</span><span>Espace réservé à {e(p['nom'])} · contact@cauricharts.com</span></div></div></footer>
 </body></html>""")
     return _tete(p, f"{p['nom']} × Cauri Charts · {nom_pays}", pays) + "".join(html_)
+
+
+CADENAS = ('<svg class="cadenas" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/>'
+           '<path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>')
+AVANTAGES = [
+    ("Écoutes Spotify", "Intégrées au classement et détaillées titre par titre, dès l'édition du 20 novembre."),
+    ("Archives complètes", "Toutes les semaines publiées depuis le lancement, en PDF, Excel et visuels."),
+    ("Visuels TV à vos couleurs", "Le logo Nec+Ultra Top 20 intégré à chaque visuel d'antenne."),
+    ("Avant-première", "Le classement le vendredi avant sa publication publique, pour préparer l'émission."),
+    ("Détail des sources", "Pour chaque titre : écoutes, vues, progression et ce qui explique sa place."),
+    ("Tous les pays", "Les classements officiels de chaque pays d'Afrique de l'Ouest, au-delà de la Côte d'Ivoire."),
+]
+
+
+def _partenariat() -> str:
+    """Carte « Votre partenariat » : statut du contrat et ce que la signature débloque. Ce qui est déjà ouvert le reste."""
+    items = "".join(f'<li>{CADENAS}<div><strong>{e(t)}</strong><span>{e(d)}</span></div></li>' for t, d in AVANTAGES)
+    return (f'<section class="partenariat"><div class="partenariat__tete"><div><span class="partenariat__eti">Votre partenariat '
+            f'Cauri Charts</span><h2>Inclus dès la signature</h2></div><span class="partenariat__statut">Contrat en cours de '
+            f'signature</span></div><ul>{items}</ul><p>Une question sur le contrat ? Écrivez-nous à <strong>contact@cauricharts.com</strong>'
+            f'</p></section>')
 
 
 def _boutons(ed: dict) -> str:

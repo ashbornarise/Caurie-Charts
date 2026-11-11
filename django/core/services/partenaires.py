@@ -41,7 +41,7 @@ def assure_tables() -> None:
         cree_le TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT uq_part_ed UNIQUE (partenaire_id, semaine))""")
     # espace protégé par mot de passe (/espace/<slug>) et couleurs du partenaire (09/11/2026)
     for col in ("slug VARCHAR(60) NULL", "mdp_hash VARCHAR(255) NULL", "couleur VARCHAR(9) NULL", "couleur2 VARCHAR(9) NULL",
-                "logo_url VARCHAR(500) NULL"):
+                "logo_url VARCHAR(500) NULL", "contrat_signe DATE NULL"):
         db.run(f"ALTER TABLE partenaires_acces ADD COLUMN IF NOT EXISTS {col}")
     db.run("CREATE UNIQUE INDEX IF NOT EXISTS uq_part_slug ON partenaires_acces (slug)")
 
