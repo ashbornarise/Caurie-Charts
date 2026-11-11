@@ -332,6 +332,33 @@ def _relit(lignes: list, textes: list[str]) -> list:
 
 # ---------------------------------------------------------------- étapes
 
+def _lien_ecoutable(lien: str, p: dict) -> str:
+    """Un lien Spotify ou Apple Music ne se télécharge pas (musique chiffrée, « DRM », 11/11/2026 : « FREE » de Didi B) :
+    on lit le titre et l'artiste sur la page, puis on prend l'audio officiel sur YouTube."""
+    hote = (re.search(r"https?://([^/]+)", lien or "") or [None, ""])[1].lower()
+    if not any(h in hote for h in ("spotify.com", "music.apple.com", "deezer.com", "audiomack.com", "boomplay.com")):
+        return lien
+    titre, artiste = p.get("titre") or "", (p.get("artistes") or "").split(",")[0].split(" ft")[0].strip()
+    try:
+        page = requests.get(lien, timeout=20, headers={"User-Agent": "Mozilla/5.0"}).text
+        t = re.search(r'<meta property="og:title" content="([^"]+)"', page)
+        d = re.search(r'<meta property="og:description" content="([^"·]+)·', page)
+        titre = titre or (t.group(1) if t else "")
+        artiste = artiste or (d.group(1).strip() if d else "")
+    except requests.RequestException:
+        pass
+    if not titre:
+        raise RuntimeError("lien de plateforme d'écoute : indique le titre et l'artiste, ou colle un lien YouTube")
+    import sys
+    r = subprocess.run([sys.executable, "-m", "yt_dlp", "--js-runtimes", "node", "--no-warnings", "--print", "webpage_url", f"ytsearch1:{artiste} {titre} audio officiel"],
+                       capture_output=True, text=True, timeout=120)
+    url = (r.stdout or "").strip().splitlines()[:1]
+    if not url:
+        raise RuntimeError(f"audio de « {titre} » introuvable sur YouTube : colle le lien YouTube du titre")
+    log_write("studio", "info", f"{lien} -> {url[0]} (audio YouTube de « {artiste} – {titre} »)")
+    return url[0]
+
+
 def _son(job: dict, p: dict, tmp: str) -> str:
     """Le son en WAV stéréo 44,1 kHz (lien YouTube…, ou fichier envoyé depuis le téléphone)."""
     from core.services.social import studio_montage as S
@@ -339,7 +366,7 @@ def _son(job: dict, p: dict, tmp: str) -> str:
         src = os.path.join(tmp, "son-source")
         open(src, "wb").write(requests.get(_url(p["sons"][0]), timeout=120).content)
     else:
-        src, _infos = S.telecharge(job["lien"], tmp)
+        src, _infos = S.telecharge(_lien_ecoutable(job["lien"], p), tmp)
     stereo = os.path.join(tmp, "stereo.wav")
     subprocess.run([_ffmpeg(), "-v", "error", "-y", "-i", src, "-vn", "-ac", "2", "-ar", "44100", stereo], check=True)
     return stereo
