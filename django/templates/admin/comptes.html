@@ -1,0 +1,23 @@
+<h1>Comptes à vérifier</h1>
+<p class="muted">Les liens officiels que les artistes ont renseignés dans Spotify for Artists ne correspondent pas à la fiche. Rien n'est remplacé sans toi : « Garder Spotify » enregistre le compte proposé (il devient « manuel »), « Garder l'actuel » écarte la proposition.</p>
+<div class="table-scroll">
+<table class="data-table">
+    <thead><tr><th>Artiste</th><th>Réseau</th><th>Sur la fiche</th><th>Sur Spotify</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+        <tr>
+            <td><b>{{ r.name }}</b></td>
+            <td>{{ r.site|capitalize }}</td>
+            <td>{% if r.actuel %}<a href="https://www.{{ r.site }}.com/{{ '@' if r.site == 'tiktok' else '' }}{{ r.actuel }}" target="_blank" rel="noopener">@{{ r.actuel }}</a>{% else %}<small>vide</small>{% endif %}</td>
+            <td><a href="https://www.{{ r.site }}.com/{{ '@' if r.site == 'tiktok' else '' }}{{ r.propose }}" target="_blank" rel="noopener">@{{ r.propose }}</a></td>
+            <td style="white-space:nowrap">
+                <form method="post" action="{{ path('admin/comptes') }}" style="display:inline">{{ csrf_field() }}<input type="hidden" name="id" value="{{ r.id }}"><input type="hidden" name="choix" value="accepte"><button class="button button--small">Garder Spotify</button></form>
+                <form method="post" action="{{ path('admin/comptes') }}" style="display:inline">{{ csrf_field() }}<input type="hidden" name="id" value="{{ r.id }}"><input type="hidden" name="choix" value="refuse"><button class="button button--small button--ghost">Garder l'actuel</button></form>
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="5">Rien à vérifier : les fiches et Spotify sont d'accord.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>

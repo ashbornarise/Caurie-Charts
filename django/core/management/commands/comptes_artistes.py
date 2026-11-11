@@ -11,10 +11,26 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--limit", type=int, default=40)
         parser.add_argument("--nom", default="", help="un seul artiste (nom exact)")
+        parser.add_argument("--spotify", action="store_true", help="passage Spotify seul, sur tous les artistes actifs")
 
     def handle(self, *args, **options):
         def task():
             comptes.colonnes()
+            if options["spotify"]:
+                import time
+                remplis, erreurs = 0, 0
+                for a in comptes.tous_spotify():
+                    try:
+                        remplis += bool(comptes.depuis_spotify(a))
+                    except Exception as exc:  # noqa: BLE001
+                        erreurs += 1
+                        if erreurs >= 5:
+                            out(f"Spotify ne répond plus ({exc}) : arrêt")
+                            break
+                    time.sleep(0.4)
+                attente = comptes.db.value("SELECT COUNT(*) FROM comptes_propositions WHERE statut = 'a_voir'")
+                out(f"Spotify : {remplis} fiche(s) complétée(s), {attente} proposition(s) à vérifier dans l'admin.")
+                return
             liste = (comptes.db.all("SELECT * FROM artists WHERE lower(name) = lower(?) LIMIT 1", [options["nom"]])
                      if options["nom"] else comptes.a_chercher(options["limit"]))
             trouves = 0

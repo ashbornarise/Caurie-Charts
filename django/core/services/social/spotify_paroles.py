@@ -108,3 +108,27 @@ def paroles(track_id: str) -> dict:
     ly = r.json()["lyrics"]
     lignes = [(int(l["startTimeMs"]) / 1000, l["words"].strip()) for l in ly["lines"] if l.get("words", "").strip() not in ("", "♪")]
     return {"sync": ly.get("syncType"), "lignes": lignes, "fournisseur": ly.get("provider")}
+
+
+ARTISTE_HASH = "4bc52527bb77a5f8bbb9afe491e9aa725698d29ab73bff58d49169ee29800167"   # requête « queryArtistOverview »
+RESEAUX = {"INSTAGRAM": "instagram", "TIKTOK": "tiktok", "TWITTER": "twitter", "FACEBOOK": "facebook", "YOUTUBE": "youtube"}
+
+
+def liens_artiste(spotify_id: str) -> dict:
+    """Liens officiels renseignés par l'artiste dans Spotify for Artists (11/11/2026) : {instagram, tiktok, twitter,
+    facebook, youtube : URL} + verifie (badge Spotify). Source bien plus sûre qu'une recherche : c'est l'équipe de
+    l'artiste qui les saisit. Test du 11/11 : 30 artistes sur les 40 plus suivis ont leur Instagram, 2 leur TikTok."""
+    import json
+    r = requests.get("https://api-partner.spotify.com/pathfinder/v1/query", timeout=20,
+                     headers={"Authorization": f"Bearer {jeton()}", "App-Platform": "WebPlayer", "User-Agent": NAVIGATEUR},
+                     params={"operationName": "queryArtistOverview",
+                             "variables": json.dumps({"uri": f"spotify:artist:{spotify_id}", "locale": "", "includePrerelease": True}),
+                             "extensions": json.dumps({"persistedQuery": {"version": 1, "sha256Hash": ARTISTE_HASH}})})
+    if r.status_code != 200:
+        raise SpotifyParolesErreur(f"page artiste refusée (HTTP {r.status_code})")
+    profil = (((r.json().get("data") or {}).get("artistUnion")) or {}).get("profile") or {}
+    out = {"verifie": bool(profil.get("verified"))}
+    for l in ((profil.get("externalLinks") or {}).get("items") or []):
+        if l.get("name") in RESEAUX and l.get("url"):
+            out[RESEAUX[l["name"]]] = l["url"]
+    return out

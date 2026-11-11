@@ -26,11 +26,13 @@
         ('admin/formule', t('admin.nav_formula'), 'sliders'),
         ('admin/journal', t('admin.nav_audit'), 'clock'),
         ('admin/erreurs', 'Journal des erreurs', 'shield'),
+        ('admin/comptes', 'Comptes à vérifier', 'shield'),
         ('admin/equipe', 'Équipe', 'users')])) %}{% endif -%}
 {%- set aides = {
     'admin': 'Ce qui attend une décision aujourd’hui, et la routine de la semaine. Commencez toujours par ici.',
     'admin/classements': 'Les classements calculés chaque semaine. Ouvrez un brouillon, examinez les titres signalés (chiffres suspects), puis publiez.',
     'admin/declarations': 'Chiffres envoyés par les artistes et les labels (écoutes, captures d’écran). Validez ou refusez chaque déclaration, preuve à l’appui.',
+    'admin/comptes': 'Comptes Instagram et TikTok des artistes : quand Spotify donne un autre compte que la fiche, tu choisis lequel garder.',
     'admin/erreurs': 'Les erreurs du site et des automatismes, regroupées : chacune est signalée par e-mail et Telegram à sa première apparition. Marquez-la résolue une fois corrigée.',
     'admin/messages': 'Messages reçus par le formulaire de contact du site. Répondez depuis contact@cauricharts.com.',
     'admin/posts': 'Publications prévues sur Instagram, Facebook, TikTok et Telegram, et leur état d’envoi. Rien ne part sans validation.',

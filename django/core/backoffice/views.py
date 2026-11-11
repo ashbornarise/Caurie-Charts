@@ -206,6 +206,25 @@ def erreurs(request):
 
 
 @admin_view()
+def comptes_a_verifier(request):
+    """Comptes Instagram / TikTok proposés par Spotify qui diffèrent de la fiche (11/11/2026) : le fondateur choisit."""
+    from core.services.social import comptes
+    comptes.colonnes()
+    if request.method == "POST" and req_str(request, "id"):
+        pid, choix = int(req_str(request, "id")), req_str(request, "choix")
+        prop = db.one("SELECT * FROM comptes_propositions WHERE id = ?", [pid])
+        if prop and choix in ("accepte", "refuse"):
+            if choix == "accepte":   # validé par le fondateur : compte « manuel », jamais remplacé ensuite
+                db.update("artists", {prop["site"]: prop["propose"], "comptes_source": "manuel"}, "id = :id", {"id": prop["artist_id"]})
+            db.run("UPDATE comptes_propositions SET statut = ? WHERE id = ?", [choix, pid])
+            audit.log(uid(request), f"comptes.{choix}", "artist", prop["artist_id"], None, {"site": prop["site"], "compte": prop["propose"]}, ip(request))
+        return back(request, path("admin/comptes"), "success", "C'est noté.")
+    rows = db.all("""SELECT p.*, a.name FROM comptes_propositions p JOIN artists a ON a.id = p.artist_id
+                     WHERE p.statut = 'a_voir' ORDER BY a.fans DESC NULLS LAST LIMIT 300""")
+    return admin_render(request, "comptes", {"rows": rows})
+
+
+@admin_view()
 def messages(request):
     return admin_render(request, "messages", {"rows": db.all("SELECT * FROM contact_messages ORDER BY status = 'new' DESC, id DESC LIMIT 200")})
 

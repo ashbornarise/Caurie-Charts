@@ -1,4 +1,9 @@
-"""Comptes Instagram et TikTok officiels des artistes, trouvés par Gemini avec la recherche Google (27/10/2026).
+"""Comptes Instagram et TikTok officiels des artistes.
+
+Ordre des sources (11/11/2026) : 1) les liens que l'artiste a renseignés dans Spotify for Artists (spotify_paroles.
+liens_artiste : officiels, gratuits) ; 2) Gemini avec la recherche Google (27/10/2026), seulement pour ce qui manque.
+Quand Spotify donne un autre compte que celui de la fiche, rien n'est remplacé : une proposition attend le fondateur
+(table comptes_propositions, admin « Comptes à vérifier »).
 
 Sert aux mentions et aux invitations en collaboration (core.services.meta.collaborateurs). Garde-fous :
 - une vraie recherche Google doit avoir eu lieu (requêtes et sources renvoyées), sinon on n'enregistre rien ;
@@ -23,8 +28,54 @@ PAS_ARTISTE = re.compile(r"fan|\bfc\b|_fc|news|update|daily|media|\btv\b|_tv|hyp
 def colonnes() -> None:
     for sql in ("ALTER TABLE artists ADD COLUMN IF NOT EXISTS tiktok VARCHAR(60) NULL",
                 "ALTER TABLE artists ADD COLUMN IF NOT EXISTS comptes_source VARCHAR(20) NULL",
-                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS comptes_le TIMESTAMP NULL"):
+                "ALTER TABLE artists ADD COLUMN IF NOT EXISTS comptes_le TIMESTAMP NULL",
+                """CREATE TABLE IF NOT EXISTS comptes_propositions (
+                    id BIGSERIAL PRIMARY KEY, artist_id INTEGER NOT NULL, site VARCHAR(12) NOT NULL, actuel VARCHAR(60),
+                    propose VARCHAR(60) NOT NULL, source VARCHAR(20) NOT NULL, cree_le TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    statut VARCHAR(10) NOT NULL DEFAULT 'a_voir', CONSTRAINT uq_comptes_prop UNIQUE (artist_id, site, propose))"""):
         db.run(sql)
+
+
+def _pseudo(url: str | None, site: str) -> str | None:
+    """« https://instagram.com/didibofficial/ » -> « didibofficial »."""
+    m = re.search(r"(?:instagram\.com|tiktok\.com)/@?([A-Za-z0-9._]{2,30})", url or "")
+    v = m.group(1).rstrip(".") if m else None
+    return v if v and v.lower() not in ("p", "reel", "explore", "accounts", "stories") else None
+
+
+def proposer(artiste: dict, site: str, propose: str, source: str) -> None:
+    db.run("""INSERT INTO comptes_propositions (artist_id, site, actuel, propose, source) VALUES (?, ?, ?, ?, ?)
+              ON CONFLICT (artist_id, site, propose) DO NOTHING""",
+           [artiste["id"], site, artiste.get(site) or None, propose, source])
+
+
+def depuis_spotify(artiste: dict) -> dict:
+    """Comptes officiels d'après Spotify. Fiche vide : on remplit (sauf fiche saisie à la main) ; fiche différente :
+    proposition à valider. Renvoie ce qui a été enregistré."""
+    if not artiste.get("spotify_id"):
+        return {}
+    from core.services.social import spotify_paroles as SP
+    liens = SP.liens_artiste(artiste["spotify_id"])
+    champs = {}
+    for site in ("instagram", "tiktok"):
+        v = _pseudo(liens.get(site), site)
+        actuel = str(artiste.get(site) or "").lstrip("@")
+        if not v or v.lower() == actuel.lower():
+            continue
+        autre = db.value(f"SELECT name FROM artists WHERE lower({site}) = lower(?) AND id <> ? LIMIT 1", [v, artiste["id"]])
+        if autre:
+            log_write("comptes", "warning", f"{artiste['name']} : @{v} (Spotify) déjà attribué à {autre}, écarté")
+            continue
+        if actuel or artiste.get("comptes_source") == "manuel":
+            proposer(artiste, site, v, "spotify")
+        else:
+            champs[site] = v
+    maj = {**champs, "comptes_le": datetime.now(timezone.utc).replace(tzinfo=None)}
+    if champs:
+        maj["comptes_source"] = "spotify"
+        log_write("comptes", "info", f"{artiste['name']} : {champs} (liens officiels Spotify)")
+    db.update("artists", maj, "id = :id", {"id": artiste["id"]})
+    return champs
 
 
 def _gemini(prompt: str, http: HttpClient, reflexion: str = "minimal", part: float = 1.0) -> tuple[str, dict]:
@@ -96,13 +147,23 @@ def chercher(nom: str, pays: str = "", http: HttpClient | None = None) -> dict:
 
 
 def completer(artiste: dict, http: HttpClient | None = None) -> dict:
-    """Cherche et enregistre les comptes d'un artiste (fiche « artists ») ; renvoie ce qui a changé."""
+    """Cherche et enregistre les comptes d'un artiste (fiche « artists ») ; renvoie ce qui a changé.
+    Spotify d'abord (officiel) ; Gemini + Google ensuite, seulement pour ce qui manque encore."""
+    champs_sp = {}
+    try:
+        champs_sp = depuis_spotify(artiste)
+    except Exception as exc:  # noqa: BLE001 — API non publique : on continue avec Gemini
+        log_write("comptes", "warning", f"{artiste['name']} : liens Spotify indisponibles ({str(exc)[:120]})")
     if artiste.get("comptes_source") == "manuel":
-        return {}
+        return champs_sp
+    artiste = {**artiste, **champs_sp}
+    manque = [site for site in ("instagram", "tiktok") if not artiste.get(site)]
+    if not manque:
+        return champs_sp
     pays = artiste.get("origin_country") or artiste.get("base_country") or ""
     trouve = chercher(artiste["name"], pays, http)
     champs = {}
-    for site in ("instagram", "tiktok"):
+    for site in manque:
         v = trouve.get(site)
         if not v or v.lower() == str(artiste.get(site) or "").lower():
             continue
@@ -113,15 +174,22 @@ def completer(artiste: dict, http: HttpClient | None = None) -> dict:
         champs[site] = v
     maj = {**champs, "comptes_le": datetime.now(timezone.utc).replace(tzinfo=None)}
     if champs:
-        maj["comptes_source"] = "ia-google"
+        maj["comptes_source"] = "spotify+ia" if champs_sp else "ia-google"
         log_write("comptes", "info", f"{artiste['name']} : {champs} ({trouve.get('preuve', '')[:120]})")
     db.update("artists", maj, "id = :id", {"id": artiste["id"]})
-    return champs
+    return {**champs_sp, **champs}
 
 
 def a_chercher(limite: int) -> list:
     """Artistes actifs les plus suivis d'abord, jamais cherchés ou cherchés il y a plus de 60 jours."""
-    return db.all("""SELECT id, name, instagram, tiktok, origin_country, base_country, comptes_source FROM artists
+    return db.all("""SELECT id, name, spotify_id, instagram, tiktok, origin_country, base_country, comptes_source FROM artists
                      WHERE status = 'active' AND coalesce(comptes_source, '') <> 'manuel'
                        AND (comptes_le IS NULL OR comptes_le < CURRENT_TIMESTAMP - INTERVAL '60 days')
                      ORDER BY youtube_subscribers DESC NULLS LAST, fans DESC NULLS LAST LIMIT ?""", [limite])
+
+
+def tous_spotify() -> list:
+    """Passage hebdomadaire Spotify : tous les artistes actifs qui ont une page Spotify, fiches manuelles comprises
+    (pour les propositions)."""
+    return db.all("""SELECT id, name, spotify_id, instagram, tiktok, comptes_source FROM artists
+                     WHERE status = 'active' AND spotify_id IS NOT NULL ORDER BY fans DESC NULLS LAST""")
