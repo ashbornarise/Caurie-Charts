@@ -44,6 +44,7 @@ def _pseudo(url: str | None, site: str) -> str | None:
 
 
 def proposer(artiste: dict, site: str, propose: str, source: str) -> None:
+    propose = propose.lower()   # Instagram et TikTok ignorent la casse (« Asakemusic » = « asakemusic »)
     db.run("""INSERT INTO comptes_propositions (artist_id, site, actuel, propose, source) VALUES (?, ?, ?, ?, ?)
               ON CONFLICT (artist_id, site, propose) DO NOTHING""",
            [artiste["id"], site, artiste.get(site) or None, propose, source])
