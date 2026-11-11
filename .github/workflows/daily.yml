@@ -91,7 +91,7 @@ jobs:
       - name: Dépendances (Python, ffmpeg, polices)
         run: |
           pip install -r requirements.txt -r requirements-pipeline.txt
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core > /dev/null
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=25 -o Acquire::https::Timeout=25 update -qq && sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=25 -o Acquire::https::Timeout=25 install -y -qq ffmpeg fonts-dejavu-core > /dev/null
       - name: Modèle de détourage (une de magazine)
         uses: actions/cache@v4
         with:
