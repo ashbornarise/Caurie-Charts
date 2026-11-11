@@ -103,8 +103,9 @@ def _lrclib_un(artistes: str, titre: str) -> list | None:
         if x.get("syncedLyrics") and _norm(_sans_feat(x.get("trackName"))) == _norm(_sans_feat(titre)):
             lignes = []
             for m in re.finditer(r"\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)", x["syncedLyrics"]):
-                if m.group(3).strip():
-                    lignes.append({"debut": int(m.group(1)) * 60 + float(m.group(2)), "texte": m.group(3).strip()})
+                texte = re.sub(r"\[\d+:\d+(?:\.\d+)?\]\s*", "", m.group(3)).strip()   # 2e minutage sur la ligne
+                if texte:
+                    lignes.append({"debut": int(m.group(1)) * 60 + float(m.group(2)), "texte": texte})
             if lignes:
                 return lignes
     return None
