@@ -268,6 +268,37 @@ def _aligne(textes: list[str], reconnus: list, t0: float, t1: float, debuts: lis
     return lignes
 
 
+def _force_minutage(lignes: list, debuts: list, t1: float) -> list:
+    """Paroles minutées (LRCLIB, Spotify) : le début de chaque ligne vient de la source, sa fin est le début de la
+    suivante (11/11/2026, « Gaou la » : 4 lignes de la fin tassées en une seconde parce que la transcription ratait
+    « Kaouli ma », « Hey »). Un décalage d'ensemble (intro du clip) est mesuré sur les lignes bien calées et appliqué.
+    Les mots gardent leurs temps reconnus s'ils tombent dans la ligne, sinon ils sont répartis selon leur longueur."""
+    import statistics
+    ecarts = [l["debut"] - d for l, d in zip(lignes, debuts) if d is not None and abs(l["debut"] - d) < 1.0]
+    decal = statistics.median(ecarts) if len(ecarts) >= 3 else 0.0
+    out = []
+    for i, (l, d) in enumerate(zip(lignes, debuts)):
+        if d is None:
+            out.append(l)
+            continue
+        deb = d + decal
+        suiv = next((x + decal for x in debuts[i + 1:] if x is not None), t1)
+        fin = max(deb + 0.4, min(suiv, deb + 6.0) - 0.05)
+        mots = l["mots"]
+        if all(deb - 0.05 <= w["d"] and w["f"] <= fin + 0.05 for w in mots) and all(a["d"] <= b["d"] for a, b in zip(mots, mots[1:])):
+            out.append({**l, "debut": round(deb, 2), "fin": round(fin, 2)})
+            continue
+        poids = [max(1, len(w["m"])) for w in mots]
+        total, t, ws = sum(poids), deb, []
+        utile = (fin - deb) * 0.92
+        for w, pd in zip(mots, poids):
+            dur = utile * pd / total
+            ws.append({"m": w["m"], "d": round(t, 2), "f": round(t + dur * 0.95, 2)})
+            t += dur
+        out.append({"debut": round(deb, 2), "fin": round(fin, 2), "mots": ws})
+    return out
+
+
 def _relit(lignes: list, textes: list[str]) -> list:
     """Lignes corrigées par le fondateur : mêmes moments, mots répartis sur la durée de la ligne s'ils ont changé."""
     out = []
@@ -385,6 +416,8 @@ def prepare(job_id: int, job: dict, p: dict, maj) -> dict:
         else:
             # un texte complet (collé, captures) : on cale tout, puis on garde les lignes du passage
             lignes = _aligne(textes, reconnus, max(0, t0 - marge), t1 + marge, debuts)
+            if debuts and len(debuts) == len(lignes):
+                lignes = _force_minutage(lignes, debuts, t1 + marge)
             lignes = [l for l in lignes if l["fin"] > t0 and l["debut"] < t1]
         if not lignes:
             raise RuntimeError("aucune parole trouvée sur ce passage : colle le texte ou ajoute des captures")
