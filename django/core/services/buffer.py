@@ -194,8 +194,13 @@ def video_url(post: dict, service: str = "") -> str | None:
     return f"{base}/media/social/{post['video']}"
 
 
-INSTAGRAM_PAR_JOUR = 4
-FACEBOOK_PAR_JOUR = 4
+INSTAGRAM_PAR_JOUR = 5   # vidéos automatiques par jour (celles du Studio ne comptent pas)
+FACEBOOK_PAR_JOUR = 5
+# Programme du 11/11/2026 (bilan des 30 derniers jours : un reel touche en moyenne 76 comptes, un carrousel 2,7, une story
+# 0,9 ; Cauri Monde en images 2,6 ; anecdotes et citations 1 à 3) : sur Instagram et Facebook, la vidéo d'abord ; en images,
+# seulement le classement officiel et les tops validés, 2 par jour au plus. TikTok inchangé (270 comptes en moyenne).
+IMAGES_INSTAGRAM = ("format-officiel", "format-top", "format-versus", "format-albums")
+IMAGES_PAR_JOUR = 2
 # Ce qui mérite Instagram (moins de posts, mieux faits — analyse du 17/10/2026) : vidéos du jour et formats,
 # classements officiels, flashs, la première actu de chaque édition Cauri Monde, le magazine de la semaine
 INSTAGRAM_THEMES = ("format-", "flash", "monde-matin-1", "monde-soir-1", "hebdo")
@@ -206,33 +211,33 @@ INSTAGRAM_THEMES = ("format-", "flash", "monde-matin-1", "monde-soir-1", "hebdo"
 PRIORITAIRES = ("format-officiel", "format-studio", "format-top", "format-albums")   # + tops, versus et albums validés par le fondateur
 
 
-def facebook_ok(post: dict) -> bool:
-    """Facebook (23/10/2026) : 75 posts la semaine 43 pour une portée médiane de 0. Même règle qu'Instagram :
-    thèmes prioritaires, FACEBOOK_PAR_JOUR posts par jour au plus ; les posts de Cauri Studio passent toujours."""
+def _envoyes_aujourdhui(service: str, video: bool) -> int:
+    """Posts automatiques déjà envoyés aujourd'hui sur ce réseau (vidéos ou images), hors Studio."""
+    return int(db.value(f"""SELECT COUNT(DISTINCT p.id) FROM audit_log a
+                            JOIN social_posts p ON a.reason LIKE 'post-' || p.id || '-{service}%'
+                            WHERE a.action = 'buffer.post' AND a.created_at >= CURRENT_DATE
+                            AND p.theme NOT LIKE 'format-studio%'
+                            AND ({'' if video else 'NOT '}(coalesce(p.video, '') <> ''))""") or 0)
+
+
+def instagram_ok(post: dict, service: str = "instagram") -> bool:
+    """Post retenu pour Instagram (et Facebook, qui suit) — programme du 11/11/2026 : la vidéo d'abord.
+    Studio et classement officiel passent toujours ; une vidéo passe (5 par jour au plus) ; en images, seulement le
+    classement officiel et les tops validés (2 par jour au plus) ; le reste (carrousels Cauri Monde, flashs, anecdotes,
+    citations, magazine) ne touche presque personne sur Instagram et n'y part plus."""
     theme = str(post.get("theme") or "")
     if theme.startswith(PRIORITAIRES):
         return True
-    if not theme.startswith(INSTAGRAM_THEMES):
+    if post.get("video"):
+        return _envoyes_aujourdhui(service, True) < (INSTAGRAM_PAR_JOUR if service == "instagram" else FACEBOOK_PAR_JOUR)
+    if not theme.startswith(IMAGES_INSTAGRAM):
         return False
-    deja = int(db.value("""SELECT COUNT(DISTINCT a.reason) FROM audit_log a
-                           JOIN social_posts p ON a.reason LIKE 'post-' || p.id || '-facebook%'
-                           WHERE a.action = 'buffer.post' AND a.created_at >= CURRENT_DATE
-                           AND p.theme NOT LIKE 'format-studio%'""") or 0)
-    return deja < FACEBOOK_PAR_JOUR
+    return _envoyes_aujourdhui(service, False) < IMAGES_PAR_JOUR
 
 
-def instagram_ok(post: dict) -> bool:
-    """Post retenu pour Instagram : thème prioritaire et moins de INSTAGRAM_PAR_JOUR posts déjà envoyés aujourd'hui.
-    Les posts de Cauri Studio, choisis à la main par le fondateur, passent toujours et ne comptent pas dans la limite."""
-    if str(post.get("theme") or "").startswith(PRIORITAIRES):
-        return True
-    if not str(post.get("theme") or "").startswith(INSTAGRAM_THEMES):
-        return False
-    deja = int(db.value("""SELECT COUNT(DISTINCT a.reason) FROM audit_log a
-                           JOIN social_posts p ON a.reason LIKE 'post-' || p.id || '-instagram%'
-                           WHERE a.action = 'buffer.post' AND a.created_at >= CURRENT_DATE
-                           AND p.theme NOT LIKE 'format-studio%'""") or 0)
-    return deja < INSTAGRAM_PAR_JOUR
+def facebook_ok(post: dict) -> bool:
+    """Facebook (portée moyenne ~0 sur 30 jours) : simple relais, mêmes règles qu'Instagram."""
+    return instagram_ok(post, "facebook")
 
 
 # TikTok (23/10/2026) : 72 % de l'audience en France, attirée par les sujets mondiaux (Céline Dion, Kendrick…), et deux
@@ -416,7 +421,7 @@ def failed(result: str) -> bool:
     parts = [p.strip() for p in (result or "").split(",") if p.strip()]
     # refus voulus (quota du jour, meilleurs posts seulement, reprise refusée sur TikTok) : pas un échec de la nuit
     # (03/11/2026 : ils déclenchaient « 1 à 3 problèmes cette nuit » presque chaque jour)
-    voulus = ("réservé aux meilleurs posts", "par jour au plus", "reprise d'un autre compte", "non recommandée", "déjà envoyé")
+    voulus = ("réservé aux meilleurs posts", "vidéos et classements seulement", "par jour au plus", "reprise d'un autre compte", "non recommandée", "déjà envoyé")
     return not parts or any(not p.endswith("programmé") and not any(v in p for v in voulus) for p in parts)
 
 
@@ -455,15 +460,20 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
             return f"file Buffer pleine : {room[1]}/{room[0]} posts programmés, il faut {len(todo(jobs))} places — rien programmé"
     for ch in chans:
         if ch["service"] == "instagram" and not instagram_ok(post):
-            done.append("instagram : réservé aux meilleurs posts du jour")
+            done.append("instagram : vidéos et classements seulement")
             continue
         if ch["service"] == "facebook" and not facebook_ok(post):
-            done.append("facebook : réservé aux meilleurs posts du jour")
+            done.append("facebook : vidéos et classements seulement")
             continue
         if ch["service"] == "tiktok" and (refus := tiktok_refus(post)):
             done.append(refus)
             continue
-        for suffix, reel, when in jobs:
+        jobs_ch = jobs
+        if (ch["service"] in ("instagram", "facebook") and post.get("video") and not video_seule(post)
+                and not str(post.get("theme") or "").startswith("format-officiel")):   # le classement garde son carrousel
+            # la vidéo seule, tout de suite (11/11/2026) : le carrousel ne touchait presque personne
+            jobs_ch = [("-reel", True, due_at)]
+        for suffix, reel, when in jobs_ch:
             if reel and ch["service"] not in NOTIFY_REELS and (not video_seule(post) or video_muette(post)):
                 continue  # Facebook : le reel publié sur Instagram y est repartagé automatiquement, avec son son
             label = ch["service"] + (" (vidéo)" if reel else "")
