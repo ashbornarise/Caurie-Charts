@@ -271,12 +271,28 @@ def _photo(p: dict):
     return None
 
 
-def _pochette(p: dict) -> str | None:
+def _pochette(p: dict, lien: str = ""):
+    """Pochette du titre, jamais vide (11/11/2026 : « Gaou la », trop récent pour la base, plantait la vidéo) :
+    base, puis Spotify, puis la miniature YouTube du lien, puis la photo de l'artiste."""
     if p.get("pochette"):
         return p["pochette"]
     t = db.one("""SELECT t.cover_url FROM tracks t JOIN artists a ON a.id = t.artist_id WHERE lower(t.title) = lower(?)
                   AND t.cover_url IS NOT NULL ORDER BY t.release_date DESC NULLS LAST LIMIT 1""", [p.get("titre") or ""])
-    return (t or {}).get("cover_url")
+    if (t or {}).get("cover_url"):
+        return t["cover_url"]
+    try:
+        from core.services.social import spotify_paroles as SP
+        from core.services.social import top_titres as TT
+        trouve = SP.cherche(p.get("titre") or "", (p.get("artistes") or "").split(",")[0].split(" ft")[0].strip())
+        im = TT.pochette(trouve["id"]) if trouve else None
+        if im is not None:
+            return im
+    except Exception as exc:  # noqa: BLE001
+        log_write("studio", "warning", f"pochette Spotify introuvable pour « {p.get('titre')} » : {str(exc)[:120]}")
+    yt = re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{11})", lien or "")
+    if yt:
+        return f"https://i.ytimg.com/vi/{yt.group(1)}/maxresdefault.jpg"
+    return _photo(p)
 
 
 def prepare(job_id: int, job: dict, p: dict, maj) -> dict:
@@ -336,10 +352,10 @@ def prepare(job_id: int, job: dict, p: dict, maj) -> dict:
         # image d'essai (1 s au milieu du passage)
         essai = os.path.join(tmp, "essai.mp4")
         tm = lignes[len(lignes) // 2]["debut"] + .4
-        V.rendu(stereo, _pochette(p), lignes, tm, tm + 1, p.get("titre") or "", p.get("artistes") or "", p.get("album") or "",
+        V.rendu(stereo, _pochette(p, job.get("lien") or ""), lignes, tm, tm + 1, p.get("titre") or "", p.get("artistes") or "", p.get("album") or "",
                 p.get("pays"), essai, "feed", photo=_photo(p))
         img = os.path.join(tmp, "essai.jpg")
-        subprocess.run([_ffmpeg(), "-v", "error", "-y", "-ss", ".6", "-i", essai, "-frames:v", "1", img], check=True)
+        subprocess.run([_ffmpeg(), "-v", "error", "-y", "-ss", "0.6", "-i", essai, "-frames:v", "1", img], check=True)
         nom = f"studio-{job_id}-paroles-apercu-{os.urandom(2).hex()}.jpg"
         storage.store_media("social", nom, open(img, "rb").read(), "image/jpeg")
         p.update({"debut": t0, "fin": t1, "lignes": lignes, "paroles": [" ".join(w["m"] for w in l["mots"]) for l in lignes],
@@ -356,7 +372,7 @@ def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
         stereo = _son(job, p, tmp)
         lignes = _relit(p["lignes"], p.get("paroles") or [])
         brut = os.path.join(tmp, "brut.mp4")
-        V.rendu(stereo, _pochette(p), lignes, float(p["debut"]), float(p["fin"]), p.get("titre") or "", p.get("artistes") or "",
+        V.rendu(stereo, _pochette(p, job.get("lien") or ""), lignes, float(p["debut"]), float(p["fin"]), p.get("titre") or "", p.get("artistes") or "",
                 p.get("album") or "", p.get("pays"), brut, "feed", photo=_photo(p))
         video = brut
         try:   # vrai limiteur FabFilter Pro-L 2 (Studio-AV), sinon le niveau du rendu (−14 LUFS) reste
