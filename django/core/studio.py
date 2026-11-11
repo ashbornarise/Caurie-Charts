@@ -611,7 +611,7 @@ def _envoyer(request, ident):
     # officiel s'ajoute dans l'appli Instagram / TikTok)
     muette = p.get("type") == "paroles" and c.get("son") == "muette" and p.get("video_muette")
     faits = {"kind": "format-video" if muette else "format-clip", "studio_job": j["id"], "due": (maintenant + timedelta(minutes=2)).isoformat(),
-             "source": j["lien"], "notifier": bool(c.get("notifier")), "reseaux": reseaux, "artiste": artiste,
+             "source": j["lien"], "notifier": bool(c.get("notifier")) or toujours_notifier(), "reseaux": reseaux, "artiste": artiste,
              "legende": mode}
     if p.get("couverture_ms") is not None:   # couverture choisie, en tête de vidéo (studio_couvertures)
         faits["couverture_ms"] = int(p["couverture_ms"])
@@ -679,14 +679,32 @@ def apercu_lien(request, chemin):
     return _json(infos)
 
 
+def toujours_notifier() -> bool:
+    """Réglage du Studio (11/11/2026) : les vidéos publiées depuis le Studio partent toujours en notification sur
+    Instagram et TikTok (le fondateur ajoute lui-même un son de la bibliothèque)."""
+    try:
+        from core.services import notif
+        notif.creer_tables()
+        return db.value("SELECT valeur FROM studio_config WHERE cle = 'toujours_notifier'") == "1"
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def reglages(request, chemin):
     _verifie(chemin)
     u = _utilisateur(request)
     if not u:
         return _json({"erreur": "connexion requise"}, 401)
     creer_tables()
+    if request.method == "POST":   # interrupteur « mes vidéos en notification »
+        from core.services import notif
+        notif.creer_tables()
+        actif = "1" if _corps(request).get("toujours_notifier") else "0"
+        db.run("""INSERT INTO studio_config (cle, valeur) VALUES ('toujours_notifier', ?)
+                  ON CONFLICT (cle) DO UPDATE SET valeur = EXCLUDED.valeur""", [actif])
+        return _json({"toujours_notifier": actif == "1"})
     cles = db.all("SELECT id, nom, cree_le FROM studio_passkeys WHERE user_id = ? ORDER BY id DESC", [u["id"]])
-    return _json({"nom": u.get("name") or u["email"], "email": u["email"],
+    return _json({"nom": u.get("name") or u["email"], "email": u["email"], "toujours_notifier": toujours_notifier(),
                   "appareils": [{"id": c["id"], "nom": _appareil(c.get("nom") or ""), "cree_le": str(c["cree_le"])[:10]} for c in cles]})
 
 
