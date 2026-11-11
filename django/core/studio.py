@@ -983,6 +983,9 @@ def valider_job(request, chemin, ident):
     c = _corps(request)
     p = _textes(json.loads(j["params"] or "{}"), c)
     if isinstance(c.get("paroles"), list):   # vidéo paroles : lignes corrigées par le fondateur
+        # écran resté ouvert sur une ancienne préparation (11/11/2026, « Gaou la ») : nombre de lignes différent, refusé
+        if p.get("lignes") and len(c["paroles"]) != len(p["lignes"]):
+            return _json({"erreur": "Les paroles affichées ne sont plus à jour : rouvre le projet puis valide."}, 409)
         p["paroles"] = [str(x).strip()[:200] for x in c["paroles"]][:80]
     if isinstance(c.get("habillage"), dict):   # début et fin choisis (studio_sequences, 10/11/2026)
         p["habillage"] = _habillage_valide(c["habillage"])

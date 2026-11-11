@@ -466,8 +466,12 @@ def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
                 cible = nom_tiktok(nom + ".mp4") if v == video else nom_tiktok(nom + "-muette.mp4")
                 storage.store_media("social", cible, open(tt, "rb").read(), "video/mp4")
         storage.store_media("social", nom + ".jpg", open(vignette, "rb").read(), "image/jpeg")
-        p.update({"video_muette": nom + "-muette.mp4"})
-        maj(job_id, statut="pret", video=nom + ".mp4", vignette=nom + ".jpg", params=p)
+        # 11/11/2026 : on ne réécrit plus tout le projet avec la copie lue au départ (une correction faite pendant le
+        # montage était écrasée) ; seul le nom de la version muette est ajouté au projet tel qu'il est en base
+        actuel = db.value("SELECT params FROM studio_jobs WHERE id = ?", [job_id])
+        actuel = actuel if isinstance(actuel, dict) else json.loads(actuel or "{}")
+        actuel["video_muette"] = nom + "-muette.mp4"
+        maj(job_id, statut="pret", video=nom + ".mp4", vignette=nom + ".jpg", params=actuel)
         return {"statut": "pret", "video": nom + ".mp4"}
 
 
