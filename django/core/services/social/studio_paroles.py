@@ -63,7 +63,32 @@ def _sans_feat(titre: str) -> str:
     return re.sub(r"\s*[\(\[]\s*(feat|ft|with|avec)\b.*?[\)\]]|\s+(feat|ft)\.?\s.*$", "", titre or "", flags=re.I).strip()
 
 
+def _variantes(titre: str, artiste: str) -> list[str]:
+    """Écritures possibles d'un titre mal saisi (souvent repris de YouTube) : « Blaqbonez- Ikebe 3000 (feat. A… »,
+    « Djelykaba Bintou Feat. Viviane », « W'ate M'anim (You Have Honoured Me) »."""
+    t = (titre or "").strip()
+    v = [t, _sans_feat(t)]
+    if artiste:
+        v.append(re.sub(rf"^\s*{re.escape(artiste)}\s*[-–:|]\s*", "", _sans_feat(t), flags=re.I))
+    v.append(re.sub(r"\s*[\(\[].*?[\)\]]", "", _sans_feat(t)).strip())
+    v.append(re.split(r"\s+(?:feat|ft)\.?\s", t, flags=re.I)[0].strip())
+    out = []
+    for x in v:
+        x = re.sub(r"\s{2,}", " ", x).strip(" -–")
+        if x and x.lower() not in [o.lower() for o in out]:
+            out.append(x)
+    return out
+
+
 def _lrclib(artistes: str, titre: str) -> list | None:
+    for t in _variantes(titre, artistes.split(",")[0].split(" ft")[0].strip()):
+        r = _lrclib_un(artistes, t)
+        if r:
+            return r
+    return None
+
+
+def _lrclib_un(artistes: str, titre: str) -> list | None:
     """Paroles minutées de LRCLIB : [{"debut", "texte"}] ou None. Recherche par titre et artiste, puis recherche
     libre ; titres comparés sans les invités (11/11/2026 : « Gaou la (feat. 6uff) » était manqué)."""
     artiste = artistes.split(",")[0].split(" ft")[0].strip()
@@ -89,7 +114,12 @@ def _spotify(artistes: str, titre: str) -> list | None:
     """Paroles de Spotify : [{"debut" (None si non minutées), "texte"}] ou None (pas de cookie, pas de paroles, API cassée)."""
     from core.services.social import spotify_paroles as SP
     try:
-        t = SP.cherche(titre, artistes.split(",")[0].split(" ft")[0].strip())
+        artiste = artistes.split(",")[0].split(" ft")[0].strip()
+        t = None
+        for variante in _variantes(titre, artiste):
+            t = SP.cherche(variante, artiste)
+            if t:
+                break
         if not t:
             return None
         d = SP.paroles(t["id"])
