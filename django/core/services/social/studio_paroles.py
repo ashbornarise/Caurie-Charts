@@ -77,6 +77,21 @@ def _lrclib(artistes: str, titre: str) -> list | None:
     return None
 
 
+def _spotify(artistes: str, titre: str) -> list | None:
+    """Paroles de Spotify : [{"debut" (None si non minutées), "texte"}] ou None (pas de cookie, pas de paroles, API cassée)."""
+    from core.services.social import spotify_paroles as SP
+    try:
+        t = SP.cherche(titre, artistes.split(",")[0].split(" ft")[0].strip())
+        if not t:
+            return None
+        d = SP.paroles(t["id"])
+    except Exception as exc:  # noqa: BLE001 — API non publique : on retombe sur la transcription
+        log_write("studio", "warning", f"paroles Spotify indisponibles pour « {titre} » : {str(exc)[:200]}")
+        return None
+    minute = d["sync"] == "LINE_SYNCED"
+    return [{"debut": deb if minute else None, "texte": txt} for deb, txt in d["lignes"]] or None
+
+
 def _lit_capture(nom: str, cle: str) -> list[str]:
     """Lignes de paroles visibles sur une capture, lues par Gemini."""
     from core.services.social.comptes import MODELES, URL
@@ -293,6 +308,13 @@ def prepare(job_id: int, job: dict, p: dict, maj) -> dict:
             if lrc:
                 dans = [x for x in lrc if t0 - 1 <= x["debut"] < t1]
                 textes, debuts, origine = [x["texte"] for x in dans], [x["debut"] for x in dans], "LRCLIB"
+        if not textes:   # paroles affichées dans Spotify (11/11/2026) : texte exact, début de chaque ligne
+            sp = _spotify(p.get("artistes") or "", p.get("titre") or "")
+            if sp:
+                dans = [x for x in sp if t0 - 1 <= x["debut"] < t1] if sp[0]["debut"] is not None else sp
+                textes = [x["texte"] for x in dans]
+                debuts = [x["debut"] for x in dans] if sp[0]["debut"] is not None else None
+                origine = "Spotify"
         marge = 3.0
         reconnus = _groq(wav16, max(0, t0 - marge), t1 + marge, " ".join(textes), tmp)
         if not textes:   # dernier recours : la transcription elle-même, à relire
