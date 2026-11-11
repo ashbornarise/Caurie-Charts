@@ -30,8 +30,20 @@ def _theme(theme: str) -> str:
         return "Cauri Monde"
     if theme.startswith("flash-"):
         return "flash"
-    if theme.startswith("format-clip-"):
+    if theme.startswith("format-clip"):
         return "vidéos du jour"
+    if theme.startswith("format-studio"):
+        return "vidéos du Studio"
+    if theme.startswith(("format-top", "format-versus", "format-albums")):
+        return "tops, versus et albums"
+    if theme.startswith("format-officiel"):
+        return "classement officiel"
+    if theme.startswith(("format-anecdote", "format-punchline", "format-citation", "format-qui-est", "format-record", "format-power")):
+        return "formats texte (anecdotes, citations, records)"
+    if theme.startswith(("format-bandeaux", "format-promo")):
+        return "promotion du site"
+    if theme.startswith("format-paroles"):
+        return "vidéos paroles"
     if theme.startswith("format-interview") or "interview" in theme:
         return "interviews"
     if "evenement" in theme:
@@ -57,10 +69,13 @@ def _collecte_plage(start: date, end: date) -> dict:
             if network in raw:
                 reseaux[network]["envoyes"] += 1
                 reseaux[network]["crees"] += 1
-    metrics = db.all("""SELECT m.social_post_id, m.channel, m.sent_at, m.metrics, m.text_start, s.theme, s.title
+    # un post est relevé chaque nuit : seul son dernier relevé compte (11/11/2026 : les relevés s'additionnaient)
+    metrics = db.all("""SELECT DISTINCT ON (m.buffer_post_id) m.social_post_id, m.channel, m.post_type, m.sent_at, m.metrics,
+                               m.text_start, s.theme, s.title
                         FROM post_metrics m LEFT JOIN social_posts s ON s.id=m.social_post_id
-                        WHERE m.captured_on BETWEEN ? AND ? AND (m.sent_at::date BETWEEN ? AND ? OR m.sent_at IS NULL)""",
-                     [debut, fin, debut, fin])
+                        WHERE m.captured_on >= ? AND (m.sent_at::date BETWEEN ? AND ? OR m.sent_at IS NULL)
+                        ORDER BY m.buffer_post_id, m.captured_on DESC""",
+                     [debut, debut, fin])
     metric_rows = []
     for m in metrics:
         try:
@@ -71,7 +86,21 @@ def _collecte_plage(start: date, end: date) -> dict:
                             "type": _theme(m.get("theme") or "inconnu"), "vues": values.get("views", values.get("impressions", 0)) or 0,
                             "portee": values.get("reach", 0) or 0,
                             "reactions": (values.get("reactions", 0) or 0) + (values.get("likes", 0) or 0),
-                            "commentaires": values.get("comments", 0) or 0})
+                            "commentaires": values.get("comments", 0) or 0, "partages": values.get("shares", 0) or 0,
+                            "enregistrements": values.get("saved", values.get("saves", 0)) or 0,
+                            "abonnements": values.get("follows", 0) or 0, "format_publication": m.get("post_type") or "inconnu"})
+    # ce qui marche : moyennes par format (rubrique) et par type de publication (11/11/2026 : un reel touchait 28 fois
+    # plus de comptes qu'un carrousel sur Instagram)
+    def _moyennes(cle):
+        g = {}
+        for r in metric_rows:
+            x = g.setdefault((r["reseau"], r[cle]), {"reseau": r["reseau"], cle: r[cle], "posts": 0, "portee": 0, "vues": 0, "interactions": 0})
+            x["posts"] += 1; x["portee"] += r["portee"]; x["vues"] += r["vues"]; x["interactions"] += r["reactions"] + r["commentaires"] + r.get("partages", 0) + r.get("enregistrements", 0)
+        out = []
+        for x in g.values():
+            out.append({**x, "portee_moyenne": round(x["portee"] / x["posts"], 1), "vues_moyennes": round(x["vues"] / x["posts"], 1)})
+        return sorted(out, key=lambda x: -x["portee_moyenne"])
+    par_format, par_type_publication = _moyennes("type"), _moyennes("format_publication")
     pages = db.all("SELECT path, SUM(views) AS vues FROM page_views WHERE day BETWEEN ? AND ? GROUP BY path ORDER BY vues DESC LIMIT 10", [debut, fin])
     visites_jour = db.all("SELECT day AS jour, SUM(views) AS vues FROM page_views WHERE day BETWEEN ? AND ? GROUP BY day ORDER BY day", [debut, fin])
     nuits = db.all("SELECT ran_at, seconds, failed, steps FROM pipeline_runs WHERE ran_at >= ? AND ran_at < (?::date + INTERVAL '1 day') ORDER BY ran_at", [debut, fin])
@@ -82,8 +111,8 @@ def _collecte_plage(start: date, end: date) -> dict:
         except (ValueError, TypeError):
             pass
     return {"debut": debut, "fin": fin, "posts_crees": len(posts), "posts_par_type": par_type, "posts_par_reseau": reseaux,
-            "metriques_posts": metric_rows, "visites_par_jour": visites_jour, "meilleurs_posts": sorted(metric_rows, key=lambda x: x["vues"], reverse=True)[:5],
-            "pires_posts": sorted(metric_rows, key=lambda x: x["vues"])[:5],
+            "metriques_posts": metric_rows, "par_format": par_format, "par_type_publication": par_type_publication, "visites_par_jour": visites_jour, "meilleurs_posts": sorted(metric_rows, key=lambda x: x["portee"] or x["vues"], reverse=True)[:5],
+            "pires_posts": sorted(metric_rows, key=lambda x: x["portee"] or x["vues"])[:5],
             "visites": sum(int(p["vues"] or 0) for p in pages), "pages_plus_vues": pages,
             "releves_classements": int(db.value("SELECT COUNT(*) FROM chart_observations WHERE observed_on BETWEEN ? AND ?", [debut, fin]) or 0),
             "artistes_actifs": int(db.value("SELECT COUNT(DISTINCT t.artist_id) FROM chart_observations o JOIN tracks t ON t.id=o.track_id WHERE o.observed_on BETWEEN ? AND ?", [debut, fin]) or 0),
@@ -112,7 +141,7 @@ def _chiffres(data: dict) -> set[str]:
 
 def rediger(data: dict, client=None) -> str:
     client = client or __import__("core.services.ai", fromlist=["make"]).make()
-    prompt = "Rédige en français : résumé de la semaine en 5 phrases, évolution globale, paragraphes réseaux, site, classements, contenus, technique, dépenses, puis 3 recommandations concrètes. Chiffres réels uniquement : utilise exclusivement le JSON ci-dessous, sans ajouter de nombre ni extrapoler. Si une donnée manque, dis qu'elle n'est pas disponible.\nJSON : " + json.dumps(data, ensure_ascii=False)
+    prompt = "Rédige en français : résumé de la semaine en 5 phrases, évolution globale, paragraphes réseaux, puis un paragraphe « Ce qui marche, ce qui ne prend pas » fondé sur par_format et par_type_publication (portée moyenne par format et par type : reel, carrousel, image ; formats à publier plus, formats à réduire), site, classements, contenus, technique, dépenses, puis 3 recommandations concrètes. Chiffres réels uniquement : utilise exclusivement le JSON ci-dessous, sans ajouter de nombre ni extrapoler. Si une donnée manque, dis qu'elle n'est pas disponible.\nJSON : " + json.dumps(data, ensure_ascii=False)
     try:
         answer = client.ask("Tu es l'assistant éditorial de Cauri Charts. Respecte strictement les chiffres fournis.", prompt, max_tokens=8000)   # large : les modèles qui « réfléchissent » coupaient le texte
         text = answer.get("text", "") if isinstance(answer, dict) else str(answer)

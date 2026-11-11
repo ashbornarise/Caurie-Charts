@@ -249,8 +249,14 @@ class DailyPipeline:
         self._step("10s. Réseaux des artistes (Gemini + Google)", reseaux_ia, 600)
 
         def stats():
-            from core.services import analytics
-            return [analytics.collect_post_metrics()]
+            from core.services import analytics, stats_instagram
+            lignes = []
+            for f in (analytics.collect_post_metrics, stats_instagram.collecter):   # Buffer (TikTok, Facebook) + Instagram
+                try:
+                    lignes.append(f())
+                except Exception as exc:  # noqa: BLE001
+                    lignes.append(f"ERREUR {f.__module__} : {str(exc)[:160]}")
+            return lignes
         self._step("10i. Statistiques des publications (vues, portée, réactions)", stats)
 
         derniere = Period.last_completed_week(clock.today().isoformat())

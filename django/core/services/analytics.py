@@ -99,7 +99,7 @@ def collect_post_metrics() -> str:
         for e in data["edges"]:
             p = e["node"]
             metrics = {m["type"]: m["value"] for m in p.get("metrics") or []}
-            if not metrics:
+            if not metrics or p["channelService"] == "instagram":   # Instagram : lu dans son API (stats_instagram, 11/11/2026)
                 continue
             db.run("""INSERT INTO post_metrics (buffer_post_id, captured_on, social_post_id, channel, post_type, sent_at, metrics, text_start)
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
