@@ -117,6 +117,15 @@ def telecharge(lien: str, dossier: str) -> tuple[str, dict]:
         for f in glob.glob(os.path.join(dossier, "source.*")):
             os.remove(f)
         time.sleep(10 * (essai + 1))
+    if (r.returncode != 0 or not fichiers) and re.search(r"No video formats|no video in this post", r.stderr or "", re.I):
+        # carrousel Instagram (11/11/2026) : un élément sans vidéo faisait tout échouer ; on prend la 1re vidéo qui passe
+        car = [a for a in cmd if a != "--no-playlist"]
+        car[car.index("-o") + 1] = os.path.join(dossier, "source-%(playlist_index)s.%(ext)s")
+        car[3:3] = ["--yes-playlist", "--ignore-errors", "--playlist-items", "1:8"]
+        r = subprocess.run(car, capture_output=True, text=True, timeout=900)
+        fichiers = sorted(f for f in glob.glob(os.path.join(dossier, "source-*")) if not f.endswith(".json"))
+        if fichiers:
+            r = subprocess.CompletedProcess(car, 0, r.stdout, r.stderr)
     if r.returncode != 0 or not fichiers:
         msg = (r.stderr or r.stdout or "").strip().splitlines()[-1:] or ["erreur inconnue"]
         texte = msg[0]
@@ -687,7 +696,9 @@ def traite(job_id: int) -> dict:
         try:
             if p.get("publier_indices"):
                 return studio_photos.publie(job_id, job, p, _maj)
-            if p.get("mode") == "profil":
+            # un lien de post (/p/, /reel/, vidéo Facebook) donné en mode profil : on traite le post (11/11/2026, 0 photo)
+            if p.get("mode") == "profil" and not re.search(r"instagram\.com/(p|reel|reels|tv)/|facebook\.com/(share|reel|watch|.+/posts)",
+                                                            job.get("lien") or ""):
                 return studio_photos.traite_profil(job_id, job, p, _maj)
             return studio_photos.traite(job_id, job, p, _maj)
         except TacheAnnulee:
