@@ -111,6 +111,20 @@ def _lrclib_un(artistes: str, titre: str) -> list | None:
     return None
 
 
+def _musixmatch(artistes: str, titre: str) -> list | None:
+    from core.services.social import musixmatch_paroles as MX
+    artiste = artistes.split(",")[0].split(" ft")[0].strip()
+    for variante in _variantes(titre, artiste):
+        try:
+            r = MX.paroles(variante, artiste)
+        except Exception as exc:  # noqa: BLE001 — API non publique : source suivante
+            log_write("studio", "warning", f"Musixmatch indisponible pour « {titre} » : {str(exc)[:120]}")
+            return None
+        if r:
+            return r
+    return None
+
+
 def _spotify(artistes: str, titre: str) -> list | None:
     """Paroles de Spotify : [{"debut" (None si non minutées), "texte"}] ou None (pas de cookie, pas de paroles, API cassée)."""
     from core.services.social import spotify_paroles as SP
@@ -394,6 +408,12 @@ def prepare(job_id: int, job: dict, p: dict, maj) -> dict:
             if lrc:
                 dans = [x for x in lrc if t0 - 1 <= x["debut"] < t1]
                 textes, debuts, origine = [x["texte"] for x in dans], [x["debut"] for x in dans], "LRCLIB"
+        if not textes:   # Musixmatch (11/11/2026, compte du fondateur) : le fournisseur de Spotify, souvent plus complet
+            mx = _musixmatch(p.get("artistes") or "", p.get("titre") or "")
+            if mx:
+                minute = mx[0]["debut"] is not None
+                dans = [x for x in mx if t0 - 1 <= x["debut"] < t1] if minute else mx
+                textes, debuts, origine = [x["texte"] for x in dans], ([x["debut"] for x in dans] if minute else None), "Musixmatch"
         if not textes:   # paroles affichées dans Spotify (11/11/2026) : texte exact, début de chaque ligne
             sp = _spotify(p.get("artistes") or "", p.get("titre") or "")
             if sp:
