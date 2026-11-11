@@ -957,7 +957,12 @@ def apercu_job(request, chemin, ident):
     if not p.get("cle"):
         return _json({"erreur": "pas d'image clé"}, 400)
     base = storage.blob_public_url()
-    fond = Image.open(io.BytesIO(requests.get(f"{base}/media/social/{p['cle']}", timeout=30).content))
+    try:
+        fond = storage.lit_image("social", p["cle"])
+    except RuntimeError as exc:
+        from core.services.platforms import log_write
+        log_write("studio", "error", f"aperçu du projet {j['id']} : {exc}")
+        return _json({"erreur": str(exc)}, 502)
     vue = apercu(fond, p.get("format_final") or "origine", p.get("etiquette") or "", p.get("accroche") or "", p.get("artiste") or "",
                  p.get("credit") or "")
     out = io.BytesIO(); vue.save(out, format="JPEG", quality=90)
@@ -1044,9 +1049,10 @@ def sequences_apercu(request, chemin):
     fond = None
     if p.get("cle"):
         try:
-            r = requests.get(f"{storage.blob_public_url()}/media/social/{p['cle']}", timeout=15)
-            fond = Image.open(io.BytesIO(r.content)).convert("RGB")
-        except Exception:  # noqa: BLE001
+            fond = storage.lit_image("social", p["cle"])
+        except RuntimeError as exc:
+            from core.services.platforms import log_write
+            log_write("studio", "error", f"aperçu des modèles, projet {j['id']} : {exc}")
             fond = None
     # textes en cours de saisie dans l'écran de validation (10/11/2026 : les aperçus gardaient les anciens textes)
     g = {k: str(request.GET.get(k) or "").strip()[:160] for k in ("etiquette", "accroche", "artiste")}

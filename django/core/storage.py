@@ -61,6 +61,34 @@ def _blob_put(pathname: str, data: bytes, content_type: str, max_age: int | None
         _sleep(RETRY_WAITS[attempt])
 
 
+def lit_image(dossier: str, nom: str):
+    """Une image du Blob (media/<dossier>/<nom>) en PIL.Image RGB, avec réessais. Le 11/11/2026, sur Vercel, l'image
+    clé du Studio revenait illisible (« cannot identify image file ») alors qu'elle s'ouvrait depuis le PC : réponse
+    demandée sans compression, contenu vérifié, et en cas d'échec un message qui dit ce qui a été reçu."""
+    import io
+    url = f"{blob_public_url()}/media/{dossier}/{nom}"
+    recu = ""
+    for attente in (0, 1, 3):
+        if attente:
+            _sleep(attente)
+        try:
+            r = requests.get(url, timeout=30, headers={"User-Agent": "CauriCharts/1.0 (+https://cauricharts.com)",
+                                                       "Accept": "image/*", "Accept-Encoding": "identity"})
+        except requests.RequestException as exc:
+            recu = f"connexion impossible ({exc.__class__.__name__})"
+            continue
+        corps = r.content or b""
+        if r.status_code == 200 and (corps[:3] == b"\xff\xd8\xff" or corps[:8] == b"\x89PNG\r\n\x1a\n" or corps[8:12] == b"WEBP"):
+            try:
+                return Image.open(io.BytesIO(corps)).convert("RGB")
+            except Exception as exc:  # noqa: BLE001
+                recu = f"image abîmée ({exc.__class__.__name__}, {len(corps)} octets)"
+                continue
+        recu = (f"HTTP {r.status_code}, {r.headers.get('content-type', '?')}, {len(corps)} octets, "
+                f"encodage {r.headers.get('content-encoding', 'aucun')}, début {corps[:40]!r}")
+    raise RuntimeError(f"image {nom} illisible : {recu}")
+
+
 def blob_token() -> str:
     return _blob_token()
 
