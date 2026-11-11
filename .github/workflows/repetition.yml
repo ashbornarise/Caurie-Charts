@@ -1,0 +1,54 @@
+name: Répétition générale de la publication du vendredi
+on:
+  schedule:
+    - cron: "0 18 * * 4"    # jeudi 18 h UTC : la veille, le temps de corriger
+    - cron: "0 12 * * 5"    # vendredi 12 h UTC : 7 h avant la publication
+    - cron: "15 21 * * 5"   # vendredi 21 h 15 UTC : contrôle après publication (classements publiés, posts partis)
+  workflow_dispatch:
+    inputs:
+      apres:
+        description: "Contrôle après publication"
+        type: boolean
+        default: false
+jobs:
+  repetition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      APP_TIMEZONE: Africa/Lome
+      TZ: Africa/Lome
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+      BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+      META_IG_ID: ${{ secrets.META_IG_ID }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+      TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
+      MAIL_ADMIN: ${{ secrets.MAIL_ADMIN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      # mêmes dépendances que la publication : on vérifie aussi qu'elles s'installent et se chargent
+      - run: pip install -r requirements.txt -r requirements-pipeline.txt numpy "opencv-python-headless==4.10.0.84"
+      - name: Contrôles
+        working-directory: django
+        run: |
+          if [ "${{ github.event.schedule }}" = "15 21 * * 5" ] || [ "${{ inputs.apres }}" = "true" ]; then
+            python manage.py repetition_vendredi --apres
+          else
+            python manage.py repetition_vendredi
+          fi

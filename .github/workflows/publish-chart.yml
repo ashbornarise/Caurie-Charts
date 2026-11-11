@@ -84,3 +84,58 @@ jobs:
             ARGS="$ARGS --clips-only"
           fi
           python manage.py publish_chart $ARGS
+
+  # Secours (11/11/2026, « quoi qu'il arrive, ce vendredi tout doit passer ») : si la publication échoue, elle est
+  # relancée une fois, automatiquement. Sans doublon : un classement déjà publié ne se republie pas et Buffer refuse
+  # ce qui est déjà programmé. Le fondateur est prévenu dans tous les cas (répétition --apres).
+  secours:
+    needs: publish
+    if: ${{ failure() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_URL: ${{ secrets.APP_URL }}
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_TIMEZONE: Africa/Lome
+      TZ: Africa/Lome
+      BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+      BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+      META_IG_ID: ${{ secrets.META_IG_ID }}
+      META_DIRECT: "1"
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
+      MAIL_ADMIN: ${{ secrets.MAIL_ADMIN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt -r requirements-pipeline.txt numpy "opencv-python-headless==4.10.0.84"
+      - name: Prévenir
+        working-directory: django
+        run: |
+          python - <<'PY' || true
+          import os, django
+          os.environ.setdefault("DJANGO_SETTINGS_MODULE", "cauri.settings")
+          django.setup()
+          from core import mail
+          mail.notify_admin("Publication du vendredi en échec, relance automatique en cours",
+                            "La publication planifiée a échoué ; le secours la relance une fois. Résultat dans le contrôle de 21 h 15 UTC.")
+          PY
+      - name: Relancer la publication
+        working-directory: django
+        run: |
+          python manage.py publish_chart --recul=0 --auto
+          python manage.py newsletter_envoi || true

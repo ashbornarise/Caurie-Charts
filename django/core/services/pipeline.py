@@ -264,7 +264,11 @@ class DailyPipeline:
                 lignes = []
                 for c in db.all("SELECT code FROM countries WHERE is_active = 1 ORDER BY sort_order"):
                     if revue_ia.en_attente(c["code"], debut):
-                        b = revue_ia.revoir(c["code"], debut)
+                        try:   # un pays en erreur n'arrête plus les suivants (11/11/2026)
+                            b = revue_ia.revoir(c["code"], debut)
+                        except Exception as exc:  # noqa: BLE001
+                            lignes.append(f"{c['code']} : ERREUR {str(exc)[:160]}")
+                            continue
                         lignes.append(f"{c['code']} : {len(b['valides'])} validé(s), {len(b['exclus'])} exclu(s), {len(b['attente'])} en doute")
                 return lines_or(lignes, "rien à revoir")
             self._step("7 bis. Revue Google de rattrapage (semaine publiée)", revue_rattrapage, 600)

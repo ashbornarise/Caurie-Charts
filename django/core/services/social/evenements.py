@@ -151,7 +151,8 @@ def _credit_image(im, source):
     d = ImageDraw.Draw(im)
     texte = f"Photo : {source}"
     try:
-        font = ImageFont.truetype("arial.ttf", max(16, im.width // 48))
+        from core.services.social.couverture2026 import police   # Arial n'existe pas sur les serveurs (Linux)
+        font = police("Montserrat.ttf", max(16, im.width // 48), "SemiBold")
     except OSError:
         font = ImageFont.load_default()
     boite = d.textbbox((0, 0), texte, font=font)
