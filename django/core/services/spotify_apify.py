@@ -19,7 +19,7 @@ from core.services.platforms import PlatformException, log_write
 API = "https://api.apify.com/v2/acts/{}/run-sync-get-dataset-items"
 ACTEUR_AUDITEURS = "omkar-cloud~spotify-monthly-listeners-scraper"
 ACTEUR_PLAYLISTS = "s-r~free-spotify-playlist-intelligence"
-PLAFOND_MOIS = 4.50
+PLAFOND_MOIS = 9.50   # relevé le 12/11/2026 par le fondateur (compte Apify limité à 10 $ par mois), était 4,50
 PRIX_PLAYLIST = 0.01
 PRIX_ARTISTE = 0.002          # réellement facturé (0,27 $ pour 130 artistes le 28/10/2026) : ~1,1 $ par mois
 MAX_ARTISTES = 330            # par semaine : tous les tops, puis le roulement (06/11/2026) : ~0,66 $, ~2,6 $ par mois
