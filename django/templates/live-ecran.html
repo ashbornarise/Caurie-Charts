@@ -33,7 +33,11 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:transparent;colo
 .stat{display:flex;justify-content:space-between;gap:20px;font-size:34px;font-weight:700;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.15)}.stat b{color:var(--or);font-weight:900;text-align:right}
 /* platine : clip plein cadre derrière les scènes, flou quand la fiche de l'artiste passe */
 #clip{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;opacity:0;transition:opacity .6s,filter .7s,transform .7s}
-#clip.on{opacity:1}#clip.flou{filter:blur(22px) brightness(.55);transform:scale(1.08)}
+#clip.on{opacity:1}
+#yt{position:absolute;inset:0;z-index:1;overflow:hidden;opacity:0;transition:opacity .6s,filter .7s,transform .7s;pointer-events:none}#yt.on{opacity:1}#yt.flou{filter:blur(22px) brightness(.55);transform:scale(1.08)}
+#yt iframe{position:absolute;top:0;left:50%;height:1920px;width:3414px;margin-left:-1707px;border:0}
+#repet{position:absolute;top:14px;right:14px;z-index:30;background:#e5384a;color:#fff;font-weight:900;font-size:26px;padding:8px 16px;border-radius:10px;display:none}
+#activer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;font:900 40px Montserrat,Arial;padding:30px 40px;border-radius:24px;border:0;background:#F5C14B;color:#14102a;display:none;cursor:pointer}#clip.flou{filter:blur(22px) brightness(.55);transform:scale(1.08)}
 #voileClip{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(13,10,31,.55) 0%,rgba(13,10,31,0) 25%,rgba(13,10,31,0) 60%,rgba(13,10,31,.85) 100%);opacity:0;transition:opacity .6s}
 #voileClip.on{opacity:1}
 #fiche{position:absolute;left:60px;right:60px;top:300px;padding:36px;z-index:7;transition:all .6s cubic-bezier(.2,1.2,.4,1)}
@@ -51,7 +55,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:transparent;colo
 body.secousse{animation:secousse .5s}@keyframes secousse{10%,50%,90%{transform:translate(-18px,8px) rotate(-.6deg)}30%,70%{transform:translate(18px,-8px) rotate(.6deg)}}
 body.zoom{animation:zoomc .6s cubic-bezier(.2,1.6,.4,1)}@keyframes zoomc{30%{transform:scale(1.12)}}
 </style></head><body>
-<video id="clip" muted playsinline loop preload="auto"></video><div id="voileClip"></div>
+<video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="repet">RÉPÉTITION · rien n'est à l'antenne</div><button id="activer">Cliquer ici pour activer le son</button>
 <div id="titreSon" style="opacity:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8FD3FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span></span></div>
 
 <section class="scene" id="attente"><div class="fond"></div>
@@ -137,7 +141,7 @@ body.zoom{animation:zoomc .6s cubic-bezier(.2,1.6,.4,1)}@keyframes zoomc{30%{tra
 <canvas id="fxc" width="1080" height="1920"></canvas><div id="flash"></div><div id="projo"></div><div id="bandeau"><span></span></div><div id="grand"></div>
 
 <script nonce="{{ nonce }}">
-const BASE = "{{ base }}";
+const BASE = "{{ base }}", MODE = "{{ mode }}", Q = MODE ? "?mode=" + MODE : "";
 let D, E = {}, dernierGong = 0, cleSon = null, cleClip = null, actif = "sonA";
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " M" : n >= 1e3 ? Math.round(n / 1e3) + " k" : String(n);
@@ -156,22 +160,56 @@ const media = (cle) => { if (!cle) return null; for (const [aid, b] of Object.en
 
 // ---- platine : fondu enchaîné entre deux lecteurs, volume réglable
 function fondu(el, vers, ms, fin) { const de = el.volume, t0 = performance.now(); const pas = (t) => { const k = Math.min(1, (t - t0) / ms); el.volume = Math.max(0, Math.min(1, de + (vers - de) * k)); k < 1 ? requestAnimationFrame(pas) : fin && fin(); }; requestAnimationFrame(pas); }
+let cleMedia = "", yt = null, ytPret = false, ytAttente = null;
+function bloque() { $("activer").style.display = "block"; }
+$("activer") && ($("activer").onclick = () => { $("activer").style.display = "none"; cleMedia = ""; actx && actx.resume(); platine(); });
+function chargeYT(id, debut) {
+  if (!window.YT) { if (!document.getElementById("ytapi")) { const sc = document.createElement("script"); sc.id = "ytapi"; sc.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(sc); }
+    ytAttente = [id, debut]; window.onYouTubeIframeAPIReady = () => { ytPret = true; const [i, d] = ytAttente; chargeYT(i, d); }; return; }
+  if (!yt) yt = new YT.Player("ytp", { host: "https://www.youtube-nocookie.com", videoId: id, playerVars: { autoplay: 1, controls: 0, start: debut || 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3 },
+    events: { onReady: (ev) => { ev.target.setVolume(Math.round((E.volume ?? .85) * 100)); ev.target.playVideo(); }, onError: () => { $("yt").classList.remove("on"); } } });
+  else yt.loadVideoById({ videoId: id, startSeconds: debut || 0 });
+}
+function arreteTout() { const v = $("clip"), a = $("son"); v.pause(); v.removeAttribute("src"); v.load(); a.pause(); a.removeAttribute("src"); if (yt && yt.stopVideo) yt.stopVideo(); $("yt").classList.remove("on"); }
 function platine() {
-  const en = E.enCours; $("titreSon").style.opacity = en ? 1 : 0;
+  const m = E.media, vol = E.volume ?? 0.85, cle = m ? [m.type, m.video || m.son || m.yt, m.t].join("|") : "";
+  const v = $("clip"), a = $("son");
+  if (cle !== cleMedia) {           // nouveau média : l'ancien s'arrête, le nouveau démarre
+    cleMedia = cle; arreteTout();
+    if (m && m.type === "clip" && !m.video) { a.src = m.son; a.volume = vol; a.play().catch(bloque); }
+    else if (m && m.type === "clip") { v.src = m.video; v.loop = !!m.son; v.muted = !!m.son; v.volume = vol; v.play().catch(bloque);
+      if (m.son) { a.src = m.son; a.volume = vol; a.play().catch(bloque); } }
+    if (m && m.type === "son") { a.src = m.son; a.volume = vol; a.play().catch(bloque); }
+    if (m && m.type === "youtube") { chargeYT(m.yt, m.debut || 0); $("yt").classList.add("on"); }
+  }
+  if (m) {
+    const pause = !!m.pause;
+    for (const el of [v, a]) if (el.src) { el.volume = vol; if (pause && !el.paused) el.pause(); if (!pause && el.paused && !el.ended) el.play().catch(() => {}); }
+    if (yt && yt.setVolume) { yt.setVolume(Math.round(vol * 100)); if (m.type === "youtube") pause ? yt.pauseVideo() : yt.playVideo(); }
+  }
+  const en = m && (m.titre || m.artiste) ? m : E.enCours; $("titreSon").style.opacity = en && !(m && m.pause) ? 1 : 0;
   $("titreSon").querySelector("span").textContent = en ? [en.titre, en.artiste].filter(Boolean).join(" · ") : "";
-  // clip
-  const v = $("clip");
-  if ((E.clip || "") !== cleClip) { cleClip = E.clip || ""; if (E.clip) { v.src = E.clip; v.play().catch(() => {}); } else v.removeAttribute("src"); }
-  if (E.clip) { E.clipJoue === false ? v.pause() : v.paused && v.play().catch(() => {}); }
-  const visible = !!E.clip && ["artiste", "camera"].includes(E.scene);
-  v.classList.toggle("on", visible); $("voileClip").classList.toggle("on", visible);
-  v.classList.toggle("flou", !!(E.flou || (E.fiche && E.carte)));
+  const video = !!m && (m.type === "clip" || m.type === "youtube"), visible = video && ["artiste", "camera"].includes(E.scene);
+  v.classList.toggle("on", visible && m.type === "clip"); $("yt").classList.toggle("on", visible && m.type === "youtube"); $("voileClip").classList.toggle("on", visible);
+  const flou = !!(E.flou || (E.fiche && (E.carte || E.carteExt))); v.classList.toggle("flou", flou); $("yt").classList.toggle("flou", flou);
+  $("repet").style.display = MODE === "test" ? "block" : "none";
+}
+// sons d'ambiance joués par l'écran (le son du live sort d'ici)
+let actx = null;
+function ambiance(type) {
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  const t = actx.currentTime, out = actx.createGain(); out.gain.value = 0.9; out.connect(actx.destination);
+  const bruit = (d) => { const b = actx.createBuffer(1, actx.sampleRate * d, actx.sampleRate), x = b.getChannelData(0); for (let i = 0; i < x.length; i++) x[i] = Math.random() * 2 - 1; const s = actx.createBufferSource(); s.buffer = b; return s; };
+  if (type === "applaudir") for (let k = 0; k < 240; k++) { const s = bruit(.06), f = actx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1200 + Math.random() * 1800; const g = actx.createGain(), tt = t + Math.random() * 3.4;
+    g.gain.setValueAtTime(0, tt); g.gain.linearRampToValueAtTime(.22 * (1 - (tt - t) / 4), tt + .003); g.gain.exponentialRampToValueAtTime(.001, tt + .05); s.connect(f); f.connect(g); g.connect(out); s.start(tt); }
+  if (type === "roulement") { const s = bruit(10.6), f = actx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1800; const g = actx.createGain(); s.connect(f); f.connect(g); g.connect(out);
+    for (let i = 0; i < 230; i++) { const tt = t + i * .045; g.gain.setValueAtTime(.1 + i / 230 * .45, tt); g.gain.exponentialRampToValueAtTime(.02, tt + .04); } g.gain.setValueAtTime(.9, t + 10.3); g.gain.exponentialRampToValueAtTime(.001, t + 10.6); s.start(t); }
 }
 function rendu() {
   document.querySelectorAll(".scene").forEach((s) => s.classList.toggle("on", s.id === E.scene));
   $("sem1").textContent = "semaine " + (D.semaine || "").split("-W")[1];
   $("flux1").innerHTML = (E.dernier || []).slice(0, 4).map((c) => `<div><b>${esc(c.user)}</b> ${esc(c.texte)}</div>`).join("");
-  if (E.gong !== dernierGong) { dernierGong = E.gong; if (E.gong) { const g = $("sonGong"); $("gong").animate([{ transform: "scale(1.4)" }, { transform: "scale(1)" }], 600); } }
+  if (E.gong !== dernierGong) { const neuf = dernierGong !== 0 || Date.now() - E.gong < 4000; dernierGong = E.gong; if (E.gong && neuf) { const g = $("sonGong"); g.currentTime = 0; g.play().catch(() => {}); $("gong").animate([{ transform: "scale(1.4)" }, { transform: "scale(1)" }], 600); } }
   const pm = D.pays.find((p) => p.code === E.mystere);
   $("myst").innerHTML = pm ? `<img src="/assets/img/flags/${pm.code}.svg" style="height:120px;border-radius:10px"><div class="anton" style="font-size:110px;margin-top:10px">${esc(pm.nom)}</div>`
     : `<div class="anton" style="font-size:200px;color:var(--ciel)">?</div>`;
@@ -251,6 +289,8 @@ function effets() {
   else if ($("grand").dataset.mode !== "texte") $("grand").innerHTML = "";
   const f = E.fx; if (!f || f.t === dernierFx) return; const nouveau = dernierFx !== 0 || Date.now() - f.t < 4000; dernierFx = f.t; if (!nouveau) return;
   if (["confettis", "cauris", "coeurs"].includes(f.type)) particules(f.type);
+  if (f.type === "applaudir" || f.type === "applaudimetre") ambiance("applaudir");
+  if (f.type === "decompte") ambiance("roulement");
   if (f.type === "flash") $("flash").animate([{ opacity: .95 }, { opacity: 0 }], 500);
   if (f.type === "secousse" || f.type === "zoom") { document.body.classList.remove(f.type); void document.body.offsetWidth; document.body.classList.add(f.type); }
   if (f.type === "projecteur") { $("projo").style.opacity = 1; clearInterval(tProjo); let k = 0; tProjo = setInterval(() => { k += .03; $("projo").style.setProperty("--x", 50 + Math.sin(k) * 30 + "%"); $("projo").style.setProperty("--y", 40 + Math.cos(k * 1.3) * 15 + "%"); if (k > 9) { clearInterval(tProjo); $("projo").style.opacity = 0; } }, 30); }
@@ -260,7 +300,7 @@ function effets() {
 setInterval(() => E.minuteur && effets(), 250);
 let empreinte = "";
 async function interroge() {
-  try { const r = await fetch(BASE + "/etat", { cache: "no-store" }); const t = await r.text(); if (t !== empreinte) { empreinte = t; E = JSON.parse(t); rendu(); } } catch (e) {}
+  try { const r = await fetch(BASE + "/etat" + Q, { cache: "no-store" }); const t = await r.text(); if (t !== empreinte) { empreinte = t; E = JSON.parse(t); rendu(); } } catch (e) {}
   setTimeout(interroge, 500);
 }
 fetch(BASE + "/donnees").then((r) => r.json()).then((d) => { D = d; interroge(); });

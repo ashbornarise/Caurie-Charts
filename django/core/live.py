@@ -31,8 +31,11 @@ ETAT_DEFAUT = {
     "clip": None, "clipJoue": False, "flou": False, "fiche": False,
     # régie v2 (13/11) : le son sort de la régie ; l'écran affiche le titre en cours et les effets visuels
     "enCours": None, "fx": None, "bandeau": "", "minuteur": 0, "carteExt": None,
+    # régie v3 « télécommande » (13/11) : l'écran joue tout (clip avec son, son seul, YouTube) ; une seule régie a la main
+    "media": None, "volume": 0.85, "paysListe": ["ci", "ng", "tg", "gh"], "maitre": None, "chat": [],
 }
-_memo = {"t": 0.0, "v": None}
+_memo: dict = {}
+MAITRE_DELAI = 20   # secondes sans signe de vie avant qu'une autre régie puisse prendre la main sans forcer
 
 
 def jeton_ecran() -> str | None:
@@ -54,13 +57,26 @@ def _ecrit(cle: str, valeur, jours: int = 3) -> None:
            [cle, json.dumps(valeur, ensure_ascii=False), str(jours)])
 
 
-def etat_courant() -> dict:
+def _cle(mode: str = "") -> str:
+    return CLE_ETAT + ("-test" if mode == "test" else "")   # mode répétition : un état et un écran à part
+
+
+def _mode(request) -> str:
+    return "test" if request.GET.get("mode") == "test" else ""
+
+
+def etat_courant(mode: str = "") -> dict:
     # mémoire de l'instance 0,4 s : l'écran interroge souvent, la base ne voit qu'une partie des appels
-    if _memo["v"] is not None and time.time() - _memo["t"] < 0.4:
-        return _memo["v"]
-    e = {**ETAT_DEFAUT, **(_lit(CLE_ETAT, {}) or {})}
-    _memo.update(t=time.time(), v=e)
+    m = _memo.get(mode)
+    if m and time.time() - m[0] < 0.4:
+        return m[1]
+    e = {**ETAT_DEFAUT, **(_lit(_cle(mode), {}) or {})}
+    _memo[mode] = (time.time(), e)
     return e
+
+
+def _public(e: dict) -> dict:
+    return {k: v for k, v in e.items() if k != "votants"}
 
 
 def _norm(s: str) -> str:
@@ -138,6 +154,8 @@ def donnees() -> dict:
 def _commentaire(e: dict, user: str, texte: str) -> None:
     t = _norm(texte)
     e["dernier"] = ([{"user": user[:30], "texte": texte[:80]}] + e.get("dernier", []))[:6]
+    if not user.startswith("régie"):
+        e["chat"] = (e.get("chat") or [])[-119:] + [int(time.time())]   # rythme du chat (conseils de l'agent)
     if e["scene"] == "versus":
         votants = set(e.get("votants", []))
         if user not in votants:
@@ -179,9 +197,24 @@ def regie_etat(request, chemin):
 
 
 def _maj_etat(request):
-    e = {**etat_courant()}
-    if request.method == "POST":
-        m = S._corps(request)
+    """Une seule régie a la main (la première ; une autre peut « prendre la main »). Les autres regardent : 409."""
+    mode = _mode(request)
+    e = {**etat_courant(mode)}
+    ident = (request.headers.get("X-Regie") or "")[:40]
+    maitre = e.get("maitre") or {}
+    libre = not maitre.get("id") or maitre.get("id") == ident or time.time() - float(maitre.get("vu") or 0) > MAITRE_DELAI
+    if request.method == "GET":
+        if ident and maitre.get("id") == ident:
+            e["maitre"] = {"id": ident, "vu": time.time()}
+            if time.time() - float(maitre.get("vu") or 0) > 5:   # signe de vie : écrit au plus toutes les 5 s
+                _ecrit(_cle(mode), e); _memo[mode] = (time.time(), e)
+        return S._json({**_public(e), "aLaMain": bool(ident) and (maitre.get("id") == ident or libre)})
+    m = S._corps(request)
+    if ident and not libre and not m.get("prendre"):
+        return S._json({**_public(e), "aLaMain": False}, 409)
+    if ident:
+        e["maitre"] = {"id": ident, "vu": time.time()}
+    if True:
         if m.get("rafraichir"):
             db.run("DELETE FROM live_cache WHERE cle = ?", [CLE_DONNEES])
         if m.get("commentaire"):
@@ -191,11 +224,11 @@ def _maj_etat(request):
         if m.get("raz") == "mur":
             e["mur"] = []
         for k, v in (m.get("set") or {}).items():
-            if k in ETAT_DEFAUT:
+            if k in ETAT_DEFAUT and k != "maitre":
                 e[k] = v
-        _ecrit(CLE_ETAT, e)
-        _memo.update(t=time.time(), v=e)
-    return S._json({k: v for k, v in e.items() if k != "votants"})
+        _ecrit(_cle(mode), e)
+        _memo[mode] = (time.time(), e)
+    return S._json({**_public(e), "aLaMain": True})
 
 
 def regie_donnees(request, chemin):
@@ -214,15 +247,18 @@ def _verifie_jeton(jeton: str) -> None:
 def ecran(request, jeton):
     _verifie_jeton(jeton)
     nonce = secrets.token_urlsafe(18)
-    html = S._JINJA.get_template("live-ecran.html").render(base=f"/live/{jeton}", nonce=nonce)
+    html = S._JINJA.get_template("live-ecran.html").render(base=f"/live/{jeton}", nonce=nonce, mode=_mode(request))
     r = S._reponse(HttpResponse(html), nonce)
-    r["Content-Security-Policy"] = r["Content-Security-Policy"].replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+    # clips YouTube (artistes hors classement) : lecteur officiel intégré
+    r["Content-Security-Policy"] = (r["Content-Security-Policy"].replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+        .replace("script-src 'self'", "script-src 'self' https://www.youtube.com https://s.ytimg.com")
+        .replace("default-src 'self';", "default-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com;"))
     return r
 
 
 def ecran_etat(request, jeton):
     _verifie_jeton(jeton)
-    return S._json({k: v for k, v in etat_courant().items() if k != "votants"})
+    return S._json(_public(etat_courant(_mode(request))))
 
 
 def ecran_donnees(request, jeton):
@@ -247,7 +283,8 @@ def _verifie_regie(jeton: str) -> None:
 
 def _page_regie(request, api: str):
     nonce = secrets.token_urlsafe(18)
-    html = S._JINJA.get_template("live-regie.html").render(api=api, nonce=nonce, csrf=get_token(request), ecran=f"/live/{jeton_ecran()}/ecran")
+    gabarit = "live-regie-dj.html" if request.path.endswith("/dj") else "live-regie.html"
+    html = S._JINJA.get_template(gabarit).render(api=api, nonce=nonce, csrf=get_token(request), ecran=f"/live/{jeton_ecran()}/ecran")
     r = S._reponse(HttpResponse(html), nonce)
     r["Content-Security-Policy"] = (r["Content-Security-Policy"]
         .replace("connect-src 'self'", "connect-src 'self' https://*.public.blob.vercel-storage.com https://*.dzcdn.net")
@@ -304,3 +341,46 @@ def regie_titres(request, jeton, ident):
     return S._json({"artiste": {"id": a.get("id"), "nom": a.get("name"), "fans": a.get("nb_fan"), "photo": a.get("picture_xl") or a.get("picture_big")},
                     "titres": [{"titre": x["title"], "url": x["preview"], "duree": x.get("duration"), "rang": x.get("rank"),
                                 "pochette": (x.get("album") or {}).get("cover_big")} for x in t.get("data") or [] if x.get("preview")]})
+
+
+
+# ---------------------------------------------------------------- YouTube : clips officiels des artistes hors classement
+def regie_youtube(request, jeton):
+    """Recherche de clips intégrables (videoEmbeddable) : on évite d'afficher un clip refusé ou bloqué en direct."""
+    _verifie_regie(jeton)
+    import urllib.request
+    from urllib.parse import quote
+    from core import env
+    q = (request.GET.get("q") or "").strip()[:80]
+    cle = env.get("YOUTUBE_API_KEY", "") or env.get("YOUTUBE_API_KEY_2", "")
+    if len(q) < 2 or not cle:
+        return S._json({"clips": []})
+    url = ("https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoSyndicated=true"
+           f"&maxResults=6&q={quote(q + ' official video')}&key={cle}")
+    try:
+        with urllib.request.urlopen(url, timeout=8) as r:
+            d = json.loads(r.read())
+    except Exception:  # noqa: BLE001
+        return S._json({"clips": [], "erreur": "YouTube ne répond pas"})
+    return S._json({"clips": [{"id": x["id"]["videoId"], "titre": x["snippet"]["title"], "chaine": x["snippet"]["channelTitle"],
+                               "vignette": ((x["snippet"].get("thumbnails") or {}).get("high") or {}).get("url")}
+                              for x in d.get("items") or [] if (x.get("id") or {}).get("videoId")]})
+
+
+# ---------------------------------------------------------------- commentaires TikTok envoyés par le connecteur local
+from django.views.decorators.csrf import csrf_exempt  # noqa: E402
+
+
+@csrf_exempt
+def regie_commentaires(request, jeton):
+    """Le connecteur du PC (tiktok-live-connector) envoie les commentaires par paquets : {liste: [{user, texte}], mode}."""
+    _verifie_regie(jeton)
+    if request.method != "POST":
+        return S._json({"ok": False}, 405)
+    m = S._corps(request)
+    mode = "test" if m.get("mode") == "test" else ""
+    e = {**etat_courant(mode)}
+    for c in (m.get("liste") or [])[:200]:
+        _commentaire(e, str(c.get("user") or "?")[:30], str(c.get("texte") or "")[:200])
+    _ecrit(_cle(mode), e); _memo[mode] = (time.time(), e)
+    return S._json({"ok": True})

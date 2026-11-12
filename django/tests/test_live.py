@@ -28,7 +28,7 @@ def base(monkeypatch):
     monkeypatch.setattr(live, "_lit", lambda cle, defaut=None: stock.get(cle, defaut))
     monkeypatch.setattr(live, "_ecrit", lambda cle, v, jours=3: stock.__setitem__(cle, json.loads(json.dumps(v))))
     monkeypatch.setattr(live, "donnees", lambda: DONNEES)
-    live._memo.update(t=0.0, v=None)
+    live._memo.clear()
     return stock
 
 
@@ -61,12 +61,12 @@ def test_etat_partage_et_votes(monkeypatch, base):
     monkeypatch.setattr(studio, "_utilisateur", lambda r, verrou=True: {"id": 1, "role": "admin"})
     live.regie_etat(_req("post", {"set": {"scene": "versus", "inconnu": 1}}), CHEMIN)
     for user, txt in [("u1", "HIMRA !"), ("u1", "himra"), ("u2", "didi b"), ("u3", "2")]:
-        live._memo.update(t=0.0, v=None)
+        live._memo.clear()
         live.regie_etat(_req("post", {"commentaire": {"user": user, "texte": txt}}), CHEMIN)
     e = base[live.CLE_ETAT]
     assert e["scene"] == "versus" and "inconnu" not in e
     assert e["votes"] == {"a": 1, "b": 2}        # un vote par personne
-    live._memo.update(t=0.0, v=None)
+    live._memo.clear()
     assert json.loads(live.ecran_etat(_req("get"), live.jeton_ecran()).content)["votes"] == {"a": 1, "b": 2}
 
 
@@ -74,6 +74,24 @@ def test_mur_compte_les_artistes_hors_versus(monkeypatch, base):
     monkeypatch.setattr(studio, "_utilisateur", lambda r, verrou=True: {"id": 1, "role": "admin"})
     live.regie_etat(_req("post", {"set": {"scene": "mur"}}), CHEMIN)
     for txt in ["Jeune Lion svp", "jeune lion", "himra"]:
-        live._memo.update(t=0.0, v=None)
+        live._memo.clear()
         live.regie_etat(_req("post", {"commentaire": {"user": "x", "texte": txt}}), CHEMIN)
     assert base[live.CLE_ETAT]["mur"] == [{"id": 711, "n": 2}, {"id": 5, "n": 1}]
+
+
+def test_une_seule_regie_a_la_main(base):
+    j = live.jeton_regie()
+    def req(ident, corps):
+        r = _req("post", corps); r.META["HTTP_X_REGIE"] = ident; return r
+    assert live.regie_lien_etat(req("aaa", {"set": {"scene": "mur"}}), j).status_code == 200
+    assert live.regie_lien_etat(req("bbb", {"set": {"scene": "fin"}}), j).status_code == 409      # l'autre regarde
+    assert base[live.CLE_ETAT]["scene"] == "mur"
+    assert live.regie_lien_etat(req("bbb", {"set": {"scene": "fin"}, "prendre": 1}), j).status_code == 200   # prendre la main
+    assert base[live.CLE_ETAT]["scene"] == "fin" and base[live.CLE_ETAT]["maitre"]["id"] == "bbb"
+
+
+def test_repetition_ne_touche_pas_l_antenne(base):
+    j = live.jeton_regie()
+    r = _req("post", {"set": {"scene": "versus"}}); r.GET = r.GET.copy(); r.GET["mode"] = "test"
+    live.regie_lien_etat(r, j)
+    assert base[live.CLE_ETAT + "-test"]["scene"] == "versus" and live.CLE_ETAT not in base
