@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from django.urls import path, re_path
 
 from core import studio
+from core import live
 from core import views, views_espace, views_partenaire, views_claim, views_cron, views_relais, views_show, views_widget, views_tiktok, views_newsletter, views_pages
 from core.backoffice import analytics_views, show_admin, team
 from core.backoffice import views as admin
@@ -27,6 +28,13 @@ urlpatterns = [
     re_path(S + r"/appareil/(?P<ident>\d+)/supprimer$", studio.supprimer_appareil),
     re_path(S + r"/deconnexion$", studio.deconnexion),
     re_path(S + r"/verrouiller$", studio.verrouiller),
+    # régie du live TikTok (« La Nuit Cauri Charts », 12/11/2026)
+    re_path(S + r"/live$", live.regie),
+    re_path(S + r"/live/etat$", live.regie_etat),
+    re_path(S + r"/live/donnees$", live.regie_donnees),
+    re_path(r"^live/(?P<jeton>[0-9a-f]{28})/ecran$", live.ecran),
+    re_path(r"^live/(?P<jeton>[0-9a-f]{28})/etat$", live.ecran_etat),
+    re_path(r"^live/(?P<jeton>[0-9a-f]{28})/donnees$", live.ecran_donnees),
     re_path(S + r"/artistes$", studio.artistes),
     re_path(S + r"/banque$", studio.banque),
     re_path(S + r"/alertes$", studio.alertes),

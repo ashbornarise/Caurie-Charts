@@ -1,0 +1,69 @@
+"""Régie du live : adresse secrète, écran par jeton, état partagé, votes et mur (base simulée)."""
+import json
+
+import pytest
+from django.contrib.sessions.backends.signed_cookies import SessionStore
+from django.http import Http404
+from django.test import RequestFactory
+
+from core import live, studio
+
+CHEMIN = "a" * 30
+RF = RequestFactory()
+DONNEES = {"semaine": "2026-W45", "pays": [], "n1_afrique_ouest": None,
+           "artistes": [{"id": 5, "nom": "Himra", "cle": "himra"}, {"id": 711, "nom": "Jeune Lion", "cle": "jeunelion"},
+                        {"id": 8, "nom": "Didi B", "cle": "didib"}]}
+
+
+def _req(methode, donnees=None):
+    r = RF.post("/", data=json.dumps(donnees or {}), content_type="application/json") if methode == "post" else RF.get("/")
+    r.session = SessionStore()
+    return r
+
+
+@pytest.fixture(autouse=True)
+def base(monkeypatch):
+    stock = {}
+    monkeypatch.setattr(studio, "chemin_secret", lambda: CHEMIN)
+    monkeypatch.setattr(live, "_lit", lambda cle, defaut=None: stock.get(cle, defaut))
+    monkeypatch.setattr(live, "_ecrit", lambda cle, v, jours=3: stock.__setitem__(cle, json.loads(json.dumps(v))))
+    monkeypatch.setattr(live, "donnees", lambda: DONNEES)
+    live._memo.update(t=0.0, v=None)
+    return stock
+
+
+def test_regie_refusee_sans_session(monkeypatch):
+    monkeypatch.setattr(studio, "_utilisateur", lambda r, verrou=True: None)
+    assert live.regie_etat(_req("post", {"set": {"scene": "mur"}}), CHEMIN).status_code == 403
+    with pytest.raises(Http404):
+        live.regie(_req("get"), "b" * 30)
+
+
+def test_ecran_par_jeton_seulement():
+    j = live.jeton_ecran()
+    assert j and len(j) == 28
+    assert live.ecran(_req("get"), j).status_code == 200
+    with pytest.raises(Http404):
+        live.ecran(_req("get"), "0" * 28)
+
+
+def test_etat_partage_et_votes(monkeypatch, base):
+    monkeypatch.setattr(studio, "_utilisateur", lambda r, verrou=True: {"id": 1, "role": "admin"})
+    live.regie_etat(_req("post", {"set": {"scene": "versus", "inconnu": 1}}), CHEMIN)
+    for user, txt in [("u1", "HIMRA !"), ("u1", "himra"), ("u2", "didi b"), ("u3", "2")]:
+        live._memo.update(t=0.0, v=None)
+        live.regie_etat(_req("post", {"commentaire": {"user": user, "texte": txt}}), CHEMIN)
+    e = base[live.CLE_ETAT]
+    assert e["scene"] == "versus" and "inconnu" not in e
+    assert e["votes"] == {"a": 1, "b": 2}        # un vote par personne
+    live._memo.update(t=0.0, v=None)
+    assert json.loads(live.ecran_etat(_req("get"), live.jeton_ecran()).content)["votes"] == {"a": 1, "b": 2}
+
+
+def test_mur_compte_les_artistes_hors_versus(monkeypatch, base):
+    monkeypatch.setattr(studio, "_utilisateur", lambda r, verrou=True: {"id": 1, "role": "admin"})
+    live.regie_etat(_req("post", {"set": {"scene": "mur"}}), CHEMIN)
+    for txt in ["Jeune Lion svp", "jeune lion", "himra"]:
+        live._memo.update(t=0.0, v=None)
+        live.regie_etat(_req("post", {"commentaire": {"user": "x", "texte": txt}}), CHEMIN)
+    assert base[live.CLE_ETAT]["mur"] == [{"id": 711, "n": 2}, {"id": 5, "n": 1}]

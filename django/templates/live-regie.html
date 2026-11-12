@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex">
+<title>Régie · La Nuit Cauri Charts</title>
+<style>
+:root{--violet:#7B5CFF;--ciel:#8FD3FF;--or:#F5C14B;--rouge:#FF5A5F;--fond:#0e0b1e;--carte:#1a1533;--bord:#3a2f78;--txt:#f3f0ff;--doux:#a9a2cf}
+*{box-sizing:border-box}html{color-scheme:dark}
+body{margin:0;background:var(--fond);color:var(--txt);font:15px/1.4 system-ui,"Segoe UI",Arial,sans-serif;padding:14px max(14px,env(safe-area-inset-left)) 40px max(14px,env(safe-area-inset-right))}
+h1{font-size:19px;margin:0}h2{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--ciel);margin:0 0 10px}
+.haut{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center}
+.etat{font-size:13px;color:var(--doux)}
+.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px;margin-top:12px}
+.bloc{background:var(--carte);border:1px solid #2a2350;border-radius:16px;padding:14px;min-width:0}
+.large{grid-column:1/-1}
+button{background:#2a2254;color:var(--txt);border:1px solid var(--bord);border-radius:10px;padding:10px 12px;font:700 14px system-ui;cursor:pointer;margin:3px;touch-action:manipulation}
+button:hover{background:#372c70}button.on{background:var(--violet);border-color:var(--violet)}button.or{background:var(--or);color:#14102a;border-color:var(--or)}
+button.rouge{background:#4a1f2c;border-color:#7a2f43}button.gros{font-size:16px;padding:14px 16px}
+.k{font-size:11px;opacity:.65;margin-left:4px}
+input,select{background:#0b0919;color:var(--txt);border:1px solid var(--bord);border-radius:10px;padding:10px;font-size:15px;width:100%}
+input[type=range]{padding:0;accent-color:var(--violet)}
+.ligne{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.liste>div{padding:7px 9px;border-bottom:1px solid #2a2350;cursor:pointer;display:flex;justify-content:space-between;gap:8px}.liste>div:hover{background:#2a2254}
+/* platine */
+.platine{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:760px){.platine{grid-template-columns:1fr}}
+.deck{background:#120e27;border:1px solid var(--bord);border-radius:14px;padding:12px}
+.deck h3{margin:0 0 8px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.piste{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #241d48}
+.piste span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.piste.joue span{color:var(--or);font-weight:800}
+.jauge{height:8px;background:#241d48;border-radius:99px;overflow:hidden;margin-top:6px}.jauge div{height:100%;background:linear-gradient(90deg,var(--ciel),var(--violet));width:0}
+.voyant{width:10px;height:10px;border-radius:50%;background:#444;display:inline-block}.voyant.on{background:#3DDC84;box-shadow:0 0 10px #3DDC84}
+iframe{width:270px;height:480px;border:2px solid var(--bord);border-radius:12px;background:#000;display:block}
+.vide{color:var(--doux);font-size:13px;padding:8px 0}
+</style></head><body>
+<div class="haut">
+  <div><h1>Régie · La Nuit Cauri Charts</h1><div class="etat" id="info">Chargement…</div></div>
+  <div class="etat">Écran pour LIVE Studio (1080 × 1920) : <input id="lienEcran" readonly style="width:auto;min-width:300px;display:inline-block;padding:6px"> <button id="copier">Copier</button></div>
+</div>
+
+<div class="grille">
+  <div class="bloc"><h2>Scènes</h2><div id="scenes"></div>
+    <p class="etat">Clavier : 1 à 9 = scènes · Espace = étape suivante · G = gong · F = fiche · B = flou · M = couper le son</p></div>
+
+  <div class="bloc large"><h2>Platine</h2>
+    <div class="ligne"><input id="chercheArt" placeholder="Artiste : tape un nom…" autocomplete="off" style="flex:1"></div>
+    <div class="liste" id="resArt"></div>
+    <div class="etat" id="artChoisi" style="margin:8px 0">Aucun artiste choisi.</div>
+    <div class="platine">
+      <div class="deck"><h3>Sons <span><span class="voyant" id="vSon"></span></span></h3><div id="sons" class="vide">Choisis un artiste.</div>
+        <div class="ligne" style="margin-top:10px"><button id="sonPause">Pause / reprise</button><button class="rouge" id="sonCoupe">Couper <span class="k">M</span></button></div>
+        <div class="ligne" style="margin-top:6px"><span class="etat" style="width:70px">Volume</span><input type="range" id="vol" min="0" max="100" value="80" style="flex:1"></div>
+        <div class="etat" id="sonEnCours">—</div></div>
+      <div class="deck"><h3>Clips <span><span class="voyant" id="vClip"></span></span></h3><div id="clips" class="vide">Choisis un artiste.</div>
+        <div class="ligne" style="margin-top:10px"><button id="clipPause">Pause / reprise</button><button class="rouge" id="clipCoupe">Couper le clip</button></div>
+        <div class="ligne" style="margin-top:6px"><button class="or gros" id="btnFiche">Fiche de l'artiste <span class="k">F</span></button><button id="btnFlou">Flou <span class="k">B</span></button>
+          <button id="btnScArt">Scène « Artiste »</button></div>
+        <div class="etat">La fiche floute le clip ; la fermer le rend net.</div></div>
+    </div>
+  </div>
+
+  <div class="bloc"><h2>Rituel</h2><div class="ligne"><button class="or gros" id="btnGong">GONG <span class="k">G</span></button><button id="btnTirage">Tirer le pays mystère</button></div>
+    <div class="etat" id="mystInfo"></div></div>
+
+  <div class="bloc"><h2>Top 3 par pays</h2><select id="pays"></select>
+    <div class="ligne" style="margin-top:8px"><button id="etRetour">◀ Retour</button><button class="or" id="etSuite">Révéler <span class="k">Espace</span></button><button id="paysSuiv">Pays suivant ▶</button></div>
+    <div class="etat">Le N°3, puis le N°2, puis le N°1.</div></div>
+
+  <div class="bloc"><h2>Versus</h2><div class="ligne"><button id="voteA">+1 A</button><button id="voteB">+1 B</button><button id="razVotes">Remettre à zéro</button></div>
+    <div class="etat" id="vsInfo"></div></div>
+
+  <div class="bloc"><h2>Le Mur · Ton artiste ?</h2>
+    <div class="ligne"><input id="cmt" placeholder="Commentaire lu dans le chat (nom d'artiste, vote…)" style="flex:1"><button id="cmtOk">Ajouter</button></div>
+    <div class="liste" id="mur" style="margin-top:8px"></div><div class="ligne"><button id="razMur">Vider le mur</button></div></div>
+
+  <div class="bloc"><h2>Final</h2><div class="ligne"><button class="or" id="fin0">N°1 du pays mystère</button><button class="or" id="fin1">N°1 Afrique de l'Ouest</button></div>
+    <div class="ligne" style="margin-top:6px"><button id="rafraichir">Recharger le classement</button></div></div>
+
+  <div class="bloc"><h2>Aperçu de l'écran</h2><iframe id="apercu" title="Aperçu" scrolling="no"></iframe></div>
+</div>
+
+<script nonce="{{ nonce }}">
+const BASE = "{{ base }}/live", CSRF = "{{ csrf }}", ECRAN = location.origin + "{{ ecran }}";
+const SC = [["attente","Attente"],["camera","Caméra"],["artiste","Artiste"],["rituel","Rituel"],["top3","Top 3"],["versus","Versus"],["mur","Mur"],["finale","Final"],["fin","Fin"]];
+let D, E = {}, art = null;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+async function poste(corps) {
+  const r = await fetch(BASE + "/etat", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF }, body: JSON.stringify(corps) });
+  if (r.status === 403) { $("info").textContent = "Régie verrouillée : recharge la page et valide ton empreinte."; return; }
+  E = await r.json(); rendu();
+}
+const set = (s) => poste({ set: s });
+const cmt = (texte) => poste({ commentaire: { user: "régie" + Math.random().toString(36).slice(2, 7), texte } });
+// scènes
+$("scenes").innerHTML = SC.map(([id, n], i) => `<button id="sc-${id}" data-sc="${id}">${n}<span class="k">${i + 1}</span></button>`).join("");
+$("scenes").addEventListener("click", (e) => { const b = e.target.closest("[data-sc]"); if (b) set({ scene: b.dataset.sc }); });
+// platine
+function choisir(a) { art = a; $("resArt").innerHTML = ""; $("chercheArt").value = a.nom; afficheDecks(); }
+function afficheDecks() {
+  const b = (D.biblio || {})[art?.id] || {};
+  $("artChoisi").innerHTML = art ? `<b>${esc(art.nom)}</b> · ${esc(art.pays_nom)} · ${(b.sons || []).length} son(s), ${(b.clips || []).length} clip(s)` : "Aucun artiste choisi.";
+  $("sons").innerHTML = (b.sons || []).map((m, i) => `<div class="piste ${E.son === m.url ? "joue" : ""}"><span>${esc(m.titre)}</span><button data-son="${i}">Jouer</button></div>`).join("") || '<div class="vide">Pas encore de son pour cet artiste.</div>';
+  $("clips").innerHTML = (b.clips || []).map((m, i) => `<div class="piste ${E.clip === m.url ? "joue" : ""}"><span>${esc(m.titre)}</span><button data-clip="${i}">Lancer</button></div>`).join("") || '<div class="vide">Pas encore de clip pour cet artiste.</div>';
+}
+$("sons").addEventListener("click", (e) => { const x = e.target.closest("[data-son]"); if (!x) return; const m = D.biblio[art.id].sons[+x.dataset.son]; set({ son: m.url, sonJoue: true, sonTop: Date.now() }); });
+$("clips").addEventListener("click", (e) => { const x = e.target.closest("[data-clip]"); if (!x) return; const m = D.biblio[art.id].clips[+x.dataset.clip]; set({ clip: m.url, clipJoue: true, carte: art.id, scene: "artiste" }); });
+$("sonPause").onclick = () => set({ sonJoue: E.sonJoue === false });
+$("sonCoupe").onclick = () => set({ son: null, sonJoue: false });
+$("vol").oninput = (e) => { clearTimeout(window._v); window._v = setTimeout(() => set({ sonVol: +e.target.value / 100 }), 120); };
+$("clipPause").onclick = () => set({ clipJoue: E.clipJoue === false });
+$("clipCoupe").onclick = () => set({ clip: null, flou: false, fiche: false });
+const fiche = () => { if (!art && !E.carte) return; const ouvre = !E.fiche; set({ fiche: ouvre, carte: art ? art.id : E.carte, flou: ouvre }); };
+$("btnFiche").onclick = fiche; $("btnFlou").onclick = () => set({ flou: !E.flou }); $("btnScArt").onclick = () => set({ scene: "artiste", carte: art ? art.id : E.carte });
+const norm = (s) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+$("chercheArt").addEventListener("input", (e) => { const q = norm(e.target.value); if (q.length < 2) { $("resArt").innerHTML = ""; return; }
+  const r = D.artistes.filter((a) => a.cle.includes(q)).slice(0, 8);
+  $("resArt").innerHTML = r.map((a) => { const b = (D.biblio || {})[a.id] || {}; return `<div data-art="${a.id}"><span>${esc(a.nom)} · ${esc(a.pays_nom)}</span><span class="etat">${(b.sons || []).length} son(s) · ${(b.clips || []).length} clip(s)</span></div>`; }).join("")
+    || '<div class="vide">Pas classé chez nous pour l\'instant.</div>'; });
+$("resArt").addEventListener("click", (e) => { const x = e.target.closest("[data-art]"); if (x) choisir(D.artistes.find((a) => a.id === +x.dataset.art)); });
+// rituel, top 3, versus, mur, final
+$("btnGong").onclick = () => set({ gong: Date.now(), scene: "rituel" });
+$("btnTirage").onclick = () => { const p = D.pays[Math.floor(Math.random() * D.pays.length)]; set({ mystere: p.code, scene: "rituel" }); };
+const etape = (d) => set({ etape: Math.max(0, Math.min(3, (E.etape || 0) + d)), scene: "top3" });
+$("etRetour").onclick = () => etape(-1); $("etSuite").onclick = () => etape(1);
+$("paysSuiv").onclick = () => set({ pays: ((E.pays || 0) + 1) % D.pays.length, etape: 0, scene: "top3" });
+$("pays").onchange = (e) => set({ pays: +e.target.value, etape: 0, scene: "top3" });
+$("voteA").onclick = () => cmt(E.versus.a); $("voteB").onclick = () => cmt(E.versus.b); $("razVotes").onclick = () => poste({ raz: "votes" });
+$("cmtOk").onclick = () => { const v = $("cmt").value.trim(); if (v) cmt(v); $("cmt").value = ""; };
+$("cmt").addEventListener("keydown", (e) => { if (e.key === "Enter") $("cmtOk").click(); });
+$("razMur").onclick = () => poste({ raz: "mur" });
+$("mur").addEventListener("click", (e) => { const x = e.target.closest("[data-art]"); if (!x) return; const a = D.artistes.find((y) => y.id === +x.dataset.art); choisir(a); set({ carte: a.id, fiche: true, flou: true }); });
+$("fin0").onclick = () => set({ scene: "finale", finale: 0 }); $("fin1").onclick = () => set({ scene: "finale", finale: 1 });
+$("rafraichir").onclick = async () => { await poste({ rafraichir: 1 }); await charge(); };
+$("lienEcran").value = ECRAN; $("copier").onclick = () => { navigator.clipboard?.writeText(ECRAN).catch(() => {}); $("lienEcran").select(); };
+document.addEventListener("keydown", (e) => { if (["INPUT", "SELECT"].includes(e.target.tagName)) return; const n = +e.key;
+  if (n >= 1 && n <= 9) set({ scene: SC[n - 1][0] });
+  if (e.code === "Space") { e.preventDefault(); etape(1); }
+  const k = e.key.toLowerCase(); if (k === "g") $("btnGong").click(); if (k === "f") fiche(); if (k === "b") $("btnFlou").click(); if (k === "m") $("sonCoupe").click(); });
+function rendu() {
+  if (!D) return;
+  SC.forEach(([id]) => $("sc-" + id).classList.toggle("on", E.scene === id));
+  $("info").textContent = `Semaine ${String(D.semaine).split("-W")[1]} · scène : ${E.scene} · ${D.artistes.length} artistes · ${Object.keys(D.biblio || {}).length} avec sons/clips`;
+  const pm = D.pays.find((p) => p.code === E.mystere); $("mystInfo").textContent = pm ? `Pays mystère : ${pm.nom} (N°1 : ${pm.artistes[0].nom}, garde le secret !)` : "Pas encore tiré.";
+  $("pays").value = E.pays || 0; $("voteA").textContent = "+1 " + E.versus.a; $("voteB").textContent = "+1 " + E.versus.b;
+  $("vsInfo").textContent = `${E.versus.a} ${E.votes.a} · ${E.versus.b} ${E.votes.b}`;
+  $("mur").innerHTML = (E.mur || []).slice(0, 10).map((m) => { const f = D.artistes.find((x) => x.id === m.id) || { nom: "?" }; return `<div data-art="${m.id}"><span>${esc(f.nom)}</span><span class="etat">${m.n} demande(s)</span></div>`; }).join("") || '<div class="vide">Rien encore.</div>';
+  $("vSon").classList.toggle("on", !!E.son && E.sonJoue !== false); $("vClip").classList.toggle("on", !!E.clip && E.clipJoue !== false);
+  $("btnFiche").classList.toggle("on", !!E.fiche); $("btnFlou").classList.toggle("on", !!E.flou); $("vol").value = Math.round((E.sonVol ?? 0.8) * 100);
+  let titre = "—"; for (const [aid, b] of Object.entries(D.biblio || {})) for (const m of b.sons || []) if (m.url === E.son) titre = m.titre + " · " + ((D.artistes.find((x) => x.id === +aid) || {}).nom || "");
+  $("sonEnCours").textContent = E.son ? (E.sonJoue === false ? "En pause : " : "En cours : ") + titre : "Aucun son.";
+  if (art) afficheDecks();
+}
+async function charge() { D = await (await fetch(BASE + "/donnees")).json(); $("pays").innerHTML = D.pays.map((p, i) => `<option value="${i}">${esc(p.nom)}</option>`).join(""); rendu(); }
+async function boucle() { try { const r = await fetch(BASE + "/etat", { cache: "no-store" }); if (r.ok) { E = await r.json(); rendu(); } } catch (e) {} setTimeout(boucle, 1500); }
+$("apercu").src = "{{ ecran }}"; $("apercu").addEventListener("load", () => { try { $("apercu").contentDocument.body.style.zoom = "0.25"; } catch (e) {} });
+charge().then(boucle);
+</script></body></html>
