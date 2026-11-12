@@ -1,157 +1,548 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex">
-<title>Régie · La Nuit Cauri Charts</title>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Cauri Live · Régie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-:root{--violet:#7B5CFF;--ciel:#8FD3FF;--or:#F5C14B;--rouge:#FF5A5F;--fond:#0e0b1e;--carte:#1a1533;--bord:#3a2f78;--txt:#f3f0ff;--doux:#a9a2cf}
+/* Cauri Live — régie façon logiciel de DJ (13/11/2026) : 2 platines, table de mixage, formes d'onde, bibliothèque, pads, pilotage du live */
+:root{--fond:#0b0b0e;--panneau:#16161b;--panneau2:#1d1d24;--bord:#2a2a33;--txt:#e9e9f0;--doux:#8b8b99;--a:#3fa9ff;--b:#ff8a3d;--or:#f5c14b;--violet:#7b5cff;--vert:#2ee59d;--rouge:#ff4d5e;
+  --metal:linear-gradient(180deg,#2b2b33 0%,#1f1f26 45%,#18181e 100%);--creux:inset 0 2px 6px rgba(0,0,0,.7),inset 0 -1px 0 rgba(255,255,255,.04)}
 *{box-sizing:border-box}html{color-scheme:dark}
-body{margin:0;background:var(--fond);color:var(--txt);font:15px/1.4 system-ui,"Segoe UI",Arial,sans-serif;padding:14px max(14px,env(safe-area-inset-left)) 40px max(14px,env(safe-area-inset-right))}
-h1{font-size:19px;margin:0}h2{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--ciel);margin:0 0 10px}
-.haut{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center}
-.etat{font-size:13px;color:var(--doux)}
-.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px;margin-top:12px}
-.bloc{background:var(--carte);border:1px solid #2a2350;border-radius:16px;padding:14px;min-width:0}
-.large{grid-column:1/-1}
-button{background:#2a2254;color:var(--txt);border:1px solid var(--bord);border-radius:10px;padding:10px 12px;font:700 14px system-ui;cursor:pointer;margin:3px;touch-action:manipulation}
-button:hover{background:#372c70}button.on{background:var(--violet);border-color:var(--violet)}button.or{background:var(--or);color:#14102a;border-color:var(--or)}
-button.rouge{background:#4a1f2c;border-color:#7a2f43}button.gros{font-size:16px;padding:14px 16px}
-.k{font-size:11px;opacity:.65;margin-left:4px}
-input,select{background:#0b0919;color:var(--txt);border:1px solid var(--bord);border-radius:10px;padding:10px;font-size:15px;width:100%}
-input[type=range]{padding:0;accent-color:var(--violet)}
-.ligne{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.liste>div{padding:7px 9px;border-bottom:1px solid #2a2350;cursor:pointer;display:flex;justify-content:space-between;gap:8px}.liste>div:hover{background:#2a2254}
-/* platine */
-.platine{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-@media (max-width:760px){.platine{grid-template-columns:1fr}}
-.deck{background:#120e27;border:1px solid var(--bord);border-radius:14px;padding:12px}
-.deck h3{margin:0 0 8px;font-size:14px;display:flex;justify-content:space-between;align-items:center}
-.piste{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #241d48}
-.piste span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.piste.joue span{color:var(--or);font-weight:800}
-.jauge{height:8px;background:#241d48;border-radius:99px;overflow:hidden;margin-top:6px}.jauge div{height:100%;background:linear-gradient(90deg,var(--ciel),var(--violet));width:0}
-.voyant{width:10px;height:10px;border-radius:50%;background:#444;display:inline-block}.voyant.on{background:#3DDC84;box-shadow:0 0 10px #3DDC84}
-iframe{width:270px;height:480px;border:2px solid var(--bord);border-radius:12px;background:#000;display:block}
-.vide{color:var(--doux);font-size:13px;padding:8px 0}
+body{margin:0;height:100vh;overflow:hidden;background:var(--fond);color:var(--txt);font:13px/1.3 Inter,system-ui,Arial,sans-serif;user-select:none;
+  display:grid;grid-template-rows:44px minmax(300px,41vh) 116px minmax(0,1fr);gap:6px;padding:6px max(8px,env(safe-area-inset-left)) 8px max(8px,env(safe-area-inset-right))}
+button{font:700 12px Inter,system-ui;color:var(--txt);background:linear-gradient(180deg,#34343e,#25252d);border:1px solid #0c0c10;border-radius:7px;padding:7px 10px;cursor:pointer;
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 2px 4px rgba(0,0,0,.5)}
+button:hover{filter:brightness(1.2)}button:active{transform:translateY(1px)}
+button.on{background:linear-gradient(180deg,#8b6dff,#5c3fe0);color:#fff}button.or{background:linear-gradient(180deg,#ffd76e,#e0a92e);color:#1a1405}
+button.rouge{background:linear-gradient(180deg,#ff6b78,#c92e3e)}button.vert{background:linear-gradient(180deg,#46f0ac,#17b877);color:#05210f}
+.panneau{background:var(--metal);border:1px solid var(--bord);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);min-width:0;min-height:0}
+.lcd{font-family:"Share Tech Mono",monospace;background:#07070a;border-radius:5px;box-shadow:var(--creux);padding:3px 7px;color:#bfe6ff}
+.titre-p{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--doux);font-weight:800}
+.k{font-size:9px;opacity:.6;margin-left:4px;font-weight:600}
+/* barre du haut */
+.barre{display:flex;align-items:center;gap:10px;padding:0 10px}
+.logo{font-weight:800;font-size:16px;letter-spacing:1px}.logo b{color:var(--or)}
+.onair{display:flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;background:#2a1216;border:1px solid #4d1c24;font-weight:800;cursor:pointer}
+.onair i{width:10px;height:10px;border-radius:50%;background:#5a2a30}.onair.actif{background:#5c0f19;border-color:#ff4d5e}.onair.actif i{background:var(--rouge);box-shadow:0 0 10px var(--rouge);animation:clig 1s infinite}
+@keyframes clig{50%{opacity:.35}}
+.espace{flex:1}
+/* platines */
+.haut{display:grid;grid-template-columns:minmax(0,1fr) 330px minmax(0,1fr);gap:6px;min-height:0}
+.deck{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;padding:8px;gap:6px;position:relative;min-height:0}
+.deck.drop{outline:2px dashed var(--or)}
+.deck-tete{display:flex;gap:8px;align-items:center;min-width:0}
+.deck-tete img{width:46px;height:46px;border-radius:6px;object-fit:cover;background:#222;flex:none}
+.deck-nom{min-width:0;flex:1}.deck-nom b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.deck-nom span{color:var(--doux);font-size:12px}
+.lettre{font-weight:800;font-size:20px;width:30px;text-align:center}
+.apercu-onde{height:28px;width:100%;display:block;border-radius:4px;background:#07070a;box-shadow:var(--creux);cursor:pointer}
+.deck-milieu{display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:8px;min-height:0;height:100%;align-items:center;justify-items:center}
+.platine{position:relative;aspect-ratio:1;height:calc(100% - 16px);width:auto;max-width:calc(100% - 16px);border-radius:50%;cursor:grab;
+  background:radial-gradient(circle at 50% 50%,#0e0e10 0 38%,transparent 38.5%),repeating-radial-gradient(circle at 50% 50%,#111 0 1px,#1b1b1f 1.5px 2.5px),#141417;
+  box-shadow:0 0 0 6px #2d2d35,0 0 0 8px #0d0d10,0 10px 30px rgba(0,0,0,.8),inset 0 0 40px rgba(0,0,0,.9)}
+.platine::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 20deg,rgba(255,255,255,0) 0deg,rgba(255,255,255,.10) 30deg,rgba(255,255,255,0) 70deg,rgba(255,255,255,0) 190deg,rgba(255,255,255,.07) 220deg,rgba(255,255,255,0) 260deg);pointer-events:none}
+.disque{position:absolute;inset:0;border-radius:50%}
+.etiquette{position:absolute;inset:31%;border-radius:50%;overflow:hidden;background:#333;box-shadow:0 0 0 3px #0b0b0d}
+.etiquette img{width:100%;height:100%;object-fit:cover}
+.repere{position:absolute;left:50%;top:3%;width:4px;height:14%;margin-left:-2px;border-radius:2px;background:#fff;box-shadow:0 0 8px #fff}
+.axe{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px;border-radius:50%;background:radial-gradient(#ddd,#666);box-shadow:0 1px 3px #000}
+.pitch{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;min-height:0}
+.pitch input{writing-mode:vertical-lr;direction:rtl;flex:1;min-height:0;width:26px}
+.deck-bas{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.temps{font-size:16px;min-width:118px;text-align:center}
+.cues{display:flex;gap:4px}.cues button{width:34px;padding:6px 0}
+.cues button.pose{background:linear-gradient(180deg,#e04bd1,#9b2391)}
+input[type=range]{accent-color:var(--violet)}
+/* table de mixage */
+.table{display:grid;grid-template-columns:1fr 84px 1fr;gap:4px 6px;padding:8px;align-content:space-between;min-height:0;overflow:hidden}
+.voie{display:flex;flex-direction:column;align-items:center;gap:3px}
+.bouton-rot{width:34px;height:34px;border-radius:50%;position:relative;cursor:ns-resize;touch-action:none;
+  background:radial-gradient(circle at 40% 35%,#5a5a66,#26262d 60%,#141418);box-shadow:0 3px 6px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.2)}
+.bouton-rot::after{content:"";position:absolute;left:50%;top:3px;width:3px;height:10px;margin-left:-1.5px;border-radius:2px;background:#fff;transform-origin:50% 14px;transform:rotate(var(--a,0deg))}
+.bouton-rot+small{font-size:9px;color:var(--doux);font-weight:700;letter-spacing:1px;margin-top:-3px}
+.vu{width:10px;height:80px;border-radius:3px;background:#07070a;box-shadow:var(--creux);position:relative;overflow:hidden}
+.vu i{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,#2ee59d 0%,#2ee59d 60%,#f5c14b 80%,#ff4d5e 100%);height:0}
+.fader{writing-mode:vertical-lr;direction:rtl;height:92px;width:28px}
+.centre-t{display:flex;flex-direction:column;align-items:center;gap:4px}
+.xfade{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:4px}.xfade input{flex:1}
+.fx{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.fx button{padding:7px 2px;font-size:10px}
+/* formes d'onde */
+.ondes{display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1fr);gap:4px;padding:6px;position:relative;min-height:0;overflow:hidden}
+.ondes canvas{width:100%;height:100%;min-height:0;display:block;border-radius:5px;background:#060608;box-shadow:var(--creux)}
+.ondes::after{content:"";position:absolute;left:50%;top:4px;bottom:4px;width:2px;background:#fff;box-shadow:0 0 6px #fff;pointer-events:none}
+/* bas */
+.bas{display:grid;grid-template-columns:minmax(0,1.25fr) 300px minmax(0,1fr);gap:6px;min-height:0}
+.biblio{display:grid;grid-template-columns:150px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:6px;padding:8px}
+.biblio .recherche{grid-column:1/-1;display:flex;gap:6px}
+.biblio input[type=search]{flex:1;background:#08080b;border:1px solid var(--bord);color:var(--txt);border-radius:7px;padding:8px 10px;font:600 13px Inter}
+.bacs{overflow:auto;display:flex;flex-direction:column;gap:3px}
+.bacs div{padding:7px 8px;border-radius:6px;cursor:pointer;font-weight:700;color:var(--doux)}.bacs div.on{background:#2b2550;color:#fff}
+.liste{overflow:auto;border-radius:6px;background:#0c0c10;box-shadow:var(--creux)}
+table{width:100%;border-collapse:collapse}th{position:sticky;top:0;background:#1a1a20;text-align:left;font-size:10px;letter-spacing:1px;color:var(--doux);padding:6px}
+td{padding:5px 6px;border-bottom:1px solid #18181e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+tr.piste{cursor:grab}tr.piste:hover{background:#1c1a2e}tr.charge-a td:first-child{box-shadow:inset 3px 0 var(--a)}tr.charge-b td:first-child{box-shadow:inset 3px 0 var(--b)}
+td.act button{padding:4px 8px;margin-left:2px}
+.depot{border:2px dashed #3a3a46;border-radius:8px;padding:10px;text-align:center;color:var(--doux);margin:6px}
+.pads{padding:8px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:6px}
+.grille-pads{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pad{border-radius:9px;border:1px solid #000;display:flex;flex-direction:column;justify-content:space-between;padding:6px;font-weight:800;font-size:12px;cursor:pointer;min-height:54px;
+  background:linear-gradient(180deg,var(--c1),var(--c2));box-shadow:0 3px 0 rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.25)}
+.pad small{opacity:.7;font-size:10px}.pad.joue{filter:brightness(1.6);transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.6)}
+.live{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:6px;padding:8px}
+.onglets{display:flex;gap:4px;margin-bottom:6px}.onglets button{flex:1}
+.vue{display:none}.vue.on{display:flex;flex-direction:column;gap:6px}
+.scenes{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.scenes button{padding:10px 4px;font-size:12px}
+.rangee{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.rangee select,.rangee input[type=text]{flex:1;min-width:0;background:#08080b;border:1px solid var(--bord);color:var(--txt);border-radius:7px;padding:7px;font:600 12px Inter}
+.mini{position:relative;width:150px;height:267px;border-radius:8px;overflow:hidden;border:1px solid var(--bord);background:#000}
+.mini iframe{width:1080px;height:1920px;border:0;transform:scale(.1389);transform-origin:0 0;pointer-events:none}
+.etat{color:var(--doux);font-size:11px}
+.notif{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#2b2550;padding:10px 16px;border-radius:10px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9}
+.notif.on{opacity:1}
+#demarrer{position:fixed;inset:0;z-index:20;background:rgba(5,5,8,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center}
+#demarrer h1{font-size:34px;margin:0}#demarrer p{color:var(--doux);max-width:560px;font-size:15px}
 </style></head><body>
-<div class="haut">
-  <div><h1>Régie · La Nuit Cauri Charts</h1><div class="etat" id="info">Chargement…</div></div>
-  <div class="etat">Écran pour LIVE Studio (1080 × 1920) : <input id="lienEcran" readonly style="width:auto;min-width:300px;display:inline-block;padding:6px"> <button id="copier">Copier</button></div>
-</div>
 
-<div class="grille">
-  <div class="bloc"><h2>Scènes</h2><div id="scenes"></div>
-    <p class="etat">Clavier : 1 à 9 = scènes · Espace = étape suivante · G = gong · F = fiche · B = flou · M = couper le son</p></div>
+<div id="demarrer"><h1>Cauri <span style="color:var(--or)">Live</span></h1>
+  <p>La régie joue le son sur ce PC (platines, effets, pads). Dans LIVE Studio, ajoute l'écran du live et capture le son du PC.</p>
+  <button class="or" id="go" style="font-size:18px;padding:16px 30px">Démarrer la régie</button></div>
 
-  <div class="bloc large"><h2>Platine</h2>
-    <div class="ligne"><input id="chercheArt" placeholder="Artiste : tape un nom…" autocomplete="off" style="flex:1"></div>
-    <div class="liste" id="resArt"></div>
-    <div class="etat" id="artChoisi" style="margin:8px 0">Aucun artiste choisi.</div>
-    <div class="platine">
-      <div class="deck"><h3>Sons <span><span class="voyant" id="vSon"></span></span></h3><div id="sons" class="vide">Choisis un artiste.</div>
-        <div class="ligne" style="margin-top:10px"><button id="sonPause">Pause / reprise</button><button class="rouge" id="sonCoupe">Couper <span class="k">M</span></button></div>
-        <div class="ligne" style="margin-top:6px"><span class="etat" style="width:70px">Volume</span><input type="range" id="vol" min="0" max="100" value="80" style="flex:1"></div>
-        <div class="etat" id="sonEnCours">—</div></div>
-      <div class="deck"><h3>Clips <span><span class="voyant" id="vClip"></span></span></h3><div id="clips" class="vide">Choisis un artiste.</div>
-        <div class="ligne" style="margin-top:10px"><button id="clipPause">Pause / reprise</button><button class="rouge" id="clipCoupe">Couper le clip</button></div>
-        <div class="ligne" style="margin-top:6px"><button class="or gros" id="btnFiche">Fiche de l'artiste <span class="k">F</span></button><button id="btnFlou">Flou <span class="k">B</span></button>
-          <button id="btnScArt">Scène « Artiste »</button></div>
-        <div class="etat">La fiche floute le clip ; la fermer le rend net.</div></div>
-    </div>
+<header class="barre panneau">
+  <div class="logo">CAURI <b>LIVE</b></div>
+  <div class="onair" id="onair" title="Démarrer / arrêter le chrono du live"><i></i><span id="chrono">HORS ANTENNE</span></div>
+  <div class="lcd" id="horloge">--:--</div>
+  <div class="etat" id="info">Chargement…</div>
+  <div class="espace"></div>
+  <span class="etat">Écran du live :</span><button id="copier">Copier le lien de l'écran</button>
+  <button id="aide">Raccourcis</button>
+</header>
+
+<section class="haut">
+  <div class="deck panneau" id="deckA" data-d="A">
+    <div class="deck-tete"><div class="lettre" style="color:var(--a)">A</div><img id="imgA" alt=""><div class="deck-nom"><b id="titreA">Glisse un titre ici</b><span id="artA">—</span></div>
+      <div class="lcd temps" id="tempsA">0:00 / -0:00</div></div>
+    <canvas class="apercu-onde" id="ovA"></canvas>
+    <div class="deck-milieu"><div class="platine" id="platA"><div class="disque" id="disqueA"><div class="etiquette"><img id="labA" alt=""></div><div class="repere"></div></div><div class="axe"></div></div>
+      <div class="pitch"><small class="etat">TEMPO</small><input type="range" min="-10" max="10" step="0.1" value="0" id="pitchA"><small class="lcd" id="pvA">0.0%</small></div></div>
+    <div class="deck-bas"><button class="vert" id="playA" style="min-width:74px">▶ LECTURE</button><button id="cueA">CUE</button>
+      <div class="cues" id="cuesA"></div><span class="espace"></span><button id="clipA" title="Le clip de l'artiste passe sur l'écran">Clip à l'écran</button></div>
   </div>
 
-  <div class="bloc"><h2>Rituel</h2><div class="ligne"><button class="or gros" id="btnGong">GONG <span class="k">G</span></button><button id="btnTirage">Tirer le pays mystère</button></div>
-    <div class="etat" id="mystInfo"></div></div>
+  <div class="table panneau">
+    <div class="voie" id="voieA"><div class="bouton-rot" data-p="gainA" data-min="0" data-max="2" data-v="1"></div><small>GAIN</small>
+      <div class="bouton-rot" data-p="hiA" data-min="-24" data-max="12" data-v="0"></div><small>AIGUS</small>
+      <div class="bouton-rot" data-p="midA" data-min="-24" data-max="12" data-v="0"></div><small>MÉDIUMS</small>
+      <div class="bouton-rot" data-p="lowA" data-min="-24" data-max="12" data-v="0"></div><small>BASSES</small>
+      <div class="bouton-rot" data-p="filtA" data-min="-1" data-max="1" data-v="0"></div><small>FILTRE</small></div>
+    <div class="centre-t"><div style="display:flex;gap:6px"><div class="vu"><i id="vuA"></i></div><div class="vu"><i id="vuB"></i></div></div>
+      <div class="bouton-rot" data-p="master" data-min="0" data-max="1.2" data-v="0.9"></div><small>MASTER</small>
+      <div class="bouton-rot" data-p="pads" data-min="0" data-max="1.2" data-v="0.8"></div><small>PADS</small>
+      <div style="display:flex;gap:10px"><input class="fader" type="range" min="0" max="1" step="0.01" value="0.9" id="volA"><input class="fader" type="range" min="0" max="1" step="0.01" value="0.9" id="volB"></div></div>
+    <div class="voie" id="voieB"><div class="bouton-rot" data-p="gainB" data-min="0" data-max="2" data-v="1"></div><small>GAIN</small>
+      <div class="bouton-rot" data-p="hiB" data-min="-24" data-max="12" data-v="0"></div><small>AIGUS</small>
+      <div class="bouton-rot" data-p="midB" data-min="-24" data-max="12" data-v="0"></div><small>MÉDIUMS</small>
+      <div class="bouton-rot" data-p="lowB" data-min="-24" data-max="12" data-v="0"></div><small>BASSES</small>
+      <div class="bouton-rot" data-p="filtB" data-min="-1" data-max="1" data-v="0"></div><small>FILTRE</small></div>
+    <div class="xfade"><b style="color:var(--a)">A</b><input type="range" min="0" max="1" step="0.01" value="0.5" id="xfade"><b style="color:var(--b)">B</b></div>
+    <div class="fx"><button data-fx="echo">ÉCHO</button><button data-fx="reverb">RÉVERB</button><button data-fx="couper" title="Coupe les basses des deux platines">SANS BASSES</button><button id="fondu" title="Fondu enchaîné automatique vers l'autre platine (6 s)">FONDU AUTO</button></div>
+  </div>
 
-  <div class="bloc"><h2>Top 3 par pays</h2><select id="pays"></select>
-    <div class="ligne" style="margin-top:8px"><button id="etRetour">◀ Retour</button><button class="or" id="etSuite">Révéler <span class="k">Espace</span></button><button id="paysSuiv">Pays suivant ▶</button></div>
-    <div class="etat">Le N°3, puis le N°2, puis le N°1.</div></div>
+  <div class="deck panneau" id="deckB" data-d="B">
+    <div class="deck-tete"><div class="lettre" style="color:var(--b)">B</div><img id="imgB" alt=""><div class="deck-nom"><b id="titreB">Glisse un titre ici</b><span id="artB">—</span></div>
+      <div class="lcd temps" id="tempsB">0:00 / -0:00</div></div>
+    <canvas class="apercu-onde" id="ovB"></canvas>
+    <div class="deck-milieu"><div class="platine" id="platB"><div class="disque" id="disqueB"><div class="etiquette"><img id="labB" alt=""></div><div class="repere"></div></div><div class="axe"></div></div>
+      <div class="pitch"><small class="etat">TEMPO</small><input type="range" min="-10" max="10" step="0.1" value="0" id="pitchB"><small class="lcd" id="pvB">0.0%</small></div></div>
+    <div class="deck-bas"><button class="vert" id="playB" style="min-width:74px">▶ LECTURE</button><button id="cueB">CUE</button>
+      <div class="cues" id="cuesB"></div><span class="espace"></span><button id="clipB" title="Le clip de l'artiste passe sur l'écran">Clip à l'écran</button></div>
+  </div>
+</section>
 
-  <div class="bloc"><h2>Versus</h2><div class="ligne"><button id="voteA">+1 A</button><button id="voteB">+1 B</button><button id="razVotes">Remettre à zéro</button></div>
-    <div class="etat" id="vsInfo"></div></div>
+<section class="ondes panneau"><canvas id="ondeA"></canvas><canvas id="ondeB"></canvas></section>
 
-  <div class="bloc"><h2>Le Mur · Ton artiste ?</h2>
-    <div class="ligne"><input id="cmt" placeholder="Commentaire lu dans le chat (nom d'artiste, vote…)" style="flex:1"><button id="cmtOk">Ajouter</button></div>
-    <div class="liste" id="mur" style="margin-top:8px"></div><div class="ligne"><button id="razMur">Vider le mur</button></div></div>
+<section class="bas">
+  <div class="biblio panneau" id="biblio">
+    <div class="recherche"><input type="search" id="cherche" placeholder="Chercher un artiste ou un titre…  (Ctrl+F)"><button id="ajout">+ Mes musiques</button><input type="file" id="fichiers" accept="audio/*" multiple hidden></div>
+    <div class="bacs" id="bacs"></div>
+    <div class="liste" id="liste"></div>
+  </div>
 
-  <div class="bloc"><h2>Final</h2><div class="ligne"><button class="or" id="fin0">N°1 du pays mystère</button><button class="or" id="fin1">N°1 Afrique de l'Ouest</button></div>
-    <div class="ligne" style="margin-top:6px"><button id="rafraichir">Recharger le classement</button></div></div>
+  <div class="pads panneau"><div class="titre-p">Pads d'effets · touches Q à V</div><div class="grille-pads" id="pads"></div>
+    <div class="rangee"><button id="stopPads" class="rouge">Couper les pads</button></div></div>
 
-  <div class="bloc"><h2>Aperçu de l'écran</h2><iframe id="apercu" title="Aperçu" scrolling="no"></iframe></div>
-</div>
+  <div class="live panneau">
+    <div style="min-width:0">
+      <div class="onglets"><button data-o="scenes" class="on">Scènes</button><button data-o="show">Top 3 · Versus · Mur</button><button data-o="effets">Effets écran</button></div>
+      <div class="vue on" id="v-scenes">
+        <div class="scenes" id="scenes"></div>
+        <div class="rangee"><button class="or" id="fiche">Fiche artiste <span class="k">H</span></button><button id="flou">Flou <span class="k">B</span></button><button id="coupeClip" class="rouge">Couper le clip</button></div>
+        <div class="rangee"><label class="etat"><input type="checkbox" id="suivre" checked> Le clip suit la platine à l'antenne</label></div>
+      </div>
+      <div class="vue" id="v-show">
+        <div class="rangee"><button class="or" id="gong">GONG <span class="k">G</span></button><button id="tirage">Tirer le pays mystère</button></div>
+        <div class="etat" id="mystInfo"></div>
+        <div class="rangee"><select id="pays"></select><button id="etRet">◀</button><button class="or" id="etSuite">Révéler <span class="k">Espace</span></button><button id="paysSuiv">▶ Pays</button></div>
+        <div class="rangee"><button id="voteA">+1 A</button><button id="voteB">+1 B</button><button id="razVotes">Zéro</button><span class="etat" id="vsInfo"></span></div>
+        <div class="rangee"><input type="text" id="cmt" placeholder="Commentaire lu dans le chat (vote, nom d'artiste)"><button id="cmtOk">OK</button></div>
+        <div class="rangee" id="mur"></div><div class="rangee"><button id="razMur">Vider le mur</button><button class="or" id="fin0">N°1 pays mystère</button><button class="or" id="fin1">N°1 Afrique de l'Ouest</button></div>
+      </div>
+      <div class="vue" id="v-effets">
+        <div class="scenes" id="effets"></div>
+        <div class="rangee"><input type="text" id="bandeau" placeholder="Texte du bandeau (ex. MERCI POUR LES 1 000 !)"><button class="or" id="bandeauOk">Afficher</button><button id="bandeauOff">Retirer</button></div>
+      </div>
+    </div>
+    <div><div class="mini"><iframe id="mini" title="Écran du live"></iframe></div><div class="etat" style="margin-top:4px;text-align:center" id="sceneNom"></div></div>
+  </div>
+</section>
+<div class="notif" id="notif"></div>
 
 <script nonce="{{ nonce }}">
-const BASE = "{{ api }}", CSRF = "{{ csrf }}", ECRAN = location.origin + "{{ ecran }}";
-const SC = [["attente","Attente"],["camera","Caméra"],["artiste","Artiste"],["rituel","Rituel"],["top3","Top 3"],["versus","Versus"],["mur","Mur"],["finale","Final"],["fin","Fin"]];
-let D, E = {}, art = null;
+"use strict";
+const API = "{{ api }}", CSRF = "{{ csrf }}", ECRAN = location.origin + "{{ ecran }}";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const norm = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const fmt = (s) => { s = Math.max(0, s || 0); return Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0"); };
+let D = null, E = {};
+const notif = (t) => { $("notif").textContent = t; $("notif").classList.add("on"); clearTimeout(notif.t); notif.t = setTimeout(() => $("notif").classList.remove("on"), 1800); };
+
+// ======================================================= liaison avec l'écran du live
 async function poste(corps) {
-  const r = await fetch(BASE + "/etat", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF }, body: JSON.stringify(corps) });
-  if (r.status === 403) { $("info").textContent = "Régie verrouillée : recharge la page et valide ton empreinte."; return; }
-  E = await r.json(); rendu();
+  try {
+    const r = await fetch(API + "/etat", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF }, body: JSON.stringify(corps) });
+    if (r.ok) { E = await r.json(); rendLive(); } else notif("Liaison avec l'écran perdue (" + r.status + ")");
+  } catch (e) { notif("Liaison avec l'écran perdue"); }
 }
 const set = (s) => poste({ set: s });
 const cmt = (texte) => poste({ commentaire: { user: "régie" + Math.random().toString(36).slice(2, 7), texte } });
-// scènes
-$("scenes").innerHTML = SC.map(([id, n], i) => `<button id="sc-${id}" data-sc="${id}">${n}<span class="k">${i + 1}</span></button>`).join("");
-$("scenes").addEventListener("click", (e) => { const b = e.target.closest("[data-sc]"); if (b) set({ scene: b.dataset.sc }); });
-// platine
-function choisir(a) { art = a; $("resArt").innerHTML = ""; $("chercheArt").value = a.nom; afficheDecks(); }
-function afficheDecks() {
-  const b = (D.biblio || {})[art?.id] || {};
-  $("artChoisi").innerHTML = art ? `<b>${esc(art.nom)}</b> · ${esc(art.pays_nom)} · ${(b.sons || []).length} son(s), ${(b.clips || []).length} clip(s)` : "Aucun artiste choisi.";
-  $("sons").innerHTML = (b.sons || []).map((m, i) => `<div class="piste ${E.son === m.url ? "joue" : ""}"><span>${esc(m.titre)}</span><button data-son="${i}">Jouer</button></div>`).join("") || '<div class="vide">Pas encore de son pour cet artiste.</div>';
-  $("clips").innerHTML = (b.clips || []).map((m, i) => `<div class="piste ${E.clip === m.url ? "joue" : ""}"><span>${esc(m.titre)}</span><button data-clip="${i}">Lancer</button></div>`).join("") || '<div class="vide">Pas encore de clip pour cet artiste.</div>';
+
+// ======================================================= moteur audio (Web Audio)
+let ctx, master, padsGain, limiteur, echoIn, reverbIn;
+const decks = {};
+function initAudio() {
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  limiteur = ctx.createDynamicsCompressor(); limiteur.threshold.value = -6; limiteur.knee.value = 4; limiteur.ratio.value = 12; limiteur.attack.value = 0.003; limiteur.release.value = 0.15;
+  master = ctx.createGain(); master.gain.value = 0.9; master.connect(limiteur); limiteur.connect(ctx.destination);
+  padsGain = ctx.createGain(); padsGain.gain.value = 0.8; padsGain.connect(master);
+  // écho et réverbération (départs d'effets)
+  echoIn = ctx.createGain(); const delai = ctx.createDelay(2); delai.delayTime.value = 0.375; const retour = ctx.createGain(); retour.gain.value = 0.42;
+  const echoOut = ctx.createGain(); echoOut.gain.value = 0.7; echoIn.connect(delai); delai.connect(retour); retour.connect(delai); delai.connect(echoOut); echoOut.connect(master);
+  reverbIn = ctx.createGain(); const conv = ctx.createConvolver(); const len = ctx.sampleRate * 2.6, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+  conv.buffer = ir; const revOut = ctx.createGain(); revOut.gain.value = 0.6; reverbIn.connect(conv); conv.connect(revOut); revOut.connect(master);
+  for (const d of ["A", "B"]) decks[d] = creerDeck(d);
+  appliqueXfade();
 }
-$("sons").addEventListener("click", (e) => { const x = e.target.closest("[data-son]"); if (!x) return; const m = D.biblio[art.id].sons[+x.dataset.son]; set({ son: m.url, sonJoue: true, sonTop: Date.now() }); });
-$("clips").addEventListener("click", (e) => { const x = e.target.closest("[data-clip]"); if (!x) return; const m = D.biblio[art.id].clips[+x.dataset.clip]; set({ clip: m.url, clipJoue: true, carte: art.id, scene: "artiste" }); });
-$("sonPause").onclick = () => set({ sonJoue: E.sonJoue === false });
-$("sonCoupe").onclick = () => set({ son: null, sonJoue: false });
-$("vol").oninput = (e) => { clearTimeout(window._v); window._v = setTimeout(() => set({ sonVol: +e.target.value / 100 }), 120); };
-$("clipPause").onclick = () => set({ clipJoue: E.clipJoue === false });
-$("clipCoupe").onclick = () => set({ clip: null, flou: false, fiche: false });
-const fiche = () => { if (!art && !E.carte) return; const ouvre = !E.fiche; set({ fiche: ouvre, carte: art ? art.id : E.carte, flou: ouvre }); };
-$("btnFiche").onclick = fiche; $("btnFlou").onclick = () => set({ flou: !E.flou }); $("btnScArt").onclick = () => set({ scene: "artiste", carte: art ? art.id : E.carte });
-const norm = (s) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
-$("chercheArt").addEventListener("input", (e) => { const q = norm(e.target.value); if (q.length < 2) { $("resArt").innerHTML = ""; return; }
-  const r = D.artistes.filter((a) => a.cle.includes(q)).slice(0, 8);
-  $("resArt").innerHTML = r.map((a) => { const b = (D.biblio || {})[a.id] || {}; return `<div data-art="${a.id}"><span>${esc(a.nom)} · ${esc(a.pays_nom)}</span><span class="etat">${(b.sons || []).length} son(s) · ${(b.clips || []).length} clip(s)</span></div>`; }).join("")
-    || '<div class="vide">Pas classé chez nous pour l\'instant.</div>'; });
-$("resArt").addEventListener("click", (e) => { const x = e.target.closest("[data-art]"); if (x) choisir(D.artistes.find((a) => a.id === +x.dataset.art)); });
-// rituel, top 3, versus, mur, final
-$("btnGong").onclick = () => set({ gong: Date.now(), scene: "rituel" });
-$("btnTirage").onclick = () => { const p = D.pays[Math.floor(Math.random() * D.pays.length)]; set({ mystere: p.code, scene: "rituel" }); };
-const etape = (d) => set({ etape: Math.max(0, Math.min(3, (E.etape || 0) + d)), scene: "top3" });
-$("etRetour").onclick = () => etape(-1); $("etSuite").onclick = () => etape(1);
-$("paysSuiv").onclick = () => set({ pays: ((E.pays || 0) + 1) % D.pays.length, etape: 0, scene: "top3" });
-$("pays").onchange = (e) => set({ pays: +e.target.value, etape: 0, scene: "top3" });
+function creerDeck(nom) {
+  const g = {}; g.gain = ctx.createGain();
+  g.low = ctx.createBiquadFilter(); g.low.type = "lowshelf"; g.low.frequency.value = 220;
+  g.mid = ctx.createBiquadFilter(); g.mid.type = "peaking"; g.mid.frequency.value = 1000; g.mid.Q.value = 0.8;
+  g.hi = ctx.createBiquadFilter(); g.hi.type = "highshelf"; g.hi.frequency.value = 4200;
+  g.filt = ctx.createBiquadFilter(); g.filt.type = "allpass";
+  g.fader = ctx.createGain(); g.xf = ctx.createGain(); g.ana = ctx.createAnalyser(); g.ana.fftSize = 1024;
+  g.echo = ctx.createGain(); g.echo.gain.value = 0; g.rev = ctx.createGain(); g.rev.gain.value = 0;
+  g.gain.connect(g.low); g.low.connect(g.mid); g.mid.connect(g.hi); g.hi.connect(g.filt); g.filt.connect(g.fader); g.fader.connect(g.xf); g.xf.connect(master);
+  g.fader.connect(g.ana); g.fader.connect(g.echo); g.echo.connect(echoIn); g.fader.connect(g.rev); g.rev.connect(reverbIn);
+  g.fader.gain.value = 0.9;
+  return { nom, g, buffer: null, src: null, offset: 0, debut: 0, joue: false, rate: 1, piste: null, cues: [null, null, null, null], peaks: null, angle: 0 };
+}
+const pos = (d) => !d.buffer ? 0 : Math.min(d.buffer.duration, d.joue ? d.offset + (ctx.currentTime - d.debut) * d.rate : d.offset);
+function lance(d, depuis) {
+  if (!d.buffer) return; arrete(d, true);
+  const s = ctx.createBufferSource(); s.buffer = d.buffer; s.playbackRate.value = d.rate; s.connect(d.g.gain);
+  d.offset = Math.max(0, Math.min(depuis ?? d.offset, d.buffer.duration - 0.05)); d.debut = ctx.currentTime; s.start(0, d.offset); d.src = s; d.joue = true;
+  s.onended = () => { if (d.src === s && pos(d) >= d.buffer.duration - 0.1) { d.joue = false; d.offset = 0; rendDeck(d); } };
+  rendDeck(d); antenne();
+}
+function arrete(d, interne) { if (d.src) { d.offset = pos(d); try { d.src.onended = null; d.src.stop(); } catch (e) {} d.src = null; } d.joue = false; if (!interne) { rendDeck(d); antenne(); } }
+const bascule = (d) => d.joue ? arrete(d) : lance(d);
+const cherche = (d, t) => { if (!d.buffer) return; if (d.joue) lance(d, t); else { d.offset = Math.max(0, Math.min(t, d.buffer.duration)); rendDeck(d); } };
+function setRate(d, pct) { const p = pos(d); d.rate = 1 + pct / 100; if (d.src) { d.src.playbackRate.value = d.rate; d.offset = p; d.debut = ctx.currentTime; } $("pv" + d.nom).textContent = (pct >= 0 ? "+" : "") + (+pct).toFixed(1) + "%"; }
+
+// chargement d'un titre sur une platine (son de la bibliothèque ou fichier du PC)
+async function charge(nomDeck, piste) {
+  const d = decks[nomDeck]; arrete(d, true);
+  $("titre" + nomDeck).textContent = "Chargement…"; $("art" + nomDeck).textContent = piste.artiste || "";
+  try {
+    const octets = piste.fichier ? await piste.fichier.arrayBuffer() : await (await fetch(piste.url)).arrayBuffer();
+    d.buffer = await ctx.decodeAudioData(octets); d.piste = piste; d.offset = 0; d.cues = [null, null, null, null]; d.peaks = pics(d.buffer);
+    $("titre" + nomDeck).textContent = piste.titre; $("art" + nomDeck).textContent = piste.artiste || "Mes musiques";
+    const photo = piste.photo || "/assets/live/logo.png"; $("img" + nomDeck).src = photo; $("lab" + nomDeck).src = photo;
+    rendDeck(d); rendListe(); dessineApercu(d);
+  } catch (e) { $("titre" + nomDeck).textContent = "Impossible de lire ce fichier"; }
+}
+// pics de la forme d'onde : 150 colonnes par seconde, amplitude + « brillance » (passages à zéro ≈ aigus)
+function pics(buf) {
+  const ch = buf.getChannelData(0), n = Math.ceil(buf.duration * 150), pas = Math.floor(ch.length / n), amp = new Float32Array(n), br = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let m = 0, z = 0, prev = 0; for (let j = i * pas; j < (i + 1) * pas && j < ch.length; j += 2) { const v = ch[j]; const a = Math.abs(v); if (a > m) m = a; if ((v > 0) !== (prev > 0)) z++; prev = v; } amp[i] = m; br[i] = Math.min(1, z / (pas / 2) * 6); }
+  return { amp, br, n };
+}
+
+// ======================================================= dessin : formes d'onde, platines, vumètres
+const COUL = { A: [63, 169, 255], B: [255, 138, 61] };
+function dessineApercu(d) {
+  const c = $("ov" + d.nom), w = c.width = c.clientWidth * devicePixelRatio, h = c.height = c.clientHeight * devicePixelRatio, x = c.getContext("2d");
+  x.clearRect(0, 0, w, h); if (!d.peaks) return; const [r, g, b] = COUL[d.nom];
+  for (let i = 0; i < w; i++) { const k = Math.floor(i / w * d.peaks.n), a = d.peaks.amp[k] * h * 0.95; x.fillStyle = `rgba(${r},${g},${b},.75)`; x.fillRect(i, (h - a) / 2, 1, a); }
+  c.dataset.w = w;
+}
+function dessineOnde(d) {
+  const c = $("onde" + d.nom); if (!c.width || c.width !== c.clientWidth * devicePixelRatio) { c.width = c.clientWidth * devicePixelRatio; c.height = c.clientHeight * devicePixelRatio; }
+  const w = c.width, h = c.height, x = c.getContext("2d"); x.fillStyle = "#060608"; x.fillRect(0, 0, w, h);
+  x.fillStyle = "rgba(255,255,255,.05)"; for (let i = 0; i < w; i += 40 * devicePixelRatio) x.fillRect(i, 0, 1, h);
+  if (!d.peaks) return; const [r, g, b] = COUL[d.nom], p = pos(d) * 150, zoom = 1.6 * devicePixelRatio;
+  for (let i = 0; i < w; i++) {
+    const k = Math.floor(p + (i - w / 2) / zoom); if (k < 0 || k >= d.peaks.n) continue;
+    const a = d.peaks.amp[k] * h * 0.92, br = d.peaks.br[k];
+    x.fillStyle = `rgb(${Math.round(r + (255 - r) * br * .7)},${Math.round(g + (255 - g) * br * .7)},${Math.round(b + (255 - b) * br * .7)})`;
+    x.globalAlpha = i < w / 2 ? 0.55 : 1; x.fillRect(i, (h - a) / 2, 1, a);
+  }
+  x.globalAlpha = 1;
+  d.cues.forEach((q, i) => { if (q == null) return; const xi = w / 2 + (q * 150 - p) * zoom; if (xi < 0 || xi > w) return; x.fillStyle = "#e04bd1"; x.fillRect(xi, 0, 2, h); x.fillText(i + 1, xi + 3, 10); });
+}
+function boucle() {
+  for (const d of Object.values(decks)) {
+    if (d.joue) { d.angle = (d.angle + 33.3 / 60 * 360 / 60 * d.rate) % 360; }
+    $("disque" + d.nom).style.transform = `rotate(${d.angle}deg)`;
+    dessineOnde(d);
+    const t = pos(d), tot = d.buffer ? d.buffer.duration : 0; $("temps" + d.nom).textContent = fmt(t) + " / -" + fmt(tot - t);
+    const c = $("ov" + d.nom); if (d.peaks && c.dataset.w) { dessineApercu(d); const xx = c.getContext("2d"); xx.fillStyle = "rgba(0,0,0,.55)"; xx.fillRect(0, 0, c.width * t / (tot || 1), c.height); xx.fillStyle = "#fff"; xx.fillRect(c.width * t / (tot || 1), 0, 2, c.height); }
+    const tab = new Uint8Array(d.g.ana.fftSize); d.g.ana.getByteTimeDomainData(tab); let m = 0; for (const v of tab) m = Math.max(m, Math.abs(v - 128)); $("vu" + d.nom).style.height = Math.min(100, m / 128 * 140) + "%";
+  }
+  requestAnimationFrame(boucle);
+}
+// platine : glisser = rechercher dans le morceau (une rotation = 1,8 s)
+function platineGlisse(nom) {
+  const el = $("plat" + nom); let actif = false, a0 = 0, t0 = 0, relance = false;
+  const angle = (e) => { const r = el.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
+  el.addEventListener("pointerdown", (e) => { if (!ctx) return; const d = decks[nom]; if (!d.buffer) return; actif = true; el.setPointerCapture(e.pointerId); a0 = angle(e); t0 = pos(d); relance = d.joue; arrete(d, true); el.style.cursor = "grabbing"; });
+  el.addEventListener("pointermove", (e) => { if (!actif) return; const d = decks[nom]; let da = angle(e) - a0; if (da > 180) da -= 360; if (da < -180) da += 360; a0 = angle(e); t0 = Math.max(0, t0 + da / 360 * 1.8); d.offset = t0; d.angle = (d.angle + da) % 360; });
+  el.addEventListener("pointerup", () => { if (!actif) return; actif = false; el.style.cursor = "grab"; const d = decks[nom]; if (relance) lance(d, t0); else rendDeck(d); });
+}
+function rendDeck(d) {
+  const b = $("play" + d.nom); b.textContent = d.joue ? "❚❚ PAUSE" : "▶ LECTURE"; b.className = d.joue ? "on" : "vert";
+  $("cues" + d.nom).innerHTML = d.cues.map((q, i) => `<button class="${q != null ? "pose" : ""}" data-cue="${i}" title="Clic : aller · Maj+clic : effacer">${i + 1}</button>`).join("");
+}
+// ======================================================= boutons rotatifs (glisser vers le haut / bas ; double-clic = remise à zéro)
+const valeurs = {};
+function applique(p, v) {
+  valeurs[p] = v; if (!ctx) return; const d = decks[p.slice(-1)];
+  if (p === "master") master.gain.value = v; else if (p === "pads") padsGain.gain.value = v;
+  else if (p.startsWith("gain")) d.g.gain.gain.value = v; else if (p.startsWith("hi")) d.g.hi.gain.value = v;
+  else if (p.startsWith("mid")) d.g.mid.gain.value = v; else if (p.startsWith("low")) d.g.low.gain.value = coupeBasses ? -40 : v;
+  else if (p.startsWith("filt")) { const f = d.g.filt; if (Math.abs(v) < 0.04) f.type = "allpass"; else if (v < 0) { f.type = "lowpass"; f.frequency.value = 20000 * Math.pow(0.01, -v); f.Q.value = 6; } else { f.type = "highpass"; f.frequency.value = 20 * Math.pow(400, v); f.Q.value = 6; } }
+}
+document.querySelectorAll(".bouton-rot").forEach((k) => {
+  const min = +k.dataset.min, max = +k.dataset.max, def = +k.dataset.v; let v = def;
+  const maj = () => { k.style.setProperty("--a", (-135 + (v - min) / (max - min) * 270) + "deg"); applique(k.dataset.p, v); };
+  let y0 = null; k.addEventListener("pointerdown", (e) => { y0 = e.clientY; k.setPointerCapture(e.pointerId); });
+  k.addEventListener("pointermove", (e) => { if (y0 == null) return; v = Math.max(min, Math.min(max, v + (y0 - e.clientY) / 150 * (max - min))); y0 = e.clientY; maj(); });
+  k.addEventListener("pointerup", () => (y0 = null)); k.addEventListener("dblclick", () => { v = def; maj(); }); k.title = "Glisser haut/bas · double-clic : neutre"; maj(); k._maj = (nv) => { v = nv; maj(); };
+});
+let coupeBasses = false;
+function appliqueXfade() { const x = +$("xfade").value; if (!ctx) return; decks.A.g.xf.gain.value = Math.cos(x * Math.PI / 2); decks.B.g.xf.gain.value = Math.sin(x * Math.PI / 2); antenne(); }
+$("xfade").oninput = appliqueXfade;
+$("volA").oninput = (e) => ctx && (decks.A.g.fader.gain.value = +e.target.value); $("volB").oninput = (e) => ctx && (decks.B.g.fader.gain.value = +e.target.value);
+document.querySelectorAll("[data-fx]").forEach((b) => b.onclick = () => {
+  if (!ctx) return; const fx = b.dataset.fx; b.classList.toggle("on"); const on = b.classList.contains("on");
+  if (fx === "echo") for (const d of Object.values(decks)) d.g.echo.gain.setTargetAtTime(on ? 0.6 : 0, ctx.currentTime, 0.05);
+  if (fx === "reverb") for (const d of Object.values(decks)) d.g.rev.gain.setTargetAtTime(on ? 0.7 : 0, ctx.currentTime, 0.05);
+  if (fx === "couper") { coupeBasses = on; applique("lowA", valeurs.lowA || 0); applique("lowB", valeurs.lowB || 0); }
+});
+$("fondu").onclick = () => { if (!ctx) return; const x0 = +$("xfade").value, vers = x0 < 0.5 ? 1 : 0, t0 = performance.now(); const autre = decks[vers ? "B" : "A"]; if (autre.buffer && !autre.joue) lance(autre);
+  const pas = (t) => { const k = Math.min(1, (t - t0) / 6000); $("xfade").value = x0 + (vers - x0) * k; appliqueXfade(); if (k < 1) requestAnimationFrame(pas); }; requestAnimationFrame(pas); };
+
+// ======================================================= pads d'effets (nos sons + sons fabriqués par la régie)
+const PADS = [
+  { n: "Gong", k: "Q", f: "gong", c: ["#f5c14b", "#a87612"] }, { n: "Klaxon", k: "W", s: "klaxon", c: ["#ff6b78", "#9d1f2d"] },
+  { n: "Sirène", k: "E", s: "sirene", c: ["#ff6b78", "#9d1f2d"] }, { n: "Boom", k: "R", f: "boom", c: ["#7b5cff", "#3c238f"] },
+  { n: "Montée", k: "A", f: "montee", c: ["#3fa9ff", "#155c9c"] }, { n: "Roulement", k: "S", s: "roulement", c: ["#3fa9ff", "#155c9c"] },
+  { n: "Applaudir", k: "D", s: "applaudir", c: ["#2ee59d", "#0f7a51"] }, { n: "Rewind", k: "F", s: "rewind", c: ["#e04bd1", "#7d1a73"] },
+  { n: "Ding", k: "Z", f: "ding", c: ["#9aa0ad", "#4b505c"] }, { n: "Paillettes", k: "X", f: "paillettes", c: ["#9aa0ad", "#4b505c"] },
+  { n: "Laser", k: "C", s: "laser", c: ["#e04bd1", "#7d1a73"] }, { n: "Pop", k: "V", f: "pop", c: ["#9aa0ad", "#4b505c"] },
+];
+const tampons = {}, enCoursPads = new Set();
+async function chargePads() { await Promise.all(PADS.filter((p) => p.f).map(async (p) => { try { tampons[p.f] = await ctx.decodeAudioData(await (await fetch(`/assets/live/sfx/${p.f}.mp3`)).arrayBuffer()); } catch (e) {} })); }
+$("pads").innerHTML = PADS.map((p, i) => `<div class="pad" data-pad="${i}" style="--c1:${p.c[0]};--c2:${p.c[1]}"><span>${p.n}</span><small>${p.k}</small></div>`).join("");
+function joueTampon(b, vol = 1) { const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; g.gain.value = vol; s.connect(g); g.connect(padsGain); s.start(); enCoursPads.add(s); s.onended = () => enCoursPads.delete(s); }
+function synth(type) {
+  const t = ctx.currentTime, out = ctx.createGain(); out.connect(padsGain); const fin = (d) => setTimeout(() => out.disconnect(), d * 1000 + 200);
+  const bruit = (dur) => { const b = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate), x = b.getChannelData(0); for (let i = 0; i < x.length; i++) x[i] = Math.random() * 2 - 1; const s = ctx.createBufferSource(); s.buffer = b; return s; };
+  if (type === "klaxon") { for (const f of [466, 470, 554, 699]) { const o = ctx.createOscillator(); o.type = "sawtooth"; o.frequency.value = f; const g = ctx.createGain(); o.connect(g); g.connect(out);
+      for (let i = 0; i < 3; i++) { g.gain.setValueAtTime(0, t + i * 0.32); g.gain.linearRampToValueAtTime(0.12, t + i * 0.32 + 0.02); g.gain.setValueAtTime(0.12, t + i * 0.32 + (i === 2 ? 0.7 : 0.18)); g.gain.linearRampToValueAtTime(0, t + i * 0.32 + (i === 2 ? 0.75 : 0.22)); }
+      o.start(t); o.stop(t + 1.5); } fin(1.5); }
+  if (type === "sirene") { const o = ctx.createOscillator(); o.type = "square"; const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 2.2; lg.gain.value = 380; lfo.connect(lg); lg.connect(o.frequency); o.frequency.value = 900;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.05); g.gain.setValueAtTime(0.12, t + 2.3); g.gain.linearRampToValueAtTime(0, t + 2.6); o.connect(g); g.connect(out); o.start(t); lfo.start(t); o.stop(t + 2.7); lfo.stop(t + 2.7); fin(2.7); }
+  if (type === "roulement") { const s = bruit(2.6), bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1800; bp.Q.value = 0.7; const g = ctx.createGain(); s.connect(bp); bp.connect(g); g.connect(out);
+    for (let i = 0; i < 52; i++) { const tt = t + i * 0.045; g.gain.setValueAtTime(0.15 + i / 52 * 0.5, tt); g.gain.exponentialRampToValueAtTime(0.02, tt + 0.04); } g.gain.setValueAtTime(0.9, t + 2.35); g.gain.exponentialRampToValueAtTime(0.001, t + 2.6); s.start(t); fin(2.7); }
+  if (type === "applaudir") { for (let k = 0; k < 220; k++) { const s = bruit(0.06), bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1200 + Math.random() * 1800; const g = ctx.createGain(); const tt = t + Math.random() * 3.2;
+      g.gain.setValueAtTime(0.0, tt); g.gain.linearRampToValueAtTime(0.25 * (1 - (tt - t) / 4), tt + 0.003); g.gain.exponentialRampToValueAtTime(0.001, tt + 0.05); s.connect(bp); bp.connect(g); g.connect(out); s.start(tt); } fin(3.6); }
+  if (type === "laser") { for (let i = 0; i < 3; i++) { const o = ctx.createOscillator(); o.type = "sawtooth"; const g = ctx.createGain(); const tt = t + i * 0.16; o.frequency.setValueAtTime(2400, tt); o.frequency.exponentialRampToValueAtTime(120, tt + 0.15);
+      g.gain.setValueAtTime(0.18, tt); g.gain.exponentialRampToValueAtTime(0.001, tt + 0.15); o.connect(g); g.connect(out); o.start(tt); o.stop(tt + 0.16); } fin(0.7); }
+  if (type === "rewind") { // la platine à l'antenne repart en arrière, comme un DJ qui fait tourner le disque à l'envers
+    const d = +$("xfade").value < 0.5 ? decks.A : decks.B; if (!d.buffer) return; const p = pos(d), deb = Math.max(0, p - 3), sr = d.buffer.sampleRate;
+    const seg = ctx.createBuffer(d.buffer.numberOfChannels, Math.floor((p - deb) * sr), sr);
+    for (let c = 0; c < seg.numberOfChannels; c++) { const src = d.buffer.getChannelData(c).subarray(Math.floor(deb * sr), Math.floor(p * sr)); const dst = seg.getChannelData(c); for (let i = 0; i < dst.length; i++) dst[i] = src[src.length - 1 - i]; }
+    arrete(d); const s = ctx.createBufferSource(); s.buffer = seg; s.playbackRate.setValueAtTime(1, t); s.playbackRate.linearRampToValueAtTime(4, t + 0.6); const g = ctx.createGain(); g.gain.setValueAtTime(0.9, t); g.gain.linearRampToValueAtTime(0, t + 0.75);
+    s.connect(g); g.connect(d.g.gain); s.start(t); d.offset = deb; notif("Rewind : relance la platine quand tu veux"); }
+}
+function pad(i) { if (!ctx) return; const p = PADS[i]; if (p.f && tampons[p.f]) joueTampon(tampons[p.f]); else if (p.s) synth(p.s);
+  const el = document.querySelector(`[data-pad="${i}"]`); el.classList.add("joue"); setTimeout(() => el.classList.remove("joue"), 160);
+  if (p.f === "gong") set({ gong: Date.now() }); }
+$("pads").addEventListener("pointerdown", (e) => { const x = e.target.closest("[data-pad]"); if (x) pad(+x.dataset.pad); });
+$("stopPads").onclick = () => { enCoursPads.forEach((s) => { try { s.stop(); } catch (e) {} }); padsGain.gain.setValueAtTime(0, ctx.currentTime); setTimeout(() => (padsGain.gain.value = valeurs.pads ?? 0.8), 150); };
+
+// ======================================================= bibliothèque : le classement, les artistes, mes musiques (fichiers du PC)
+let bac = "tout", pistes = [], mesFichiers = [];
+function construitPistes() {
+  pistes = [];
+  for (const [aid, b] of Object.entries(D.biblio || {})) { const a = D.artistes.find((x) => x.id === +aid) || { nom: b.nom, pays_nom: "", pays: "" };
+    for (const s of b.sons || []) pistes.push({ id: s.url, url: s.url, titre: s.titre, artiste: a.nom, artisteId: +aid, pays: a.pays_nom, code: a.pays, photo: a.photo, clip: (b.clips || [])[0]?.url }); }
+  pistes.sort((x, y) => x.artiste.localeCompare(y.artiste));
+}
+function rendBacs() {
+  const pays = [...new Set(pistes.map((p) => p.pays).filter(Boolean))].sort();
+  const items = [["tout", `Tout le classement (${pistes.length})`], ["deezer", "Hors classement (Deezer)"], ["mes", `Mes musiques (${mesFichiers.length})`], ...pays.map((p) => ["p:" + p, p])];
+  $("bacs").innerHTML = items.map(([k, n]) => `<div data-bac="${esc(k)}" class="${bac === k ? "on" : ""}">${esc(n)}</div>`).join("");
+}
+// ---- plan B : un artiste qui n'est pas dans notre base -> Deezer (photo, fans, 10 titres phares, extraits de 30 s)
+let dzArtistes = [], dzPistes = [], dzChoisi = null, dzMinuteur = null;
+async function chercheDeezer(q) {
+  if (q.length < 2) { dzArtistes = []; return rendListe(); }
+  const r = await (await fetch(API + "/cherche?q=" + encodeURIComponent(q))).json(); dzArtistes = r.artistes || []; dzChoisi = null; dzPistes = []; rendListe();
+}
+async function titresDeezer(id) {
+  const r = await (await fetch(API + "/titres/" + id)).json(); dzChoisi = r.artiste;
+  const ext = { nom: r.artiste.nom, photo: r.artiste.photo, fans: r.artiste.fans, titres: r.titres.slice(0, 3).map((x) => x.titre) };
+  dzPistes = r.titres.map((x) => ({ id: "dz:" + x.url, url: x.url, titre: x.titre + " (extrait)", artiste: r.artiste.nom, photo: x.pochette || r.artiste.photo, externe: ext })); rendListe();
+}
+function rendDeezer() {
+  const cl = (p) => (decks.A?.piste?.id === p.id ? "charge-a" : decks.B?.piste?.id === p.id ? "charge-b" : "");
+  if (dzChoisi) return `<div class="rangee" style="padding:8px"><img src="${esc(dzChoisi.photo)}" style="width:48px;height:48px;border-radius:6px;object-fit:cover"><b style="font-size:15px">${esc(dzChoisi.nom)}</b>
+      <span class="etat">${(dzChoisi.fans || 0).toLocaleString("fr-FR")} fans Deezer · extraits de 30 s</span><span style="flex:1"></span><button data-dzfiche class="or">Fiche à l'écran</button><button data-dzretour>Autres résultats</button></div>
+    <table><tr><th>TITRE</th><th style="width:110px"></th></tr>${dzPistes.map((p) => `<tr class="piste ${cl(p)}" draggable="true" data-id="${esc(p.id)}"><td>${esc(p.titre)}</td>
+      <td class="act"><button data-charge="A" style="color:var(--a)">A</button><button data-charge="B" style="color:var(--b)">B</button></td></tr>`).join("")}</table>`;
+  return `<div class="etat" style="padding:8px">Tape le nom de l'artiste dans la recherche : on le cherche sur Deezer (artistes absents de notre classement).</div>` +
+    dzArtistes.map((a) => `<div class="rangee" data-dz="${a.id}" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #18181e"><img src="${esc(a.photo)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">
+      <b>${esc(a.nom)}</b><span class="etat">${(a.fans || 0).toLocaleString("fr-FR")} fans</span></div>`).join("");
+}
+function rendListe() {
+  if (bac === "deezer") { $("liste").innerHTML = rendDeezer(); return; }
+  const q = norm($("cherche").value); let l = bac === "mes" ? mesFichiers : pistes;
+  if (bac.startsWith("p:")) l = l.filter((p) => p.pays === bac.slice(2));
+  if (q) l = (bac === "tout" ? [...pistes, ...mesFichiers] : l).filter((p) => norm(p.artiste + " " + p.titre).includes(q));
+  const charge = (p) => (decks.A?.piste?.id === p.id ? "charge-a" : decks.B?.piste?.id === p.id ? "charge-b" : "");
+  $("liste").innerHTML = (bac === "mes" ? `<div class="depot" id="depot">Glisse ici des fichiers audio de ton PC (MP3, WAV…) ou clique « + Mes musiques »</div>` : "") +
+    `<table><tr><th>ARTISTE</th><th>TITRE</th><th>PAYS</th><th style="width:150px"></th></tr>${l.map((p) =>
+      `<tr class="piste ${charge(p)}" draggable="true" data-id="${esc(p.id)}"><td><b>${esc(p.artiste)}</b></td><td>${esc(p.titre)}</td><td class="etat">${esc(p.pays || "")}</td>
+       <td class="act"><button data-charge="A" style="color:var(--a)">A</button><button data-charge="B" style="color:var(--b)">B</button>${p.clip ? '<button data-clip title="Clip à l\'écran">Clip</button>' : ""}</td></tr>`).join("")}</table>` +
+    (q && l.length < 3 ? `<div class="depot">Pas (ou peu) dans notre classement ? <button class="or" data-versdz>Chercher « ${esc($("cherche").value)} » sur Deezer</button></div>` : "");
+}
+const trouve = (id) => pistes.find((p) => p.id === id) || mesFichiers.find((p) => p.id === id) || dzPistes.find((p) => p.id === id);
+$("bacs").onclick = (e) => { const x = e.target.closest("[data-bac]"); if (x) { bac = x.dataset.bac; rendBacs(); rendListe(); } };
+$("cherche").oninput = () => { if (bac === "deezer") { clearTimeout(dzMinuteur); dzMinuteur = setTimeout(() => chercheDeezer($("cherche").value.trim()), 350); } else rendListe(); };
+$("liste").addEventListener("click", (e) => {
+  if (e.target.closest("[data-versdz]")) { bac = "deezer"; rendBacs(); return chercheDeezer($("cherche").value.trim()); }
+  const dz = e.target.closest("[data-dz]"); if (dz) return titresDeezer(dz.dataset.dz);
+  if (e.target.closest("[data-dzretour]")) { dzChoisi = null; return rendListe(); }
+  if (e.target.closest("[data-dzfiche]")) { const ext = dzPistes[0]?.externe; if (ext) set({ carte: null, carteExt: ext, fiche: true, flou: true }); return; }
+  const tr = e.target.closest("tr.piste"); if (!tr) return; const p = trouve(tr.dataset.id);
+  const b = e.target.closest("[data-charge]"); if (b) return charge(b.dataset.charge, p);
+  if (e.target.closest("[data-clip]")) return envoieClip(p); });
+$("liste").addEventListener("dblclick", (e) => { const tr = e.target.closest("tr.piste"); if (!tr) return; charge(!decks.A.joue ? "A" : "B", trouve(tr.dataset.id)); });
+$("liste").addEventListener("dragstart", (e) => { const tr = e.target.closest("tr.piste"); if (tr) e.dataTransfer.setData("text/piste", tr.dataset.id); });
+for (const n of ["A", "B"]) { const el = $("deck" + n);
+  el.addEventListener("dragover", (e) => { e.preventDefault(); el.classList.add("drop"); }); el.addEventListener("dragleave", () => el.classList.remove("drop"));
+  el.addEventListener("drop", async (e) => { e.preventDefault(); el.classList.remove("drop"); const id = e.dataTransfer.getData("text/piste");
+    if (id) return charge(n, trouve(id)); const f = [...e.dataTransfer.files].find((x) => x.type.startsWith("audio")); if (f) { const p = await ajouteFichier(f); charge(n, p); } }); }
+// mes musiques : gardées dans le navigateur (IndexedDB) d'une session à l'autre
+const idb = () => new Promise((ok, ko) => { const r = indexedDB.open("cauri-live", 1); r.onupgradeneeded = () => r.result.createObjectStore("fichiers", { keyPath: "id" }); r.onsuccess = () => ok(r.result); r.onerror = ko; });
+async function ajouteFichier(f) {
+  const nomF = f.name.replace(/\.[a-z0-9]+$/i, ""), [artiste, titre] = nomF.includes(" - ") ? nomF.split(" - ", 2) : ["Mes musiques", nomF];
+  const p = { id: "f:" + f.name + ":" + f.size, titre: titre.trim(), artiste: artiste.trim(), fichier: f, pays: "" };
+  if (!mesFichiers.find((x) => x.id === p.id)) { mesFichiers.push(p); try { const db = await idb(); db.transaction("fichiers", "readwrite").objectStore("fichiers").put({ id: p.id, nom: f.name, blob: f }); } catch (e) {} }
+  rendBacs(); rendListe(); return p;
+}
+async function lisFichiers() { try { const db = await idb(); const r = db.transaction("fichiers").objectStore("fichiers").getAll(); r.onsuccess = () => { for (const x of r.result) { const f = new File([x.blob], x.nom, { type: x.blob.type }); const nomF = x.nom.replace(/\.[a-z0-9]+$/i, ""), [ar, ti] = nomF.includes(" - ") ? nomF.split(" - ", 2) : ["Mes musiques", nomF]; mesFichiers.push({ id: x.id, titre: ti.trim(), artiste: ar.trim(), fichier: f, pays: "" }); } rendBacs(); }; } catch (e) {} }
+$("ajout").onclick = () => $("fichiers").click();
+$("fichiers").onchange = async (e) => { for (const f of e.target.files) await ajouteFichier(f); bac = "mes"; rendBacs(); rendListe(); notif(e.target.files.length + " musique(s) ajoutée(s)"); };
+$("biblio").addEventListener("dragover", (e) => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); });
+$("biblio").addEventListener("drop", async (e) => { const fs = [...e.dataTransfer.files].filter((f) => f.type.startsWith("audio")); if (!fs.length) return; e.preventDefault(); for (const f of fs) await ajouteFichier(f); bac = "mes"; rendBacs(); rendListe(); });
+
+// ======================================================= l'antenne : ce qui passe sur l'écran du live
+function platineAntenne() { const x = +$("xfade").value, A = decks.A, B = decks.B; const a = A.joue ? Math.cos(x * Math.PI / 2) : 0, b = B.joue ? Math.sin(x * Math.PI / 2) : 0; return a >= b ? (A.joue ? A : null) : B; }
+let dernierAntenne = "";
+function antenne() {
+  const d = platineAntenne(); const cle = d?.piste?.id || ""; if (cle === dernierAntenne) return; dernierAntenne = cle;
+  const s = { enCours: d?.piste ? { titre: d.piste.titre, artiste: d.piste.artiste } : null };
+  if (d?.piste?.externe) Object.assign(s, { carte: null, carteExt: d.piste.externe }); else if (d?.piste?.artisteId) s.carteExt = null;
+  if (d?.piste && $("suivre").checked && d.piste.clip) Object.assign(s, { clip: d.piste.clip, clipJoue: true, carte: d.piste.artisteId });
+  set(s);
+}
+function envoieClip(p) { if (!p?.clip) return notif("Pas de clip pour ce titre"); set({ clip: p.clip, clipJoue: true, carte: p.artisteId, scene: "artiste" }); }
+$("clipA").onclick = () => envoieClip(decks.A.piste); $("clipB").onclick = () => envoieClip(decks.B.piste);
+
+const SC = [["attente", "Attente"], ["camera", "Caméra"], ["artiste", "Artiste"], ["rituel", "Rituel"], ["top3", "Top 3"], ["versus", "Versus"], ["mur", "Mur"], ["finale", "Final"], ["fin", "Fin"]];
+$("scenes").innerHTML = SC.map(([id, n], i) => `<button data-sc="${id}">${n}<span class="k">${i + 1}</span></button>`).join("");
+$("scenes").onclick = (e) => { const b = e.target.closest("[data-sc]"); if (b) set({ scene: b.dataset.sc }); };
+const EFFETS = [["confettis", "Confettis"], ["cauris", "Pluie de cauris"], ["flash", "Flash"], ["secousse", "Secousse"], ["zoom", "Zoom choc"], ["projecteur", "Projecteur"],
+  ["decompte", "Décompte 10 s"], ["applaudimetre", "« Faites du bruit ! »"], ["coeurs", "Merci les cadeaux"]];
+$("effets").innerHTML = EFFETS.map(([id, n]) => `<button data-ef="${id}">${n}</button>`).join("");
+$("effets").onclick = (e) => { const b = e.target.closest("[data-ef]"); if (!b) return; const s = { fx: { type: b.dataset.ef, t: Date.now() } }; if (b.dataset.ef === "decompte") s.minuteur = Date.now() + 10000; set(s);
+  if (b.dataset.ef === "decompte" && ctx) synth("roulement"); };
+$("bandeauOk").onclick = () => set({ bandeau: $("bandeau").value.trim() }); $("bandeauOff").onclick = () => set({ bandeau: "" });
+const fiche = () => { const ouvre = !E.fiche, p = platineAntenne()?.piste; set({ fiche: ouvre, flou: ouvre, carte: p?.externe ? null : (p?.artisteId || E.carte || null), carteExt: p?.externe || (E.carte ? null : E.carteExt) }); };
+$("fiche").onclick = fiche; $("flou").onclick = () => set({ flou: !E.flou }); $("coupeClip").onclick = () => set({ clip: null, flou: false, fiche: false });
+$("gong").onclick = () => pad(0);
+$("tirage").onclick = () => { const p = D.pays[Math.floor(Math.random() * D.pays.length)]; set({ mystere: p.code, scene: "rituel" }); };
+const etape = (k) => set({ etape: Math.max(0, Math.min(3, (E.etape || 0) + k)), scene: "top3" });
+$("etRet").onclick = () => etape(-1); $("etSuite").onclick = () => etape(1);
+$("paysSuiv").onclick = () => set({ pays: ((E.pays || 0) + 1) % D.pays.length, etape: 0, scene: "top3" }); $("pays").onchange = (e) => set({ pays: +e.target.value, etape: 0, scene: "top3" });
 $("voteA").onclick = () => cmt(E.versus.a); $("voteB").onclick = () => cmt(E.versus.b); $("razVotes").onclick = () => poste({ raz: "votes" });
-$("cmtOk").onclick = () => { const v = $("cmt").value.trim(); if (v) cmt(v); $("cmt").value = ""; };
-$("cmt").addEventListener("keydown", (e) => { if (e.key === "Enter") $("cmtOk").click(); });
-$("razMur").onclick = () => poste({ raz: "mur" });
-$("mur").addEventListener("click", (e) => { const x = e.target.closest("[data-art]"); if (!x) return; const a = D.artistes.find((y) => y.id === +x.dataset.art); choisir(a); set({ carte: a.id, fiche: true, flou: true }); });
-$("fin0").onclick = () => set({ scene: "finale", finale: 0 }); $("fin1").onclick = () => set({ scene: "finale", finale: 1 });
-$("rafraichir").onclick = async () => { await poste({ rafraichir: 1 }); await charge(); };
-$("lienEcran").value = ECRAN; $("copier").onclick = () => { navigator.clipboard?.writeText(ECRAN).catch(() => {}); $("lienEcran").select(); };
-document.addEventListener("keydown", (e) => { if (["INPUT", "SELECT"].includes(e.target.tagName)) return; const n = +e.key;
-  if (n >= 1 && n <= 9) set({ scene: SC[n - 1][0] });
-  if (e.code === "Space") { e.preventDefault(); etape(1); }
-  const k = e.key.toLowerCase(); if (k === "g") $("btnGong").click(); if (k === "f") fiche(); if (k === "b") $("btnFlou").click(); if (k === "m") $("sonCoupe").click(); });
-function rendu() {
+$("cmtOk").onclick = () => { const v = $("cmt").value.trim(); if (v) cmt(v); $("cmt").value = ""; }; $("cmt").onkeydown = (e) => e.key === "Enter" && $("cmtOk").click();
+$("razMur").onclick = () => poste({ raz: "mur" }); $("fin0").onclick = () => set({ scene: "finale", finale: 0 }); $("fin1").onclick = () => set({ scene: "finale", finale: 1 });
+$("mur").onclick = (e) => { const x = e.target.closest("[data-art]"); if (x) set({ carte: +x.dataset.art, fiche: true, flou: true }); };
+document.querySelectorAll(".onglets button").forEach((b) => b.onclick = () => { document.querySelectorAll(".onglets button").forEach((x) => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".vue").forEach((v) => v.classList.toggle("on", v.id === "v-" + b.dataset.o)); });
+function rendLive() {
   if (!D) return;
-  SC.forEach(([id]) => $("sc-" + id).classList.toggle("on", E.scene === id));
-  $("info").textContent = `Semaine ${String(D.semaine).split("-W")[1]} · scène : ${E.scene} · ${D.artistes.length} artistes · ${Object.keys(D.biblio || {}).length} avec sons/clips`;
-  const pm = D.pays.find((p) => p.code === E.mystere); $("mystInfo").textContent = pm ? `Pays mystère : ${pm.nom} (N°1 : ${pm.artistes[0].nom}, garde le secret !)` : "Pas encore tiré.";
-  $("pays").value = E.pays || 0; $("voteA").textContent = "+1 " + E.versus.a; $("voteB").textContent = "+1 " + E.versus.b;
-  $("vsInfo").textContent = `${E.versus.a} ${E.votes.a} · ${E.versus.b} ${E.votes.b}`;
-  $("mur").innerHTML = (E.mur || []).slice(0, 10).map((m) => { const f = D.artistes.find((x) => x.id === m.id) || { nom: "?" }; return `<div data-art="${m.id}"><span>${esc(f.nom)}</span><span class="etat">${m.n} demande(s)</span></div>`; }).join("") || '<div class="vide">Rien encore.</div>';
-  $("vSon").classList.toggle("on", !!E.son && E.sonJoue !== false); $("vClip").classList.toggle("on", !!E.clip && E.clipJoue !== false);
-  $("btnFiche").classList.toggle("on", !!E.fiche); $("btnFlou").classList.toggle("on", !!E.flou); $("vol").value = Math.round((E.sonVol ?? 0.8) * 100);
-  let titre = "—"; for (const [aid, b] of Object.entries(D.biblio || {})) for (const m of b.sons || []) if (m.url === E.son) titre = m.titre + " · " + ((D.artistes.find((x) => x.id === +aid) || {}).nom || "");
-  $("sonEnCours").textContent = E.son ? (E.sonJoue === false ? "En pause : " : "En cours : ") + titre : "Aucun son.";
-  if (art) afficheDecks();
+  document.querySelectorAll("[data-sc]").forEach((b) => b.classList.toggle("on", b.dataset.sc === E.scene));
+  $("sceneNom").textContent = "À l'écran : " + ((SC.find((s) => s[0] === E.scene) || [])[1] || "—");
+  $("fiche").classList.toggle("on", !!E.fiche); $("flou").classList.toggle("on", !!E.flou);
+  const pm = D.pays.find((p) => p.code === E.mystere); $("mystInfo").textContent = pm ? `Pays mystère : ${pm.nom} — N°1 : ${pm.artistes[0].nom} (secret !)` : "Pays mystère pas encore tiré.";
+  $("pays").value = E.pays || 0; if (E.versus) { $("voteA").textContent = "+1 " + E.versus.a; $("voteB").textContent = "+1 " + E.versus.b; $("vsInfo").textContent = `${E.votes.a} – ${E.votes.b}`; }
+  $("mur").innerHTML = (E.mur || []).slice(0, 6).map((m) => { const f = D.artistes.find((x) => x.id === m.id) || { nom: "?" }; return `<button data-art="${m.id}">${esc(f.nom)} · ${m.n}</button>`; }).join("") || '<span class="etat">Le mur est vide.</span>';
 }
-async function charge() { D = await (await fetch(BASE + "/donnees")).json(); $("pays").innerHTML = D.pays.map((p, i) => `<option value="${i}">${esc(p.nom)}</option>`).join(""); rendu(); }
-async function boucle() { try { const r = await fetch(BASE + "/etat", { cache: "no-store" }); if (r.ok) { E = await r.json(); rendu(); } } catch (e) {} setTimeout(boucle, 1500); }
-$("apercu").src = "{{ ecran }}"; $("apercu").addEventListener("load", () => { try { $("apercu").contentDocument.body.style.zoom = "0.25"; } catch (e) {} });
-charge().then(boucle);
+// ======================================================= clavier
+document.addEventListener("keydown", (e) => {
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) { if (e.key === "Escape") e.target.blur(); return; }
+  if (e.ctrlKey && e.key.toLowerCase() === "f") { e.preventDefault(); $("cherche").focus(); return; }
+  const k = e.key.toUpperCase(); const i = PADS.findIndex((p) => p.k === k); if (i >= 0 && !e.ctrlKey) { pad(i); return; }
+  const n = +e.key; if (n >= 1 && n <= 9) return set({ scene: SC[n - 1][0] });
+  if (e.code === "Space") { e.preventDefault(); return etape(1); }
+  if (k === "G") pad(0); if (k === "B") $("flou").click(); if (k === "H") fiche();
+  if (e.key === "ArrowLeft") bascule(decks.A); if (e.key === "ArrowRight") bascule(decks.B);
+});
+// cues, lecture, tempo
+for (const n of ["A", "B"]) {
+  $("play" + n).onclick = () => bascule(decks[n]); $("cue" + n).onclick = () => { const d = decks[n]; arrete(d, true); d.offset = d.cues[0] ?? 0; rendDeck(d); };
+  $("pitch" + n).oninput = (e) => setRate(decks[n], +e.target.value); $("pitch" + n).ondblclick = (e) => { e.target.value = 0; setRate(decks[n], 0); };
+  $("cues" + n).onclick = (e) => { const b = e.target.closest("[data-cue]"); if (!b) return; const d = decks[n], i = +b.dataset.cue;
+    if (e.shiftKey) d.cues[i] = null; else if (d.cues[i] == null) d.cues[i] = pos(d); else cherche(d, d.cues[i]); rendDeck(d); };
+  $("ov" + n).onclick = (e) => { const d = decks[n]; if (!d.buffer) return; const r = e.currentTarget.getBoundingClientRect(); cherche(d, (e.clientX - r.left) / r.width * d.buffer.duration); };
+  platineGlisse(n);
+}
+$("aide").onclick = () => alert("1 à 9 : scènes · Espace : top 3 suivant · Q W E R / A S D F / Z X C V : pads · G : gong · H : fiche · B : flou · ← → : lecture A / B · Ctrl+F : chercher");
+$("copier").onclick = () => { navigator.clipboard?.writeText(ECRAN).then(() => notif("Lien de l'écran copié")).catch(() => notif(ECRAN)); };
+// chrono du live
+let debutLive = null; $("onair").onclick = () => { debutLive = debutLive ? null : Date.now(); $("onair").classList.toggle("actif", !!debutLive); };
+setInterval(() => { const d = new Date(); $("horloge").textContent = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + " · " + d.toUTCString().slice(17, 22) + " GMT";
+  $("chrono").textContent = debutLive ? "À L'ANTENNE " + fmt((Date.now() - debutLive) / 1000) : "HORS ANTENNE"; }, 1000);
+// démarrage (le navigateur exige un clic avant de jouer du son)
+$("go").onclick = async () => { $("demarrer").remove(); initAudio(); await chargePads(); requestAnimationFrame(boucle); };
+async function chargeDonnees() { D = await (await fetch(API + "/donnees")).json(); construitPistes(); await lisFichiers(); rendBacs(); rendListe();
+  $("pays").innerHTML = D.pays.map((p, i) => `<option value="${i}">${esc(p.nom)}</option>`).join("");
+  $("info").textContent = `Semaine ${String(D.semaine).split("-W")[1]} · ${pistes.length} titres · ${D.artistes.length} artistes`; rendLive(); }
+async function suit() { try { const r = await fetch(API + "/etat", { cache: "no-store" }); if (r.ok) { E = await r.json(); rendLive(); } } catch (e) {} setTimeout(suit, 1500); }
+$("mini").src = "{{ ecran }}";
+for (const n of ["A", "B"]) rendDeck({ nom: n, joue: false, cues: [null, null, null, null] });
+chargeDonnees().then(suit);
 </script></body></html>

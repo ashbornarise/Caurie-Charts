@@ -37,9 +37,19 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:transparent;colo
 #voileClip{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(13,10,31,.55) 0%,rgba(13,10,31,0) 25%,rgba(13,10,31,0) 60%,rgba(13,10,31,.85) 100%);opacity:0;transition:opacity .6s}
 #voileClip.on{opacity:1}
 #fiche{position:absolute;left:60px;right:60px;top:300px;padding:36px;z-index:7;transition:all .6s cubic-bezier(.2,1.2,.4,1)}
+#fiche{box-shadow:0 30px 80px rgba(0,0,0,.45),0 0 0 3000px rgba(6,4,16,.55)}
 #fiche.cache{opacity:0;transform:translateY(80px) scale(.95);pointer-events:none}
 #titreSon{position:absolute;left:40px;top:150px;z-index:7;display:flex;align-items:center;gap:14px;font-weight:800;font-size:28px;background:rgba(13,10,31,.7);padding:12px 20px;border-radius:999px;transition:opacity .5s}
 #titreSon svg{flex:none}
+#fxc{position:absolute;inset:0;z-index:20;pointer-events:none}
+#flash{position:absolute;inset:0;z-index:21;background:#fff;opacity:0;pointer-events:none}
+#projo{position:absolute;inset:0;z-index:19;pointer-events:none;opacity:0;transition:opacity .5s;background:radial-gradient(circle 360px at var(--x,50%) var(--y,40%),rgba(255,255,255,0) 0%,rgba(255,255,255,0) 60%,rgba(5,4,12,.82) 100%)}
+#bandeau{position:absolute;left:0;right:0;top:1580px;z-index:18;height:110px;background:linear-gradient(90deg,#c9142c,#ff4d5e);overflow:hidden;display:flex;align-items:center;transform:translateX(-110%);transition:transform .6s cubic-bezier(.2,1,.3,1);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+#bandeau.on{transform:none}#bandeau span{white-space:nowrap;font-family:Anton,Impact;font-size:76px;padding-left:100%;animation:defile 14s linear infinite}
+@keyframes defile{to{transform:translateX(-100%)}}
+#grand{position:absolute;inset:0;z-index:22;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:Anton,Impact;text-align:center;line-height:1}
+body.secousse{animation:secousse .5s}@keyframes secousse{10%,50%,90%{transform:translate(-18px,8px) rotate(-.6deg)}30%,70%{transform:translate(18px,-8px) rotate(.6deg)}}
+body.zoom{animation:zoomc .6s cubic-bezier(.2,1.6,.4,1)}@keyframes zoomc{30%{transform:scale(1.12)}}
 </style></head><body>
 <video id="clip" muted playsinline loop preload="auto"></video><div id="voileClip"></div>
 <div id="titreSon" style="opacity:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8FD3FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span></span></div>
@@ -124,7 +134,7 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:transparent;colo
 </section>
 
 <div id="fiche" class="verre cache"></div>
-<audio id="sonA" preload="auto"></audio><audio id="sonB" preload="auto"></audio><audio id="sonGong" src="/assets/live/gong.wav" preload="auto"></audio>
+<canvas id="fxc" width="1080" height="1920"></canvas><div id="flash"></div><div id="projo"></div><div id="bandeau"><span></span></div><div id="grand"></div>
 
 <script nonce="{{ nonce }}">
 const BASE = "{{ base }}";
@@ -147,19 +157,8 @@ const media = (cle) => { if (!cle) return null; for (const [aid, b] of Object.en
 // ---- platine : fondu enchaîné entre deux lecteurs, volume réglable
 function fondu(el, vers, ms, fin) { const de = el.volume, t0 = performance.now(); const pas = (t) => { const k = Math.min(1, (t - t0) / ms); el.volume = Math.max(0, Math.min(1, de + (vers - de) * k)); k < 1 ? requestAnimationFrame(pas) : fin && fin(); }; requestAnimationFrame(pas); }
 function platine() {
-  const vol = E.sonVol ?? 0.8, cle = (E.son || "") + "#" + (E.sonTop || 0);
-  const a = $(actif), b = $(actif === "sonA" ? "sonB" : "sonA");
-  if (cle !== cleSon) {           // nouveau son (ou relance) : l'ancien s'efface en 1,2 s, le nouveau monte
-    cleSon = cle;
-    fondu(a, 0, 1200, () => a.pause());
-    if (E.son) { b.src = E.son; b.volume = 0; b.currentTime = 0; b.play().catch(() => {}); fondu(b, E.sonJoue === false ? 0 : vol, 1200); actif = b.id; }
-  } else if (E.son) {
-    if (E.sonJoue === false && !a.paused) fondu(a, 0, 600, () => a.pause());
-    else if (E.sonJoue !== false && a.paused) { a.play().catch(() => {}); fondu(a, vol, 600); }
-    else if (!a.paused && Math.abs(a.volume - vol) > 0.02) fondu(a, vol, 300);
-  }
-  const m = media(E.son); $("titreSon").style.opacity = E.son && E.sonJoue !== false ? 1 : 0;
-  $("titreSon").querySelector("span").textContent = m ? [m.titre, (D.artistes.find((x) => x.id === m.artiste) || {}).nom].filter(Boolean).join(" · ") : "";
+  const en = E.enCours; $("titreSon").style.opacity = en ? 1 : 0;
+  $("titreSon").querySelector("span").textContent = en ? [en.titre, en.artiste].filter(Boolean).join(" · ") : "";
   // clip
   const v = $("clip");
   if ((E.clip || "") !== cleClip) { cleClip = E.clip || ""; if (E.clip) { v.src = E.clip; v.play().catch(() => {}); } else v.removeAttribute("src"); }
@@ -172,7 +171,7 @@ function rendu() {
   document.querySelectorAll(".scene").forEach((s) => s.classList.toggle("on", s.id === E.scene));
   $("sem1").textContent = "semaine " + (D.semaine || "").split("-W")[1];
   $("flux1").innerHTML = (E.dernier || []).slice(0, 4).map((c) => `<div><b>${esc(c.user)}</b> ${esc(c.texte)}</div>`).join("");
-  if (E.gong !== dernierGong) { dernierGong = E.gong; if (E.gong) { const g = $("sonGong"); g.currentTime = 0; g.play().catch(() => {}); $("gong").animate([{ transform: "scale(1.4)" }, { transform: "scale(1)" }], 600); } }
+  if (E.gong !== dernierGong) { dernierGong = E.gong; if (E.gong) { const g = $("sonGong"); $("gong").animate([{ transform: "scale(1.4)" }, { transform: "scale(1)" }], 600); } }
   const pm = D.pays.find((p) => p.code === E.mystere);
   $("myst").innerHTML = pm ? `<img src="/assets/img/flags/${pm.code}.svg" style="height:120px;border-radius:10px"><div class="anton" style="font-size:110px;margin-top:10px">${esc(pm.nom)}</div>`
     : `<div class="anton" style="font-size:200px;color:var(--ciel)">?</div>`;
@@ -188,8 +187,12 @@ function rendu() {
   $("vbA").style.width = pa + "%"; $("vbB").style.width = (100 - pa) + "%"; $("vbA").textContent = pa + " %"; $("vbB").textContent = (100 - pa) + " %";
   $("vsTot").textContent = tot + " vote" + (tot > 1 ? "s" : ""); $("vsConsigne").textContent = `ÉCRIS « ${E.versus.a.toUpperCase()} » OU « ${E.versus.b.toUpperCase()} »`;
   // fiche d'artiste (passe par-dessus n'importe quelle scène)
-  const fc = D.artistes.find((x) => x.id === E.carte);
-  $("fiche").classList.toggle("cache", !(E.fiche && fc));
+  const fc = D.artistes.find((x) => x.id === E.carte), fx2 = !fc && E.carteExt;
+  $("fiche").classList.toggle("cache", !(E.fiche && (fc || fx2)));
+  if (fx2) { const x = E.carteExt; $("fiche").innerHTML = `<div style="display:flex;gap:36px;align-items:center"><div class="photo" style="width:330px;height:400px;flex:none">${ph(x.photo, x.nom)}</div>
+    <div style="flex:1;min-width:0"><div class="anton" style="font-size:96px">${esc(x.nom)}</div><div style="font-weight:800;font-size:34px;margin-top:10px;color:var(--ciel)">Pas encore classé chez nous</div></div></div>
+    <div style="margin-top:26px"><div class="stat">Fans sur Deezer<b>${fmt(x.fans)}</b></div>${(x.titres || []).map((t, i) => `<div class="stat"${i === x.titres.length - 1 ? ' style="border:0"' : ""}>Titre phare n°${i + 1}<b>${esc(t)}</b></div>`).join("")}</div>`;
+    $("artPill").textContent = x.nom.toUpperCase(); $("artBande").textContent = "Demandé par le public"; }
   if (fc) { $("fiche").innerHTML = `<div style="display:flex;gap:36px;align-items:center"><div class="photo" style="width:330px;height:400px;flex:none">${ph(fc.photo, fc.nom)}</div>
     <div style="flex:1;min-width:0"><div class="anton" style="font-size:96px">${esc(fc.nom)}</div><div style="display:flex;align-items:center;gap:14px;margin-top:10px;font-weight:800;font-size:36px">
     <img src="/assets/img/flags/${fc.pays}.svg" style="height:44px;border-radius:6px" alt="">${esc(fc.pays_nom)}</div></div></div>
@@ -207,8 +210,54 @@ function rendu() {
   else if (D.n1_afrique_ouest) { const w = D.n1_afrique_ouest; $("finTitre").textContent = "N°1 DE TOUTE L'AFRIQUE DE L'OUEST";
     $("finHaut").innerHTML = `<div style="font-weight:900;font-size:50px;letter-spacing:4px">LE N°1 DE</div><div class="anton" style="font-size:120px;color:var(--or)">L'AFRIQUE DE L'OUEST</div>`;
     $("finCarte").innerHTML = carte({ ...w, pos: 1, prec: 1 }, 600, 680, true) + `<div style="font-weight:800;font-size:40px;margin-top:10px;color:var(--ciel)">« ${esc(w.titre)} »</div>`; }
-  platine();
+  platine(); effets();
 }
+
+// ---- effets visuels déclenchés par la régie
+const fx = { parts: [], t: 0 };
+function particules(type) {
+  const n = type === "confettis" ? 260 : type === "coeurs" ? 70 : 55, cols = ["#F5C14B", "#7B5CFF", "#8FD3FF", "#ff4d5e", "#2ee59d", "#ffffff"];
+  for (let i = 0; i < n; i++) fx.parts.push({ type, x: type === "confettis" ? 540 + (Math.random() - .5) * 200 : Math.random() * 1080, y: type === "confettis" ? 1100 : -60 - Math.random() * 900,
+    vx: type === "confettis" ? (Math.random() - .5) * 34 : (Math.random() - .5) * 2, vy: type === "confettis" ? -18 - Math.random() * 26 : 3 + Math.random() * 5,
+    r: Math.random() * 6.28, vr: (Math.random() - .5) * .3, s: type === "cauris" ? 38 + Math.random() * 26 : type === "coeurs" ? 30 + Math.random() * 30 : 10 + Math.random() * 12, c: cols[i % cols.length], vie: 0 });
+}
+function dessineFx() {
+  const c = $("fxc"), x = c.getContext("2d"); x.clearRect(0, 0, 1080, 1920);
+  fx.parts = fx.parts.filter((p) => p.y < 2000 && p.vie < 600);
+  for (const p of fx.parts) {
+    p.vie++; p.x += p.vx; p.y += p.vy; p.r += p.vr; if (p.type === "confettis") { p.vy += .7; p.vx *= .985; } else p.x += Math.sin((p.vie + p.s) / 20) * 1.5;
+    x.save(); x.translate(p.x, p.y); x.rotate(p.r);
+    if (p.type === "confettis") { x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); }
+    else if (p.type === "cauris") { // coquillage cauri vu de dessous : dôme nacré, fente centrale bordée de petites dents
+      const L = p.s, W = p.s * .72;
+      const g = x.createRadialGradient(-W * .35, -L * .45, 2, 0, 0, L * 1.1); g.addColorStop(0, "#fffdf6"); g.addColorStop(.45, "#f3e6cc"); g.addColorStop(1, "#c8a46c");
+      x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 10; x.shadowOffsetY = 4;
+      x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, W, L, 0, 0, 6.28); x.fill(); x.shadowColor = "transparent";
+      x.fillStyle = "rgba(255,255,255,.65)"; x.beginPath(); x.ellipse(-W * .38, -L * .35, W * .18, L * .32, -.25, 0, 6.28); x.fill();
+      x.strokeStyle = "#6b4a24"; x.lineWidth = Math.max(2, W * .09); x.lineCap = "round";
+      x.beginPath(); x.moveTo(0, -L * .82); x.bezierCurveTo(W * .16, -L * .3, -W * .16, L * .3, 0, L * .82); x.stroke();
+      x.lineWidth = Math.max(1.2, W * .05);
+      for (let k = -5; k <= 5; k++) { const yy = k * L * .135, dx = Math.sin(yy / L * 3) * W * .08; x.beginPath(); x.moveTo(dx - W * .13, yy); x.lineTo(dx - W * .04, yy); x.moveTo(dx + W * .04, yy); x.lineTo(dx + W * .13, yy); x.stroke(); }
+    } else { x.fillStyle = p.c; const s = p.s / 2; x.beginPath(); x.moveTo(0, s * .6); x.bezierCurveTo(-s * 1.4, -s * .3, -s * .5, -s * 1.3, 0, -s * .5); x.bezierCurveTo(s * .5, -s * 1.3, s * 1.4, -s * .3, 0, s * .6); x.fill(); }
+    x.restore();
+  }
+  requestAnimationFrame(dessineFx);
+}
+requestAnimationFrame(dessineFx);
+let dernierFx = 0, tProjo = null;
+function effets() {
+  $("bandeau").classList.toggle("on", !!E.bandeau); if (E.bandeau && $("bandeau").firstChild.textContent !== E.bandeau) $("bandeau").firstChild.textContent = E.bandeau + "   ·   " + E.bandeau;
+  if (E.minuteur && E.minuteur > Date.now()) { const r = Math.ceil((E.minuteur - Date.now()) / 1000); $("grand").innerHTML = `<div style="font-size:520px;color:#F5C14B;text-shadow:0 0 80px rgba(245,193,75,.7)">${r}</div>`; }
+  else if ($("grand").dataset.mode !== "texte") $("grand").innerHTML = "";
+  const f = E.fx; if (!f || f.t === dernierFx) return; const nouveau = dernierFx !== 0 || Date.now() - f.t < 4000; dernierFx = f.t; if (!nouveau) return;
+  if (["confettis", "cauris", "coeurs"].includes(f.type)) particules(f.type);
+  if (f.type === "flash") $("flash").animate([{ opacity: .95 }, { opacity: 0 }], 500);
+  if (f.type === "secousse" || f.type === "zoom") { document.body.classList.remove(f.type); void document.body.offsetWidth; document.body.classList.add(f.type); }
+  if (f.type === "projecteur") { $("projo").style.opacity = 1; clearInterval(tProjo); let k = 0; tProjo = setInterval(() => { k += .03; $("projo").style.setProperty("--x", 50 + Math.sin(k) * 30 + "%"); $("projo").style.setProperty("--y", 40 + Math.cos(k * 1.3) * 15 + "%"); if (k > 9) { clearInterval(tProjo); $("projo").style.opacity = 0; } }, 30); }
+  if (f.type === "applaudimetre") { $("grand").dataset.mode = "texte"; $("grand").innerHTML = '<div style="font-size:150px;color:#fff;text-shadow:0 0 60px #7B5CFF">FAITES<br>DU <span style="color:#F5C14B">BRUIT</span> !</div>'; $("grand").animate([{ transform: "scale(.6)", opacity: 0 }, { transform: "scale(1.05)", opacity: 1 }, { transform: "scale(1)" }], 500); setTimeout(() => { $("grand").dataset.mode = ""; $("grand").innerHTML = ""; }, 3500); }
+  if (f.type === "coeurs") { $("grand").dataset.mode = "texte"; $("grand").innerHTML = '<div style="font-size:120px;color:#fff;text-shadow:0 0 60px #ff4d5e">MERCI POUR<br>LES <span style="color:#F5C14B">CADEAUX</span> !</div>'; setTimeout(() => { $("grand").dataset.mode = ""; $("grand").innerHTML = ""; }, 3500); }
+}
+setInterval(() => E.minuteur && effets(), 250);
 let empreinte = "";
 async function interroge() {
   try { const r = await fetch(BASE + "/etat", { cache: "no-store" }); const t = await r.text(); if (t !== empreinte) { empreinte = t; E = JSON.parse(t); rendu(); } } catch (e) {}

@@ -29,6 +29,8 @@ ETAT_DEFAUT = {
     # platine : un son et un clip à la fois, chacun avec son propre réglage
     "son": None, "sonVol": 0.8, "sonJoue": False, "sonTop": 0,
     "clip": None, "clipJoue": False, "flou": False, "fiche": False,
+    # régie v2 (13/11) : le son sort de la régie ; l'écran affiche le titre en cours et les effets visuels
+    "enCours": None, "fx": None, "bandeau": "", "minuteur": 0, "carteExt": None,
 }
 _memo = {"t": 0.0, "v": None}
 
@@ -164,10 +166,8 @@ def regie(request, chemin):
     if not u:
         from django.shortcuts import redirect
         return redirect(f"/studio/{chemin}")
-    nonce = secrets.token_urlsafe(18)
-    html = S._JINJA.get_template("live-regie.html").render(api=f"/studio/{chemin}/live", nonce=nonce, csrf=get_token(request),
-                                                          ecran=f"/live/{jeton_ecran()}/ecran")
-    return S._reponse(HttpResponse(html), nonce)
+    from django.shortcuts import redirect
+    return redirect(f"/live/{jeton_regie()}/regie")   # une seule régie : le lien secret (recherche Deezer comprise)
 
 
 def regie_etat(request, chemin):
@@ -245,12 +245,19 @@ def _verifie_regie(jeton: str) -> None:
         raise Http404
 
 
+def _page_regie(request, api: str):
+    nonce = secrets.token_urlsafe(18)
+    html = S._JINJA.get_template("live-regie.html").render(api=api, nonce=nonce, csrf=get_token(request), ecran=f"/live/{jeton_ecran()}/ecran")
+    r = S._reponse(HttpResponse(html), nonce)
+    r["Content-Security-Policy"] = (r["Content-Security-Policy"]
+        .replace("connect-src 'self'", "connect-src 'self' https://*.public.blob.vercel-storage.com https://*.dzcdn.net")
+        .replace("frame-ancestors 'none'", "frame-ancestors 'self'"))
+    return r
+
+
 def regie_lien(request, jeton):
     _verifie_regie(jeton)
-    nonce = secrets.token_urlsafe(18)
-    html = S._JINJA.get_template("live-regie.html").render(api=f"/live/{jeton}/regie", nonce=nonce, csrf=get_token(request),
-                                                          ecran=f"/live/{jeton_ecran()}/ecran")
-    return S._reponse(HttpResponse(html), nonce)
+    return _page_regie(request, f"/live/{jeton}/regie")
 
 
 def regie_lien_etat(request, jeton):
@@ -261,3 +268,39 @@ def regie_lien_etat(request, jeton):
 def regie_lien_donnees(request, jeton):
     _verifie_regie(jeton)
     return S._json({**donnees(), "biblio": _lit(CLE_BIBLIO, {})})
+
+
+# ---------------------------------------------------------------- plan B : un artiste absent de notre base (Deezer, gratuit)
+# Le public peut réclamer n'importe qui : la régie le cherche sur Deezer (photo, fans, 10 titres phares avec extrait de 30 s).
+# Deezer n'autorise pas l'appel direct depuis le navigateur pour la recherche ; les extraits, eux, se lisent directement.
+
+def _deezer(chemin: str) -> dict:
+    import urllib.request
+    with urllib.request.urlopen("https://api.deezer.com/" + chemin, timeout=8) as r:
+        return json.loads(r.read())
+
+
+def regie_cherche(request, jeton):
+    _verifie_regie(jeton)
+    from urllib.parse import quote
+    q = (request.GET.get("q") or "").strip()[:80]
+    if len(q) < 2:
+        return S._json({"artistes": []})
+    try:
+        d = _deezer(f"search/artist?limit=6&q={quote(q)}")
+    except Exception:  # noqa: BLE001
+        return S._json({"artistes": [], "erreur": "Deezer ne répond pas"})
+    return S._json({"artistes": [{"id": a["id"], "nom": a["name"], "fans": a.get("nb_fan"), "photo": a.get("picture_xl") or a.get("picture_big")}
+                                 for a in d.get("data") or []]})
+
+
+def regie_titres(request, jeton, ident):
+    _verifie_regie(jeton)
+    try:
+        a = _deezer(f"artist/{int(ident)}")
+        t = _deezer(f"artist/{int(ident)}/top?limit=10")
+    except Exception:  # noqa: BLE001
+        return S._json({"titres": [], "erreur": "Deezer ne répond pas"})
+    return S._json({"artiste": {"id": a.get("id"), "nom": a.get("name"), "fans": a.get("nb_fan"), "photo": a.get("picture_xl") or a.get("picture_big")},
+                    "titres": [{"titre": x["title"], "url": x["preview"], "duree": x.get("duration"), "rang": x.get("rank"),
+                                "pochette": (x.get("album") or {}).get("cover_big")} for x in t.get("data") or [] if x.get("preview")]})
