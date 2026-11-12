@@ -165,7 +165,7 @@ def regie(request, chemin):
         from django.shortcuts import redirect
         return redirect(f"/studio/{chemin}")
     nonce = secrets.token_urlsafe(18)
-    html = S._JINJA.get_template("live-regie.html").render(base=f"/studio/{chemin}", nonce=nonce, csrf=get_token(request),
+    html = S._JINJA.get_template("live-regie.html").render(api=f"/studio/{chemin}/live", nonce=nonce, csrf=get_token(request),
                                                           ecran=f"/live/{jeton_ecran()}/ecran")
     return S._reponse(HttpResponse(html), nonce)
 
@@ -175,6 +175,10 @@ def regie_etat(request, chemin):
     S._verifie(chemin)
     if not S._utilisateur(request):
         return S._json({"erreur": "verrouillé"}, 403)
+    return _maj_etat(request)
+
+
+def _maj_etat(request):
     e = {**etat_courant()}
     if request.method == "POST":
         m = S._corps(request)
@@ -223,4 +227,37 @@ def ecran_etat(request, jeton):
 
 def ecran_donnees(request, jeton):
     _verifie_jeton(jeton)
+    return S._json({**donnees(), "biblio": _lit(CLE_BIBLIO, {})})
+
+
+# ---------------------------------------------------------------- régie par lien secret (13/11/2026, demande du fondateur)
+# Sans empreinte ni mot de passe, pour qu'un assistant puisse tenir la régie : le lien (28 caractères aléatoires, déduits
+# du chemin secret du Studio) suffit. Le garder privé ; changer STUDIO_CHEMIN le révoque.
+
+def jeton_regie() -> str | None:
+    secret = S.chemin_secret()
+    return hmac.new(secret.encode(), b"regie-live", hashlib.sha256).hexdigest()[:28] if secret else None
+
+
+def _verifie_regie(jeton: str) -> None:
+    j = jeton_regie()
+    if not j or not secrets.compare_digest(jeton, j):
+        raise Http404
+
+
+def regie_lien(request, jeton):
+    _verifie_regie(jeton)
+    nonce = secrets.token_urlsafe(18)
+    html = S._JINJA.get_template("live-regie.html").render(api=f"/live/{jeton}/regie", nonce=nonce, csrf=get_token(request),
+                                                          ecran=f"/live/{jeton_ecran()}/ecran")
+    return S._reponse(HttpResponse(html), nonce)
+
+
+def regie_lien_etat(request, jeton):
+    _verifie_regie(jeton)
+    return _maj_etat(request)
+
+
+def regie_lien_donnees(request, jeton):
+    _verifie_regie(jeton)
     return S._json({**donnees(), "biblio": _lit(CLE_BIBLIO, {})})

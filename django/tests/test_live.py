@@ -47,6 +47,16 @@ def test_ecran_par_jeton_seulement():
         live.ecran(_req("get"), "0" * 28)
 
 
+def test_regie_par_lien_secret_sans_empreinte(base):
+    j = live.jeton_regie()
+    assert j and j != live.jeton_ecran()
+    assert live.regie_lien(_req("get"), j).status_code == 200
+    live.regie_lien_etat(_req("post", {"set": {"scene": "mur"}}), j)
+    assert base[live.CLE_ETAT]["scene"] == "mur"
+    with pytest.raises(Http404):
+        live.regie_lien_etat(_req("post", {"set": {"scene": "fin"}}), live.jeton_ecran())   # le lien de l'écran ne pilote rien
+
+
 def test_etat_partage_et_votes(monkeypatch, base):
     monkeypatch.setattr(studio, "_utilisateur", lambda r, verrou=True: {"id": 1, "role": "admin"})
     live.regie_etat(_req("post", {"set": {"scene": "versus", "inconnu": 1}}), CHEMIN)
