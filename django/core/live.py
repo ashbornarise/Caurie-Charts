@@ -33,6 +33,23 @@ ETAT_DEFAUT = {
     "enCours": None, "fx": None, "bandeau": "", "minuteur": 0, "carteExt": None,
     # régie v3 « télécommande » (13/11) : l'écran joue tout (clip avec son, son seul, YouTube) ; une seule régie a la main
     "media": None, "volume": 0.85, "paysListe": ["ci", "ng", "tg", "gh"], "maitre": None, "chat": [],
+    # v3.1 : la mascotte passe à l'écran entre les étapes (ce qui vient de se passer, ce qui arrive, anecdotes)
+    "mascotte": None,
+}
+
+# Anecdotes vérifiées (sources croisées le 12/11/2026, vidéos « Cauri raconte ») : la mascotte les raconte en direct.
+ANECDOTES = {
+    8: ["À 13 ans, Didi B tenait le premier rôle du film « Les Frères Kadogo », primé au Fespaco.",
+        "Didi B est le seul rappeur ivoirien à avoir rempli le stade Félix Houphouët-Boigny : plus de 30 000 places.",
+        "Avant sa carrière solo, Didi B a fondé le groupe Kiff No Beat en 2009, avec ses cousins.",
+        "Sur son album « Shogun in Lagos », Didi B invite 6 artistes nigérians, dont Davido et Phyno."],
+    5: ["« Himra », ce sont les lettres de son prénom, Rahim, dans le désordre.",
+        "En octobre 2025, Himra a remporté 5 trophées au Primud en une seule nuit, dont le Primud d'or.",
+        "Le 28 janvier 2026, Himra a rempli le Zénith de Paris.",
+        "Le 26 décembre, Himra joue au stade d'Ébimpé : plus de 60 000 places."],
+    711: ["Dans « Nyamien Son No Fall », Nyamien veut dire Dieu en baoulé.",
+          "Le clip de « 446 », Jeune Lion avec Freeze Corleone, dépasse 1,3 million de vues.",
+          "Jeune Lion est né à Marcory, à Abidjan, et mélange reggae, coupé-décalé et trap."],
 }
 _memo: dict = {}
 MAITRE_DELAI = 20   # secondes sans signe de vie avant qu'une autre régie puisse prendre la main sans forcer
@@ -139,7 +156,7 @@ def donnees() -> dict:
         JOIN chart_types t ON t.id = r.chart_type_id JOIN artists a ON a.id = e.artist_id JOIN tracks tr ON tr.id = e.track_id
         WHERE t.code = 'prime-wa' AND r.status = 'published' ORDER BY r.period_end DESC, e.position LIMIT 1""")
     n1wa = {**dict(wa), "photo": (par_id.get(wa["id"]) or {}).get("photo")} if wa else None
-    d = {"semaine": sem, "pays": pays, "artistes": artistes, "n1_afrique_ouest": n1wa}
+    d = {"semaine": sem, "pays": pays, "artistes": artistes, "n1_afrique_ouest": n1wa, "anecdotes": {str(k): v for k, v in ANECDOTES.items()}}
     try:
         db.run("""INSERT INTO live_cache (cle, valeur, expire) VALUES (?, ?, NOW() + interval '10 minutes')
                   ON CONFLICT (cle) DO UPDATE SET valeur = EXCLUDED.valeur, expire = EXCLUDED.expire""",
@@ -253,6 +270,7 @@ def ecran(request, jeton):
     r["Content-Security-Policy"] = (r["Content-Security-Policy"].replace("frame-ancestors 'none'", "frame-ancestors 'self'")
         .replace("script-src 'self'", "script-src 'self' https://www.youtube.com https://s.ytimg.com")
         .replace("default-src 'self';", "default-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com;"))
+    r["Referrer-Policy"] = "strict-origin-when-cross-origin"   # YouTube refuse de jouer un clip intégré sans l'origine (erreur 153)
     return r
 
 
@@ -345,6 +363,60 @@ def regie_titres(request, jeton, ident):
 
 
 # ---------------------------------------------------------------- YouTube : clips officiels des artistes hors classement
+def _yt_recherche(q: str, n: int = 6) -> list:
+    import urllib.error
+    import urllib.request
+    from urllib.parse import quote
+    from core import env
+    for cle in [env.get("YOUTUBE_API_KEY", ""), env.get("YOUTUBE_API_KEY_2", "")]:
+        if not cle:
+            continue
+        url = ("https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoSyndicated=true"
+               f"&maxResults={n}&q={quote(q)}&key={cle}")
+        try:
+            with urllib.request.urlopen(url, timeout=8) as r:
+                return json.loads(r.read()).get("items") or []
+        except urllib.error.HTTPError as e:
+            if e.code == 403:   # quota épuisé : seconde clé
+                continue
+            return []
+        except Exception:  # noqa: BLE001
+            return []
+    return []
+
+
+def regie_clip(request, jeton):
+    """Le clip à jouer pour un titre : le clip officiel (chaîne de l'artiste, VEVO, « official ») ; sinon une autre vidéo de
+    l'artiste, à flouter. Mémorisé 30 jours (une recherche YouTube coûte 100 unités de quota sur 10 000 par jour)."""
+    _verifie_regie(jeton)
+    import html as H
+    artiste = (request.GET.get("artiste") or "").strip()[:80]
+    titre = re.split(r"\s*[\(\[]\s*(feat|ft|with|extrait)", (request.GET.get("titre") or "").strip(), flags=re.I)[0][:80]
+    if not artiste:
+        return S._json({"clip": None})
+    cle = "yt-" + hashlib.sha1(_norm(artiste + "|" + titre).encode()).hexdigest()[:20]
+    deja = _lit(cle)
+    if deja is not None:
+        return S._json({"clip": deja})
+    na = _norm(artiste)
+    def officiel(x):
+        sn = x["snippet"]; ch, ti = _norm(sn["channelTitle"]), _norm(H.unescape(sn["title"]))
+        return na and (na in ch or ch.startswith(na[:6]) or "vevo" in ch) and (not titre or _norm(titre)[:8] in ti)
+    clip = None
+    if titre:
+        res = _yt_recherche(f"{artiste} {titre} official video")
+        o = next((x for x in res if officiel(x)), None) or next((x for x in res if na in _norm(H.unescape(x["snippet"]["title"])) and _norm(titre)[:8] in _norm(H.unescape(x["snippet"]["title"]))), None)
+        if o:
+            clip = {"id": o["id"]["videoId"], "titre": H.unescape(o["snippet"]["title"]), "officiel": officiel(o)}
+    if not clip:   # pas de clip pour ce titre : une vidéo de l'artiste, floutée à l'écran
+        res = _yt_recherche(f"{artiste} live", 5)
+        o = next((x for x in res if na in _norm(H.unescape(x["snippet"]["title"])) or na in _norm(x["snippet"]["channelTitle"])), None)
+        if o:
+            clip = {"id": o["id"]["videoId"], "titre": H.unescape(o["snippet"]["title"]), "officiel": False}
+    _ecrit(cle, clip or {}, jours=30)
+    return S._json({"clip": clip})
+
+
 def regie_youtube(request, jeton):
     """Recherche de clips intégrables (videoEmbeddable) : on évite d'afficher un clip refusé ou bloqué en direct."""
     _verifie_regie(jeton)
