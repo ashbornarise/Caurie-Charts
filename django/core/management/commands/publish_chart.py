@@ -150,7 +150,9 @@ class Command(BaseCommand):
             except Exception as exc:
                 out(f"Post officiel : {exc}")
             # 09/11/2026 : les partenaires média (Nec+Ultra…) reçoivent leur dossier dès la publication, sans passer par le site
-            if publies:
+            # 13/11/2026 : aussi quand une relance n'a plus rien à publier (tâche coupée à 90 min juste avant cet envoi) ;
+            # partenaires.envoyer ne renvoie pas une semaine déjà envoyée
+            if publies or db.value("SELECT 1 FROM chart_runs WHERE period_type = 'week' AND period_key = ? AND status = 'published' LIMIT 1", [week]):
                 from core.services import partenaires
                 try:
                     for ligne in partenaires.envoyer(week):
