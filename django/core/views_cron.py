@@ -57,6 +57,10 @@ def monde(request):
     if q not in ("matin", "soir", "flash"):
         return _reply("q = matin, soir ou flash", 400)
     if q == "flash":
+        try:
+            _publication_vendredi()
+        except Exception:  # noqa: BLE001 — le guet de Cauri Monde continue quoi qu'il arrive
+            pass
         from core.services.social import monde as M
         etat = M.etat_guet()   # fichier du Blob : la base dort (relue seulement s'il est périmé ou vieux de 3 h)
         if M.file_due(etat):   # un post Cauri Monde est arrivé à son heure : GitHub l'envoie (Buffer, Telegram)
