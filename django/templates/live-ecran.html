@@ -4,7 +4,7 @@
 <style>
 :root{--ciel:#8FD3FF;--violet:#7B5CFF;--or:#F5C14B;--fond:#0d0a1f;--blanc:#fff}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:1080px;height:1920px;overflow:hidden;background:transparent;color:var(--blanc);font-family:Montserrat,Arial,sans-serif}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#0d0a1f;color:var(--blanc);font-family:Montserrat,Arial,sans-serif}
 .scene{position:absolute;inset:0;display:none;z-index:2}.scene.on{display:block;animation:entre .5s ease-out}
 @keyframes entre{from{opacity:0;transform:scale(1.03)}to{opacity:1;transform:none}}
 .fond{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,#2b1f63 0%,var(--fond) 70%)}
@@ -130,8 +130,28 @@ body{transition:filter .6s}body.nb{filter:grayscale(1) contrast(1.2)}
 body.arcenciel{animation:hue 2s linear 2}@keyframes hue{to{filter:hue-rotate(360deg) saturate(1.6)}}
 body.pulse{animation:pulse .48s ease-in-out 10}@keyframes pulse{50%{transform:scale(1.03)}}
 body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:translate(-16px,6px);filter:hue-rotate(90deg) saturate(3)}33%{transform:translate(14px,-6px);filter:invert(.12)}66%{transform:translate(-6px,-10px);filter:hue-rotate(-90deg)}100%{transform:none;filter:none}}
+/* ===== plateau (live sans visage ni voix) : fond vivant, le chat en grand, « à suivre », messages qui tournent ===== */
+#base{position:absolute;inset:0;z-index:0;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#2b1f63 0%,#0d0a1f 70%)}
+#base i{position:absolute;border-radius:50%;filter:blur(110px);opacity:.5;animation:flotte 18s ease-in-out infinite alternate}
+#base i:nth-child(1){width:720px;height:720px;left:-220px;top:180px;background:#7B5CFF}
+#base i:nth-child(2){width:640px;height:640px;right:-240px;top:900px;background:#3fa9ff;animation-duration:23s;animation-delay:-6s}
+#base i:nth-child(3){width:520px;height:520px;left:280px;top:1380px;background:#F5C14B;opacity:.22;animation-duration:27s;animation-delay:-11s}
+@keyframes flotte{to{transform:translate(170px,-230px) scale(1.25)}}
+#base img{position:absolute;left:50%;top:46%;width:820px;margin-left:-410px;transform:translateY(-50%);opacity:.045}
+#plHero{transition:opacity .5s}
+#murChat{position:absolute;left:60px;right:60px;top:820px;height:790px;display:flex;flex-direction:column;gap:16px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(180deg,#000 75%,transparent);mask-image:linear-gradient(180deg,#000 75%,transparent)}
+.bulleC{background:rgba(255,255,255,.09);border-left:8px solid var(--violet);border-radius:24px;padding:16px 26px;flex:none}
+.bulleC b{display:block;font-weight:900;font-size:28px;color:var(--ciel)}.bulleC span{display:block;font-weight:800;font-size:42px;line-height:1.18;overflow-wrap:anywhere}
+.bulleC.cadeau{border-left-color:var(--or);background:rgba(245,193,75,.14)}.bulleC.cadeau b{color:var(--or)}
+.bulleC.neuve{animation:bulleIn .5s cubic-bezier(.2,1.4,.4,1)}@keyframes bulleIn{from{transform:translateX(-80px);opacity:0}}
+.videC{margin-top:120px;text-align:center;font-family:Anton,Impact;font-size:96px;line-height:1.05}.videC small{display:block;font-family:Montserrat,Arial;font-weight:800;font-size:38px;color:var(--ciel);margin-top:20px}
+#aSuivre{position:absolute;left:60px;right:60px;top:1630px;padding:18px 30px;display:flex;align-items:center;gap:24px;border-radius:30px}
+#aSuivre small{font-weight:900;font-size:26px;letter-spacing:4px;color:var(--or);flex:none}#aSuivre b{font-family:Anton,Impact;font-size:52px;line-height:1.05;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ticker{transition:opacity .4s}
+.direct{display:inline-flex;align-items:center;gap:10px;background:#e5384a;font-weight:900;font-size:26px;letter-spacing:3px;padding:10px 18px;border-radius:999px}.direct i{width:14px;height:14px;border-radius:50%;background:#fff;animation:clig 1s infinite}@keyframes clig{50%{opacity:.25}}
 </style></head><body>
-<video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
+<div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
 <audio id="sonPassage" src="/assets/live/sfx/balayage.mp3" preload="auto"></audio><div id="merci"></div><div id="topfans"></div><div id="roi"></div><div id="devineurs"></div><div id="objectif"></div><div id="repet">RÉPÉTITION · rien n'est à l'antenne</div><button id="activer">Cliquer ici pour activer le son</button>
 <div id="titreSon" style="opacity:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8FD3FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span></span></div>
 
@@ -147,9 +167,11 @@ body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:tran
 </section>
 
 <section class="scene" id="camera">
-  <div class="entete" style="top:40px;justify-content:flex-start;padding-left:40px"><img src="/assets/live/logo.png" alt=""><div class="pill">LA NUIT CAURI CHARTS</div></div>
-  <div class="flux" id="flux1"></div>
-  <div class="bande"><span>Classement officiel · <b id="sem1"></b></span><span>cauricharts.com</span></div>
+  <div class="entete" style="top:40px"><img src="/assets/live/logo.png" alt=""><div class="direct"><i></i>EN DIRECT</div></div>
+  <div class="centre" id="plHero" style="top:300px"><div style="font-weight:900;font-size:52px;letter-spacing:8px">LA NUIT</div><div class="anton" style="font-size:200px;color:var(--or);text-shadow:0 0 60px rgba(245,193,75,.4)">CAURI CHARTS</div></div>
+  <div id="murChat"></div>
+  <div id="aSuivre" class="verre"></div>
+  <div class="bande"><span id="ticker"></span><span>cauricharts.com</span></div>
 </section>
 
 <!-- ARTISTE : le clip en fond (plein écran), la fiche passe par-dessus quand la régie l'ouvre -->
@@ -327,6 +349,30 @@ function ambiance(type) {
 }
 const joueSfx = (nom) => { try { const a = new Audio("/assets/live/sfx/" + nom + ".mp3"); a.volume = .9; a.play().catch(() => {}); } catch (e) {} };
 
+// ---- le plateau : le chat en grand (c'est lui la vedette), ce qui arrive ensuite, des messages qui tournent
+const PROCHAIN = { attente: "Le décompte", rituel: "Le rituel du pays mystère", top3: "Le top 3, pays par pays", versus: "Le versus", mur: "Ton artiste ? Le mur des réclamations", finale: "Le grand final",
+  fin: "Le mot de la fin", blind: "Devine le titre", photo: "Qui est-ce ?", mot: "Le mot mystère", roue: "La roue Cauri", sondage: "Le sondage", dou: "D'où tu nous regardes ?" };
+let murCle = null;
+function plateau() {
+  const L = (E.dernier || []).filter((c) => c.user && !/^régie/.test(c.user)).slice(0, 6), cle = L.map((c) => c.user + c.texte).join("|");
+  if (cle !== murCle) { const neuf = murCle !== null && murCle !== ""; murCle = cle;
+    $("murChat").innerHTML = L.length ? L.map((c, i) => `<div class="bulleC ${/^envoie |^s'abonne/.test(c.texte) ? "cadeau" : ""} ${i === 0 && neuf ? "neuve" : ""}"><b>${esc(c.user)}</b><span>${esc(c.texte)}</span></div>`).join("")
+      : `<div class="videC">ÉCRIS DANS LE CHAT<small>ton artiste · ton pays · ton pronostic</small></div>`; }
+  const Ld = (E.deroule && E.deroule.length ? E.deroule : ["attente", "rituel", "top3", "versus", "mur", "finale", "fin"]).filter((x) => PROCHAIN[x]);
+  const nx = Ld[(+E.pos || 0) + 1] || Ld.find((x) => x !== "attente");
+  let txt = nx ? PROCHAIN[nx] : "Le classement officiel, chaque vendredi"; if (nx === "versus") txt = `Le versus ${E.versus.a} / ${E.versus.b}`;
+  $("aSuivre").innerHTML = `<small>À SUIVRE</small><b>${esc(txt)}</b>`;
+  const w = ["roi", "topfans", "devineurs", "objectif"].some((id) => $(id).style.display !== "none");
+  $("plHero").style.opacity = w ? 0 : 1;
+}
+let tickI = 0;
+function messagesTicker() {
+  if (!D) return []; const n1 = D.n1_afrique_ouest, sem = (D.semaine || "").split("-W")[1];
+  return [`Classement officiel · <b>semaine ${esc(sem)}</b>`, n1 ? `N°1 Afrique de l'Ouest : <b>${esc(n1.nom)}</b> · « ${esc(n1.titre)} »` : "", "Écris ton artiste : on affiche ses chiffres",
+    "Nouveau classement <b>chaque vendredi · 20 h GMT</b>", "Abonne-toi pour ne rien rater"].filter(Boolean);
+}
+setInterval(() => { const M = messagesTicker(); if (!M.length) return; const t = $("ticker"); t.style.opacity = 0;
+  setTimeout(() => { t.innerHTML = M[tickI++ % M.length]; t.style.opacity = 1; }, 400); }, 6000);
 let dernierCadeau = 0;
 function cadeaux() {
   const c = E.cadeau;
@@ -485,8 +531,7 @@ function intermede() {
 }
 function rendu() {
   document.querySelectorAll(".scene").forEach((s) => s.classList.toggle("on", s.id === E.scene));
-  $("sem1").textContent = "semaine " + (D.semaine || "").split("-W")[1];
-  $("flux1").innerHTML = (E.dernier || []).slice(0, 4).map((c) => `<div><b>${esc(c.user)}</b> ${esc(c.texte)}</div>`).join("");
+  plateau();
   if (E.gong !== dernierGong) { const neuf = dernierGong !== 0 || Date.now() - E.gong < 4000; dernierGong = E.gong; if (E.gong && neuf) { const g = $("sonGong"); g.currentTime = 0; g.play().catch(() => {}); $("gong").animate([{ transform: "scale(1.4)" }, { transform: "scale(1)" }], 600); } }
   const pm = D.pays.find((p) => p.code === E.mystere);
   $("myst").innerHTML = pm ? `<img src="/assets/img/flags/${pm.code}.svg" style="height:120px;border-radius:10px"><div class="anton" style="font-size:110px;margin-top:10px">${esc(pm.nom)}</div>`
@@ -526,7 +571,8 @@ function rendu() {
   else if (D.n1_afrique_ouest) { const w = D.n1_afrique_ouest; $("finTitre").textContent = "N°1 DE TOUTE L'AFRIQUE DE L'OUEST";
     $("finHaut").innerHTML = `<div style="font-weight:900;font-size:50px;letter-spacing:4px">LE N°1 DE</div><div class="anton" style="font-size:120px;color:var(--or)">L'AFRIQUE DE L'OUEST</div>`;
     $("finCarte").innerHTML = carte({ ...w, pos: 1, prec: 1 }, 600, 680, true) + `<div style="font-weight:800;font-size:40px;margin-top:10px;color:var(--ciel)">« ${esc(w.titre)} »</div>`; }
-  place(); platine(); effets(); intermede(); cadeaux(); widgets(); jeuRendu(); tirage();
+  place(); platine(); effets(); intermede(); cadeaux(); widgets(); jeuRendu(); tirage(); plateau();
+  if (!$("ticker").innerHTML) $("ticker").innerHTML = messagesTicker()[0] || "";
 }
 
 // ---- effets visuels déclenchés par la régie

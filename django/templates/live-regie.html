@@ -480,7 +480,7 @@ function demande(t, v, ph, ok, choix) {
 // ===================================================== ce qui est à l'écran : chaque élément se retire d'un clic
 function calques() {
   const c = [];
-  const nomSc = { jeu: "Jeu : " + ((ETAPES[(E.jeu || {}).type] || {}).nom || ""), attente: "Attente", camera: "Caméra seule", artiste: "Clip plein écran", rituel: "Rituel", top3: "Top 3 " + ((D.pays[E.pays] || {}).nom || ""), versus: "Versus", mur: "Ton artiste ?", finale: "Le final", fin: "Fin" }[E.scene] || E.scene;
+  const nomSc = { jeu: "Jeu : " + ((ETAPES[(E.jeu || {}).type] || {}).nom || ""), attente: "Attente", camera: "Plateau", artiste: "Clip plein écran", rituel: "Rituel", top3: "Top 3 " + ((D.pays[E.pays] || {}).nom || ""), versus: "Versus", mur: "Ton artiste ?", finale: "Le final", fin: "Fin" }[E.scene] || E.scene;
   c.push({ n: nomSc, x: E.scene === "camera" ? null : () => set({ scene: "camera", fiche: false }) });
   if (E.media) c.push({ n: "♪ " + [E.media.titre, E.media.artiste].filter(Boolean).join(" · "), x: () => set({ media: null }) });
   if (E.fiche && (E.carte || E.carteExt)) c.push({ n: "Fiche " + ((D.artistes.find((a) => a.id === E.carte) || E.carteExt || {}).nom || ""), x: () => set({ fiche: false, flou: false }) });
@@ -606,7 +606,7 @@ function rendu() {
   const Ld = deroule(), ia = posActuelle();
   html($("etapes"), Ld.map((id, i) => { const e = ETAPES[id]; return `<div class="etape ${i === ia ? "on" : ""} ${e.jeu ? "jeu" : ""}" data-etape="${id}" data-i="${i}"><div class="n">${i + 1}</div><div class="et">${esc(e.nom)}<small>${esc(e.sous())}</small></div>`
     + `<span class="edt"><b data-monte="${i}" title="Monter">↑</b><b data-descend="${i}" title="Descendre">↓</b><b data-retire="${i}" title="Retirer du déroulé">✕</b></span></div>`; }).join("")
-    + `<div class="etape libre ${E.scene === "camera" ? "on" : ""}" data-etape="camera"><div class="n">◉</div><div class="et">Caméra seule<small>toi en grand, à tout moment</small></div></div>`);
+    + `<div class="etape libre ${E.scene === "camera" ? "on" : ""}" data-etape="camera"><div class="n">◉</div><div class="et">Plateau<small>le chat en grand, ce qui arrive ensuite</small></div></div>`);
   const a = actionSuivante(); $("suivant").innerHTML = `SUIVANT ▶ ${esc(a.t)}${a.s ? `<small>${esc(a.s)}</small>` : ""}`; $("suivant").disabled = !a.f;
   calques();
   const m = E.media; $("lecteur").style.display = m ? "flex" : "none";
