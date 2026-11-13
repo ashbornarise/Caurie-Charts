@@ -250,6 +250,9 @@ body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:tran
 
 <script nonce="{{ nonce }}">
 const BASE = "{{ base }}", MODE = "{{ mode }}", Q = MODE ? "?mode=" + MODE : "";
+// aperçu de la régie (?apercu=1) : muet, YouTube en petite qualité, ne signale rien à la régie (seul le vrai écran compte)
+const APERCU = new URLSearchParams(location.search).has("apercu");
+if (APERCU) { const jouer = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; return jouer.call(this); }; }
 let D, E = {}, dernierGong = 0, cleSon = null, cleClip = null, actif = "sonA";
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => n == null ? "—" : n >= 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " M" : n >= 1e3 ? Math.round(n / 1e3) + " k" : String(n);
@@ -269,7 +272,7 @@ const media = (cle) => { if (!cle) return null; for (const [aid, b] of Object.en
 // ---- platine : fondu enchaîné entre deux lecteurs, volume réglable
 function fondu(el, vers, ms, fin) { const de = el.volume, t0 = performance.now(); const pas = (t) => { const k = Math.min(1, (t - t0) / ms); el.volume = Math.max(0, Math.min(1, de + (vers - de) * k)); k < 1 ? requestAnimationFrame(pas) : fin && fin(); }; requestAnimationFrame(pas); }
 let cleMedia = "", yt = null, ytPret = false, ytAttente = null, essai = 0, enRepli = false;
-function statut(etat, detail) { try { fetch(BASE + "/statut", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: MODE, media: cleMedia, etat, detail }) }); } catch (e) {} }
+function statut(etat, detail) { if (APERCU) return; try { fetch(BASE + "/statut", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: MODE, media: cleMedia, etat, detail }) }); } catch (e) {} }
 function candidatSuivant() {
   const m = E.media; if (!m) return; const liste = m.liste || (m.yt ? [{ id: m.yt, officiel: !m.flou }] : []);
   essai++;
@@ -285,15 +288,15 @@ function repli() {   // aucune vidéo YouTube autorisée : notre extrait, ou l'e
   platine.flou = true; majFlou(); statut("repli", r.video ? "notre extrait" : "extrait audio");
 }
 function majFlou() { const m = E.media; const f = !!(E.flou || platine.flou || (m && m.flou) || (E.fiche && (E.carte || E.carteExt))); $("clip").classList.toggle("flou", f); $("yt").classList.toggle("flou", f); }
-function bloque() { $("activer").style.display = "block"; }
+function bloque() { if (!APERCU) $("activer").style.display = "block"; }
 $("activer") && ($("activer").onclick = () => { $("activer").style.display = "none"; cleMedia = ""; actx && actx.resume(); platine(); });
 // qualité : on demande la 4K, sinon la 1080p (YouTube garde le dernier mot, mais notre lecteur fait 3414×1920 px)
-function hd(p) { try { const q = p.getAvailableQualityLevels ? p.getAvailableQualityLevels() : []; const v = ["hd2160", "hd1440", "hd1080"].find((k) => q.includes(k)) || "hd1080";
+function hd(p) { if (APERCU) { try { p.mute(); p.setPlaybackQuality("small"); } catch (e) {} return; } try { const q = p.getAvailableQualityLevels ? p.getAvailableQualityLevels() : []; const v = ["hd2160", "hd1440", "hd1080"].find((k) => q.includes(k)) || "hd1080";
   if (p.getPlaybackQuality && p.getPlaybackQuality() !== v) p.setPlaybackQuality(v); } catch (e) {} }
 function chargeYT(id, debut) {
   if (!window.YT) { if (!document.getElementById("ytapi")) { const sc = document.createElement("script"); sc.id = "ytapi"; sc.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(sc); }
     ytAttente = [id, debut]; window.onYouTubeIframeAPIReady = () => { ytPret = true; const [i, d] = ytAttente; chargeYT(i, d); }; return; }
-  if (!yt) yt = new YT.Player("ytp", { videoId: id, playerVars: { autoplay: 1, controls: 0, start: debut || 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, origin: location.origin, enablejsapi: 1, vq: "hd2160" },
+  if (!yt) yt = new YT.Player("ytp", { videoId: id, playerVars: { autoplay: 1, controls: 0, start: debut || 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, origin: location.origin, enablejsapi: 1, vq: APERCU ? "small" : "hd2160" },
     events: { onReady: (ev) => { hd(ev.target); ev.target.setVolume(Math.round((E.volume ?? .85) * 100)); ev.target.playVideo(); }, onError: (ev) => { window.ytErreur = ev.data; candidatSuivant(); },
                onStateChange: (ev) => { if (ev.data === 3 || ev.data === -1) hd(ev.target); if (ev.data === 1) { hd(ev.target); $("yt").classList.add("on"); statut("lecture", "YouTube"); } } } });
   else yt.loadVideoById({ videoId: id, startSeconds: debut || 0, suggestedQuality: "hd2160" });
@@ -327,6 +330,7 @@ function platine() {
 // sons d'ambiance joués par l'écran (le son du live sort d'ici)
 let actx = null;
 function ambiance(type) {
+  if (APERCU) return;
   try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
   const t = actx.currentTime, out = actx.createGain(); out.gain.value = 0.9; out.connect(actx.destination);
   const bruit = (d) => { const b = actx.createBuffer(1, actx.sampleRate * d, actx.sampleRate), x = b.getChannelData(0); for (let i = 0; i < x.length; i++) x[i] = Math.random() * 2 - 1; const s = actx.createBufferSource(); s.buffer = b; return s; };
@@ -347,7 +351,7 @@ function ambiance(type) {
     const s = bruit(.05), g2 = actx.createGain(); g2.gain.value = .35; s.connect(g2); g2.connect(out); s.start(t); }
   if (type === "tic") { const o = actx.createOscillator(), g = actx.createGain(); o.type = "triangle"; o.frequency.value = 1500; g.gain.setValueAtTime(.25, t); g.gain.exponentialRampToValueAtTime(.001, t + .05); o.connect(g); g.connect(out); o.start(t); o.stop(t + .06); }
 }
-const joueSfx = (nom) => { try { const a = new Audio("/assets/live/sfx/" + nom + ".mp3"); a.volume = .9; a.play().catch(() => {}); } catch (e) {} };
+const joueSfx = (nom) => { if (APERCU) return; try { const a = new Audio("/assets/live/sfx/" + nom + ".mp3"); a.volume = .9; a.play().catch(() => {}); } catch (e) {} };
 
 // ---- le plateau : le chat en grand (c'est lui la vedette), ce qui arrive ensuite, des messages qui tournent
 const PROCHAIN = { attente: "Le décompte", rituel: "Le rituel du pays mystère", top3: "Le top 3, pays par pays", versus: "Le versus", mur: "Ton artiste ? Le mur des réclamations", finale: "Le grand final",

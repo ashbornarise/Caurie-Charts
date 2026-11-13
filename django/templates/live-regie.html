@@ -128,7 +128,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
     <button class="v" id="suivant" data-tour="suivant">SUIVANT ▶</button>
   </div>
   <div class="centre">
-    <div class="lbl" id="lblEcran">CE QUE VOIENT LES SPECTATEURS</div>
+    <div class="lbl" style="display:flex;gap:10px;align-items:center"><span id="lblEcran">CE QUE VOIENT LES SPECTATEURS</span><button id="apercuBtn" style="padding:4px 10px;font-size:11px" title="L'aperçu est muet et léger ; le couper libère la mémoire du PC">Couper l'aperçu</button></div>
     <div id="tel"><div class="coque" data-tour="ecran"><div class="ecran" id="cadre"><iframe id="apercu" title="Écran du live" scrolling="no"></iframe></div></div></div>
     <div class="calques" id="calques"></div>
     <div class="petit" id="stats" style="text-align:center"></div>
@@ -635,7 +635,12 @@ setInterval(() => { const m = E.media; if (m && m.t) $("lecTemps").textContent =
 // ===================================================== écran : aperçu à la bonne taille, mode répétition, lien, chrono
 function ajuste() { const c = $("cadre"); const k = c.clientWidth / 1080; $("apercu").style.transform = `scale(${k})`; }
 new ResizeObserver(ajuste).observe($("cadre"));
-function chargeApercu() { $("apercu").src = ECRAN + (MODE ? "?mode=test" : ""); }
+let apercuOff = memo("cauri-apercu") === "off";
+function chargeApercu() {   // l'aperçu est muet et léger (?apercu=1) ; coupé, il ne consomme plus rien
+  $("apercu").src = apercuOff ? "about:blank" : ECRAN + "?apercu=1" + (MODE ? "&mode=test" : "");
+  $("apercuBtn").textContent = apercuOff ? "Rallumer l'aperçu" : "Couper l'aperçu"; $("cadre").style.background = apercuOff ? "#17142b" : "#000";
+}
+$("apercuBtn").onclick = () => { apercuOff = !apercuOff; memo("cauri-apercu", apercuOff ? "off" : "on"); chargeApercu(); notif(apercuOff ? "Aperçu coupé : regarde l'écran dans LIVE Studio" : "Aperçu rallumé (muet)"); };
 $("repetBtn").onclick = () => { MODE = MODE ? "" : "test"; try { sessionStorage.setItem("cauri-mode", MODE); } catch (e) {} chargeApercu(); notif(MODE ? "Répétition : tu t'entraînes sur un écran de test" : "Retour à l'antenne"); };
 $("copier").onclick = () => { const u = location.origin + ECRAN; navigator.clipboard?.writeText(u).then(() => notif("Lien de l'écran copié : à coller dans LIVE Studio")).catch(() => notif(u)); };
 $("modeDj").href = API + "/dj";
