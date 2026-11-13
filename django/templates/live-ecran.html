@@ -36,15 +36,23 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:transparent;colo
 #clip.on{opacity:1}
 #yt{position:absolute;inset:0;z-index:1;overflow:hidden;opacity:0;transition:opacity .6s,filter .7s,transform .7s;pointer-events:none}#yt.on{opacity:1}#yt.flou{filter:blur(22px) brightness(.55);transform:scale(1.08)}
 #yt iframe{position:absolute;top:0;left:50%;height:1920px;width:3414px;margin-left:-1707px;border:0}
-#interlude{position:absolute;left:0;right:0;bottom:0;height:1150px;z-index:26;pointer-events:none;opacity:0;transition:opacity .4s;background:linear-gradient(0deg,rgba(8,6,20,.85) 0%,rgba(8,6,20,.55) 45%,rgba(8,6,20,0) 100%)}
+/* la mascotte surgit du haut, coupée par le bord, penchée (façon vidéos « Science Trash »), puis s'efface en fondu */
+#interlude{position:absolute;left:0;right:0;top:0;height:640px;z-index:26;pointer-events:none;opacity:0;transition:opacity .45s}
 #interlude.on{opacity:1}
-#intImg{position:absolute;left:-40px;bottom:-20px;height:900px;transform:translateX(-120%) rotate(-6deg);transition:transform .7s cubic-bezier(.2,1.3,.4,1);filter:drop-shadow(0 30px 40px rgba(0,0,0,.55))}
-#interlude.on #intImg{transform:none}
-.intBulle{position:absolute;left:330px;right:40px;bottom:520px;background:#fff;color:#14102a;border-radius:44px;padding:40px 44px;box-shadow:0 30px 70px rgba(0,0,0,.45);transform:scale(.6) translateY(80px);opacity:0;transition:all .5s cubic-bezier(.2,1.4,.4,1) .25s}
-.intBulle::before{content:"";position:absolute;left:-26px;bottom:60px;border:26px solid transparent;border-right-color:#fff;border-left:0}
+#intImg{position:absolute;left:20px;top:-230px;height:600px;transform:translateY(-330px) rotate(196deg);transition:transform .6s cubic-bezier(.2,1.5,.4,1);filter:drop-shadow(0 20px 26px rgba(0,0,0,.5))}
+#interlude.on #intImg{transform:translateY(0) rotate(196deg)}
+.intBulle{position:absolute;left:290px;right:40px;top:90px;background:#fff;color:#14102a;border-radius:30px;padding:20px 26px;box-shadow:0 20px 50px rgba(0,0,0,.4);transform:scale(.5);transform-origin:0 0;opacity:0;transition:all .4s cubic-bezier(.2,1.5,.4,1) .2s}
+.intBulle::before{content:"";position:absolute;left:-20px;top:60px;border:20px solid transparent;border-right-color:#fff;border-left:0}
 #interlude.on .intBulle{transform:none;opacity:1}
-.intBulle b{display:block;font-family:Anton,Impact;font-size:74px;line-height:1.02;color:#6c4bff;margin-bottom:14px}
-.intBulle span{display:block;font-weight:800;font-size:44px;line-height:1.2}
+.intBulle b{display:block;font-family:Anton,Impact;font-size:50px;line-height:1.02;color:#6c4bff;margin-bottom:6px}
+.intBulle span{display:block;font-weight:800;font-size:32px;line-height:1.2}
+#merci{position:absolute;right:30px;bottom:150px;z-index:24;display:flex;flex-direction:column;gap:12px;align-items:flex-end}
+.merci{background:linear-gradient(90deg,#F5C14B,#ffde85);color:#2a1e00;font-weight:900;font-size:34px;padding:16px 26px;border-radius:999px;box-shadow:0 14px 40px rgba(0,0,0,.4);animation:merciIn .5s cubic-bezier(.2,1.4,.4,1),merciOut .5s ease-in 4.5s forwards}
+.merci small{font-weight:700;opacity:.8;margin-left:8px}
+@keyframes merciIn{from{transform:translateX(120%)}}@keyframes merciOut{to{transform:translateX(130%);opacity:0}}
+#topfans{position:absolute;right:30px;top:160px;z-index:6;width:330px;display:none;background:rgba(13,10,31,.72);border:2px solid rgba(245,193,75,.6);border-radius:26px;padding:16px 20px}
+#topfans b{display:block;font-family:Anton;font-size:34px;color:#F5C14B;margin-bottom:6px;letter-spacing:1px}
+#topfans div{display:flex;justify-content:space-between;font-weight:800;font-size:24px;padding:4px 0}#topfans span{opacity:.8}
 #repet{position:absolute;top:14px;right:14px;z-index:30;background:#e5384a;color:#fff;font-weight:900;font-size:26px;padding:8px 16px;border-radius:10px;display:none}
 #activer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;font:900 40px Montserrat,Arial;padding:30px 40px;border-radius:24px;border:0;background:#F5C14B;color:#14102a;display:none;cursor:pointer}#clip.flou{filter:blur(22px) brightness(.55);transform:scale(1.08)}
 #voileClip{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(13,10,31,.55) 0%,rgba(13,10,31,0) 25%,rgba(13,10,31,0) 60%,rgba(13,10,31,.85) 100%);opacity:0;transition:opacity .6s}
@@ -65,7 +73,7 @@ body.secousse{animation:secousse .5s}@keyframes secousse{10%,50%,90%{transform:t
 body.zoom{animation:zoomc .6s cubic-bezier(.2,1.6,.4,1)}@keyframes zoomc{30%{transform:scale(1.12)}}
 </style></head><body>
 <video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
-<audio id="sonPassage" src="/assets/live/sfx/balayage.mp3" preload="auto"></audio><div id="repet">RÉPÉTITION · rien n'est à l'antenne</div><button id="activer">Cliquer ici pour activer le son</button>
+<audio id="sonPassage" src="/assets/live/sfx/balayage.mp3" preload="auto"></audio><div id="merci"></div><div id="topfans"></div><div id="repet">RÉPÉTITION · rien n'est à l'antenne</div><button id="activer">Cliquer ici pour activer le son</button>
 <div id="titreSon" style="opacity:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8FD3FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span></span></div>
 
 <section class="scene" id="attente"><div class="fond"></div>
@@ -233,6 +241,17 @@ function ambiance(type) {
   if (type === "roulement") { const s = bruit(10.6), f = actx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1800; const g = actx.createGain(); s.connect(f); f.connect(g); g.connect(out);
     for (let i = 0; i < 230; i++) { const tt = t + i * .045; g.gain.setValueAtTime(.1 + i / 230 * .45, tt); g.gain.exponentialRampToValueAtTime(.02, tt + .04); } g.gain.setValueAtTime(.9, t + 10.3); g.gain.exponentialRampToValueAtTime(.001, t + 10.6); s.start(t); }
 }
+let dernierCadeau = 0;
+function cadeaux() {
+  const c = E.cadeau;
+  if (c && c.t !== dernierCadeau) { const neuf = dernierCadeau !== 0 || Date.now() - c.t < 8000; dernierCadeau = c.t;
+    if (neuf) { const d = document.createElement("div"); d.className = "merci"; d.innerHTML = `Merci ${esc(c.nom)} !<small>${c.n} × ${esc(c.cadeau)}</small>`; $("merci").prepend(d); setTimeout(() => d.remove(), 5200);
+      while ($("merci").children.length > 3) $("merci").lastChild.remove(); } }
+  const top = Object.values(E.donateurs || {}).sort((a, b) => b.diamants - a.diamants).slice(0, 3);
+  const voir = E.topFans !== false && top.length && ["camera", "artiste"].includes(E.scene);
+  $("topfans").style.display = voir ? "block" : "none";
+  if (voir) $("topfans").innerHTML = "<b>TOP FANS</b>" + top.map((d, i) => `<div>${i + 1}. ${esc(d.nom)} <span>${d.diamants}</span></div>`).join("");
+}
 let dernierInter = 0, minuteurInter = null;
 function intermede() {
   const m = E.mascotte; if (!m || m.t === dernierInter) return;
@@ -240,7 +259,7 @@ function intermede() {
   $("intImg").src = "/assets/live/" + (m.pose || "m2-presente") + ".png"; $("intTitre").textContent = m.titre || ""; $("intTexte").textContent = m.texte || "";
   const el = $("interlude"); el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
   const s = $("sonPassage"); s.currentTime = 0; s.volume = .8; s.play().catch(() => {});
-  clearTimeout(minuteurInter); minuteurInter = setTimeout(() => el.classList.remove("on"), Math.max(4000, Math.min(14000, m.duree || 7000)));
+  clearTimeout(minuteurInter); minuteurInter = setTimeout(() => el.classList.remove("on"), Math.max(3000, Math.min(5000, (m.duree || 4000) * .6)));   // 3 à 5 s, puis fondu
 }
 function rendu() {
   document.querySelectorAll(".scene").forEach((s) => s.classList.toggle("on", s.id === E.scene));
@@ -285,23 +304,23 @@ function rendu() {
   else if (D.n1_afrique_ouest) { const w = D.n1_afrique_ouest; $("finTitre").textContent = "N°1 DE TOUTE L'AFRIQUE DE L'OUEST";
     $("finHaut").innerHTML = `<div style="font-weight:900;font-size:50px;letter-spacing:4px">LE N°1 DE</div><div class="anton" style="font-size:120px;color:var(--or)">L'AFRIQUE DE L'OUEST</div>`;
     $("finCarte").innerHTML = carte({ ...w, pos: 1, prec: 1 }, 600, 680, true) + `<div style="font-weight:800;font-size:40px;margin-top:10px;color:var(--ciel)">« ${esc(w.titre)} »</div>`; }
-  platine(); effets(); intermede();
+  platine(); effets(); intermede(); cadeaux();
 }
 
 // ---- effets visuels déclenchés par la régie
 const fx = { parts: [], t: 0 };
 function particules(type) {
   const n = type === "confettis" ? 260 : type === "coeurs" ? 70 : 55, cols = ["#F5C14B", "#7B5CFF", "#8FD3FF", "#ff4d5e", "#2ee59d", "#ffffff"];
-  for (let i = 0; i < n; i++) fx.parts.push({ type, x: type === "confettis" ? 540 + (Math.random() - .5) * 200 : Math.random() * 1080, y: type === "confettis" ? 1100 : -60 - Math.random() * 900,
-    vx: type === "confettis" ? (Math.random() - .5) * 34 : (Math.random() - .5) * 2, vy: type === "confettis" ? -18 - Math.random() * 26 : 3 + Math.random() * 5,
+  for (let i = 0; i < n; i++) fx.parts.push({ type, x: type === "confettis" ? 540 + (Math.random() - .5) * 200 : Math.random() * 1080, y: type === "confettis" ? 1100 : -60 - Math.random() * 380,
+    vx: type === "confettis" ? (Math.random() - .5) * 34 : (Math.random() - .5) * 3, vy: type === "confettis" ? -18 - Math.random() * 26 : 14 + Math.random() * 12,
     r: Math.random() * 6.28, vr: (Math.random() - .5) * .3, s: type === "cauris" ? 38 + Math.random() * 26 : type === "coeurs" ? 30 + Math.random() * 30 : 10 + Math.random() * 12, c: cols[i % cols.length], vie: 0 });
 }
 function dessineFx() {
   const c = $("fxc"), x = c.getContext("2d"); x.clearRect(0, 0, 1080, 1920);
-  fx.parts = fx.parts.filter((p) => p.y < 2000 && p.vie < 600);
+  fx.parts = fx.parts.filter((p) => p.y < 2000 && p.vie < 150);   // 2,5 s au plus
   for (const p of fx.parts) {
-    p.vie++; p.x += p.vx; p.y += p.vy; p.r += p.vr; if (p.type === "confettis") { p.vy += .7; p.vx *= .985; } else p.x += Math.sin((p.vie + p.s) / 20) * 1.5;
-    x.save(); x.translate(p.x, p.y); x.rotate(p.r);
+    p.vie++; p.x += p.vx; p.y += p.vy; p.r += p.vr; if (p.type === "confettis") { p.vy += .7; p.vx *= .985; } else { p.vy += .6; p.x += Math.sin((p.vie + p.s) / 12) * 1.2; }
+    x.save(); x.globalAlpha = Math.max(0, Math.min(1, (150 - p.vie) / 35)); x.translate(p.x, p.y); x.rotate(p.r);
     if (p.type === "confettis") { x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); }
     else if (p.type === "cauris") { // coquillage cauri vu de dessous : dôme nacré, fente centrale bordée de petites dents
       const L = p.s, W = p.s * .72;

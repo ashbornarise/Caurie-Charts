@@ -35,6 +35,8 @@ ETAT_DEFAUT = {
     "media": None, "volume": 0.85, "paysListe": ["ci", "ng", "tg", "gh"], "maitre": None, "chat": [],
     # v3.1 : la mascotte passe à l'écran entre les étapes (ce qui vient de se passer, ce qui arrive, anecdotes)
     "mascotte": None, "lecture": None,
+    # chat TikTok (connecteur du PC) : cadeaux, classement des donateurs, spectateurs, « j'aime », abonnés
+    "donateurs": {}, "cadeau": None, "likes": 0, "spectateurs": None, "pic": 0, "abonnes": 0, "reglesCadeaux": True, "topFans": True,
 }
 
 # Anecdotes vérifiées (sources croisées le 12/11/2026, vidéos « Cauri raconte ») : la mascotte les raconte en direct.
@@ -450,6 +452,32 @@ def regie_youtube(request, jeton):
 from django.views.decorators.csrf import csrf_exempt  # noqa: E402
 
 
+def _cadeau(e: dict, g: dict) -> None:
+    """Un cadeau : classement des donateurs, remerciement à l'écran et, si les règles sont actives, un effet selon sa
+    valeur (espacé pour ne pas saturer l'écran : petits effets toutes les 8 s au plus, mascotte toutes les 20 s)."""
+    user, nom = str(g.get("user") or "?")[:30], str(g.get("nom") or g.get("user") or "?")[:40]
+    d, n, cad = int(g.get("diamants") or 1), int(g.get("n") or 1), str(g.get("cadeau") or "cadeau")[:30]
+    don = e.setdefault("donateurs", {})
+    don[user] = {"nom": nom, "diamants": int((don.get(user) or {}).get("diamants") or 0) + d}
+    if len(don) > 300:   # on garde les 300 plus généreux
+        e["donateurs"] = dict(sorted(don.items(), key=lambda kv: -kv[1]["diamants"])[:300])
+    now = int(time.time() * 1000)
+    e["cadeau"] = {"user": user, "nom": nom, "cadeau": cad, "n": n, "diamants": d, "t": now}
+    e["dernier"] = ([{"user": user, "texte": f"envoie {n} × {cad}"}] + e.get("dernier", []))[:6]
+    if not e.get("reglesCadeaux", True):
+        return
+    dernier_fx, dernier_masc = int(e.get("fxAuto") or 0), int(e.get("mascAuto") or 0)
+    if d >= 500:
+        e["gong"] = now; e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now
+        e["mascotte"] = {"titre": f"MERCI {nom.upper()} !", "texte": f"{n} × {cad} : tu fais trembler la Nuit Cauri Charts !", "pose": "m4-appel", "duree": 8000, "t": now}; e["mascAuto"] = now
+    elif d >= 100 and now - dernier_fx > 8000:
+        e["fx"] = {"type": "cauris", "t": now}; e["fxAuto"] = now
+        if now - dernier_masc > 20000:
+            e["mascotte"] = {"titre": f"Merci {nom} !", "texte": f"{n} × {cad}, quelle générosité !", "pose": "m4-appel", "duree": 6000, "t": now}; e["mascAuto"] = now
+    elif d >= 5 and now - dernier_fx > 8000:
+        e["fx"] = {"type": "coeurs", "t": now}; e["fxAuto"] = now
+
+
 @csrf_exempt
 def regie_commentaires(request, jeton):
     """Le connecteur du PC (tiktok-live-connector) envoie les commentaires par paquets : {liste: [{user, texte}], mode}."""
@@ -461,6 +489,14 @@ def regie_commentaires(request, jeton):
     e = {**etat_courant(mode)}
     for c in (m.get("liste") or [])[:200]:
         _commentaire(e, str(c.get("user") or "?")[:30], str(c.get("texte") or "")[:200])
+    for g in (m.get("cadeaux") or [])[:100]:
+        _cadeau(e, g)
+    for u in (m.get("abonnes") or [])[:100]:
+        e["abonnes"] = int(e.get("abonnes") or 0) + 1
+        e["dernier"] = ([{"user": str(u)[:30], "texte": "s'abonne !"}] + e.get("dernier", []))[:6]
+    e["likes"] = int(e.get("likes") or 0) + int(m.get("likes") or 0)
+    if m.get("spectateurs") is not None:
+        e["spectateurs"] = int(m["spectateurs"]); e["pic"] = max(int(e.get("pic") or 0), e["spectateurs"])
     _ecrit(_cle(mode), e); _memo[mode] = (time.time(), e)
     return S._json({"ok": True})
 

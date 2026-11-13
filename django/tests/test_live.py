@@ -95,3 +95,17 @@ def test_repetition_ne_touche_pas_l_antenne(base):
     r = _req("post", {"set": {"scene": "versus"}}); r.GET = r.GET.copy(); r.GET["mode"] = "test"
     live.regie_lien_etat(r, j)
     assert base[live.CLE_ETAT + "-test"]["scene"] == "versus" and live.CLE_ETAT not in base
+
+
+def test_cadeaux_classement_et_regles(base):
+    j = live.jeton_regie()
+    def envoi(corps):
+        live._memo.clear(); return live.regie_commentaires(RF.post("/", data=json.dumps(corps), content_type="application/json"), j)
+    envoi({"cadeaux": [{"user": "ama", "nom": "Ama", "cadeau": "Rose", "n": 3, "diamants": 3}], "spectateurs": 120, "likes": 40})
+    e = base[live.CLE_ETAT]
+    assert e["donateurs"]["ama"]["diamants"] == 3 and e["spectateurs"] == 120 and e["likes"] == 40 and not e.get("fx")   # petit cadeau : merci seulement
+    envoi({"cadeaux": [{"user": "kofi", "nom": "Kofi", "cadeau": "Lion", "n": 1, "diamants": 29999}], "abonnes": ["x"]})
+    e = base[live.CLE_ETAT]
+    assert e["gong"] and e["fx"]["type"] == "confettis" and "KOFI" in e["mascotte"]["titre"] and e["abonnes"] == 1
+    envoi({"set": {}, "cadeaux": [{"user": "ama", "cadeau": "Rose", "n": 1, "diamants": 1}]})
+    assert base[live.CLE_ETAT]["donateurs"]["ama"]["diamants"] == 4
