@@ -14,6 +14,7 @@ import re
 import secrets
 import time
 import unicodedata
+from contextlib import contextmanager
 
 from django.http import Http404, HttpResponse
 from django.middleware.csrf import get_token
@@ -37,7 +38,27 @@ ETAT_DEFAUT = {
     "mascotte": None, "lecture": None,
     # chat TikTok (connecteur du PC) : cadeaux, classement des donateurs, spectateurs, « j'aime », abonnés
     "donateurs": {}, "cadeau": None, "likes": 0, "spectateurs": None, "pic": 0, "abonnes": 0, "reglesCadeaux": True, "topFans": True,
+    # jeux et studio (13/11) : devine le titre, qui est-ce, mot mystère, roue, sondage, « d'où tu nous regardes », tirage au sort,
+    # roi du live, objectif de « j'aime », bienvenue aux abonnés ; disposition des éléments et déroulé modifiables
+    "jeu": None, "devineurs": {}, "roi": True, "roiActuel": None, "disposition": {}, "pos": 0,
+    "deroule": ["attente", "rituel", "top3", "versus", "mur", "finale", "fin"],
+    "chatteurs": [], "tirage": None, "objectifLikes": 0, "bienvenue": True, "abonne": None,
 }
+JEUX_DEVINE = ("blind", "photo", "mot")
+# « D'où tu nous regardes ? » : mots du chat -> pays (les codes de 2 lettres ne comptent que s'ils sont écrits seuls)
+PAYS_CHAT = {"ci": ["cotedivoire", "ivoire", "abidjan", "bouake", "yamoussoukro", "babi"], "ng": ["nigeria", "naija", "lagos", "abuja"],
+             "tg": ["togo", "lome", "kara"], "gh": ["ghana", "accra", "kumasi"], "bj": ["benin", "cotonou", "portonovo"],
+             "sn": ["senegal", "dakar"], "ml": ["mali", "bamako"], "bf": ["burkina", "ouaga", "bobo"], "gn": ["guinee", "conakry"],
+             "ne": ["niger", "niamey"], "cm": ["cameroun", "douala", "yaounde"], "fr": ["france", "paris", "lyon", "marseille"],
+             "us": ["usa", "etatsunis", "amerique"], "ca": ["canada", "montreal", "quebec"], "be": ["belgique", "bruxelles"],
+             "cd": ["rdc", "kinshasa", "congo"], "ga": ["gabon", "libreville"], "ma": ["maroc", "casablanca"], "lr": ["liberia"],
+             "sl": ["sierraleone"], "gm": ["gambie"], "cv": ["capvert"], "mr": ["mauritanie"], "gw": ["guineebissau"]}
+PAYS_NOMS = {"ci": "Côte d'Ivoire", "ng": "Nigeria", "tg": "Togo", "gh": "Ghana", "bj": "Bénin", "sn": "Sénégal", "ml": "Mali",
+             "bf": "Burkina Faso", "gn": "Guinée", "ne": "Niger", "cm": "Cameroun", "fr": "France", "us": "États-Unis", "ca": "Canada",
+             "be": "Belgique", "cd": "RD Congo", "ga": "Gabon", "ma": "Maroc", "lr": "Liberia", "sl": "Sierra Leone", "gm": "Gambie",
+             "cv": "Cap-Vert", "mr": "Mauritanie", "gw": "Guinée-Bissau"}
+# l'ordre compte : « nigeria » avant « niger », « guineebissau » avant « guinee »
+_PAYS_MOTS = sorted(((m, c) for c, mots in PAYS_CHAT.items() for m in mots), key=lambda mc: -len(mc[0]))
 
 # Anecdotes vérifiées (sources croisées le 12/11/2026, vidéos « Cauri raconte ») : la mascotte les raconte en direct.
 ANECDOTES = {
@@ -62,11 +83,13 @@ def jeton_ecran() -> str | None:
     return hmac.new(secret.encode(), b"ecran-live", hashlib.sha256).hexdigest()[:28] if secret else None
 
 
-def _lit(cle: str, defaut=None):
+def _lit(cle: str, defaut=None, verrou: bool = False):
     try:
-        v = db.value("SELECT valeur FROM live_cache WHERE cle = ? AND expire > NOW()", [cle])
+        v = db.value("SELECT valeur FROM live_cache WHERE cle = ? AND expire > NOW()" + (" FOR UPDATE" if verrou else ""), [cle])
         return json.loads(v) if v else defaut
     except Exception:  # noqa: BLE001 — table absente : état par défaut
+        if verrou:   # écriture : surtout ne pas repartir de l'état par défaut (on effacerait le live)
+            raise
         return defaut
 
 
@@ -94,8 +117,25 @@ def etat_courant(mode: str = "") -> dict:
     return e
 
 
+@contextmanager
+def _verrou(mode: str = ""):
+    """Lecture fraîche de l'état, verrouillée jusqu'à l'écriture (SELECT … FOR UPDATE) : la régie, le connecteur TikTok
+    et l'écran écrivent en même temps sans s'effacer (un cadeau ou un pari n'est jamais perdu). e["_pas"] = True : ne rien écrire."""
+    with db.atomic():
+        e = {**ETAT_DEFAUT, **(_lit(_cle(mode), {}, verrou=True) or {})}
+        yield e
+        if not e.pop("_pas", False):
+            _ecrit(_cle(mode), e)
+    _memo[mode] = (time.time(), e)
+
+
 def _public(e: dict) -> dict:
-    return {k: v for k, v in e.items() if k != "votants"}
+    p = {k: v for k, v in e.items() if k not in ("votants", "chatteurs")}
+    j = p.get("jeu")
+    if isinstance(j, dict) and ("paris" in j or "votants" in j):   # les listes de joueurs restent sur le serveur
+        p["jeu"] = {**{k: v for k, v in j.items() if k not in ("paris", "votants")}, "nParis": len(j.get("paris") or j.get("votants") or {})}
+    p["nChatteurs"] = len(e.get("chatteurs") or [])
+    return p
 
 
 def _norm(s: str) -> str:
@@ -170,11 +210,89 @@ def donnees() -> dict:
 
 # ---------------------------------------------------------------- votes et réclamations (commentaires saisis ou lus)
 
-def _commentaire(e: dict, user: str, texte: str) -> None:
+def _point(e: dict, user: str, nom: str, n: int = 1) -> None:
+    d = e.setdefault("devineurs", {})
+    x = d.get(user) or {"nom": nom, "points": 0}
+    d[user] = {"nom": nom or x["nom"], "points": int(x["points"]) + n}
+    if len(d) > 300:
+        e["devineurs"] = dict(sorted(d.items(), key=lambda kv: -kv[1]["points"])[:300])
+
+
+def _choix(t: str, options: list):
+    """Le numéro d'une case (« 3 ») ou son nom écrit en commentaire."""
+    if t.isdigit() and 1 <= int(t) <= len(options):
+        return int(t) - 1
+    for k, o in sorted(enumerate(options), key=lambda ko: -len(_norm(str(ko[1])))):
+        no = _norm(str(o))
+        if len(no) >= 3 and no in t:
+            return k
+    return None
+
+
+def _jeu_commentaire(e: dict, user: str, nom: str, t: str) -> bool:
+    """Un jeu est en cours : le commentaire est une réponse, un pari ou un vote. Renvoie True s'il a été pris par le jeu."""
+    j = e.get("jeu") or {}
+    ty, now = j.get("type"), int(time.time() * 1000)
+    if ty in JEUX_DEVINE and j.get("phase") == "jeu":
+        fin = int(j.get("t") or 0) + int(j.get("duree") or 30) * 1000 + 3000
+        if not j.get("gagnant") and now <= fin and any(len(k) >= 3 and k in t for k in j.get("cles") or []):
+            r = j.get("reponse") or {}
+            e["jeu"] = {**j, "phase": "fin", "gagnant": {"user": user, "nom": nom, "t": now}}
+            _point(e, user, nom, 1)
+            e["fx"] = {"type": "confettis", "t": now}
+            quoi = r.get("artiste") or r.get("mot") or ""
+            e["mascotte"] = {"titre": f"BRAVO {nom.upper()} !", "texte": f"Bonne réponse : {quoi}" + (f", « {r['titre']} »" if r.get("titre") else "") + ".",
+                             "pose": "m4-appel", "duree": 7000, "t": now}
+        return True
+    if ty == "roue" and j.get("phase") == "paris":
+        i = _choix(t, j.get("segments") or [])
+        paris = j.setdefault("paris", {})
+        if i is not None and user not in paris and len(paris) < 5000:
+            paris[user] = [i, nom]
+        return True
+    if ty in ("sondage", "dou") and j.get("phase") == "vote":
+        votants = j.setdefault("votants", {})
+        if user in votants or len(votants) >= 20000:
+            return True
+        if ty == "sondage":
+            i = _choix(t, j.get("options") or [])
+            if i is not None:
+                votants[user] = 1; j["votes"][i] = int(j["votes"][i]) + 1
+        else:
+            code = t if t in PAYS_CHAT else next((c for m, c in _PAYS_MOTS if m in t), None)
+            if code:
+                votants[user] = 1; tp = j.setdefault("pays", {}); tp[code] = int(tp.get(code) or 0) + 1
+        return True
+    return e.get("scene") == "jeu"   # jeu terminé mais encore à l'écran : les réponses tardives ne vont pas au mur
+
+
+def _jeu_action(e: dict, a: str) -> None:
+    j, now = e.get("jeu") or {}, int(time.time() * 1000)
+    if a == "reveler" and j.get("phase") in ("jeu", "vote"):
+        e["jeu"] = {**j, "phase": "fin", "tFin": now}
+    if a == "lancer" and j.get("type") == "roue" and j.get("phase") == "paris" and j.get("segments"):
+        r = secrets.randbelow(len(j["segments"]))   # le tirage se fait ici, pas dans le navigateur
+        paris = j.get("paris") or {}
+        bons = [(u, v[1]) for u, v in paris.items() if v[0] == r]
+        for u, n in bons:
+            _point(e, u, n, 1)
+        e["jeu"] = {**j, "phase": "tourne", "resultat": r, "t": now, "gagnants": [n for _, n in bons][:30], "nGagnants": len(bons), "nParisFin": len(paris)}
+    if a == "tirage":
+        ch = (e.get("chatteurs") or [])[-200:]
+        if ch:
+            u, n = ch[secrets.randbelow(len(ch))]
+            e["tirage"] = {"user": u, "nom": n, "t": now, "parmi": len(ch)}
+
+
+def _commentaire(e: dict, user: str, texte: str, nom: str | None = None) -> None:
     t = _norm(texte)
+    nom = (nom or user)[:30]
     e["dernier"] = ([{"user": user[:30], "texte": texte[:80]}] + e.get("dernier", []))[:6]
     if not user.startswith("régie"):
         e["chat"] = (e.get("chat") or [])[-119:] + [int(time.time())]   # rythme du chat (conseils de l'agent)
+        e["chatteurs"] = [c for c in (e.get("chatteurs") or []) if c[0] != user][-299:] + [[user, nom]]   # pour le tirage au sort
+    if _jeu_commentaire(e, user, nom, t):
+        return
     if e["scene"] == "versus":
         votants = set(e.get("votants", []))
         if user not in votants:
@@ -218,36 +336,45 @@ def regie_etat(request, chemin):
 def _maj_etat(request):
     """Une seule régie a la main (la première ; une autre peut « prendre la main »). Les autres regardent : 409."""
     mode = _mode(request)
-    e = {**etat_courant(mode)}
     ident = (request.headers.get("X-Regie") or "")[:40]
-    maitre = e.get("maitre") or {}
-    libre = not maitre.get("id") or maitre.get("id") == ident or time.time() - float(maitre.get("vu") or 0) > MAITRE_DELAI
+    libre_pour = lambda e: (lambda mt: not mt.get("id") or mt.get("id") == ident or time.time() - float(mt.get("vu") or 0) > MAITRE_DELAI)(e.get("maitre") or {})
     if request.method == "GET":
-        if ident and maitre.get("id") == ident:
-            e["maitre"] = {"id": ident, "vu": time.time()}
-            if time.time() - float(maitre.get("vu") or 0) > 5:   # signe de vie : écrit au plus toutes les 5 s
-                _ecrit(_cle(mode), e); _memo[mode] = (time.time(), e)
-        return S._json({**_public(e), "aLaMain": bool(ident) and (maitre.get("id") == ident or libre)})
+        e = {**etat_courant(mode)}
+        maitre = e.get("maitre") or {}
+        if ident and maitre.get("id") == ident and time.time() - float(maitre.get("vu") or 0) > 5:   # signe de vie : au plus toutes les 5 s
+            with _verrou(mode) as e:
+                if (e.get("maitre") or {}).get("id") == ident:
+                    e["maitre"] = {"id": ident, "vu": time.time()}
+                else:
+                    e["_pas"] = True
+        maitre = e.get("maitre") or {}
+        return S._json({**_public(e), "aLaMain": bool(ident) and (maitre.get("id") == ident or libre_pour(e))})
     m = S._corps(request)
-    if ident and not libre and not m.get("prendre"):
-        return S._json({**_public(e), "aLaMain": False}, 409)
-    if ident:
-        e["maitre"] = {"id": ident, "vu": time.time()}
-    if True:
-        if m.get("rafraichir"):
-            db.run("DELETE FROM live_cache WHERE cle = ?", [CLE_DONNEES])
-        if m.get("commentaire"):
-            _commentaire(e, str(m["commentaire"].get("user") or "régie"), str(m["commentaire"].get("texte") or ""))
-        if m.get("raz") == "votes":
-            e["votes"], e["votants"] = {"a": 0, "b": 0}, []
-        if m.get("raz") == "mur":
-            e["mur"] = []
-        for k, v in (m.get("set") or {}).items():
-            if k in ETAT_DEFAUT and k != "maitre":
-                e[k] = v
-        _ecrit(_cle(mode), e)
-        _memo[mode] = (time.time(), e)
-    return S._json({**_public(e), "aLaMain": True})
+    if m.get("rafraichir"):
+        db.run("DELETE FROM live_cache WHERE cle = ?", [CLE_DONNEES])
+    refus = False
+    with _verrou(mode) as e:
+        if ident and not libre_pour(e) and not m.get("prendre"):
+            refus = True; e["_pas"] = True
+        else:
+            if ident:
+                e["maitre"] = {"id": ident, "vu": time.time()}
+            if m.get("commentaire"):
+                _commentaire(e, str(m["commentaire"].get("user") or "régie"), str(m["commentaire"].get("texte") or ""))
+            if m.get("raz") == "votes":
+                e["votes"], e["votants"] = {"a": 0, "b": 0}, []
+            if m.get("raz") == "mur":
+                e["mur"] = []
+            for k, v in (m.get("set") or {}).items():
+                if k in ETAT_DEFAUT and k != "maitre":
+                    if k == "jeu" and isinstance(v, dict):   # l'heure du serveur fait foi (fin des réponses)
+                        v = {**v, "t": int(time.time() * 1000) + (1500 if v.get("type") in JEUX_DEVINE else 0)}
+                    e[k] = v
+            if m.get("raz") == "devineurs":
+                e["devineurs"] = {}
+            if m.get("jeuAction"):
+                _jeu_action(e, str(m["jeuAction"]))
+    return S._json({**_public(e), "aLaMain": not refus}, 409 if refus else 200)
 
 
 def regie_donnees(request, chemin):
@@ -462,6 +589,14 @@ def _cadeau(e: dict, g: dict) -> None:
     if len(don) > 300:   # on garde les 300 plus généreux
         e["donateurs"] = dict(sorted(don.items(), key=lambda kv: -kv[1]["diamants"])[:300])
     now = int(time.time() * 1000)
+    # le roi du live : le plus gros donateur garde la couronne jusqu'à ce qu'un autre le dépasse
+    roi = max(e["donateurs"].items(), key=lambda kv: kv[1]["diamants"])
+    ancien = e.get("roiActuel") or {}
+    if roi[0] != ancien.get("user"):
+        e["roiActuel"] = {"user": roi[0], "nom": roi[1]["nom"], "t": now}
+        if ancien and e.get("roi", True) and now - int(e.get("mascAuto") or 0) > 15000:
+            e["mascotte"] = {"titre": "NOUVEAU ROI DU LIVE !", "texte": f"{roi[1]['nom']} prend la couronne avec {roi[1]['diamants']} diamants.",
+                             "pose": "m4-appel", "duree": 7000, "t": now}; e["mascAuto"] = now
     e["cadeau"] = {"user": user, "nom": nom, "cadeau": cad, "n": n, "diamants": d, "t": now}
     e["dernier"] = ([{"user": user, "texte": f"envoie {n} × {cad}"}] + e.get("dernier", []))[:6]
     if not e.get("reglesCadeaux", True):
@@ -486,19 +621,23 @@ def regie_commentaires(request, jeton):
         return S._json({"ok": False}, 405)
     m = S._corps(request)
     mode = "test" if m.get("mode") == "test" else ""
-    e = {**etat_courant(mode)}
+    with _verrou(mode) as e:
+        _paquet(e, m)
+    return S._json({"ok": True})
+
+
+def _paquet(e: dict, m: dict) -> None:
     for c in (m.get("liste") or [])[:200]:
-        _commentaire(e, str(c.get("user") or "?")[:30], str(c.get("texte") or "")[:200])
+        _commentaire(e, str(c.get("user") or "?")[:30], str(c.get("texte") or "")[:200], str(c.get("nom") or "")[:30] or None)
     for g in (m.get("cadeaux") or [])[:100]:
         _cadeau(e, g)
     for u in (m.get("abonnes") or [])[:100]:
         e["abonnes"] = int(e.get("abonnes") or 0) + 1
+        e["abonne"] = {"nom": str(u)[:30], "t": int(time.time() * 1000)}
         e["dernier"] = ([{"user": str(u)[:30], "texte": "s'abonne !"}] + e.get("dernier", []))[:6]
     e["likes"] = int(e.get("likes") or 0) + int(m.get("likes") or 0)
     if m.get("spectateurs") is not None:
         e["spectateurs"] = int(m["spectateurs"]); e["pic"] = max(int(e.get("pic") or 0), e["spectateurs"])
-    _ecrit(_cle(mode), e); _memo[mode] = (time.time(), e)
-    return S._json({"ok": True})
 
 
 
@@ -509,7 +648,6 @@ def ecran_statut(request, jeton):
     if request.method != "POST":
         return S._json({"ok": False}, 405)
     m = S._corps(request); mode = "test" if m.get("mode") == "test" else ""
-    e = {**etat_courant(mode)}
-    e["lecture"] = {"t": int(time.time()), "media": m.get("media"), "etat": str(m.get("etat") or "")[:40], "detail": str(m.get("detail") or "")[:120]}
-    _ecrit(_cle(mode), e); _memo[mode] = (time.time(), e)
+    with _verrou(mode) as e:
+        e["lecture"] = {"t": int(time.time()), "media": m.get("media"), "etat": str(m.get("etat") or "")[:40], "detail": str(m.get("detail") or "")[:120]}
     return S._json({"ok": True})

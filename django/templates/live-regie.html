@@ -33,6 +33,9 @@ h3{margin:0 0 10px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
 .etape .n{width:28px;height:28px;border-radius:50%;background:#efedf8;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
 .etape.on{border-color:var(--violet);background:var(--violet2)}.etape.on .n{background:var(--violet);color:#fff}
 .etape.fait{opacity:.55}.etape.libre{border-style:dashed}
+.etape .et{flex:1;min-width:0}.etape .edt{display:none;gap:3px;flex:none}.etape:hover .edt{display:flex}
+.edt b{width:24px;height:24px;border-radius:7px;background:#efedf8;display:grid;place-items:center;font-size:12px;color:var(--doux)}.edt b:hover{background:var(--violet);color:#fff}
+.etape.jeu .n{background:#fff3d6;color:#7a5600}
 #suivant{width:100%;padding:16px;font-size:16px;border-radius:14px;line-height:1.2}
 #suivant small{display:block;font-weight:600;opacity:.75;font-size:12px}
 /* centre */
@@ -53,7 +56,7 @@ h3{margin:0 0 10px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
 #recherche{width:100%;border:1px solid var(--bord);border-radius:12px;padding:11px 12px;font:600 14px Inter;background:#faf9fe}
 .droite{gap:10px}
 .musique{flex:1 1 auto;min-height:180px;display:flex;flex-direction:column}#resultats{flex:1;min-height:0;overflow:auto;margin-top:6px}
-.outils{flex:0 1 auto;max-height:44vh;display:flex;flex-direction:column;min-height:0}.liste-outils{overflow:auto;min-height:0;display:flex;flex-direction:column;gap:5px;padding-right:2px}
+.outils{flex:0 0 auto;height:min(56vh,540px);display:flex;flex-direction:column;min-height:0}.liste-outils{overflow:auto;min-height:0;display:flex;flex-direction:column;gap:5px;padding-right:2px}
 .outil{display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px;background:#f6f5fb;border:1px solid var(--bord);font-size:13px}.outil:hover{background:var(--violet2)}
 .outil i{font-style:normal;width:30px;height:30px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;font-size:15px}
 .outil span{display:flex;flex-direction:column}.outil small{color:var(--doux);font-weight:600;font-size:11px}
@@ -79,6 +82,19 @@ input[type=range]{width:100%;accent-color:var(--violet)}
 .petit{font-size:12px;color:var(--doux)}
 details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;list-style:none}
 .ligne{display:flex;gap:6px;align-items:center;margin-top:8px}.ligne input{flex:1;min-width:0;border:1px solid var(--bord);border-radius:10px;padding:9px;font:600 13px Inter}
+/* onglets Ambiance / Jeux / Studio */
+.onglets{display:flex;gap:4px;background:#f1f0f6;border-radius:12px;padding:4px;margin-bottom:10px}.onglets button{flex:1;padding:8px 6px;font-size:13px;background:transparent;border-radius:9px}
+.onglets button.on{background:#fff;box-shadow:0 2px 8px rgba(40,20,120,.1);color:var(--violet)}
+.onglet{display:none;overflow:auto;min-height:0;flex-direction:column;gap:6px;padding-right:2px}.onglet.on{display:flex}.onglet.on{flex:1}.onglet>*{flex:none}.onglet>.liste-outils{flex:1 1 auto;min-height:140px}
+#outilQ{border:1px solid var(--bord);border-radius:10px;padding:8px 10px;font:600 13px Inter;background:#faf9fe;margin-bottom:2px}
+.jeu{border:1px solid var(--bord);border-radius:12px;padding:9px 10px;background:#faf9fe}.jeu>b{display:block;font-size:13px}.jeu .petit{display:block}
+.jeu .ligne{margin-top:6px}.jeu select,.jeu input:not([type=checkbox]){border:1px solid var(--bord);border-radius:9px;padding:7px;font:600 12px Inter;min-width:0;background:#fff}
+.jeu button{padding:7px 10px;font-size:12px}.jeu label{display:flex;gap:6px;align-items:center;font-weight:700;font-size:13px}
+#jeuEtat{background:#fff8e1;border:1px solid #f6dc8a;border-radius:12px;padding:8px 10px;font-size:12px}
+.wrow{display:flex;align-items:center;gap:5px;font-size:13px;padding:4px 0;border-bottom:1px solid var(--bord)}.wrow label{flex:1;display:flex;gap:6px;align-items:center;font-weight:700;min-width:0}
+.wrow button{width:28px;height:28px;padding:0;font-size:14px}.wrow span{font-size:11px;color:var(--doux);width:38px;text-align:center}
+.coque iframe.edit{pointer-events:auto}.coque.edit{box-shadow:0 0 0 5px var(--or),0 30px 60px rgba(40,20,120,.25)}
+.choix{display:flex;flex-direction:column;gap:5px;margin-top:10px;max-height:220px;overflow:auto}.choix button{text-align:left;font-weight:600;font-size:13px;padding:8px 10px}
 /* fenêtres : confirmation, bandeau, visite de la mascotte */
 .modal{position:fixed;inset:0;background:rgba(20,15,40,.5);display:none;align-items:center;justify-content:center;z-index:20}.modal.on{display:flex}
 .modal .boite{background:#fff;border-radius:20px;padding:22px;width:min(420px,92vw);box-shadow:0 30px 60px rgba(0,0,0,.3)}
@@ -129,37 +145,56 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
       <label class="vol" title="Volume"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" id="volume" min="0" max="100" value="85"></label>
       <button id="lecFlou" title="Flouter la vidéo derrière"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="4"/></svg></button>
       <button id="lecStop" title="Couper la musique"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button></div>
-    <div class="panel outils" data-tour="ambiance"><h3>Ambiance et outils</h3>
-      <div class="liste-outils">
-        <button class="outil" data-fx="gong"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><span>Gong<small>le son du rituel</small></span></button>
-        <button class="outil" data-fx="anecdote"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></i><span>Anecdote<small>la mascotte raconte une histoire vraie</small></span></button>
-        <button class="outil" data-fx="cauris"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="6" ry="9"/><path d="M12 4c1.5 3-1.5 5 0 8s-1.5 5 0 8"/></svg></i><span>Pluie de cauris<small>pour fêter un N°1</small></span></button>
-        <button class="outil" data-fx="confettis"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.8 11.3 2 22l10.7-3.8"/><path d="M4 3h.01M22 8h.01M15 2h.01M22 20h.01"/><path d="m22 2-2.2.7a2.9 2.9 0 0 0-1.9 3.3v0c.1.8-.5 1.5-1.3 1.5h-.4c-.9 0-1.6.6-1.8 1.4L14 10"/><path d="M11 13c1.9 1.9 2.8 4.1 2 4.9-.8.8-3-.1-4.9-2-1.9-1.9-2.8-4.1-2-4.9.8-.8 3 .1 4.9 2Z"/></svg></i><span>Confettis<small>explosion de couleurs</small></span></button>
-        <button class="outil" data-fx="applaudimetre"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg></i><span>Applaudir<small>« Faites du bruit ! » + applaudissements</small></span></button>
-        <button class="outil" data-fx="decompte"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4"/></svg></i><span>Décompte 10 s<small>avec roulement de tambour</small></span></button>
-        <button class="outil" data-fx="flou"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20Z"/></svg></i><span>Flou<small>flouter ou rendre net le fond</small></span></button>
-        <button class="outil" data-fx="fiche"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h2M15 12h2M7 16h10"/></svg></i><span>Fiche artiste<small>ses chiffres à l'écran</small></span></button>
-        <button class="outil" data-fx="bandeau"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="20" height="8" rx="2"/><path d="M6 12h12"/></svg></i><span>Bandeau…<small>un message qui défile</small></span></button>
-        <button class="outil" data-fx="flash"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></i><span>Flash</span></button>
-        <button class="outil" data-fx="secousse"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l3-6 4 12 3-6h7"/></svg></i><span>Secousse</span></button>
-        <button class="outil" data-fx="zoom"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg></i><span>Zoom choc</span></button>
-        <button class="outil" data-fx="projecteur"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></i><span>Projecteur</span></button>
-        <button class="outil" data-fx="coeurs"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></i><span>Merci les cadeaux</span></button>
+    <div class="panel outils" data-tour="ambiance">
+      <div class="onglets"><button data-onglet="ambiance" class="on">Ambiance</button><button data-onglet="jeux">Jeux</button><button data-onglet="studio">Studio</button></div>
+      <div class="onglet on" id="o-ambiance">
+        <input id="outilQ" type="search" placeholder="Chercher un effet (cauris, laser, klaxon…)" autocomplete="off">
+        <div class="liste-outils" id="listeOutils"></div>
+        <label class="petit" style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="mascAuto" checked> La mascotte passe à chaque étape</label>
+        <label class="petit" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="reglesCadeaux" checked> Les cadeaux déclenchent des effets (cœurs, cauris, gong)</label>
+        <div class="petit" id="fans"></div>
+        <details><summary>Commentaires à la main ▾</summary>
+          <div class="ligne"><input id="cmt" placeholder="Vote, réponse ou nom d'artiste lu dans le chat"><button id="cmtOk">Ajouter</button></div></details>
       </div>
-      <label class="petit" style="display:flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="mascAuto" checked> La mascotte passe à chaque étape</label>
-      <label class="petit" style="display:flex;gap:6px;align-items:center;margin-top:4px"><input type="checkbox" id="reglesCadeaux" checked> Les cadeaux déclenchent des effets (cœurs, cauris, gong)</label>
-      <label class="petit" style="display:flex;gap:6px;align-items:center;margin-top:4px"><input type="checkbox" id="topFans" checked> Afficher les Top fans à l'écran</label>
-      <div class="petit" id="fans" style="margin-top:8px"></div>
-      <details style="margin-top:8px"><summary>Commentaires à la main ▾</summary>
-        <div class="ligne"><input id="cmt" placeholder="Vote ou nom d'artiste lu dans le chat"><button id="cmtOk">Ajouter</button></div></details>
+      <div class="onglet" id="o-jeux">
+        <div id="jeuEtat">Aucun jeu en cours</div>
+        <div class="jeu"><b>Devine le titre</b><span class="petit">un extrait passe, le chat devine l'artiste</span>
+          <div class="ligne"><select id="jDuree" title="Durée des manches"><option value="20">20 s</option><option value="30" selected>30 s</option><option value="45">45 s</option><option value="60">60 s</option></select><button class="v" data-jeu="blind">Nouvelle manche</button></div></div>
+        <div class="jeu"><b>Qui est-ce ?</b><span class="petit">photo floutée qui se dévoile petit à petit</span>
+          <div class="ligne"><button class="v" data-jeu="photo">Nouvelle photo</button></div></div>
+        <div class="jeu"><b>Le mot mystère</b><span class="petit">vide = un mot tiré au hasard</span>
+          <div class="ligne"><input id="motMot" placeholder="Le mot"><input id="motIndice" placeholder="L'indice"><button class="v" data-jeu="mot">Lancer</button></div></div>
+        <div class="jeu"><b>La roue Cauri</b><span class="petit">le chat parie un numéro, la roue décide</span>
+          <div class="ligne"><select id="roMode"><option value="pays">Pays</option><option value="artistes">Artistes</option><option value="defis">Défis</option></select><button class="v" data-jeu="roue">Ouvrir les paris</button><button id="roLance">Faire tourner</button></div></div>
+        <div class="jeu"><b>Sondage</b>
+          <div class="ligne"><input id="sdQ" placeholder="La question" value="Ce son, c'est…"></div>
+          <div class="ligne"><input id="sdO" placeholder="Réponses séparées par /" value="Feu / Pas mal / Bof"><button class="v" data-jeu="sondage">Lancer</button></div></div>
+        <div class="jeu"><b>D'où tu nous regardes ?</b><span class="petit">le chat écrit son pays ou sa ville</span>
+          <div class="ligne"><button class="v" data-jeu="dou">Lancer</button></div></div>
+        <div class="jeu"><b>Tirage au sort</b><span class="petit" id="tirInfo">un spectateur qui a écrit dans le chat</span>
+          <div class="ligne"><button class="v" id="tirage">Tirer au sort</button></div></div>
+        <div class="jeu"><b>Objectif « j'aime »</b><span class="petit" id="objInfo"></span>
+          <div class="ligne"><input id="objN" type="number" min="0" step="500" placeholder="Ex. 10000"><button id="objOk">Fixer</button><button id="objNon">Retirer</button></div></div>
+        <div class="jeu"><label><input type="checkbox" id="roiOn" checked> Roi du live (le plus gros donateur)</label><span class="petit" id="roiInfo"></span></div>
+        <div class="jeu"><label><input type="checkbox" id="bienvOn" checked> Souhaiter la bienvenue aux nouveaux abonnés</label></div>
+        <div class="jeu"><b>Meilleurs devineurs</b><span class="petit" id="devListe"></span><div class="ligne"><button id="devRaz">Remettre à zéro</button></div></div>
+      </div>
+      <div class="onglet" id="o-studio">
+        <button class="v" id="placer">Placer les éléments sur l'aperçu</button>
+        <span class="petit">Glisse un élément sur l'écran du centre ; la molette de la souris change sa taille.</span>
+        <div id="widgets"></div>
+        <div class="jeu" style="margin-top:6px"><b>Ajouter au déroulé</b><span class="petit">avant le live ou en plein live ; survole une étape pour la monter, la descendre ou la retirer</span>
+          <div class="ligne"><select id="ajType"></select><select id="ajOu"><option value="ici">après l'étape en cours</option><option value="debut">au début</option><option value="fin">à la fin</option></select></div>
+          <div class="ligne"><button class="v" id="ajOk">Ajouter</button><button id="derRaz">Déroulé d'origine</button></div></div>
+      </div>
     </div>
   </div>
 </main>
 
 <div class="modal" id="mConfirme"><div class="boite"><h4 id="mcTitre"></h4><p id="mcTexte" class="petit" style="font-size:14px"></p>
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button id="mcNon">Annuler</button><button class="r" id="mcOui">Confirmer</button></div></div></div>
-<div class="modal" id="mBandeau"><div class="boite"><h4>Texte du bandeau</h4><input id="bandeauTxt" style="width:100%;border:1px solid var(--bord);border-radius:10px;padding:11px;font:700 15px Inter" placeholder="Ex. MERCI POUR LES 1 000 !">
-  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button id="mbNon">Annuler</button><button class="v" id="mbOui">Afficher</button></div></div></div>
+<div class="modal" id="mBandeau"><div class="boite"><h4 id="mbTitre">Texte du bandeau</h4><div class="choix" id="mbChoix"></div><input id="bandeauTxt" style="width:100%;border:1px solid var(--bord);border-radius:10px;padding:11px;font:700 15px Inter" placeholder="Ex. MERCI POUR LES 1 000 !">
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button id="mbNon">Annuler</button><button class="v" id="mbOui">OK</button></div></div></div>
 <div id="spot"></div><div id="guide"><img id="guideImg" src="/assets/live/m2-presente.png" alt=""><div class="bulle"><b id="gTitre"></b><span id="gTexte"></span><div class="pts" id="gPts"></div><button class="v" id="gSuiv">Suivant</button> <button id="gPasser">Passer</button></div></div>
 <div id="voileObs"></div><div class="notif" id="notif"></div>
 
@@ -186,7 +221,7 @@ async function poste(corps, prendre) {
     rendu();
   } catch (e) { enLigne = false; rendu(); notif("Pas de connexion : l'écran garde ce qu'il affiche. Réessaie."); }
 }
-const AVEC_CARTE = ["attente", "rituel", "top3", "versus", "mur", "finale", "fin"];
+const AVEC_CARTE = ["attente", "rituel", "top3", "versus", "mur", "finale", "fin", "jeu"];
 const set = (s) => { if (s.fiche === true && AVEC_CARTE.includes(s.scene || E.scene)) s.scene = (s.media || E.media) && ((s.media || E.media).video || (s.media || E.media).yt) ? "artiste" : "camera"; return poste({ set: s }); };
 async function suit() {
   try { const r = await fetch(API + "/etat" + Q(), { cache: "no-store", headers: { "X-Regie": ID } }); const d = await r.json(); E = d; aLaMain = d.aLaMain !== false; enLigne = true; rendu(); }
@@ -194,16 +229,28 @@ async function suit() {
   setTimeout(suit, 1000);
 }
 
-// ===================================================== le déroulé : 7 étapes + caméra, un seul bouton SUIVANT
-const ETAPES = [
-  { id: "attente", n: "1", nom: "Attente", sous: () => "décompte avant le live" },
-  { id: "rituel", n: "2", nom: "Rituel", sous: () => { const p = paysDe(E.mystere); return p ? "pays mystère : " + p.nom + " (secret)" : "gong + pays mystère"; } },
-  { id: "top3", n: "3", nom: "Top 3 par pays", sous: () => { const p = D.pays[E.pays]; return E.scene === "top3" && p ? p.nom + " · " + (E.etape >= 3 ? "N°1 révélé" : (E.etape ? "N°" + (4 - E.etape) + " révélé" : "rien de révélé")) : (E.paysListe || []).map((c) => (paysDe(c) || {}).nom).filter(Boolean).join(", "); } },
-  { id: "versus", n: "4", nom: "Versus", sous: () => `${E.versus.a} ${E.votes.a} · ${E.votes.b} ${E.versus.b}` },
-  { id: "mur", n: "5", nom: "Ton artiste ?", sous: () => (E.mur || []).length ? `${E.mur.length} artiste(s) réclamé(s)` : "le mur des réclamations" },
-  { id: "finale", n: "6", nom: "Le final", sous: () => "N°1 mystère, puis N°1 Afrique de l'Ouest" },
-  { id: "fin", n: "7", nom: "Fin", sous: () => "merci, rendez-vous vendredi" },
-];
+// ===================================================== le déroulé : modifiable (Studio), avec des étapes de jeu ; un seul bouton SUIVANT
+const ETAPES = {
+  attente: { nom: "Attente", sous: () => "décompte avant le live" },
+  rituel: { nom: "Rituel", sous: () => { const p = paysDe(E.mystere); return p ? "pays mystère : " + p.nom + " (secret)" : "gong + pays mystère"; } },
+  top3: { nom: "Top 3 par pays", sous: () => { const p = D.pays[E.pays]; return E.scene === "top3" && p ? p.nom + " · " + (E.etape >= 3 ? "N°1 révélé" : (E.etape ? "N°" + (4 - E.etape) + " révélé" : "rien de révélé")) : (E.paysListe || []).map((c) => (paysDe(c) || {}).nom).filter(Boolean).join(", "); } },
+  versus: { nom: "Versus", sous: () => `${E.versus.a} ${E.votes.a} · ${E.votes.b} ${E.versus.b}` },
+  mur: { nom: "Ton artiste ?", sous: () => (E.mur || []).length ? `${E.mur.length} artiste(s) réclamé(s)` : "le mur des réclamations" },
+  finale: { nom: "Le final", sous: () => "N°1 mystère, puis N°1 Afrique de l'Ouest" },
+  fin: { nom: "Fin", sous: () => "merci, rendez-vous vendredi" },
+  blind: { nom: "Devine le titre", sous: () => "un extrait, le chat devine l'artiste", jeu: 1 },
+  photo: { nom: "Qui est-ce ?", sous: () => "photo floutée qui se dévoile", jeu: 1 },
+  mot: { nom: "Le mot mystère", sous: () => "le premier qui trouve gagne", jeu: 1 },
+  roue: { nom: "La roue Cauri", sous: () => "paris en commentaire, puis la roue", jeu: 1 },
+  sondage: { nom: "Sondage", sous: () => "le chat vote 1, 2, 3…", jeu: 1 },
+  dou: { nom: "D'où tu nous regardes ?", sous: () => "les pays du chat en direct", jeu: 1 },
+};
+const DEROULE0 = ["attente", "rituel", "top3", "versus", "mur", "finale", "fin"];
+const deroule = () => ((E.deroule && E.deroule.length) ? E.deroule : DEROULE0).filter((id) => ETAPES[id]);
+const sceneDe = (id) => (ETAPES[id] && ETAPES[id].jeu ? "jeu" : id);
+const estLa = (id) => sceneDe(id) === E.scene && (E.scene !== "jeu" || (E.jeu || {}).type === id);
+function posActuelle() { const L = deroule(); return L[E.pos] && estLa(L[E.pos]) ? E.pos : L.findIndex(estLa); }
+function suite() { const L = deroule(), i = posActuelle(); const id = i >= 0 ? L[i + 1] : null; if (!id) return null; const e = ETAPES[id]; return { t: e.nom, s: e.sous(), f: () => va(id, i + 1) }; }
 const paysDe = (code) => (D?.pays || []).find((p) => p.code === code);
 const idxPays = (code) => (D?.pays || []).findIndex((p) => p.code === code);
 let derniere = memo("cauri-etape") || "attente";
@@ -221,10 +268,13 @@ function anecdote() {
   const f = faitArtiste(id); if (!f) return notif("Pas d'anecdote pour cet artiste");
   set({ mascotte: { titre: "Le savais-tu ?", texte: f, pose: "m1-question", duree: 9000, t: Date.now() } });
 }
-function va(id) {
-  if (id === "fin") return confirme("Terminer le live ?", "L'écran de fin s'affiche pour tout le monde.", () => { set({ scene: "fin", fiche: false, bandeau: "", mascotte: inter("Merci à vous !", "Rendez-vous vendredi prochain, 20 h GMT, pour le nouveau classement.", "m4-appel", 8000) }); });
-  derniere = id; memo("cauri-etape", id);
-  const s = { scene: id, fiche: false };
+function va(id, i) {
+  if (i === undefined) i = deroule().indexOf(id);
+  if (ETAPES[id] && ETAPES[id].jeu) return lanceJeu(id, i);
+  if (id === "fin") return confirme("Terminer le live ?", "L'écran de fin s'affiche pour tout le monde.", () => { set({ scene: "fin", pos: i, fiche: false, bandeau: "", jeu: null, mascotte: inter("Merci à vous !", "Rendez-vous vendredi prochain, 20 h GMT, pour le nouveau classement.", "m4-appel", 8000) }); });
+  if (id !== "camera") { derniere = id; memo("cauri-etape", id); }
+  const s = { scene: id, fiche: false, pos: i };
+  if (id === "rituel") s.gong = Date.now();
   if (id === "top3") { const c = (E.paysListe || [])[0]; s.pays = Math.max(0, idxPays(c)); s.etape = 0; }
   if (id === "rituel" && !E.mystere && D.pays.length) s.mystere = D.pays[Math.floor(Math.random() * D.pays.length)].code;
   if (id === "finale") s.finale = 0;
@@ -240,9 +290,7 @@ function va(id) {
   set(s);
 }
 function actionSuivante() {
-  const sc = E.scene;
-  if (sc === "attente") return { t: "Lancer le rituel", s: "gong + pays mystère", f: () => { va("rituel"); setTimeout(() => set({ gong: Date.now() }), 400); } };
-  if (sc === "rituel") return { t: "Top 3 par pays", s: (paysDe((E.paysListe || [])[0]) || {}).nom || "", f: () => va("top3") };
+  const sc = E.scene, ensuite = (x) => suite() || x || { t: "Fin du déroulé", s: "ajoute une étape dans Studio", f: null };
   if (sc === "top3") {
     if ((E.etape || 0) < 3) return { t: "Révéler le N°" + (3 - (E.etape || 0)), s: (D.pays[E.pays] || {}).nom || "", f: () => {
       const p = D.pays[E.pays], k = E.etape || 0, s = { etape: k + 1 };
@@ -250,21 +298,189 @@ function actionSuivante() {
       set(s); } };
     const liste = E.paysListe || [], i = liste.indexOf((D.pays[E.pays] || {}).code);
     if (i >= 0 && i < liste.length - 1) { const p = paysDe(liste[i + 1]); return { t: "Pays suivant", s: p ? p.nom : "", f: () => set({ pays: idxPays(liste[i + 1]), etape: 0, mascotte: inter("Direction : " + (p ? p.nom : "le pays suivant") + " !", "Qui sera N°1 ? Écris ton pronostic en commentaire.") }) }; }
-    return { t: "Le versus", s: E.versus.a + " ou " + E.versus.b, f: () => va("versus") };
+    return ensuite();
   }
-  if (sc === "versus") return { t: "Ton artiste ?", s: "le mur des réclamations", f: () => va("mur") };
-  if (sc === "mur") return { t: "Le final", s: "N°1 du pays mystère", f: () => va("finale") };
-  if (sc === "finale") return E.finale === 0 ? { t: "N°1 Afrique de l'Ouest", s: "la grande révélation", f: () => set({ finale: 1, fx: { type: "confettis", t: Date.now() }, mascotte: inter("Et le N°1 de toute l'Afrique de l'Ouest est…", D.n1_afrique_ouest ? D.n1_afrique_ouest.nom + " avec « " + D.n1_afrique_ouest.titre + " » !" : "", "m4-appel", 9000) }) } : { t: "Fin du live", s: "avec confirmation", f: () => va("fin") };
+  if (sc === "finale" && E.finale === 0) return { t: "N°1 Afrique de l'Ouest", s: "la grande révélation", f: () => set({ finale: 1, fx: { type: "confettis", t: Date.now() }, mascotte: inter("Et le N°1 de toute l'Afrique de l'Ouest est…", D.n1_afrique_ouest ? D.n1_afrique_ouest.nom + " avec « " + D.n1_afrique_ouest.titre + " » !" : "", "m4-appel", 9000) }) };
+  if (sc === "jeu") {
+    const j = E.jeu || {}, ty = j.type, nom = (ETAPES[ty] || {}).nom || "Jeu";
+    if (["blind", "photo", "mot"].includes(ty)) return j.phase === "jeu" ? { t: "Révéler la réponse", s: nom, f: () => poste({ jeuAction: "reveler" }) } : ensuite({ t: "Encore une manche", s: nom, f: () => lanceJeu(ty) });
+    if (ty === "roue") { if (j.phase === "paris") return { t: "Faire tourner la roue", s: (j.nParis || 0) + " pari(s)", f: tourneRoue };
+      const lab = (j.segments || [])[j.resultat]; if (lab && roueFaite !== j.t) return { t: "Enchaîner : " + lab, s: "la roue a parlé", f: () => enchaineRoue(j) };
+      return ensuite({ t: "Encore un tour", s: nom, f: () => lanceJeu("roue") }); }
+    if (ty === "sondage" || ty === "dou") return j.phase === "vote" ? { t: "Afficher le résultat", s: (j.nParis || 0) + " réponse(s)", f: () => poste({ jeuAction: "reveler" }) } : ensuite();
+  }
   if (sc === "fin") return { t: "Live terminé", s: "", f: null };
-  const e = ETAPES.find((x) => x.id === derniere) || ETAPES[0]; return { t: "Reprendre : " + e.nom, s: "retour au déroulé", f: () => va(e.id) };
+  if (posActuelle() >= 0) return ensuite();
+  const e = ETAPES[derniere] ? derniere : "attente"; return { t: "Reprendre : " + ETAPES[e].nom, s: "retour au déroulé", f: () => va(e) };
 }
 $("suivant").onclick = () => { const a = actionSuivante(); a.f && a.f(); };
-$("etapes").onclick = (e) => { const b = e.target.closest("[data-etape]"); if (b) va(b.dataset.etape); };
+$("etapes").onclick = (e) => {
+  const m = e.target.closest("[data-monte],[data-descend],[data-retire]");
+  if (m) { const L = [...deroule()], i = +(m.dataset.monte ?? m.dataset.descend ?? m.dataset.retire);
+    if (m.dataset.retire !== undefined) { if (L.length <= 1) return; L.splice(i, 1); }
+    else { const k = m.dataset.monte !== undefined ? i - 1 : i + 1; if (k < 0 || k >= L.length) return; [L[i], L[k]] = [L[k], L[i]]; }
+    return set({ deroule: L }); }
+  const b = e.target.closest("[data-etape]"); if (b) va(b.dataset.etape, b.dataset.i !== undefined ? +b.dataset.i : undefined); };
+
+// ===================================================== les jeux : la régie prépare, le serveur arbitre (réponses, paris, tirages)
+const MOTS = [["AFROBEAT", "Un genre musical"], ["COUPÉ-DÉCALÉ", "Danse et genre ivoirien"], ["AZONTO", "Une danse venue du Ghana"], ["CAURI", "Un coquillage… et notre nom"],
+  ["CLASSEMENT", "Chaque vendredi chez nous"], ["REFRAIN", "La partie que tout le monde chante"], ["FEATURING", "Quand deux artistes chantent ensemble"], ["NOUCHI", "L'argot d'Abidjan"],
+  ["AMAPIANO", "Un genre venu d'Afrique du Sud"], ["STUDIO", "Là où naissent les titres"], ["MICRO", "L'outil de tout chanteur"], ["PLAYLIST", "Une liste de sons"]];
+const DEFIS = [{ nom: "Pluie de cauris", f: () => fx("cauris") }, { nom: "Anecdote", f: () => anecdote() }, { nom: "Blind test express", f: () => lanceJeu("blind") },
+  { nom: "Faites du bruit !", f: () => fx("applaudimetre") }, { nom: "Tirage au sort", f: () => poste({ jeuAction: "tirage" }) }, { nom: "Le chat choisit", f: () => va("mur") },
+  { nom: "Partage le live", f: () => set({ bandeau: "PARTAGE LE LIVE À 3 AMIS !" }) }, { nom: "Drop !", f: () => fx("drop") }];
+const usages = { blind: new Set(), photo: new Set(), mot: new Set() };
+const auHasard = (L, k) => { const libres = L.filter((x) => !usages[k].has(x.id ?? x[0] ?? x)); const P = libres.length ? libres : (usages[k].clear(), L); const x = P[Math.floor(Math.random() * P.length)]; usages[k].add(x.id ?? x[0] ?? x); return x; };
+const classes = () => { const ids = new Set((D.pays || []).flatMap((p) => p.artistes.map((a) => a.id))); return D.artistes.filter((a) => ids.has(a.id)); };
+let roueFaite = null, dernierJeu = Date.now();
+function segmentsRoue(mode) {
+  if (mode === "pays") return (D.pays || []).slice(0, 10).map((p) => p.nom);
+  if (mode === "artistes") return [...new Set(classes().map((a) => a.nom))].sort(() => Math.random() - .5).slice(0, 8);
+  return DEFIS.map((d) => d.nom);
+}
+async function lanceJeu(type, i) {
+  const base = { scene: "jeu", fiche: false, bandeau: "", pos: i ?? E.pos }, duree = +$("jDuree").value || 30;
+  dernierJeu = Date.now();
+  if (type === "blind") {
+    const P = pistes.filter((p) => p.son); let son = null, rep = null;
+    if (P.length) { const p = auHasard(P.map((x) => ({ ...x, id: x.artisteId })), "blind"); son = p.son; rep = { artiste: p.artiste, artisteId: p.artisteId, titre: p.titre, photo: p.photo }; }
+    else { const a = auHasard(classes(), "blind"); notif("Recherche d'un extrait…");
+      try { const d = (await (await fetch(API + "/cherche?q=" + encodeURIComponent(a.nom))).json()).artistes || []; const art = d.find((x) => norm(x.nom) === norm(a.nom)) || d[0];
+        const tt = ((await (await fetch(API + "/titres/" + art.id)).json()).titres || []).filter((x) => x.url).slice(0, 5); const x = tt[Math.floor(Math.random() * tt.length)];
+        son = x.url; rep = { artiste: a.nom, artisteId: a.id, titre: x.titre, photo: a.photo }; } catch (e) { return notif("Pas d'extrait trouvé : réessaie"); } }
+    const cles = [norm(rep.artiste)], tc = norm(String(rep.titre || "").replace(/\(.*?\)|\[.*?\]|feat.*$/gi, "")); if (tc.length >= 4) cles.push(tc);
+    return set({ ...base, jeu: { type, phase: "jeu", reponse: rep, cles, duree }, media: { type: "son", son, titre: "", artiste: "", t: Date.now(), blind: 1 },
+      mascotte: inter("Devine le titre !", "Écoute bien… Le premier qui écrit le nom de l'artiste en commentaire gagne un point !", "m1-question", 6000) });
+  }
+  if (type === "photo") { const P = classes().filter((a) => a.photo); if (!P.length) return notif("Pas de photo disponible"); const a = auHasard(P, "photo");
+    return set({ ...base, jeu: { type, phase: "jeu", reponse: { artiste: a.nom, artisteId: a.id, photo: a.photo }, cles: [norm(a.nom)], duree: Math.max(30, duree) },
+      mascotte: inter("Qui est-ce ?", "La photo se dévoile petit à petit. Le premier qui écrit le bon nom gagne !", "m1-question", 6000) }); }
+  if (type === "mot") { let mot = $("motMot").value.trim(), ind = $("motIndice").value.trim(); if (!mot) { const x = auHasard(MOTS, "mot"); mot = x[0]; ind = x[1]; }
+    $("motMot").value = ""; $("motIndice").value = "";
+    return set({ ...base, jeu: { type, phase: "jeu", reponse: { mot: mot.toUpperCase(), indice: ind }, cles: [norm(mot)], duree: Math.max(30, duree) },
+      mascotte: inter("Le mot mystère !", (ind ? "Indice : " + ind + ". " : "") + "Les lettres apparaissent petit à petit. Le premier qui trouve gagne !", "m1-question", 6000) }); }
+  if (type === "roue") { const mode = $("roMode").value, seg = segmentsRoue(mode); if (seg.length < 2) return notif("Pas assez de cases pour la roue");
+    return set({ ...base, jeu: { type, mode, segments: seg, phase: "paris" }, mascotte: inter("La roue Cauri !", "Parie en commentaire : écris le numéro d'une case. Chaque bon pronostic gagne un point !", "m4-appel", 6000) }); }
+  if (type === "sondage") { const q = $("sdQ").value.trim() || "Ce son, c'est…", o = $("sdO").value.split("/").map((x) => x.trim()).filter(Boolean).slice(0, 6);
+    if (o.length < 2) { notif("Écris au moins 2 réponses, séparées par /"); return ongletVers("jeux"); }
+    return set({ ...base, jeu: { type, question: q, options: o, votes: o.map(() => 0), phase: "vote" }, mascotte: inter("Sondage !", q + " Écris le numéro de ta réponse en commentaire.", "m1-question", 6000) }); }
+  if (type === "dou") return set({ ...base, jeu: { type, phase: "vote", pays: {} }, mascotte: inter("D'où tu nous regardes ?", "Écris ton pays ou ta ville en commentaire : on fait la carte du chat en direct !", "m4-appel", 6000) });
+}
+async function tourneRoue() {
+  await poste({ jeuAction: "lancer" });
+  setTimeout(() => { const j = E.jeu || {}, lab = (j.segments || [])[j.resultat]; if (!aLaMain || !lab || j.type !== "roue") return;
+    set({ mascotte: inter("La roue a parlé : " + lab + " !", j.nGagnants ? `${j.nGagnants} bon(s) pronostic(s). Bravo ${(j.gagnants || []).slice(0, 3).join(", ")} !` : "Personne n'avait parié dessus !", "m4-appel", 7000) }); }, 7000);
+}
+function enchaineRoue(j) {
+  roueFaite = j.t; const lab = (j.segments || [])[j.resultat];
+  if (j.mode === "pays") { const k = (D.pays || []).findIndex((p) => p.nom === lab); return set({ scene: "top3", pays: Math.max(0, k), etape: 0, fiche: false }); }
+  if (j.mode === "artistes") { const p = pistes.find((x) => norm(x.artiste) === norm(lab)), a = D.artistes.find((x) => norm(x.nom) === norm(lab));
+    if (p) return joue(p.artiste, p.titre, { artisteId: p.artisteId, fiche: true, set: { carte: p.artisteId, carteExt: null }, repli: { video: p.video || null, son: p.son } });
+    return a ? set({ carte: a.id, carteExt: null, fiche: true, flou: true, scene: "camera" }) : notif("Artiste introuvable"); }
+  const d = DEFIS.find((x) => x.nom === lab); if (d) d.f();
+}
+document.querySelectorAll("[data-jeu]").forEach((b) => b.onclick = () => lanceJeu(b.dataset.jeu));
+$("roLance").onclick = () => (E.jeu || {}).type === "roue" && E.jeu.phase === "paris" ? tourneRoue() : notif("Ouvre d'abord les paris");
+$("tirage").onclick = () => (E.nChatteurs ? poste({ jeuAction: "tirage" }) : notif("Personne n'a encore écrit dans le chat"));
+$("objOk").onclick = () => { const n = Math.max(0, +$("objN").value || 0); set({ objectifLikes: n }); };
+$("objNon").onclick = () => set({ objectifLikes: 0 });
+$("roiOn").onchange = (e) => set({ roi: e.target.checked });
+$("bienvOn").onchange = (e) => set({ bienvenue: e.target.checked });
+$("devRaz").onclick = () => confirme("Remettre les points à zéro ?", "Le classement des meilleurs devineurs repart de zéro.", () => poste({ raz: "devineurs" }));
+
+// ===================================================== studio : éléments à placer, déroulé à composer
+const WIDGETS = { titreSon: "Titre en cours", topfans: "Top fans", roi: "Roi du live", devineurs: "Meilleurs devineurs", merci: "Remerciements et bienvenue", objectif: "Objectif j'aime" };
+const dispo = (id, ch) => set({ disposition: { ...(E.disposition || {}), [id]: { ...((E.disposition || {})[id] || {}), ...ch } } });
+const html = (el, h) => { if (el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; } };
+function rendWidgets() {
+  const d = E.disposition || {};
+  html($("widgets"), Object.entries(WIDGETS).map(([id, nom]) => { const w = d[id] || {}, on = id === "topfans" ? E.topFans !== false : id === "roi" ? E.roi !== false : w.on !== false;
+    return `<div class="wrow"><label><input type="checkbox" data-won="${id}" ${on ? "checked" : ""}> ${esc(nom)}</label><button data-wt="${id}" data-k="-1" title="Plus petit">−</button><span>${Math.round((w.s || 1) * 100)} %</span><button data-wt="${id}" data-k="1" title="Plus grand">+</button><button data-wraz="${id}" title="Place et taille d'origine">↺</button></div>`; }).join(""));
+}
+$("widgets").onchange = (e) => { const c = e.target.closest("[data-won]"); if (!c) return; const id = c.dataset.won;
+  if (id === "topfans") set({ topFans: c.checked }); else if (id === "roi") set({ roi: c.checked }); else dispo(id, { on: c.checked }); };
+$("widgets").onclick = (e) => { const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.wt) { const w = (E.disposition || {})[b.dataset.wt] || {}; dispo(b.dataset.wt, { s: Math.max(.5, Math.min(2, Math.round(((w.s || 1) + +b.dataset.k * .1) * 10) / 10)) }); }
+  if (b.dataset.wraz) { const d = { ...(E.disposition || {}) }; delete d[b.dataset.wraz]; set({ disposition: d }); } };
+let edition = false;
+function envoieEdition() { try { $("apercu").contentWindow.postMessage({ type: "edition", on: edition }, location.origin); } catch (e) {} }
+$("placer").onclick = () => { edition = !edition; $("apercu").classList.toggle("edit", edition); document.querySelector(".coque").classList.toggle("edit", edition);
+  $("placer").textContent = edition ? "Terminer le placement" : "Placer les éléments sur l'aperçu"; $("placer").className = edition ? "o" : "v"; envoieEdition();
+  if (edition) notif("Glisse les éléments sur l'écran du centre ; la molette change leur taille"); };
+$("apercu").addEventListener("load", envoieEdition);
+window.addEventListener("message", (e) => { if (e.origin !== location.origin || !e.data || e.data.type !== "place" || !WIDGETS[e.data.id]) return;
+  const ch = {}; if (e.data.x != null) { ch.x = e.data.x; ch.y = e.data.y; } if (e.data.s != null) ch.s = e.data.s; dispo(e.data.id, ch); });
+$("ajType").innerHTML = Object.entries(ETAPES).map(([id, e]) => `<option value="${id}">${esc(e.nom)}${e.jeu ? " (jeu)" : ""}</option>`).join("");
+$("ajType").value = "blind";
+$("ajOk").onclick = () => { const L = [...deroule()], id = $("ajType").value, ou = $("ajOu").value;
+  const k = ou === "debut" ? 0 : ou === "ici" ? Math.max(0, posActuelle()) + 1 : (L[L.length - 1] === "fin" ? L.length - 1 : L.length);
+  L.splice(k, 0, id); set({ deroule: L }); notif("« " + ETAPES[id].nom + " » ajouté au déroulé (étape " + (k + 1) + ")"); };
+$("derRaz").onclick = () => confirme("Rétablir le déroulé d'origine ?", "Les étapes ajoutées sont retirées du déroulé (rien ne change à l'écran).", () => set({ deroule: DEROULE0 }));
+function ongletVers(o) { document.querySelectorAll("[data-onglet]").forEach((b) => b.classList.toggle("on", b.dataset.onglet === o)); document.querySelectorAll(".onglet").forEach((x) => x.classList.toggle("on", x.id === "o-" + o)); memo("cauri-onglet", o); }
+document.querySelectorAll("[data-onglet]").forEach((b) => b.onclick = () => ongletVers(b.dataset.onglet));
+function rendJeux() {
+  const j = E.jeu || {}, r = j.reponse || {};
+  const ph = { jeu: "en cours", vote: "votes ouverts", paris: "paris ouverts", tourne: "la roue a tourné", fin: "terminé" }[j.phase] || "";
+  html($("jeuEtat"), j.type && ETAPES[j.type] ? `<b>${esc(ETAPES[j.type].nom)}</b> · ${ph}` + (r.artiste || r.mot ? ` · réponse (toi seul la vois) : <b>${esc(r.artiste || r.mot)}</b>${r.titre ? " — " + esc(r.titre) : ""}` : "")
+    + (j.gagnant ? ` · trouvé par <b>${esc(j.gagnant.nom)}</b>` : "") + (j.nParis != null && j.phase !== "fin" ? ` · ${j.nParis} réponse(s)` : "") : "Aucun jeu en cours. Lance un jeu ici, ou ajoute-le au déroulé (onglet Studio).");
+  const top = Object.values(E.devineurs || {}).sort((a, b) => b.points - a.points).slice(0, 5);
+  html($("devListe"), top.length ? top.map((d, i) => `${i + 1}. ${esc(d.nom)} (${d.points})`).join(" · ") : "personne pour l'instant");
+  const rd = E.roiActuel && (E.donateurs || {})[E.roiActuel.user]; html($("roiInfo"), rd ? `Couronne : <b>${esc(rd.nom)}</b> (${rd.diamants} diamants)` : "pas encore de cadeau");
+  html($("tirInfo"), (E.nChatteurs || 0) + " personne(s) ont écrit dans le chat" + (E.tirage ? " · dernier gagnant : " + esc(E.tirage.nom) : ""));
+  html($("objInfo"), E.objectifLikes ? `${(E.likes || 0).toLocaleString("fr-FR")} / ${(+E.objectifLikes).toLocaleString("fr-FR")} j'aime` : "une jauge à l'écran ; feu d'artifice quand c'est atteint");
+  for (const [id, k] of [["roiOn", "roi"], ["bienvOn", "bienvenue"]]) if (document.activeElement !== $(id)) $(id).checked = E[k] !== false;
+  rendWidgets();
+}
+
+// ===================================================== l'ambiance : plus de 40 effets, rangés par famille, avec recherche
+const IC = { gong: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0", anecdote: "M7.9 20A9 9 0 1 0 4 16.1L2 22Z", cauris: "M12 3c3.3 0 6 4 6 9s-2.7 9-6 9-6-4-6-9 2.7-9 6-9zM12 4c1.5 3-1.5 5 0 8s-1.5 5 0 8",
+  confettis: "M5.8 11.3 2 22l10.7-3.8M4 3h.01M22 8h.01M15 2h.01M22 20h.01M11 13c1.9 1.9 2.8 4.1 2 4.9-.8.8-3-.1-4.9-2-1.9-1.9-2.8-4.1-2-4.9.8-.8 3 .1 4.9 2Z", applaudimetre: "M11 5 6 9H2v6h4l5 4V5ZM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14",
+  decompte: "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2 2M10 2h4", flou: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 2a10 10 0 0 1 0 20Z", fiche: "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM9 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM15 8h2M15 12h2M7 16h10",
+  bandeau: "M4 8h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2zM6 12h12", flash: "M13 2 3 14h9l-1 8 10-12h-9l1-8z", secousse: "M2 12h3l3-6 4 12 3-6h7", zoom: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3M11 8v6M8 11h6",
+  projecteur: "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4", coeurs: "M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z",
+  paillettes: "M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2zM19 2v4M17 4h4", artifice: "M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8", ballons: "M12 2a6 6 0 0 0-6 6c0 4 6 9 6 9s6-5 6-9a6 6 0 0 0-6-6zM12 17v5",
+  etoiles: "M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z", notes: "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z", drapeaux: "M4 22V4M4 4h12l-2 4 2 4H4",
+  lasers: "M12 3v18M12 3 4 21M12 3l8 18", strobe: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM2 12h3M19 12h3M12 2v3M12 19v3", nb: "M3 3h18v18H3zM3 21 21 3", glitch: "M3 6h8M14 6h7M3 12h5M11 12h10M3 18h12M18 18h3",
+  rideau: "M3 3h18M5 3v18c3-3 4-9 4-18M19 3v18c-3-3-4-9-4-18", arcenciel: "M2 17a10 10 0 0 1 20 0M6 17a6 6 0 0 1 12 0M10 17a2 2 0 0 1 4 0", pulse: "M3 12h4l3-8 4 16 3-8h4", drop: "M12 3v12M7 10l5 5 5-5M5 21h14",
+  tampon: "M9 3h6v6l3 4H6l3-4zM5 17h14v4H5z", klaxon: "M3 11v2a1 1 0 0 0 1 1h3l8 5V5L7 10H4a1 1 0 0 0-1 1zM19 9a4 4 0 0 1 0 6", sirene: "M7 18v-6a5 5 0 0 1 10 0v6M5 21h14v-3H5zM12 2v2M4.2 5.2l1.4 1.4M19.8 5.2l-1.4 1.4",
+  scratch: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM17 4l-3 6", tambour: "M4 8c0-2 3.6-3 8-3s8 1 8 3v8c0 2-3.6 3-8 3s-8-1-8-3zM4 8c0 2 3.6 3 8 3s8-1 8-3M8 2l3 6M16 2l-3 6",
+  boom: "M12 2l2 6 6-2-4 5 5 4-6 1 1 6-4-4-4 4 1-6-6-1 5-4-4-5 6 2z", montee: "M3 17l6-6 4 4 8-8M15 7h6v6", ding: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0M2 8c0-2 1-4 2-5M22 8c0-2-1-4-2-5",
+  whoosh: "M17.7 7.7A2.5 2.5 0 1 1 19.5 12H2M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2", bigup: "M7 10v12M15 5.9 14 10h5.8a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 18.4 22H7V10l4-8a3 3 0 0 1 4 3.9z",
+  flashinfo: "M4 22h16a2 2 0 0 0 2-2V4H8v16a2 2 0 0 1-4 0V11h4M12 8h6M12 12h6M12 16h4", citation: "M12 17v5M9 10.8V4h6v6.8l2 3.2H7z", defi60: "M10 2h4M12 14l3-3M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" };
+const OUTILS = [
+  ["Fête", "gong", "Gong", "le son du rituel"], ["Fête", "cauris", "Pluie de cauris", "pour fêter un N°1"], ["Fête", "confettis", "Confettis", "explosion de couleurs"], ["Fête", "artifice", "Feu d'artifice", "six bouquets"],
+  ["Fête", "paillettes", "Paillettes dorées", "pluie scintillante"], ["Fête", "ballons", "Lâcher de ballons", ""], ["Fête", "etoiles", "Étoiles filantes", ""], ["Fête", "notes", "Notes de musique", "qui s'envolent"],
+  ["Fête", "drapeaux", "Pluie de drapeaux", "le pays affiché, sinon tous"], ["Fête", "coeurs", "Merci les cadeaux", "cœurs + message"],
+  ["Lumière et image", "flash", "Flash", ""], ["Lumière et image", "strobe", "Stroboscope", "2 secondes"], ["Lumière et image", "lasers", "Lasers", "6 secondes"], ["Lumière et image", "projecteur", "Projecteur", "balaie l'écran"],
+  ["Lumière et image", "rideau", "Rideau", "se ferme puis s'ouvre"], ["Lumière et image", "secousse", "Secousse", ""], ["Lumière et image", "zoom", "Zoom choc", ""], ["Lumière et image", "pulse", "Battements", "l'écran bat au rythme"],
+  ["Lumière et image", "glitch", "Glitch", "bug d'image volontaire"], ["Lumière et image", "arcenciel", "Arc-en-ciel", "les couleurs tournent"], ["Lumière et image", "nb", "Noir et blanc", "6 secondes, façon souvenir"], ["Lumière et image", "flou", "Flou", "flouter ou rendre net le fond"],
+  ["Sons", "applaudimetre", "Applaudir", "« Faites du bruit ! » + applaudissements"], ["Sons", "decompte", "Décompte 10 s", "avec roulement de tambour"], ["Sons", "drop", "Drop 3-2-1", "décompte, boum, feu d'artifice"],
+  ["Sons", "klaxon", "Klaxon de stade", ""], ["Sons", "sirene", "Sirène DJ", ""], ["Sons", "scratch", "Scratch", ""], ["Sons", "tambour", "Coup de tambour", ""], ["Sons", "boom", "Boum", "grosse basse"],
+  ["Sons", "montee", "Montée", "le suspense monte"], ["Sons", "ding", "Ding", "bonne réponse"], ["Sons", "whoosh", "Whoosh", "passage rapide"],
+  ["Messages", "anecdote", "Anecdote", "la mascotte raconte une histoire vraie"], ["Messages", "fiche", "Fiche artiste", "ses chiffres à l'écran"], ["Messages", "bandeau", "Bandeau…", "un message qui défile"],
+  ["Messages", "bigup", "Big up…", "le nom d'un spectateur en grand"], ["Messages", "citation", "Épingler un commentaire…", "affiché en grand"], ["Messages", "flashinfo", "Flash info…", "une annonce en bas"],
+  ["Messages", "defi60", "Défi 60 secondes…", "un chrono à l'écran"], ["Messages", "tampon", "Tampon…", "« OFFICIEL » en grand"]];
+function rendOutils() {
+  const q = norm($("outilQ").value); let h = "", g = "";
+  for (const [grp, f, nom, sous] of OUTILS) { if (q && !norm(nom + " " + sous + " " + grp).includes(q)) continue;
+    if (grp !== g) { g = grp; h += `<div class="groupe">${esc(grp.toUpperCase())}</div>`; }
+    h += `<button class="outil" data-fx="${f}"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[f] || ""}"/></svg></i><span>${esc(nom)}${sous ? `<small>${esc(sous)}</small>` : ""}</span></button>`; }
+  $("listeOutils").innerHTML = h || '<div class="petit" style="padding:6px">Aucun effet ne correspond.</div>';
+}
+$("outilQ").oninput = rendOutils;
+const fx = (type, extra) => set({ fx: { type, t: Date.now(), ...(extra || {}) } });
+function demande(t, v, ph, ok, choix) {
+  $("mbTitre").textContent = t; $("bandeauTxt").value = v || ""; $("bandeauTxt").placeholder = ph || "";
+  $("mbChoix").innerHTML = (choix || []).map((c, i) => `<button data-c="${i}">${esc(c)}</button>`).join("");
+  $("mbChoix").onclick = (e) => { const b = e.target.closest("[data-c]"); if (b) $("bandeauTxt").value = choix[+b.dataset.c]; };
+  demande.ok = ok; $("mBandeau").classList.add("on"); $("bandeauTxt").focus();
+}
+
 
 // ===================================================== ce qui est à l'écran : chaque élément se retire d'un clic
 function calques() {
   const c = [];
-  const nomSc = { attente: "Attente", camera: "Caméra seule", artiste: "Clip plein écran", rituel: "Rituel", top3: "Top 3 " + ((D.pays[E.pays] || {}).nom || ""), versus: "Versus", mur: "Ton artiste ?", finale: "Le final", fin: "Fin" }[E.scene] || E.scene;
+  const nomSc = { jeu: "Jeu : " + ((ETAPES[(E.jeu || {}).type] || {}).nom || ""), attente: "Attente", camera: "Caméra seule", artiste: "Clip plein écran", rituel: "Rituel", top3: "Top 3 " + ((D.pays[E.pays] || {}).nom || ""), versus: "Versus", mur: "Ton artiste ?", finale: "Le final", fin: "Fin" }[E.scene] || E.scene;
   c.push({ n: nomSc, x: E.scene === "camera" ? null : () => set({ scene: "camera", fiche: false }) });
   if (E.media) c.push({ n: "♪ " + [E.media.titre, E.media.artiste].filter(Boolean).join(" · "), x: () => set({ media: null }) });
   if (E.fiche && (E.carte || E.carteExt)) c.push({ n: "Fiche " + ((D.artistes.find((a) => a.id === E.carte) || E.carteExt || {}).nom || ""), x: () => set({ fiche: false, flou: false }) });
@@ -274,7 +490,7 @@ function calques() {
   calques.actions = c.map((k) => k.x);
 }
 $("calques").onclick = (e) => { const b = e.target.closest("[data-x]"); if (b) calques.actions[+b.dataset.x](); };
-$("toutCouper").onclick = () => set({ media: null, fiche: false, flou: false, bandeau: "", minuteur: 0, fx: null, scene: "camera" });
+$("toutCouper").onclick = () => set({ media: null, fiche: false, flou: false, bandeau: "", minuteur: 0, fx: null, scene: "camera", jeu: null });
 
 // ===================================================== musique & clips : classement, puis hors classement (Deezer, YouTube)
 function construitPistes() {
@@ -337,17 +553,24 @@ $("lecFlou").onclick = () => { const f = !(E.flou || (E.media && E.media.flou));
 $("volume").oninput = (e) => { clearTimeout(window._v); window._v = setTimeout(() => set({ volume: +e.target.value / 100 }), 150); };
 
 // ===================================================== ambiance
-document.querySelectorAll("[data-fx]").forEach((b) => b.onclick = () => {
-  const f = b.dataset.fx; dernierEffet = Date.now();
+$("listeOutils").onclick = (ev) => {
+  const b = ev.target.closest("[data-fx]"); if (!b) return; const f = b.dataset.fx; dernierEffet = Date.now();
   if (f === "gong") return set({ gong: Date.now() });
   if (f === "anecdote") return anecdote();
   if (f === "flou") return $("lecFlou").onclick();
-  if (f === "bandeau") { $("mBandeau").classList.add("on"); $("bandeauTxt").value = E.bandeau || ""; return $("bandeauTxt").focus(); }
+  if (f === "bandeau") return demande("Texte du bandeau", E.bandeau || "", "Ex. MERCI POUR LES 1 000 !", (v) => set({ bandeau: v }));
   if (f === "fiche") { const id = E.media?.artisteId || E.carte; return id || E.carteExt ? set({ fiche: !E.fiche, flou: !E.fiche }) : notif("Choisis d'abord un artiste (Fiche dans Musique & clips)"); }
+  const chat = (E.dernier || []).filter((c) => c.user && !/^régie/.test(c.user) && !/^envoie |^s'abonne/.test(c.texte));
+  if (f === "bigup") return demande("Big up à qui ?", chat[0]?.user || "", "Le pseudo du spectateur", (v) => v && fx(f, { texte: v }), [...new Set(chat.map((c) => c.user))]);
+  if (f === "flashinfo") return demande("Flash info", "", "Ex. NOUVEAU CLIP DE DIDI B CE SOIR", (v) => v && fx(f, { texte: v }));
+  if (f === "tampon") return demande("Texte du tampon", "OFFICIEL", "", (v) => fx(f, { texte: v || "OFFICIEL" }));
+  if (f === "defi60") return demande("Le défi (60 secondes)", "1 000 J'AIME EN 60 SECONDES !", "", (v) => v && fx(f, { texte: v }));
+  if (f === "citation") return demande("Épingler un commentaire", "", "Clique un commentaire, ou écris « pseudo : message »", (v) => { if (!v) return; const k = v.indexOf(" : ");
+    fx(f, k > 0 ? { user: v.slice(0, k).trim(), texte: v.slice(k + 3).trim() } : { user: "", texte: v }); }, chat.map((c) => c.user + " : " + c.texte));
   const s = { fx: { type: f, t: Date.now() } }; if (f === "decompte") s.minuteur = Date.now() + 10000; set(s);
-});
+};
 $("mbNon").onclick = () => $("mBandeau").classList.remove("on");
-$("mbOui").onclick = () => { set({ bandeau: $("bandeauTxt").value.trim() }); $("mBandeau").classList.remove("on"); };
+$("mbOui").onclick = () => { const v = $("bandeauTxt").value.trim(); $("mBandeau").classList.remove("on"); demande.ok && demande.ok(v); };
 $("bandeauTxt").onkeydown = (e) => e.key === "Enter" && $("mbOui").click();
 $("cmtOk").onclick = () => { const v = $("cmt").value.trim(); if (v) poste({ commentaire: { user: "régie" + Math.random().toString(36).slice(2, 6), texte: v } }); $("cmt").value = ""; };
 $("cmt").onkeydown = (e) => e.key === "Enter" && $("cmtOk").click();
@@ -363,7 +586,9 @@ function conseils() {
   if (E.scene === "versus" && tot >= 15) { const ga = E.votes.a >= E.votes.b, pc = Math.round(Math.max(E.votes.a, E.votes.b) * 100 / tot);
     L.push({ id: "vs" + Math.floor(tot / 15), titre: `${tot} votes pour le versus`, texte: `Annonce le résultat : Team ${ga ? E.versus.a : E.versus.b} (${pc} %) ?`, f: () => set({ fx: { type: "confettis", t: Date.now() }, bandeau: `TEAM ${(ga ? E.versus.a : E.versus.b).toUpperCase()} GAGNE · ${pc} %` }) }); }
   const chat = E.chat || [];
-  if (antenne && chat.length > 5 && now / 1000 - chat[chat.length - 1] > 90) L.push({ id: "lent" + Math.floor(now / 180000), titre: "Le chat ralentit", texte: "Relance avec « Devine le N°1 » ?", f: () => { const c = (E.paysListe || [])[0]; set({ scene: "top3", pays: Math.max(0, idxPays(c)), etape: 0, fiche: false }); } });
+  if (antenne && chat.length > 5 && now / 1000 - chat[chat.length - 1] > 90) L.push({ id: "lent" + Math.floor(now / 180000), titre: "Le chat ralentit", texte: "Relance avec « D'où tu nous regardes ? » : tout le monde peut répondre.", f: () => lanceJeu("dou") });
+  if (antenne && E.scene !== "jeu" && now - dernierJeu > 12 * 60000) L.push({ id: "jeu" + Math.floor(now / 720000), titre: "12 minutes sans jeu", texte: "Lance « Devine le titre » : c'est le jeu qui fait le plus écrire.", f: () => lanceJeu("blind") });
+  if (antenne && (E.spectateurs || 0) >= 30 && !E.objectifLikes) L.push({ id: "obj", titre: `${E.spectateurs} spectateurs`, texte: `Fixe un objectif de j'aime (${(Math.ceil(((E.likes || 0) + 5000) / 1000) * 1000).toLocaleString("fr-FR")}) pour les faire taper ?`, f: () => set({ objectifLikes: Math.ceil(((E.likes || 0) + 5000) / 1000) * 1000 }) });
   if (antenne && now - dernierEffet > 6 * 60000) L.push({ id: "effet" + Math.floor(now / 360000), titre: "Ça fait 6 minutes sans effet", texte: "Réveille le public : pluie de cauris et applaudissements ?", f: () => { dernierEffet = now; set({ fx: { type: "cauris", t: now } }); setTimeout(() => set({ fx: { type: "applaudimetre", t: Date.now() } }), 1500); } });
   if (E.media && E.media.t && now - E.media.t > 110000 && !E.media.pause) L.push({ id: "long" + E.media.t, titre: "La musique tourne depuis 2 minutes", texte: "Coupe-la pour limiter le risque de son coupé par TikTok ?", f: () => set({ media: null }) });
   return L.filter((c) => !(reportes[c.id] > now));
@@ -378,12 +603,14 @@ $("iaPlusTard").onclick = () => { if (conseilCourant) { reportes[conseilCourant.
 // ===================================================== rendu général
 function rendu() {
   if (!D) return;
-  $("etapes").innerHTML = ETAPES.map((e) => `<button class="etape ${E.scene === e.id ? "on" : ""}" data-etape="${e.id}"><div class="n">${e.n}</div><div>${esc(e.nom)}<small>${esc(e.sous())}</small></div></button>`).join("") +
-    `<button class="etape libre ${E.scene === "camera" ? "on" : ""}" data-etape="camera"><div class="n">◉</div><div>Caméra seule<small>toi en grand, à tout moment</small></div></button>`;
+  const Ld = deroule(), ia = posActuelle();
+  html($("etapes"), Ld.map((id, i) => { const e = ETAPES[id]; return `<div class="etape ${i === ia ? "on" : ""} ${e.jeu ? "jeu" : ""}" data-etape="${id}" data-i="${i}"><div class="n">${i + 1}</div><div class="et">${esc(e.nom)}<small>${esc(e.sous())}</small></div>`
+    + `<span class="edt"><b data-monte="${i}" title="Monter">↑</b><b data-descend="${i}" title="Descendre">↓</b><b data-retire="${i}" title="Retirer du déroulé">✕</b></span></div>`; }).join("")
+    + `<div class="etape libre ${E.scene === "camera" ? "on" : ""}" data-etape="camera"><div class="n">◉</div><div class="et">Caméra seule<small>toi en grand, à tout moment</small></div></div>`);
   const a = actionSuivante(); $("suivant").innerHTML = `SUIVANT ▶ ${esc(a.t)}${a.s ? `<small>${esc(a.s)}</small>` : ""}`; $("suivant").disabled = !a.f;
   calques();
   const m = E.media; $("lecteur").style.display = m ? "flex" : "none";
-  if (m) { $("lecNom").textContent = [m.titre, m.artiste].filter(Boolean).join(" · "); $("lecPause").innerHTML = m.pause ? ICO_PLAY : ICO_PAUSE; $("lecPause").title = m.pause ? "Reprendre" : "Pause"; }
+  if (m) { $("lecNom").textContent = m.blind ? "Devine le titre (extrait secret)" : [m.titre, m.artiste].filter(Boolean).join(" · "); $("lecPause").innerHTML = m.pause ? ICO_PLAY : ICO_PAUSE; $("lecPause").title = m.pause ? "Reprendre" : "Pause"; }
   $("lecteur").style.display = m ? "flex" : "none";
   const L = E.lecture; $("lecEtat").textContent = !m ? "" : !L || L.t * 1000 < (m.t || 0) - 2000 ? "Lancement à l'écran…" : ({ lecture: "À l'écran : " + L.detail, essai: "Clip bloqué par le label, essai suivant (" + L.detail + ")", repli: "Clips bloqués : on joue " + L.detail + " (floutée)", bloque: "Rien ne peut être lu : choisis un autre titre" }[L.etat] || ""); $("lecEtat").title = $("lecEtat").textContent;  $("lecFlou").classList.toggle("on", !!(E.flou || (m && m.flou)));
   if (document.activeElement !== $("volume")) $("volume").value = Math.round((E.volume ?? .85) * 100);
@@ -400,10 +627,9 @@ function rendu() {
   const top = Object.values(E.donateurs || {}).sort((a, b) => b.diamants - a.diamants).slice(0, 5);
   $("fans").innerHTML = top.length ? "<b>Top fans :</b> " + top.map((d, i) => `${i + 1}. ${esc(d.nom)} (${d.diamants})`).join(" · ") : "";
   if (document.activeElement !== $("reglesCadeaux")) $("reglesCadeaux").checked = E.reglesCadeaux !== false;
-  if (document.activeElement !== $("topFans")) $("topFans").checked = E.topFans !== false;
+  rendJeux();
 }
 $("reglesCadeaux").onchange = (e) => set({ reglesCadeaux: e.target.checked });
-$("topFans").onchange = (e) => set({ topFans: e.target.checked });
 setInterval(() => { const m = E.media; if (m && m.t) $("lecTemps").textContent = fmt((Date.now() - m.t) / 1000); }, 1000);
 
 // ===================================================== écran : aperçu à la bonne taille, mode répétition, lien, chrono
@@ -428,7 +654,7 @@ const VISITE = [
   { cible: "deroule", img: "m1-question", t: "Le déroulé du live", x: "Les étapes de la soirée, dans l'ordre. Clique une étape pour y aller directement." },
   { cible: "suivant", img: "m2-presente", t: "Le seul bouton à retenir : SUIVANT", x: "Il fait toujours la bonne chose : révéler le N°3, puis le N°2, passer au pays suivant… Raccourci : la barre Espace." },
   { cible: "musique", img: "m2-presente", t: "Musique et clips", x: "Tape un artiste. ▶ joue son clip à l'écran. S'il n'est pas classé chez nous, on le trouve sur YouTube ou Deezer." },
-  { cible: "ambiance", img: "m4-appel", t: "L'ambiance", x: "Gong, anecdote de la mascotte, pluie de cauris, applaudissements, flou… Un clic, et ça s'efface tout seul. Le volume est dans la barre noire du titre en cours." },
+  { cible: "ambiance", img: "m4-appel", t: "Ambiance, Jeux et Studio", x: "Ambiance : plus de 40 effets et sons, un clic et ça s'efface. Jeux : devine le titre, qui est-ce, roue, sondage, tirage au sort… Studio : déplace les éléments sur l'écran et compose ton déroulé." },
   { cible: "couper", img: "m1-question", t: "Un souci ? TOUT COUPER.", x: "Ça retire tout de l'écran et coupe la musique. Sous l'écran, la croix ✕ retire un seul élément. Pour t'entraîner sans risque : « Mode répétition »." },
 ];
 let pas = 0;
@@ -447,7 +673,7 @@ $("aide").onclick = () => { pas = 0; montreVisite(); };
 
 // ===================================================== démarrage
 (async () => {
-  D = await (await fetch(API + "/donnees")).json(); construitPistes(); rendResultats(); chargeApercu(); suit();
+  D = await (await fetch(API + "/donnees")).json(); construitPistes(); rendResultats(); rendOutils(); ongletVers(memo("cauri-onglet") || "ambiance"); chargeApercu(); suit();
   if (!memo("cauri-live-visite")) setTimeout(() => { pas = 0; montreVisite(); }, 900);
 })();
 </script></body></html>

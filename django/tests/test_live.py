@@ -25,7 +25,8 @@ def _req(methode, donnees=None):
 def base(monkeypatch):
     stock = {}
     monkeypatch.setattr(studio, "chemin_secret", lambda: CHEMIN)
-    monkeypatch.setattr(live, "_lit", lambda cle, defaut=None: stock.get(cle, defaut))
+    monkeypatch.setattr(live, "_lit", lambda cle, defaut=None, verrou=False: stock.get(cle, defaut))
+    monkeypatch.setattr(live.db, "atomic", __import__("contextlib").nullcontext)
     monkeypatch.setattr(live, "_ecrit", lambda cle, v, jours=3: stock.__setitem__(cle, json.loads(json.dumps(v))))
     monkeypatch.setattr(live, "donnees", lambda: DONNEES)
     live._memo.clear()
@@ -109,3 +110,52 @@ def test_cadeaux_classement_et_regles(base):
     assert e["gong"] and e["fx"]["type"] == "confettis" and "KOFI" in e["mascotte"]["titre"] and e["abonnes"] == 1
     envoi({"set": {}, "cadeaux": [{"user": "ama", "cadeau": "Rose", "n": 1, "diamants": 1}]})
     assert base[live.CLE_ETAT]["donateurs"]["ama"]["diamants"] == 4
+
+
+def _cmt(e, user, texte):
+    live._commentaire(e, user, texte)
+
+
+def test_devine_le_titre_premier_gagne():
+    import time
+    e = {**live.ETAT_DEFAUT, "jeu": {"type": "blind", "phase": "jeu", "cles": ["didib", "malade"], "t": time.time() * 1000, "duree": 30,
+                                     "reponse": {"artiste": "Didi B", "titre": "Malade"}}, "mur": [], "devineurs": {}, "scene": "jeu"}
+    _cmt(e, "a", "himra !"); assert e["jeu"]["phase"] == "jeu"
+    _cmt(e, "b", "c'est Didi B"); assert e["jeu"]["gagnant"]["user"] == "b" and e["devineurs"]["b"]["points"] == 1
+    _cmt(e, "c", "didi b"); assert e["jeu"]["gagnant"]["user"] == "b" and "c" not in e["devineurs"]
+    assert e["mur"] == []   # pendant un jeu, les commentaires ne remplissent pas le mur
+
+
+def test_roue_paris_et_tirage_serveur(monkeypatch):
+    e = {**live.ETAT_DEFAUT, "jeu": {"type": "roue", "phase": "paris", "segments": ["Togo", "Ghana", "Nigeria"]}, "devineurs": {}}
+    _cmt(e, "a", "2"); _cmt(e, "b", "nigeria"); _cmt(e, "a", "3")   # un seul pari par personne
+    assert e["jeu"]["paris"] == {"a": [1, "a"], "b": [2, "b"]}
+    monkeypatch.setattr(live.secrets, "randbelow", lambda n: 1)
+    live._jeu_action(e, "lancer")
+    assert e["jeu"]["resultat"] == 1 and e["jeu"]["gagnants"] == ["a"] and e["devineurs"]["a"]["points"] == 1
+    assert "paris" not in live._public(e)["jeu"]
+
+
+def test_sondage_et_pays_du_chat():
+    e = {**live.ETAT_DEFAUT, "jeu": {"type": "sondage", "phase": "vote", "options": ["Feu", "Bof"], "votes": [0, 0]}}
+    _cmt(e, "a", "1"); _cmt(e, "a", "2"); _cmt(e, "b", "bof")
+    assert e["jeu"]["votes"] == [1, 1]
+    e["jeu"] = {"type": "dou", "phase": "vote"}
+    _cmt(e, "a", "Abidjan ici"); _cmt(e, "b", "Lomé"); _cmt(e, "c", "merci"); _cmt(e, "d", "Nigeria !")
+    assert e["jeu"]["pays"] == {"ci": 1, "tg": 1, "ng": 1}
+
+
+def test_roi_du_live_change_de_main():
+    e = {**live.ETAT_DEFAUT, "donateurs": {}, "dernier": []}
+    live._cadeau(e, {"user": "a", "nom": "Ama", "diamants": 10})
+    assert e["roiActuel"]["user"] == "a" and not e.get("mascotte")
+    live._cadeau(e, {"user": "b", "nom": "Kofi", "diamants": 50})
+    assert e["roiActuel"]["user"] == "b" and "Kofi" in e["mascotte"]["texte"]
+
+
+def test_tirage_au_sort_parmi_le_chat(monkeypatch):
+    e = {**live.ETAT_DEFAUT, "chatteurs": [], "mur": [], "dernier": []}
+    _cmt(e, "a", "salut"); _cmt(e, "b", "yo"); _cmt(e, "a", "re")
+    assert [c[0] for c in e["chatteurs"]] == ["b", "a"]
+    monkeypatch.setattr(live.secrets, "randbelow", lambda n: 0)
+    live._jeu_action(e, "tirage"); assert e["tirage"]["user"] == "b"
