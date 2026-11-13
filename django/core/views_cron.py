@@ -57,6 +57,10 @@ def monde(request):
     if q not in ("matin", "soir", "flash"):
         return _reply("q = matin, soir ou flash", 400)
     if q == "flash":
+        try:   # le vendredi soir, le classement part tout seul même si GitHub oublie sa tâche planifiée
+            _publication_vendredi()
+        except Exception:  # noqa: BLE001 — le guet de Cauri Monde continue quoi qu'il arrive
+            pass
         from core.services.social import monde as M
         etat = M.etat_guet()   # fichier du Blob : la base dort (relue seulement s'il est périmé ou vieux de 3 h)
         if M.file_due(etat):   # un post Cauri Monde est arrivé à son heure : GitHub l'envoie (Buffer, Telegram)
@@ -66,6 +70,28 @@ def monde(request):
             return _reply("rien de choc pour l'instant")
     code = _lance(q)
     return _reply(f"Cauri Monde ({q}) lancé" if code == 204 else f"échec GitHub {code}", 200 if code == 204 else 502)
+
+
+def _publication_vendredi() -> str | None:
+    """Filet de sécurité demandé par le fondateur (14/11/2026, « les classements doivent partir tout seuls ») : la tâche
+    planifiée GitHub du vendredi 19 h UTC n'est jamais partie le 13/11 (celles du mardi partaient avec 8 h de retard).
+    Le guet de Cauri Monde, appelé toutes les 10 min par cron-job.org, lance la publication le vendredi à partir de
+    19 h UTC si aucune ne tourne ni n'a réussi aujourd'hui, 3 fois au plus (une publication coupée reprend où elle
+    s'était arrêtée, sans rien republier)."""
+    maintenant = datetime.now(timezone.utc)
+    if maintenant.weekday() != 4 or maintenant.hour < 19:
+        return None
+    token = env.get("GH_DISPATCH_TOKEN", "")
+    if not token:
+        return None
+    h = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    url = f"https://api.github.com/repos/{REPO}/actions/workflows/publish-chart.yml"
+    runs = requests.get(url + "/runs", params={"created": f">={maintenant.date().isoformat()}", "per_page": 20},
+                        headers=h, timeout=20).json().get("workflow_runs") or []
+    if len(runs) >= 3 or any(r.get("status") != "completed" or r.get("conclusion") == "success" for r in runs):
+        return None
+    code = requests.post(url + "/dispatches", json={"ref": "main"}, headers=h, timeout=20).status_code
+    return "publication lancée" if code == 204 else f"publication : échec GitHub {code}"
 
 
 def _lance(edition: str) -> int:
