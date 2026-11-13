@@ -156,7 +156,7 @@ def montage(request, chemin):
     return _reponse(HttpResponse(html), nonce)
 
 
-OUTILS_BASE = ("clip", "paroles", "annonce", "vedette", "photos")
+OUTILS_BASE = ("clip", "paroles", "annonce", "vedette", "photos", "raconte")
 
 
 def outils(request, chemin):
@@ -337,7 +337,7 @@ def _lance(job_id: int) -> str | None:
     from core.views_cron import REPO
     j = db.one("SELECT lien, params FROM studio_jobs WHERE id = ?", [job_id])
     hote = (urlparse((j or {}).get("lien") or "").hostname or "").lower()
-    paroles = '"type": "paroles"' in str((j or {}).get("params") or "")   # iZotope RX et rendu lourd : sur le PC
+    paroles = re.search(r'"type": "(paroles|raconte)"', str((j or {}).get("params") or ""))   # iZotope RX, Remotion : sur le PC
     if hote.endswith("youtube.com") or hote.endswith("youtu.be") or paroles:
         from core import storage
         db.update("studio_jobs", {"statut": "attente_pc"}, "id = :id", {"id": job_id})
@@ -818,6 +818,30 @@ def paroles_nouveau(request, chemin):
     return _json({"id": job_id})
 
 
+def raconte_nouveau(request, chemin):
+    """« Cauri raconte » (13/11/2026) : un artiste suivi (+ un angle facultatif) ; le PC cherche les chiffres et écrit le récit."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    c = _corps(request)
+    try:
+        aid = int(c.get("artiste_id"))
+    except (TypeError, ValueError):
+        return _json({"erreur": "choisis un artiste"}, 400)
+    a = db.one("SELECT id, name FROM artists WHERE id = ? AND status = 'active'", [aid])
+    if not a:
+        return _json({"erreur": "artiste introuvable"}, 404)
+    params = {"type": "raconte", "artiste_id": a["id"], "artiste": a["name"], "angle": str(c.get("angle") or "").strip()[:300],
+              "accroche": f"Cauri raconte : {a['name']}"}
+    creer_tables()
+    job_id = db.insert("studio_jobs", {"lien": "raconte", "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"], "statut": "attente"})
+    erreur = _lance(job_id)
+    if erreur:
+        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
+    return _json({"id": job_id, "erreur": erreur})
+
+
 def paroles_fichier(request, chemin, ident):
     """Un fichier de la vidéo paroles envoyé depuis le téléphone : ?genre=photo|capture|son (corps brut)."""
     _verifie(chemin)
@@ -1005,6 +1029,12 @@ def valider_job(request, chemin, ident):
         if p.get("lignes") and len(c["paroles"]) != len(p["lignes"]):
             return _json({"erreur": "Les paroles affichées ne sont plus à jour : rouvre le projet puis valide."}, 409)
         p["paroles"] = [str(x).strip()[:200] for x in c["paroles"]][:80]
+    if p.get("type") == "raconte" and c.get("recit") is not None:   # récit relu : texte, prononciation, cartes
+        from core.services.social.studio_raconte import recit_valide
+        r = recit_valide(c["recit"])
+        if not r:
+            return _json({"erreur": "le récit doit garder au moins 3 phrases"}, 400)
+        p["recit"] = r
     if isinstance(c.get("habillage"), dict):   # début et fin choisis (studio_sequences, 10/11/2026)
         p["habillage"] = _habillage_valide(c["habillage"])
     p["valide"] = True

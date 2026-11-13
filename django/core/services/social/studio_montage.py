@@ -691,6 +691,18 @@ def traite(job_id: int) -> dict:
         except Exception as exc:  # noqa: BLE001
             _maj(job_id, statut="erreur", erreur=str(exc)[:500])
             raise
+    if p.get("type") == "raconte":   # « Cauri raconte » (13/11/2026), sur le PC : récit, voix Henri, rendu Remotion
+        from core.services.social import studio_raconte
+        try:
+            return studio_raconte.traite(job_id, job, p, _maj)
+        except TacheAnnulee:
+            return {"statut": "annule"}
+        except Exception as exc:  # noqa: BLE001
+            try:
+                _maj(job_id, statut="erreur", erreur=str(exc)[:500])
+            except TacheAnnulee:
+                return {"statut": "annule"}
+            raise
     if p.get("type") == "photos":   # section Photos : récupérer les images d'un post pour la banque de l'artiste
         from core.services.social import studio_photos
         try:
