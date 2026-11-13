@@ -415,12 +415,16 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
     epoques = []          # (début, sources d'images de l'époque)
     musiques = []
     base = [s for s in (RF.telecharge(v, dossier) for v in clips(aid, 2)) if s]
+    BLOQUE = ("YouTube refuse les téléchargements depuis ce PC pour l'instant (« confirme que tu n'es pas un robot ») : "
+              "relance le projet dans quelques heures")
+    if not base:   # 14/11/2026 : une vidéo sans images ni musique a été fabriquée, puis marquée « prête »
+        raise RuntimeError(BLOQUE)
     for j, pr in enumerate(projets):
         cover = _photo(pr.get("cover"), dossier, f"cover{j}.jpg")
         pr["cover"] = f"{prefixe}/cover{j}.jpg" if cover else "raconte/logo.png"
         v = video_morceau(aid, p.get("artiste") or "", pr.get("morceau") or pr["titre"], dossier)
         if not v:
-            continue
+            raise RuntimeError(f"musique de « {pr.get('morceau') or pr['titre']} » introuvable sur YouTube ; " + BLOQUE)
         try:
             t0, _ = RF.refrain(v, duree=DUREE_PROJET)
         except Exception:  # noqa: BLE001
