@@ -34,7 +34,7 @@ ETAT_DEFAUT = {
     # régie v3 « télécommande » (13/11) : l'écran joue tout (clip avec son, son seul, YouTube) ; une seule régie a la main
     "media": None, "volume": 0.85, "paysListe": ["ci", "ng", "tg", "gh"], "maitre": None, "chat": [],
     # v3.1 : la mascotte passe à l'écran entre les étapes (ce qui vient de se passer, ce qui arrive, anecdotes)
-    "mascotte": None,
+    "mascotte": None, "lecture": None,
 }
 
 # Anecdotes vérifiées (sources croisées le 12/11/2026, vidéos « Cauri raconte ») : la mascotte les raconte en direct.
@@ -269,6 +269,7 @@ def ecran(request, jeton):
     # clips YouTube (artistes hors classement) : lecteur officiel intégré
     r["Content-Security-Policy"] = (r["Content-Security-Policy"].replace("frame-ancestors 'none'", "frame-ancestors 'self'")
         .replace("script-src 'self'", "script-src 'self' https://www.youtube.com https://s.ytimg.com")
+        .replace("media-src 'self'", "media-src 'self' https://*.dzcdn.net")
         .replace("default-src 'self';", "default-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com;"))
     r["Referrer-Policy"] = "strict-origin-when-cross-origin"   # YouTube refuse de jouer un clip intégré sans l'origine (erreur 153)
     return r
@@ -386,35 +387,41 @@ def _yt_recherche(q: str, n: int = 6) -> list:
 
 
 def regie_clip(request, jeton):
-    """Le clip à jouer pour un titre : le clip officiel (chaîne de l'artiste, VEVO, « official ») ; sinon une autre vidéo de
-    l'artiste, à flouter. Mémorisé 30 jours (une recherche YouTube coûte 100 unités de quota sur 10 000 par jour)."""
+    """Les vidéos candidates pour un titre, dans l'ordre : clip officiel, autres vidéos du titre (paroles, audio, live),
+    puis vidéos de l'artiste. Beaucoup de labels interdisent la lecture de leurs clips hors de YouTube (erreur 150) :
+    l'écran essaie les candidates une à une. Mémorisé 30 jours (une recherche = 100 unités de quota sur 10 000 par jour)."""
     _verifie_regie(jeton)
     import html as H
     artiste = (request.GET.get("artiste") or "").strip()[:80]
     titre = re.split(r"\s*[\(\[]\s*(feat|ft|with|extrait)", (request.GET.get("titre") or "").strip(), flags=re.I)[0][:80]
     if not artiste:
-        return S._json({"clip": None})
-    cle = "yt-" + hashlib.sha1(_norm(artiste + "|" + titre).encode()).hexdigest()[:20]
+        return S._json({"clips": []})
+    cle = "yt2-" + hashlib.sha1(_norm(artiste + "|" + titre).encode()).hexdigest()[:20]
     deja = _lit(cle)
     if deja is not None:
-        return S._json({"clip": deja})
-    na = _norm(artiste)
-    def officiel(x):
-        sn = x["snippet"]; ch, ti = _norm(sn["channelTitle"]), _norm(H.unescape(sn["title"]))
-        return na and (na in ch or ch.startswith(na[:6]) or "vevo" in ch) and (not titre or _norm(titre)[:8] in ti)
-    clip = None
+        return S._json({"clips": deja})
+    na, nt = _norm(artiste), _norm(titre)[:8]
+    def info(x, officiel):
+        return {"id": x["id"]["videoId"], "titre": H.unescape(x["snippet"]["title"]), "officiel": officiel}
+    clips, vus = [], set()
+    def ajoute(x, officiel):
+        if x["id"]["videoId"] not in vus:
+            vus.add(x["id"]["videoId"]); clips.append(info(x, officiel))
     if titre:
-        res = _yt_recherche(f"{artiste} {titre} official video")
-        o = next((x for x in res if officiel(x)), None) or next((x for x in res if na in _norm(H.unescape(x["snippet"]["title"])) and _norm(titre)[:8] in _norm(H.unescape(x["snippet"]["title"]))), None)
-        if o:
-            clip = {"id": o["id"]["videoId"], "titre": H.unescape(o["snippet"]["title"]), "officiel": officiel(o)}
-    if not clip:   # pas de clip pour ce titre : une vidéo de l'artiste, floutée à l'écran
-        res = _yt_recherche(f"{artiste} live", 5)
-        o = next((x for x in res if na in _norm(H.unescape(x["snippet"]["title"])) or na in _norm(x["snippet"]["channelTitle"])), None)
-        if o:
-            clip = {"id": o["id"]["videoId"], "titre": H.unescape(o["snippet"]["title"]), "officiel": False}
-    _ecrit(cle, clip or {}, jours=30)
-    return S._json({"clip": clip})
+        res = _yt_recherche(f"{artiste} {titre}", 8)
+        for x in res:
+            sn = x["snippet"]; ch, ti = _norm(sn["channelTitle"]), _norm(H.unescape(sn["title"]))
+            if nt and nt in ti and (na in ch or "vevo" in ch):
+                ajoute(x, True)
+        for x in res:
+            if nt and nt in _norm(H.unescape(x["snippet"]["title"])):
+                ajoute(x, False)
+    for x in _yt_recherche(f"{artiste} live", 4):
+        if na in _norm(H.unescape(x["snippet"]["title"])) or na in _norm(x["snippet"]["channelTitle"]):
+            ajoute(x, False)
+    clips = clips[:7]
+    _ecrit(cle, clips, jours=30)
+    return S._json({"clips": clips})
 
 
 def regie_youtube(request, jeton):
@@ -454,5 +461,19 @@ def regie_commentaires(request, jeton):
     e = {**etat_courant(mode)}
     for c in (m.get("liste") or [])[:200]:
         _commentaire(e, str(c.get("user") or "?")[:30], str(c.get("texte") or "")[:200])
+    _ecrit(_cle(mode), e); _memo[mode] = (time.time(), e)
+    return S._json({"ok": True})
+
+
+
+@csrf_exempt
+def ecran_statut(request, jeton):
+    """L'écran signale ce qui joue vraiment (clip YouTube, vidéo de repli, extrait) : la régie l'affiche."""
+    _verifie_jeton(jeton)
+    if request.method != "POST":
+        return S._json({"ok": False}, 405)
+    m = S._corps(request); mode = "test" if m.get("mode") == "test" else ""
+    e = {**etat_courant(mode)}
+    e["lecture"] = {"t": int(time.time()), "media": m.get("media"), "etat": str(m.get("etat") or "")[:40], "detail": str(m.get("detail") or "")[:120]}
     _ecrit(_cle(mode), e); _memo[mode] = (time.time(), e)
     return S._json({"ok": True})

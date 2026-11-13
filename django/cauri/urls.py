@@ -35,6 +35,7 @@ urlpatterns = [
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/ecran$", live.ecran),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/etat$", live.ecran_etat),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/donnees$", live.ecran_donnees),
+    re_path(r"^live/(?P<jeton>[0-9a-f]{28})/statut$", live.ecran_statut),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie$", live.regie_lien),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie/etat$", live.regie_lien_etat),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie/donnees$", live.regie_lien_donnees),

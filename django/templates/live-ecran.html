@@ -170,27 +170,45 @@ const media = (cle) => { if (!cle) return null; for (const [aid, b] of Object.en
 
 // ---- platine : fondu enchaîné entre deux lecteurs, volume réglable
 function fondu(el, vers, ms, fin) { const de = el.volume, t0 = performance.now(); const pas = (t) => { const k = Math.min(1, (t - t0) / ms); el.volume = Math.max(0, Math.min(1, de + (vers - de) * k)); k < 1 ? requestAnimationFrame(pas) : fin && fin(); }; requestAnimationFrame(pas); }
-let cleMedia = "", yt = null, ytPret = false, ytAttente = null;
+let cleMedia = "", yt = null, ytPret = false, ytAttente = null, essai = 0, enRepli = false;
+function statut(etat, detail) { try { fetch(BASE + "/statut", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: MODE, media: cleMedia, etat, detail }) }); } catch (e) {} }
+function candidatSuivant() {
+  const m = E.media; if (!m) return; const liste = m.liste || (m.yt ? [{ id: m.yt, officiel: !m.flou }] : []);
+  essai++;
+  if (essai < liste.length) { const c = liste[essai]; m.flou = !c.officiel; statut("essai", "vidéo " + (essai + 1) + "/" + liste.length); chargeYT(c.id, c.officiel ? 15 : 0); platine.flou = !c.officiel; majFlou(); return; }
+  repli();
+}
+function repli() {   // aucune vidéo YouTube autorisée : notre extrait, ou l'extrait Deezer, photo floutée
+  const m = E.media, r = m && m.repli; $("yt").classList.remove("on"); enRepli = true;
+  if (!r) { statut("bloque", "aucune vidéo ne peut être lue"); return; }
+  const v = $("clip"), a = $("son"), vol = E.volume ?? 0.85;
+  if (r.video) { v.src = r.video; v.loop = !!r.son; v.muted = !!r.son; v.volume = vol; v.play().catch(bloque); v.classList.add("on"); }
+  if (r.son) { a.src = r.son; a.volume = vol; a.play().catch(bloque); }
+  platine.flou = true; majFlou(); statut("repli", r.video ? "notre extrait" : "extrait audio");
+}
+function majFlou() { const m = E.media; const f = !!(E.flou || platine.flou || (m && m.flou) || (E.fiche && (E.carte || E.carteExt))); $("clip").classList.toggle("flou", f); $("yt").classList.toggle("flou", f); }
 function bloque() { $("activer").style.display = "block"; }
 $("activer") && ($("activer").onclick = () => { $("activer").style.display = "none"; cleMedia = ""; actx && actx.resume(); platine(); });
 function chargeYT(id, debut) {
   if (!window.YT) { if (!document.getElementById("ytapi")) { const sc = document.createElement("script"); sc.id = "ytapi"; sc.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(sc); }
     ytAttente = [id, debut]; window.onYouTubeIframeAPIReady = () => { ytPret = true; const [i, d] = ytAttente; chargeYT(i, d); }; return; }
   if (!yt) yt = new YT.Player("ytp", { videoId: id, playerVars: { autoplay: 1, controls: 0, start: debut || 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, origin: location.origin, enablejsapi: 1 },
-    events: { onReady: (ev) => { ev.target.setVolume(Math.round((E.volume ?? .85) * 100)); ev.target.playVideo(); }, onError: (ev) => { window.ytErreur = ev.data; $("yt").classList.remove("on"); } } });
+    events: { onReady: (ev) => { ev.target.setVolume(Math.round((E.volume ?? .85) * 100)); ev.target.playVideo(); }, onError: (ev) => { window.ytErreur = ev.data; candidatSuivant(); },
+               onStateChange: (ev) => { if (ev.data === 1) { $("yt").classList.add("on"); statut("lecture", "YouTube"); } } } });
   else yt.loadVideoById({ videoId: id, startSeconds: debut || 0 });
 }
-function arreteTout() { const v = $("clip"), a = $("son"); v.pause(); v.removeAttribute("src"); v.load(); a.pause(); a.removeAttribute("src"); if (yt && yt.stopVideo) yt.stopVideo(); $("yt").classList.remove("on"); }
+function arreteTout() { const v = $("clip"), a = $("son"); v.classList.remove("on"); v.pause(); v.removeAttribute("src"); v.load(); a.pause(); a.removeAttribute("src"); if (yt && yt.stopVideo) yt.stopVideo(); $("yt").classList.remove("on"); }
 function platine() {
   const m = E.media, vol = E.volume ?? 0.85, cle = m ? [m.type, m.video || m.son || m.yt, m.t].join("|") : "";
   const v = $("clip"), a = $("son");
   if (cle !== cleMedia) {           // nouveau média : l'ancien s'arrête, le nouveau démarre
-    cleMedia = cle; arreteTout();
+    cleMedia = cle; arreteTout(); essai = 0; enRepli = false; platine.flou = false;
     if (m && m.type === "clip" && !m.video) { a.src = m.son; a.volume = vol; a.play().catch(bloque); }
     else if (m && m.type === "clip") { v.src = m.video; v.loop = !!m.son; v.muted = !!m.son; v.volume = vol; v.play().catch(bloque);
       if (m.son) { a.src = m.son; a.volume = vol; a.play().catch(bloque); } }
     if (m && m.type === "son") { a.src = m.son; a.volume = vol; a.play().catch(bloque); }
-    if (m && m.type === "youtube") { chargeYT(m.yt, m.debut || 0); $("yt").classList.add("on"); }
+    if (m && m.type === "youtube") { const l = m.liste || [{ id: m.yt, officiel: !m.flou }]; if (l.length) { m.flou = !l[0].officiel; chargeYT(l[0].id, l[0].officiel ? 15 : 0); } else repli(); }
+    if (m && (m.type === "clip" || m.type === "son")) statut("lecture", m.type === "clip" ? "notre extrait" : "extrait audio");
   }
   if (m) {
     const pause = !!m.pause;
@@ -200,8 +218,8 @@ function platine() {
   const en = m && (m.titre || m.artiste) ? m : E.enCours; $("titreSon").style.opacity = en && !(m && m.pause) ? 1 : 0;
   $("titreSon").querySelector("span").textContent = en ? [en.titre, en.artiste].filter(Boolean).join(" · ") : "";
   const video = !!m && (m.type === "clip" || m.type === "youtube"), visible = video && ["artiste", "camera"].includes(E.scene);
-  v.classList.toggle("on", visible && m.type === "clip"); $("yt").classList.toggle("on", visible && m.type === "youtube"); $("voileClip").classList.toggle("on", visible);
-  const flou = !!(E.flou || (m && m.flou) || (E.fiche && (E.carte || E.carteExt))); v.classList.toggle("flou", flou); $("yt").classList.toggle("flou", flou);
+  v.classList.toggle("on", visible && (m.type === "clip" || enRepli) && !!v.getAttribute("src")); if (!(visible && m.type === "youtube" && !enRepli)) $("yt").classList.remove("on"); else if (yt && yt.getPlayerState && yt.getPlayerState() === 1) $("yt").classList.add("on"); $("voileClip").classList.toggle("on", visible);
+  majFlou();
   $("repet").style.display = MODE === "test" ? "block" : "none";
 }
 // sons d'ambiance joués par l'écran (le son du live sort d'ici)

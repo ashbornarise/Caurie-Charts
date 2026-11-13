@@ -116,7 +116,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
       <input id="recherche" type="search" placeholder="Un artiste ou un titre…" autocomplete="off">
       <div id="resultats"></div></div>
     <div id="lecteur">
-      <div class="lec1"><span>♪</span><span class="nom" id="lecNom"></span><span id="lecTemps">0:00</span></div>
+      <div class="lec1"><span>♪</span><span class="nom" id="lecNom"></span><span id="lecTemps">0:00</span></div><div class="petit" id="lecEtat" style="color:#c9c4e6"></div>
       <div class="lec2"><span class="petit" style="color:#c9c4e6">Volume</span><input type="range" id="volume" min="0" max="100" value="85">
         <button id="lecFlou" title="Flouter la vidéo derrière">Flou</button><button id="lecPause">Pause</button><button id="lecStop" title="Couper la musique">✕</button></div></div>
     <div class="panel outils" data-tour="ambiance"><h3>Ambiance et outils</h3>
@@ -293,25 +293,23 @@ $("recherche").oninput = () => { rendResultats(); clearTimeout(minuteurR); const
     hors = { yt: (y.clips || []).slice(0, 3).map((v) => ({ ...v, titre: dec(v.titre), chaine: dec(v.chaine) })), dz: (d.artistes || []).slice(0, 3), q }; rendResultats(); }, 600); };
 async function dzArtiste(a) { const r = await (await fetch(API + "/titres/" + a.id)).json(); return { ext: { nom: r.artiste.nom, photo: r.artiste.photo, fans: r.artiste.fans, titres: r.titres.slice(0, 3).map((x) => x.titre) }, titre: r.titres[0] }; }
 async function joue(artiste, titre, extra = {}) {
-  notif("Recherche du clip officiel de " + artiste + "…");
-  let c = null; try { c = (await (await fetch(API + "/clip?artiste=" + encodeURIComponent(artiste) + "&titre=" + encodeURIComponent(titre || ""))).json()).clip; } catch (e) {}
-  if (c && c.id) {
-    set({ media: { type: "youtube", yt: c.id, debut: c.officiel ? 15 : 30, flou: !c.officiel, titre: titre || c.titre, artiste, artisteId: extra.artisteId || null, t: Date.now() }, scene: "artiste", fiche: !!extra.fiche, flou: !c.officiel, ...(extra.set || {}) });
-    if (!c.officiel) notif("Pas de clip officiel pour ce titre : une vidéo de l'artiste passe, floutée.");
-    return true;
-  }
-  if (extra.repli) { set(extra.repli); notif("Aucune vidéo YouTube : on joue ce qu'on a."); return true; }
-  notif("Aucune vidéo trouvée pour " + artiste); return false;
+  notif("Recherche du clip de " + artiste + "…");
+  let l = []; try { l = (await (await fetch(API + "/clip?artiste=" + encodeURIComponent(artiste) + "&titre=" + encodeURIComponent(titre || ""))).json()).clips || []; } catch (e) {}
+  const repli = extra.repli || null;
+  if (!l.length && !repli) { notif("Aucune vidéo ni extrait trouvé pour " + artiste); return false; }
+  set({ media: { type: "youtube", liste: l, repli, yt: l[0]?.id || null, flou: !(l[0] && l[0].officiel), titre: titre || (l[0] && l[0].titre) || "", artiste, artisteId: extra.artisteId || null, t: Date.now() },
+        scene: "artiste", fiche: !!extra.fiche, flou: false, ...(extra.set || {}) });
+  return true;
 }
 $("resultats").onclick = async (e) => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.loc) { const p = pistes[+b.dataset.loc];
-    joue(p.artiste, p.titre, { artisteId: p.artisteId, set: { carte: p.artisteId, carteExt: null }, repli: { media: { type: "clip", video: p.video || null, son: p.son, titre: p.titre, artiste: p.artiste, artisteId: p.artisteId, t: Date.now() }, scene: p.video ? "artiste" : E.scene, carte: p.artisteId, carteExt: null, fiche: false, flou: false } }); }
+    joue(p.artiste, p.titre, { artisteId: p.artisteId, set: { carte: p.artisteId, carteExt: null }, repli: { video: p.video || null, son: p.son } }); }
   if (b.dataset.fiche) set({ carte: +b.dataset.fiche, carteExt: null, fiche: true, flou: true });
   if (b.dataset.yt) { const v = hors.yt[+b.dataset.yt]; set({ media: { type: "youtube", yt: v.id, debut: 0, titre: v.titre.replace(/\s*[\(\[].*?(official|clip|video).*?[\)\]]/gi, ""), artiste: v.chaine, t: Date.now() }, scene: "artiste", fiche: false, flou: false }); }
   if (b.dataset.dz || b.dataset.dzf) { const a = hors.dz[+(b.dataset.dz || b.dataset.dzf)]; notif("Recherche de " + a.nom + "…"); const { ext, titre } = await dzArtiste(a);
     if (b.dataset.dzf) return set({ carte: null, carteExt: ext, fiche: true, flou: true });
-    joue(a.nom, titre ? titre.titre : "", { set: { carte: null, carteExt: ext } }); }
+    joue(a.nom, titre ? titre.titre : "", { set: { carte: null, carteExt: ext }, repli: titre ? { son: titre.url } : null }); }
 };
 $("lecPause").onclick = () => E.media && set({ media: { ...E.media, pause: !E.media.pause } });
 $("lecStop").onclick = () => set({ media: null });
@@ -340,7 +338,7 @@ function conseils() {
   const L = [], now = Date.now(), antenne = !!debutLive;
   const top = (E.mur || [])[0];
   if (top && top.n >= 5 && E.carte !== top.id) { const a = D.artistes.find((x) => x.id === top.id); const p = pistes.find((x) => x.artisteId === top.id);
-    if (a) L.push({ id: "mur" + top.id, titre: `« ${a.nom} » demandé ${top.n} fois`, texte: p ? "Montre sa fiche et lance son titre ?" : "Montre sa fiche ?", f: () => p ? set({ media: { type: "clip", video: p.video || null, son: p.son, titre: p.titre, artiste: p.artiste, artisteId: p.artisteId, t: Date.now() }, scene: "artiste", carte: a.id, carteExt: null, fiche: true, flou: true }) : set({ carte: a.id, fiche: true, flou: true }) }); }
+    if (a) L.push({ id: "mur" + top.id, titre: `« ${a.nom} » demandé ${top.n} fois`, texte: p ? "Montre sa fiche et lance son titre ?" : "Montre sa fiche ?", f: () => p ? joue(p.artiste, p.titre, { artisteId: p.artisteId, fiche: true, set: { carte: a.id, carteExt: null }, repli: { video: p.video || null, son: p.son } }) : set({ carte: a.id, fiche: true, flou: true }) }); }
   const tot = E.votes.a + E.votes.b;
   if (E.scene === "versus" && tot >= 15) { const ga = E.votes.a >= E.votes.b, pc = Math.round(Math.max(E.votes.a, E.votes.b) * 100 / tot);
     L.push({ id: "vs" + Math.floor(tot / 15), titre: `${tot} votes pour le versus`, texte: `Annonce le résultat : Team ${ga ? E.versus.a : E.versus.b} (${pc} %) ?`, f: () => set({ fx: { type: "confettis", t: Date.now() }, bandeau: `TEAM ${(ga ? E.versus.a : E.versus.b).toUpperCase()} GAGNE · ${pc} %` }) }); }
@@ -366,7 +364,8 @@ function rendu() {
   calques();
   const m = E.media; $("lecteur").style.display = m ? "flex" : "none";
   if (m) { $("lecNom").textContent = [m.titre, m.artiste].filter(Boolean).join(" · "); $("lecPause").textContent = m.pause ? "Reprendre" : "Pause"; }
-  $("lecteur").style.display = m ? "flex" : "none"; $("lecFlou").classList.toggle("on", !!(E.flou || (m && m.flou)));
+  $("lecteur").style.display = m ? "flex" : "none";
+  const L = E.lecture; $("lecEtat").textContent = !m ? "" : !L || L.t * 1000 < (m.t || 0) - 2000 ? "Lancement à l'écran…" : ({ lecture: "À l'écran : " + L.detail, essai: "Clip bloqué par le label, essai suivant (" + L.detail + ")", repli: "Clips bloqués : on joue " + L.detail + " (floutée)", bloque: "Rien ne peut être lu : choisis un autre titre" }[L.etat] || ""); $("lecFlou").classList.toggle("on", !!(E.flou || (m && m.flou)));
   if (document.activeElement !== $("volume")) $("volume").value = Math.round((E.volume ?? .85) * 100);
   const cx = $("connexion");
   if (!enLigne) { cx.className = "pastille perdu"; cx.innerHTML = "<i></i><span>Connexion perdue · nouvel essai…</span>"; }
