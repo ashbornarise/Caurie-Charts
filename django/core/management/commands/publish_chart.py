@@ -79,20 +79,45 @@ class Command(BaseCommand):
                 if not o["country"] and artistes < 8:
                     out(f"{code} : {artistes} artiste(s) seulement, pas de classement officiel (8 au moins)")
                     continue
+                # 13/11/2026 : rien en brouillon (semaine déjà publiée) -> on passe tout de suite (14 min perdues à
+                # recontrôler les semaines 44 et 45, revue IA comprise, avant d'arriver à la semaine du jour)
+                if not db.value("""SELECT 1 FROM chart_runs r JOIN countries c ON c.id = r.country_id
+                                   WHERE c.code = ? AND r.period_type = 'week' AND r.period_key = ? AND r.status = 'draft' LIMIT 1""",
+                                [code, week]):
+                    out(f"{code} : déjà publié ou pas de brouillon")
+                    continue
                 # Titres signalés : Gemini + recherche Google tranchent d'abord ce qui est prouvé (27/10/2026)
                 if not o["sans_revue"] and revue_ia.en_attente(code, debut):
                     try:
-                        b = revue_ia.revoir(code, debut)
+                        try:
+                            b = revue_ia.revoir(code, debut)
+                        except Exception as exc:  # noqa: BLE001 — coupure de la base pendant la recherche : une seconde fois
+                            if not _coupure(exc):
+                                raise
+                            _reconnecte()
+                            b = revue_ia.revoir(code, debut)
                         out(f"{code} revue IA : {len(b['valides'])} validé(s), {len(b['exclus'])} exclu(s), "
                             f"{len(b['attente'])} pour le fondateur")
                         for x in b["attente"]:
                             out(f"  à trancher : {x}")
                     except Exception as exc:  # noqa: BLE001
                         out(f"{code} revue IA impossible : {exc}")
+                # La revue IA dure plusieurs minutes : la base (Neon) coupe la connexion restée inactive (13/11/2026,
+                # « the connection is closed » au Ghana, publication arrêtée). On repart sur une connexion neuve,
+                # et une coupure pendant la publication est retentée une fois.
+                _reconnecte()
                 try:
-                    n = service.publish(code, "week", week, 1, force=o["auto"])
+                    try:
+                        n = service.publish(code, "week", week, 1, force=o["auto"])
+                    except Exception as exc:  # noqa: BLE001
+                        if not _coupure(exc):
+                            raise
+                        out(f"{code} : connexion coupée, nouvel essai")
+                        _reconnecte()
+                        n = service.publish(code, "week", week, 1, force=o["auto"])
                 except Exception as exc:
                     out(f"{code} : {exc}")
+                    _reconnecte()
                     continue
                 if n and o["sans_envois"]:
                     publies.append(code)
@@ -134,3 +159,18 @@ class Command(BaseCommand):
                     out(f"Partenaires : {exc}")
             return [f"{len(publies)} pays publié(s) : {', '.join(publies)}"] if publies else ["rien à publier"]
         run("publish-chart", task)
+
+
+def _reconnecte() -> None:
+    """Ferme la connexion à la base : la requête suivante en ouvre une neuve."""
+    from django.db import connection
+    try:
+        connection.close()
+    except Exception:  # noqa: BLE001 — déjà fermée côté serveur
+        pass
+
+
+def _coupure(exc: Exception) -> bool:
+    t = str(exc).lower()
+    return any(m in t for m in ("connection is closed", "ssl connection has been closed", "server closed the connection",
+                                "connection already closed", "terminating connection", "consuming input failed"))
