@@ -187,7 +187,7 @@ def _propre(texte: str) -> str:
 def _chiffres_dits(texte: str) -> str:
     """« 4,66 MD » -> « 4,66 milliards », « 5,4 M » -> « 5,4 millions » (la voix lirait les lettres)."""
     espace = "[\\s  ]*"
-    texte = re.sub(r"(\d+(?:[,.]\d+)?)" + espace + r"M[dD]\b", r"\1 milliards", texte)
+    texte = re.sub(r"(\d+(?:[,.]\d+)?)" + espace + r"(?:M[dD]s?|Mrds?)\b", r"\1 milliards", texte)
     texte = re.sub(r"(\d+(?:[,.]\d+)?)" + espace + r"M\b", r"\1 millions", texte)
     return re.sub(r"(\d+(?:[,.]\d+)?)" + espace + r"k\b", r"\1 mille", texte)
 
@@ -264,8 +264,9 @@ def _image(url: str | None) -> bytes | None:
 
 def prepare(job_id: int, job: dict, p: dict, maj) -> dict:
     maj(job_id, statut="analyse", erreur=None)
-    donnees = recherche(int(p["artiste_id"]), p.get("angle") or "")
-    recit = ecrit(donnees)
+    from core.services.social import raconte_v2   # v2 (13/11/2026) : dossier complet, chapitres, projets en musique
+    donnees = raconte_v2.dossier(int(p["artiste_id"]), p.get("angle") or "")
+    recit = raconte_v2.ecrit(donnees)
     vignette = None
     if donnees.get("_photo"):
         corps = _image(donnees["_photo"])
@@ -502,7 +503,8 @@ def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
     shutil.rmtree(dossier, ignore_errors=True)
     os.makedirs(dossier)
     try:
-        props = construit(job_id, p, dossier, prefixe)
+        from core.services.social import raconte_v2
+        props = (raconte_v2.construit if (p.get("recit") or {}).get("v") == 2 else construit)(job_id, p, dossier, prefixe)
         with tempfile.TemporaryDirectory(prefix=f"cauri-raconte-{job_id}-") as tmp:
             brut = os.path.join(tmp, "brut.mp4")
             rendu(props, dossier, brut)
@@ -532,20 +534,36 @@ def traite(job_id: int, job: dict, p: dict, maj) -> dict:
 
 
 def recit_valide(r: dict) -> dict | None:
-    """Le récit relu dans le Studio (texte, prononciation, cartes), nettoyé."""
+    """Le récit relu dans le Studio (texte, prononciation, cartes ; v2 : chapitres et projets), nettoyé."""
     if not isinstance(r, dict) or not isinstance(r.get("phrases"), list):
         return None
     t = r.get("titre") or {}
     phrases = []
-    for x in r["phrases"][:16]:
-        if not isinstance(x, dict) or not str(x.get("texte") or "").strip():
+    for x in r["phrases"][:40]:
+        if not isinstance(x, dict):
+            continue
+        sorte = x.get("type") or "voix"
+        if sorte == "chapitre":
+            if str(x.get("titre") or "").strip():
+                phrases.append({"type": "chapitre", "numero": str(x.get("numero") or "")[:20], "titre": str(x["titre"]).strip()[:28]})
+            continue
+        if sorte == "projet":
+            if x.get("album_id") and str(x.get("titre") or "").strip():
+                phrases.append({"type": "projet", **{k: str(x.get(k) or "")[:300] for k in ("titre", "cover", "etiquette", "morceau", "chiffre", "invites")},
+                                "album_id": x["album_id"]})
+            continue
+        if not str(x.get("texte") or "").strip():
             continue
         c = x.get("carte") if isinstance(x.get("carte"), dict) and str((x.get("carte") or {}).get("grand") or "").strip() else None
-        phrases.append({"texte": str(x["texte"]).strip()[:240], "voix": _chiffres_dits(str(x.get("voix") or _phonetique(str(x["texte"]))).strip())[:260],
+        phrases.append({"type": "voix", "texte": str(x["texte"]).strip()[:260],
+                        "voix": _chiffres_dits(str(x.get("voix") or _phonetique(str(x["texte"]))).strip())[:300],
                         "carte": {"grand": str(c["grand"]).strip()[:18], "petit": str(c.get("petit") or "").strip()[:60], "or": bool(c.get("or"))} if c else None})
-    if len(phrases) < 3:
+    if sum(1 for x in phrases if x["type"] == "voix") < 3:
         return None
     fin = r.get("fin") or {}
-    return {"titre": {"haut": str(t.get("haut") or "")[:14], "nom": str(t.get("nom") or "")[:22], "bas": str(t.get("bas") or "")[:60]},
-            "phrases": phrases, "fin": {"titre": str(fin.get("titre") or "TON ARTISTE ?")[:24], "texte": str(fin.get("texte") or "")[:80]},
-            "sources": str(r.get("sources") or "")[:200]}
+    out = {"titre": {"haut": str(t.get("haut") or "")[:14], "nom": str(t.get("nom") or "")[:22], "bas": str(t.get("bas") or "")[:60]},
+           "phrases": phrases, "fin": {"titre": str(fin.get("titre") or "TON ARTISTE ?")[:24], "texte": str(fin.get("texte") or "")[:80]},
+           "sources": str(r.get("sources") or "")[:220]}
+    if r.get("v") == 2:
+        out["v"] = 2
+    return out
