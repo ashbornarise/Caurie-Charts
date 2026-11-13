@@ -262,7 +262,7 @@ def dit(texte: str, sortie: str) -> list[dict]:
     cle = env.get("ELEVENLABS_API_KEY", "")
     if not cle:
         raise RuntimeError("ELEVENLABS_API_KEY absente")
-    corps = {"text": texte, "model_id": MODELE_EL, "language_code": "fr"}
+    corps = {"text": texte, "model_id": MODELE_EL, "language_code": "fr", "voice_settings": {"stability": 0.5}}   # « naturel » : ton régulier
     req = urllib.request.Request(f"https://api.elevenlabs.io/v1/text-to-speech/{VOIX_EL}/with-timestamps?output_format=mp3_44100_128",
                                  data=json.dumps(corps).encode(), headers={"xi-api-key": cle, "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=300) as r:
@@ -270,7 +270,7 @@ def dit(texte: str, sortie: str) -> list[dict]:
     brut = sortie + ".brut.mp3"
     open(brut, "wb").write(base64.b64decode(d["audio_base64"]))
     subprocess.run([_ffmpeg(), "-v", "error", "-y", "-i", brut, "-af", f"atempo={ACCEL}", "-ar", "44100", "-ac", "2", "-b:a", "192k", sortie], check=True)
-    al = d.get("normalized_alignment") or d["alignment"]
+    al = d.get("alignment") or d["normalized_alignment"]   # texte d'origine : les nombres restent un seul mot
     mots, cur, d0, f0, crochet = [], "", None, None, False
     for c, s, e in zip(al["characters"], al["character_start_times_seconds"], al["character_end_times_seconds"]):
         if c == "[":
@@ -334,41 +334,75 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
     blocs = recit["phrases"]
     t, mots, morceaux, chapitres, projets, cartes, sfx, voix_bornes = 0.1, [], [], [], [], [], [], []
     chap_attente, k = None, 0
-    # 1) la voix et la ligne du temps
-    for i, b in enumerate(blocs):
-        if b.get("type") == "chapitre":
-            chap_attente = b
-            continue
+    # 1) la voix, en une seule prise par passage entre deux projets (14/11/2026 : bloc par bloc, le ton changeait à chaque
+    #    phrase et le début « faisait IA », la fin était meilleure) ; une seule émotion, en tête de passage
+    passages, cur = [], []
+    for b in blocs:
         if b.get("type") == "projet":
+            if cur:
+                passages.append(cur)
+                cur = []
+            passages.append(b)
+        else:
+            cur.append(b)
+    if cur:
+        passages.append(cur)
+    derniere = max(i for i, b in enumerate(blocs) if b.get("type") == "voix")
+    for passage in passages:
+        if isinstance(passage, dict):   # un projet en musique
             if voix_bornes:
-                sfx.append({"src": SFX["montee"], "d": round(max(0, t - 1.8), 3), "vol": 0.35})
-            projets.append({**b, "d": round(t, 3), "f": round(t + DUREE_PROJET, 3)})
-            sfx.append({"src": SFX["impact"], "d": round(t, 3), "vol": 0.5})
+                sfx.append({"src": SFX["montee"], "d": round(max(0, t - 1.8), 3), "vol": 0.22})
+            projets.append({**passage, "d": round(t, 3), "f": round(t + DUREE_PROJET, 3)})
+            sfx.append({"src": SFX["impact"], "d": round(t, 3), "vol": 0.35})
             t += DUREE_PROJET + 0.35
             continue
+        dites = [b for b in passage if b.get("type") == "voix"]
+        if not dites:
+            continue
+        morceaux_texte = []
+        for n, b in enumerate(dites):
+            v = b.get("voix") or b["texte"]
+            balise = re.match(r"\s*(\[[a-z ]{3,20}\])\s*", v)
+            sans = v[balise.end():] if balise else v
+            morceaux_texte.append(((balise.group(1) + " ") if (balise and n == 0) else "") + sans)
         mp3 = os.path.join(dossier, f"v{k:02d}.mp3")
-        dits = dit(b.get("voix") or b["texte"], mp3)
+        dits = dit(" ".join(morceaux_texte), mp3)
         d = _duree(mp3)
-        mots += _sous_titres(b["texte"], dits, t, d)
         morceaux.append((t, mp3))
-        voix_bornes.append((t, t + d, b))
-        if chap_attente:   # jamais sur le titre d'ouverture (0 à 3,6 s)
-            cd0 = max(t, 3.7)
-            chapitres.append({"d": round(cd0, 3), "f": round(cd0 + 2.4, 3), "numero": chap_attente.get("numero") or "", "titre": chap_attente["titre"]})
-            sfx.append({"src": SFX["chapitre"], "d": round(cd0, 3), "vol": 0.45})
-            chap_attente = None
-        c = b.get("carte")
-        if c and k > 0 and i < len(blocs) - 1:
-            cd = t + 0.15
-            cartes.append({"d": round(cd, 3), "f": round(min(max(t + d + 0.25, cd + 1.6), cd + 4.2), 3), "grand": c["grand"], "petit": c.get("petit") or "",
-                           "or": bool(c.get("or"))})
-            sfx.append({"src": SFX["carte"], "d": round(cd, 3), "vol": 0.3})
+        # chaque phrase reprend ses mots dans la prise (même découpage que l'alignement d'ElevenLabs)
+        pos, debut_phrase = 0, {}
+        for b, txt in zip(dites, morceaux_texte):
+            n_mots = len([m for m in re.sub(r"\[[^\]]*\]", " ", txt).split() if any(ch.isalnum() for ch in m)])
+            part = dits[pos:pos + n_mots] or dits[-1:]
+            pos += n_mots
+            a = t + (part[0]["d"] if part else 0)
+            z = t + (part[-1]["f"] if part else d)
+            mots += _sous_titres(b["texte"], part, t, z - a)
+            voix_bornes.append((a, z, b))
+            debut_phrase[id(b)] = (a, z)
+        chap_attente = None
+        for b in passage:   # chapitres : au début de la phrase qui les suit, jamais sur le titre d'ouverture
+            if b.get("type") == "chapitre":
+                chap_attente = b
+                continue
+            a, z = debut_phrase.get(id(b), (t, t + d))
+            if chap_attente:
+                cd0 = max(a, 3.7)
+                chapitres.append({"d": round(cd0, 3), "f": round(cd0 + 2.4, 3), "numero": chap_attente.get("numero") or "", "titre": chap_attente["titre"]})
+                sfx.append({"src": SFX["chapitre"], "d": round(cd0, 3), "vol": 0.28})
+                chap_attente = None
+            c = b.get("carte")
+            if c and a > 3.6 and blocs.index(b) != derniere:
+                cd = a + 0.15
+                cartes.append({"d": round(cd, 3), "f": round(min(max(z + 0.25, cd + 1.6), cd + 4.2), 3), "grand": c["grand"], "petit": c.get("petit") or "",
+                               "or": bool(c.get("or"))})
+                sfx.append({"src": SFX["carte"], "d": round(cd, 3), "vol": 0.18})
         t += d + PAUSE
         k += 1
     fin_voix = t - PAUSE
     duree = round(fin_voix + 3.4, 2)
     fin_d = voix_bornes[-1][0]
-    sfx.append({"src": SFX["fin"], "d": round(max(0, fin_d - 0.6), 3), "vol": 0.4})
+    sfx.append({"src": SFX["fin"], "d": round(max(0, fin_d - 0.6), 3), "vol": 0.25})
     # voix.mp3 : chaque bloc à sa place (silences pendant les projets)
     entrees = []
     for j, (d0, chemin) in enumerate(morceaux):
@@ -438,7 +472,8 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                 break
     mascottes.append({"src": POSES["appel"], "d": round(fin_d + 0.3, 3), "f": duree, "cote": "gauche", "h": 820})
     return {"voix": f"{prefixe}/voix.mp3", "musique": musiques[0]["src"] if musiques else f"{prefixe}/voix.mp3", "duree": duree, "mots": mots,
-            "titre": recit["titre"], "plans": les_plans, "cartes": cartes, "mascottes": mascottes, "musiques": musiques, "fond": 0.13,
+            "titre": recit["titre"], "plans": les_plans, "cartes": cartes, "mascottes": mascottes, "musiques": musiques, "fond": 0.045,   # 14/11/2026 : « les sons en fond sont trop forts, on n'écoute plus la voix »
+           
             "projets": [{k2: x[k2] for k2 in ("d", "f", "cover", "titre", "etiquette", "invites", "chiffre", "morceau") if x.get(k2) is not None} for x in projets],
             "chapitres": chapitres, "sfx": sfx,
             "fin": {"d": round(fin_d, 3), "titre": recit["fin"]["titre"], "texte": recit["fin"]["texte"]}, "sources": recit.get("sources") or ""}
