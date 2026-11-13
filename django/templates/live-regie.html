@@ -295,7 +295,13 @@ async function dzArtiste(a) { const r = await (await fetch(API + "/titres/" + a.
 async function joue(artiste, titre, extra = {}) {
   notif("Recherche du clip de " + artiste + "…");
   let l = []; try { l = (await (await fetch(API + "/clip?artiste=" + encodeURIComponent(artiste) + "&titre=" + encodeURIComponent(titre || ""))).json()).clips || []; } catch (e) {}
-  const repli = extra.repli || null;
+  let repli = extra.repli || null;
+  if (!repli || (!repli.video && !repli.son)) {   // dernier recours : l'extrait Deezer du titre (30 s)
+    try { const d = (await (await fetch(API + "/cherche?q=" + encodeURIComponent(artiste))).json()).artistes || [];
+      const art = d.find((x) => norm(x.nom) === norm(artiste)) || d[0];
+      if (art) { const tt = (await (await fetch(API + "/titres/" + art.id)).json()).titres || [];
+        const x = tt.find((k) => titre && norm(k.titre).includes(norm(titre).slice(0, 8))) || tt[0]; if (x) repli = { son: x.url }; } } catch (e) {}
+  }
   if (!l.length && !repli) { notif("Aucune vidéo ni extrait trouvé pour " + artiste); return false; }
   set({ media: { type: "youtube", liste: l, repli, yt: l[0]?.id || null, flou: !(l[0] && l[0].officiel), titre: titre || (l[0] && l[0].titre) || "", artiste, artisteId: extra.artisteId || null, t: Date.now() },
         scene: "artiste", fiche: !!extra.fiche, flou: false, ...(extra.set || {}) });
