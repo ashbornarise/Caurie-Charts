@@ -197,13 +197,16 @@ function repli() {   // aucune vidéo YouTube autorisée : notre extrait, ou l'e
 function majFlou() { const m = E.media; const f = !!(E.flou || platine.flou || (m && m.flou) || (E.fiche && (E.carte || E.carteExt))); $("clip").classList.toggle("flou", f); $("yt").classList.toggle("flou", f); }
 function bloque() { $("activer").style.display = "block"; }
 $("activer") && ($("activer").onclick = () => { $("activer").style.display = "none"; cleMedia = ""; actx && actx.resume(); platine(); });
+// qualité : on demande la 4K, sinon la 1080p (YouTube garde le dernier mot, mais notre lecteur fait 3414×1920 px)
+function hd(p) { try { const q = p.getAvailableQualityLevels ? p.getAvailableQualityLevels() : []; const v = ["hd2160", "hd1440", "hd1080"].find((k) => q.includes(k)) || "hd1080";
+  if (p.getPlaybackQuality && p.getPlaybackQuality() !== v) p.setPlaybackQuality(v); } catch (e) {} }
 function chargeYT(id, debut) {
   if (!window.YT) { if (!document.getElementById("ytapi")) { const sc = document.createElement("script"); sc.id = "ytapi"; sc.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(sc); }
     ytAttente = [id, debut]; window.onYouTubeIframeAPIReady = () => { ytPret = true; const [i, d] = ytAttente; chargeYT(i, d); }; return; }
-  if (!yt) yt = new YT.Player("ytp", { videoId: id, playerVars: { autoplay: 1, controls: 0, start: debut || 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, origin: location.origin, enablejsapi: 1 },
-    events: { onReady: (ev) => { ev.target.setVolume(Math.round((E.volume ?? .85) * 100)); ev.target.playVideo(); }, onError: (ev) => { window.ytErreur = ev.data; candidatSuivant(); },
-               onStateChange: (ev) => { if (ev.data === 1) { $("yt").classList.add("on"); statut("lecture", "YouTube"); } } } });
-  else yt.loadVideoById({ videoId: id, startSeconds: debut || 0 });
+  if (!yt) yt = new YT.Player("ytp", { videoId: id, playerVars: { autoplay: 1, controls: 0, start: debut || 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, origin: location.origin, enablejsapi: 1, vq: "hd2160" },
+    events: { onReady: (ev) => { hd(ev.target); ev.target.setVolume(Math.round((E.volume ?? .85) * 100)); ev.target.playVideo(); }, onError: (ev) => { window.ytErreur = ev.data; candidatSuivant(); },
+               onStateChange: (ev) => { if (ev.data === 3 || ev.data === -1) hd(ev.target); if (ev.data === 1) { hd(ev.target); $("yt").classList.add("on"); statut("lecture", "YouTube"); } } } });
+  else yt.loadVideoById({ videoId: id, startSeconds: debut || 0, suggestedQuality: "hd2160" });
 }
 function arreteTout() { const v = $("clip"), a = $("son"); v.classList.remove("on"); v.pause(); v.removeAttribute("src"); v.load(); a.pause(); a.removeAttribute("src"); if (yt && yt.stopVideo) yt.stopVideo(); $("yt").classList.remove("on"); }
 function platine() {

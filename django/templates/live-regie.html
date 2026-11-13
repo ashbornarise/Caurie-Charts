@@ -64,9 +64,15 @@ h3{margin:0 0 10px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
 .res button{padding:8px 10px;font-size:13px}
 .tag{font-size:10px;font-weight:800;padding:3px 7px;border-radius:999px;background:#e4f8ef;color:#0b7a51;flex:none}.tag.y{background:#ffe9ec;color:var(--rouge)}.tag.d{background:#e7f2ff;color:#1662b0}
 .groupe{font-size:11px;font-weight:800;color:var(--doux);letter-spacing:1px;margin:10px 4px 4px}
-#lecteur{display:none;flex-direction:column;gap:8px;background:#17142b;color:#fff;border-radius:14px;padding:10px 12px}.lec1,.lec2{display:flex;align-items:center;gap:8px}.lec2 input{flex:1}#lecFlou.on{background:var(--violet)}
-#lecteur .nom{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
-#lecteur button{background:#2c2846;color:#fff;padding:7px 10px}
+#lecteur{display:none;align-items:center;gap:6px;background:#17142b;color:#fff;border-radius:12px;padding:5px 8px;height:44px;box-sizing:border-box}
+#lecteur .txt{flex:1;min-width:0;line-height:1.15}
+#lecteur .nom,#lecEtat{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lecteur .nom{font-weight:700;font-size:12.5px}#lecEtat{font-size:10.5px;color:#c9c4e6}
+#lecTemps{font-size:11px;color:#c9c4e6;font-variant-numeric:tabular-nums}
+#lecteur button{background:#2c2846;color:#fff;width:30px;height:30px;padding:0;border-radius:8px;display:grid;place-items:center;flex:none}
+#lecteur button:hover{background:#3b3660}#lecFlou.on{background:var(--violet)}
+#lecteur svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#lecteur .vol{display:flex;align-items:center;gap:3px;color:#c9c4e6}#volume{width:70px;accent-color:#9b7bff;margin:0}
 .effets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.effets button{padding:13px 4px;font-size:13px}
 .plus{margin-top:8px;display:none;grid-template-columns:repeat(3,1fr);gap:8px}.plus.on{display:grid}.plus button{padding:10px 4px;font-size:12px}
 input[type=range]{width:100%;accent-color:var(--violet)}
@@ -117,9 +123,12 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
       <input id="recherche" type="search" placeholder="Un artiste ou un titre…" autocomplete="off">
       <div id="resultats"></div></div>
     <div id="lecteur">
-      <div class="lec1"><span>♪</span><span class="nom" id="lecNom"></span><span id="lecTemps">0:00</span></div><div class="petit" id="lecEtat" style="color:#c9c4e6"></div>
-      <div class="lec2"><span class="petit" style="color:#c9c4e6">Volume</span><input type="range" id="volume" min="0" max="100" value="85">
-        <button id="lecFlou" title="Flouter la vidéo derrière">Flou</button><button id="lecPause">Pause</button><button id="lecStop" title="Couper la musique">✕</button></div></div>
+      <button id="lecPause" title="Pause"></button>
+      <div class="txt"><span class="nom" id="lecNom"></span><span id="lecEtat"></span></div>
+      <span id="lecTemps">0:00</span>
+      <label class="vol" title="Volume"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><input type="range" id="volume" min="0" max="100" value="85"></label>
+      <button id="lecFlou" title="Flouter la vidéo derrière"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="4"/></svg></button>
+      <button id="lecStop" title="Couper la musique"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button></div>
     <div class="panel outils" data-tour="ambiance"><h3>Ambiance et outils</h3>
       <div class="liste-outils">
         <button class="outil" data-fx="gong"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><span>Gong<small>le son du rituel</small></span></button>
@@ -321,6 +330,7 @@ $("resultats").onclick = async (e) => {
     if (b.dataset.dzf) return set({ carte: null, carteExt: ext, fiche: true, flou: true });
     joue(a.nom, titre ? titre.titre : "", { set: { carte: null, carteExt: ext }, repli: titre ? { son: titre.url } : null }); }
 };
+const ICO_PAUSE = '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>', ICO_PLAY = '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>';
 $("lecPause").onclick = () => E.media && set({ media: { ...E.media, pause: !E.media.pause } });
 $("lecStop").onclick = () => set({ media: null });
 $("lecFlou").onclick = () => { const f = !(E.flou || (E.media && E.media.flou)); set({ flou: f, media: E.media ? { ...E.media, flou: f } : null }); };
@@ -373,9 +383,9 @@ function rendu() {
   const a = actionSuivante(); $("suivant").innerHTML = `SUIVANT ▶ ${esc(a.t)}${a.s ? `<small>${esc(a.s)}</small>` : ""}`; $("suivant").disabled = !a.f;
   calques();
   const m = E.media; $("lecteur").style.display = m ? "flex" : "none";
-  if (m) { $("lecNom").textContent = [m.titre, m.artiste].filter(Boolean).join(" · "); $("lecPause").textContent = m.pause ? "Reprendre" : "Pause"; }
+  if (m) { $("lecNom").textContent = [m.titre, m.artiste].filter(Boolean).join(" · "); $("lecPause").innerHTML = m.pause ? ICO_PLAY : ICO_PAUSE; $("lecPause").title = m.pause ? "Reprendre" : "Pause"; }
   $("lecteur").style.display = m ? "flex" : "none";
-  const L = E.lecture; $("lecEtat").textContent = !m ? "" : !L || L.t * 1000 < (m.t || 0) - 2000 ? "Lancement à l'écran…" : ({ lecture: "À l'écran : " + L.detail, essai: "Clip bloqué par le label, essai suivant (" + L.detail + ")", repli: "Clips bloqués : on joue " + L.detail + " (floutée)", bloque: "Rien ne peut être lu : choisis un autre titre" }[L.etat] || ""); $("lecFlou").classList.toggle("on", !!(E.flou || (m && m.flou)));
+  const L = E.lecture; $("lecEtat").textContent = !m ? "" : !L || L.t * 1000 < (m.t || 0) - 2000 ? "Lancement à l'écran…" : ({ lecture: "À l'écran : " + L.detail, essai: "Clip bloqué par le label, essai suivant (" + L.detail + ")", repli: "Clips bloqués : on joue " + L.detail + " (floutée)", bloque: "Rien ne peut être lu : choisis un autre titre" }[L.etat] || ""); $("lecEtat").title = $("lecEtat").textContent;  $("lecFlou").classList.toggle("on", !!(E.flou || (m && m.flou)));
   if (document.activeElement !== $("volume")) $("volume").value = Math.round((E.volume ?? .85) * 100);
   const cx = $("connexion");
   if (!enLigne) { cx.className = "pastille perdu"; cx.innerHTML = "<i></i><span>Connexion perdue · nouvel essai…</span>"; }

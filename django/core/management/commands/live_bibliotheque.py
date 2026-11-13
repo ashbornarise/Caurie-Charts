@@ -72,7 +72,7 @@ class Command(BaseCommand):
             for i, t in enumerate(titres):
                 propre = re.split(r"\s*[\(\[]\s*(feat|ft|with)", t, flags=re.I)[0].strip()
                 src = os.path.join(tmp, f"{i}.%(ext)s")
-                r = subprocess.run([_ytdlp(), "--js-runtimes", "node", "-q", "--no-playlist", "-f", "bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720]",
+                r = subprocess.run([_ytdlp(), "--js-runtimes", "node", "-q", "--no-playlist", "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080]",
                                     "--merge-output-format", "mp4", "--max-filesize", "200M", "-o", src, f"ytsearch1:{a['name']} {propre} official"],
                                    capture_output=True, text=True, timeout=600)
                 fichier = next((os.path.join(tmp, f) for f in os.listdir(tmp) if f.startswith(f"{i}.")), None)
@@ -91,7 +91,7 @@ class Command(BaseCommand):
                     clip = os.path.join(tmp, f"{i}-clip.mp4")
                     debut_clip = min(45.0, max(0.0, duree - 30)) if duree else 0
                     subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", str(debut_clip), "-i", fichier, "-t", "25", "-an",
-                                    "-vf", "scale=-2:720,fps=30", "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-movflags", "+faststart", clip], check=True)
+                                    "-vf", "scale=-2:1080,fps=30", "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-movflags", "+faststart", clip], check=True)
                     url = storage.blob_put(f"live/{aid}/{_slug(propre)}-clip.mp4", open(clip, "rb").read(), "video/mp4")
                     res["clips"].append({"titre": propre, "url": url})
             self.stdout.write(f"  {a['name']} : {len(res['sons'])} son(s), {len(res['clips'])} clip(s)")
