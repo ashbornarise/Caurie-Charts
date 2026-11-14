@@ -254,7 +254,8 @@ def _ffmpeg() -> str:
 
 def _duree(chemin: str) -> float:
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", chemin], capture_output=True, text=True).stdout
-    return float(out.strip() or 0)
+    m = re.search(r"\d+(?:\.\d+)?", out or "")
+    return float(m.group()) if m else 0.0
 
 
 def dit(texte: str, sortie: str) -> list[dict]:

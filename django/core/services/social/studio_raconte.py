@@ -293,8 +293,9 @@ def _ffmpeg() -> str:
 
 def _duree(chemin: str) -> float:
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", chemin],
-                         capture_output=True, text=True).stdout.strip()
-    return float(out or 0)
+                         capture_output=True, text=True).stdout
+    m = re.search(r"\d+(?:\.\d+)?", out or "")
+    return float(m.group()) if m else 0.0
 
 
 def _tts(texte: str, sortie: str) -> list[dict]:
@@ -379,7 +380,8 @@ def _cadre(video: str) -> str | None:
     w, h, x, y = map(int, m[-1])
     hauteur = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=height", "-of", "csv=p=0", video],
                              capture_output=True, text=True).stdout.strip()
-    H = int(hauteur or 0)
+    m = re.search(r"\d+", hauteur or "")
+    H = int(m.group()) if m else 0
     if H and h < H * 0.9:
         return f"crop={w}:{int(h * 0.86)}:{x}:{y}"
     return None
