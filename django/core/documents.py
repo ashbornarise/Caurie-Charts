@@ -4,6 +4,79 @@ from core.helpers import url
 
 DOCUMENTS = [
     {
+        "slug": "cauri-charts-magazine-n46",
+        "fichier": "cauri-charts-magazine-n46",
+        "date": "2026-11-14",
+        "pages": 18,
+        "titre": "Cauri Charts Magazine N°46",
+        "sous_titre": "Tous les classements officiels de la semaine du 9 au 12 novembre 2026",
+        "description": "Le premier Cauri Charts Magazine : le Top 20 Afrique de l'Ouest (N°1 : Heaven Baby d'Ayra Starr feat. ZAYN), les classements complets de 13 pays avec les N°1, les entrées et les mouvements, et les six classements par genre.",
+        "format": "PDF · A3 paysage · 18 pages",
+        "legendes": ['Couverture', 'Les N°1 de la semaine', "Top 20 Afrique de l'Ouest", 'Top Togo', 'Top Nigeria', "Top Côte d'Ivoire", 'Top Ghana', 'Top Sénégal', 'Top Bénin', 'Top Burkina Faso', 'Top Mali', 'Top Guinée', 'Top Sierra Leone', 'Top Cap-Vert', 'Top Guinée-Bissau', 'Top Mauritanie', 'Classements par genre', 'Comment on calcule'],
+        "sections": [
+            [
+                "Top 20 Afrique de l'Ouest (les 10 premiers)",
+                "1. Heaven Baby (feat. ZAYN) (Ayra Starr), 2. Go Hard or Go Home (Chief Priest), 3. SLICK (Victony), 4. Rush (Ayra Starr), 5. Oh No (Rema), 6. Great Change (Nsesaeɛ Kɛseɛ) (Piesie Esther), 7. Djelykaba Bintou Feat. Viviane Chidid - (Djelykaba Bintou), 8. Dugi-dugi (AMADEUS), 9. Namm nama la (AMADEUS), 10. Raay (Momo Dieng)"
+            ],
+            [
+                "Top Togo",
+                "1. Migbo (Remix) (sethlo), 2. DESTIN (Joachin Migos), 3. Tout ira mieux (Faut pas m'appeler) (Paki Chenzu), 4. BELIEVE (Paki Chenzu), 5. M'gbabidjio (Santrinos Raphaël)"
+            ],
+            [
+                "Top Nigeria",
+                "1. Heaven Baby (feat. ZAYN) (Ayra Starr), 2. Gratitude (Asake), 3. BABA ft. Zlatan (HOTKEED), 4. Forgiveness (Asake), 5. Oh No (Rema)"
+            ],
+            [
+                "Top Côte d'Ivoire",
+                "1. TAPER CREER (feat. Gazo) (Himra), 2. ADIOS (Didi B), 3. C'EST PAS DE MA FAUTE (Himra), 4. PARTY (Didi B), 5. PLUS DE LOVE (Himra)"
+            ],
+            [
+                "Top Ghana",
+                "1. Faith (Kweku Smoke), 2. Bombele (Kweku Smoke), 3. Bra (Kweku Smoke), 4. Gen Z (Fameye), 5. Sorry I'm Different (Miracle LRE)"
+            ],
+            [
+                "Top Sénégal",
+                "1. Dugi-dugi (AMADEUS), 2. Namm nama la (AMADEUS), 3. Raay (Momo Dieng), 4. Nous 2 (feat. Wally B. Seck) (Viviane Chidid), 5. Naataango (AMADEUS)"
+            ],
+            [
+                "Top Bénin",
+                "1. Dans La Poussiere (Axel Merryl), 2. Chérie agonkè (First King), 3. Fité (VANO BABY), 4. Je suis béni (First King), 5. Bandit (VANO BABY)"
+            ],
+            [
+                "Top Burkina Faso",
+                "1. Velar (Babi Tape), 2. Vis ton Viim (AMZY), 3. Ya maam (AMZY), 4. Weedo (Floby), 5. Ouaga zeune (Floby)"
+            ],
+            [
+                "Top Mali",
+                "1. Dali (Seydou Chée), 2. IBN (Malakey), 3. I Ban Ban (Momo Choco), 4. Président (Yacou B OG), 5. Business classe (Seydou Chée)"
+            ],
+            [
+                "Top Guinée",
+                "1. Fidjou (SAIFOND), 2. IYE (SAIFOND), 3. LABADHO (SAIFOND), 4. Fulah Me Yes (Wandjan dimedi), 5. Djelykaba Bintou Feat. Viviane Chidid - (Djelykaba Bintou)"
+            ],
+            [
+                "Top Sierra Leone",
+                "1. Scatter (Bakitenno), 2. Crush (feat. JZyNO) (INCREDIBLE JJ), 3. GO (Drizilik), 4. Sabi Road (Drizilik), 5. No Games (Drizilik)"
+            ],
+            [
+                "Top Cap-Vert",
+                "1. ERRO & ACERTO (Loose jr), 2. Passada (Garry), 3. Vou Ser Teu (feat. Landrick) (Loony Johnson), 4. Kumpanhero (Dynamo), 5. Obrigado (Helio Batalha)"
+            ],
+            [
+                "Top Guinée-Bissau",
+                "1. Mistin (As One 1820), 2. MON CHÉRI [2026] (Yasmine), 3. Ley Dy Byda (Justino Delgado), 4. Chatice (As One 1820), 5. SORRISO DE LUZ DE SOL (Chito Kaharam)"
+            ],
+            [
+                "Top Mauritanie",
+                "1. Mbiida Yonaani (feat. Sidi Eleya) (Bab's OG), 2. Welema (Bab's OG), 3. Ko Ni'i (BRMX), 4. Somi Dani (feat. Sidi Eleya) (Bab's OG), 5. Hollam (feat. Ceepee) (BRMX)"
+            ],
+            [
+                "Classements par genre",
+                "Top Rap, Top Mbalax, Top Afrobeats, Top R&B, Top Gospel et Top Coupé-décalé & Zouglou, sur toute l'Afrique de l'Ouest."
+            ]
+        ]
+    },
+    {
         "slug": "le-voyage-d-un-titre",
         "fichier": "cauri-charts-le-voyage-d-un-titre",
         "date": "2026-11-14",

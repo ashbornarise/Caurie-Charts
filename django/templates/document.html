@@ -27,7 +27,7 @@
     <div class="doc-pages">
         {% for img in d.images %}
         <figure>
-            <img src="{{ img }}" alt="{{ d.titre }} · page {{ loop.index }} sur {{ d.pages }}{% if loop.index > 1 and d.sections[loop.index - 2] %} : {{ d.sections[loop.index - 2][0] }}{% endif %} · Cauri Charts" width="1600" height="1131" {% if not loop.first %}loading="lazy"{% endif %}>
+            <img src="{{ img }}" alt="{{ d.titre }} · page {{ loop.index }} sur {{ d.pages }}{% if d.legendes %} : {{ d.legendes[loop.index0] }}{% elif loop.index > 1 and d.sections|length > loop.index - 2 %} : {{ d.sections[loop.index - 2][0] }}{% endif %} · Cauri Charts" width="1600" height="1131" {% if not loop.first %}loading="lazy"{% endif %}>
             <figcaption>{{ tr("Page") }} {{ loop.index }} / {{ d.pages }}</figcaption>
         </figure>
         {% endfor %}
