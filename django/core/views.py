@@ -57,6 +57,10 @@ def site_ld() -> dict:
     """Organisation et site, présents sur chaque page (données structurées schema.org)."""
     return {"@type": "Organization", "@id": url("/") + "#organisation", "name": brand(), "url": url("/"),
             "logo": url("assets/img/brand/logo-share.png"), "areaServed": [c["code"] for c in repos.countries()],
+            "alternateName": ["Cauri", "CauriCharts"], "slogan": "La référence de la musique ouest-africaine",
+            "description": "Cauri Charts publie chaque vendredi les classements musicaux officiels de l'Afrique de l'Ouest (Prime, Buzz, Fresh, "
+                           "Icon, Legend), calculés à partir de YouTube, Spotify, Apple Music et Boomplay selon une méthode publique.",
+            "email": "contact@cauricharts.com", "knowsAbout": ["classements musicaux", "musique ouest-africaine", "afrobeats", "coupé-décalé"],
             # Profils officiels : Google les relie au site (panneau de la marque dans les résultats)
             "sameAs": ["https://www.instagram.com/cauricharts/", "https://www.tiktok.com/@caurichartsofficial",
                        "https://www.facebook.com/profile.php?id=61594631234765"]}
@@ -92,7 +96,10 @@ def _artist_news(artist_id=None, limit=6) -> list:
 def json_ld(items: list):
     """Bloc JSON-LD prêt à insérer dans <script type="application/ld+json"> (« </ » neutralisé)."""
     from markupsafe import Markup
-    graph = items + [{"@type": "WebSite", "name": brand(), "url": url("/"), "inLanguage": "fr",
+    graph = items + [{"@type": "WebSite", "@id": url("/") + "#site", "name": brand(), "url": url("/"), "inLanguage": ["fr", "en"],
+                      # 14/11/2026 : les variantes que les gens tapent, pour que Google affiche bien « Cauri Charts » comme nom du site
+                      "alternateName": ["Cauri", "CauriCharts", "Cauri Charts Afrique de l'Ouest", "cauricharts.com"],
+                      "description": "Le classement musical hebdomadaire de 16 pays d'Afrique de l'Ouest, calculé sur des données réelles.",
                       "publisher": {"@id": url("/") + "#organisation"}}]
     body = json.dumps({"@context": "https://schema.org", "@graph": graph}, ensure_ascii=False, default=str)
     return Markup(body.replace("</", "<\\/"))
@@ -178,7 +185,9 @@ def home(request):
         "artistNews": _artist_news(),
         "partners": repos.partners_active(),
         "meta": {
-            "title": brand() + " · " + t("home.meta_title", country=country_name(country["code"]), size=country["chart_size"]),
+            # 14/11/2026 : l'accueil dit en clair ce qu'on est (« classement musical »), les mots que tapent les gens qui nous cherchent
+            "title": brand() + (" · Le classement musical de l’Afrique de l’Ouest · Top 20" if regional and locale() == "fr" else
+                                " · " + t("home.meta_title", country=country_name(country["code"]), size=country["chart_size"])),
             "description": t("home.meta_description_region" if regional else "home.meta_description", country=country_name(country["code"])),
             "image": og_image("classement", "wa" if regional else country["code"].lower()),
         },
@@ -535,6 +544,41 @@ def presse(request):
     })
 
 
+def documents_liste(request):
+    """Documents illustrés à feuilleter et télécharger (PDF indexés par Google)."""
+    use_locale(request)
+    from core import documents as D
+    docs = D.tous()
+    return render(request, "documents", {
+        "docs": docs,
+        "meta": {"title": "Documents · Comprendre les classements · " + brand(),
+                 "description": "Les documents illustrés de Cauri Charts à feuilleter et télécharger en PDF : comment les titres "
+                                "sont relevés, vérifiés et classés en Afrique de l'Ouest, et nos perspectives.",
+                 "image": docs[0]["images"][0],
+                 "jsonld": [{"@type": "CollectionPage", "name": "Documents Cauri Charts", "url": url("documents"),
+                             "hasPart": [{"@id": d["url"] + "#document"} for d in docs]}] + [D.ld(d) for d in docs]},
+    })
+
+
+def document_page(request, slug: str):
+    """Un document : aperçu de chaque page, texte, téléchargement du PDF."""
+    use_locale(request)
+    from core import documents as D
+    d = D.par_slug(slug)
+    if not d:
+        raise Http404
+    autres = [x for x in D.tous() if x["slug"] != slug]
+    fil = {"@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": brand(), "item": url("/")},
+        {"@type": "ListItem", "position": 2, "name": "Documents", "item": url("documents")},
+        {"@type": "ListItem", "position": 3, "name": d["titre"], "item": d["url"]}]}
+    return render(request, "document", {
+        "d": d, "autres": autres,
+        "meta": {"title": d["titre"] + " (PDF) · " + brand(), "description": d["description"][:300],
+                 "image": d["images"][0], "type": "article", "jsonld": [D.ld(d), fil]},
+    })
+
+
 def distinction(request, did: str, kind: str | None = None):
     """Page publique d'une distinction officielle : la carte, sa preuve (le classement), les fichiers à télécharger."""
     use_locale(request)
@@ -731,6 +775,12 @@ def sitemap(request):
     from core import press
     urls += [url("presse")] + [url(f) for r in press.published() for _l, f in r["files"] if f.endswith(".pdf")]
     urls += [url(p) for p in ("actualites", "actu-artistes", "partenaires", "integrer", "mentions-legales", "confidentialite", "cookies")]
+    from core import documents
+    urls.append(url("documents"))
+    for d in documents.tous():
+        urls += [d["url"], d["pdf"]]
+        images[d["url"]] = [(i, f"{d['titre']} · page {k + 1} · Cauri Charts") for k, i in enumerate(d["images"])]
+        images[url("documents")] = images.get(url("documents"), []) + [(d["images"][0], d["titre"])]
     if conf.get("show.public"):
         urls.append(url("show"))
     data = repos.sitemap_entries()
@@ -775,6 +825,7 @@ def sitemap(request):
 
 def llms(request):
     """Résumé du site pour les moteurs de recherche IA : quoi, comment, et le classement de ce jour."""
+    from core import documents
     rows = [r for r in live_chart.build(None, None, 10, "prime", 20, "latest")["rows"] if not r.get("is_artist")]
     lines = [f"# {brand()}", "",
              "> Le classement musical hebdomadaire de 16 pays d'Afrique de l'Ouest (Togo, Bénin, Ghana, Côte d'Ivoire, Sénégal, "
@@ -786,6 +837,7 @@ def llms(request):
               f"- Top 20 Afrique de l'Ouest : {url('classements/afrique-de-l-ouest')}",
               *[f"- Top {country_name(c['code'])} : {url(chart_path(c['code'], 'prime'))}" for c in repos.countries()],
               f"- Méthodologie et indice de fiabilité : {url('methodologie')}",
+              *[f"- Document PDF « {d['titre']} » : {d['url']} (téléchargement : {d['pdf']})" for d in documents.tous()],
               f"- Actualités, Cauri Hebdo et Cauri Matin : {url('actualites')}",
               f"- À propos : {url('a-propos')}", ""]
     resp = HttpResponse("\n".join(lines), content_type="text/plain; charset=utf-8")

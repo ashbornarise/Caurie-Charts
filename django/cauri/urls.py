@@ -113,6 +113,8 @@ urlpatterns = [
     path("les-plus-ecoutes-dans-le-monde", views.world_listeners),
     path("actu-artistes", views.artist_news_page),
     path("presse", views.presse),
+    path("documents", views.documents_liste),
+    path("documents/<slug:slug>", views.document_page),
     path("la-machine", views.machine),
     path("envoie-ta-video", views.fan_video),
     path("api/relais/profils", views_relais.profils),

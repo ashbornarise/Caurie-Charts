@@ -159,6 +159,9 @@ class Command(BaseCommand):
                         out(f"Partenaires : {ligne}")
                 except Exception as exc:  # noqa: BLE001
                     out(f"Partenaires : {exc}")
+            if publies:  # 14/11/2026 : Bing et les moteurs IndexNow revisitent les classements dès leur sortie
+                from core.services import indexnow
+                out("IndexNow : " + indexnow.soumettre(indexnow.classements_de_la_semaine()))
             return [f"{len(publies)} pays publié(s) : {', '.join(publies)}"] if publies else ["rien à publier"]
         run("publish-chart", task)
 

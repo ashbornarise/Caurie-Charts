@@ -1,0 +1,48 @@
+<style>
+.doc-page{max-width:1100px;padding-top:24px;padding-bottom:48px}
+.doc-page nav.fil{font-size:.85rem;color:#5d5a78;margin-bottom:10px}
+.doc-page nav.fil a{color:inherit}
+.doc-top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+.doc-top .doc-meta{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#2fa8ff;font-weight:700}
+.doc-pages{display:flex;flex-direction:column;gap:22px;margin-top:26px}
+.doc-pages figure{margin:0;border:1px solid #e4e7f3;border-radius:16px;overflow:hidden;box-shadow:0 14px 34px rgba(40,50,120,.08);background:#fff}
+.doc-pages img{width:100%;height:auto;display:block}
+.doc-pages figcaption{font-size:.8rem;color:#8f8da6;padding:8px 14px;border-top:1px solid #eef0f8}
+.doc-texte{max-width:760px;margin-top:40px}
+.doc-texte h2{font-size:1.15rem;margin:22px 0 6px}
+.doc-texte p{color:#4b4866;line-height:1.6;margin:0}
+.doc-bas{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+</style>
+<div class="wrap doc-page">
+    <nav class="fil"><a href="{{ path('/') }}">Cauri Charts</a> › <a href="{{ path('documents') }}">{{ tr("Documents") }}</a> › {{ d.titre }}</nav>
+    <div class="doc-top">
+        <div>
+            <p class="doc-meta">{{ d.format }}</p>
+            <h1 style="margin:6px 0 8px">{{ d.titre }}</h1>
+            <p class="lead" style="margin:0">{{ d.sous_titre }}</p>
+        </div>
+        <a class="button" href="{{ d.pdf }}" download>{{ tr("Télécharger le PDF") }}</a>
+    </div>
+
+    <div class="doc-pages">
+        {% for img in d.images %}
+        <figure>
+            <img src="{{ img }}" alt="{{ d.titre }} · page {{ loop.index }} sur {{ d.pages }}{% if loop.index > 1 and d.sections[loop.index - 2] %} : {{ d.sections[loop.index - 2][0] }}{% endif %} · Cauri Charts" width="1600" height="1131" {% if not loop.first %}loading="lazy"{% endif %}>
+            <figcaption>{{ tr("Page") }} {{ loop.index }} / {{ d.pages }}</figcaption>
+        </figure>
+        {% endfor %}
+    </div>
+
+    <section class="doc-texte">
+        <h2 style="font-size:1.4rem">{{ tr("Ce que contient ce document") }}</h2>
+        <p>{{ d.description }}</p>
+        {% for titre, texte in d.sections %}
+        <h2>{{ titre }}</h2>
+        <p>{{ texte }}</p>
+        {% endfor %}
+    </section>
+
+    <p class="doc-bas"><a class="button" href="{{ d.pdf }}" download>{{ tr("Télécharger le PDF") }}</a>
+        {% for a in autres %}<a class="button button--ghost" href="{{ a.url }}">{{ a.titre }}</a>{% endfor %}
+        <a class="button button--ghost" href="{{ path('methodologie') }}">{{ tr("Méthodologie détaillée") }}</a></p>
+</div>
