@@ -489,10 +489,14 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
 def rendu(props: dict, dossier: str, sortie: str) -> None:
     fichier = os.path.join(dossier, "props.json")
     json.dump(props, open(fichier, "w", encoding="utf-8"), ensure_ascii=False)
-    r = subprocess.run(f'npx remotion render src/index.ts CauriRaconte "{sortie}" --props="{fichier}" --concurrency=2',
-                       cwd=REMOTION, shell=True, capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
+    # 14/11/2026 : délai par image allongé (clips 1080p lourds, PC à court de mémoire) ; journal complet gardé
+    r = subprocess.run(f'npx remotion render src/index.ts CauriRaconte "{sortie}" --props="{fichier}" --concurrency=2 --timeout=120000',
+                       cwd=REMOTION, shell=True, capture_output=True, text=True, timeout=5400, encoding="utf-8", errors="replace")
     if r.returncode or not os.path.isfile(sortie):
-        raise RuntimeError("rendu Remotion en échec : " + (r.stderr or r.stdout)[-400:])
+        open(os.path.join(dossier, "rendu.log"), "w", encoding="utf-8").write((r.stdout or "") + "\n----\n" + (r.stderr or ""))
+        propre = re.sub(r"\x1b\[[0-9;]*m", "", r.stderr or r.stdout or "")
+        lignes = [l for l in propre.splitlines() if re.search(r"error|Error|échec", l)]
+        raise RuntimeError("rendu Remotion en échec : " + " | ".join(lignes[:3])[:400])
 
 
 def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
@@ -500,11 +504,22 @@ def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
     maj(job_id, statut="montage", erreur=None)
     prefixe = f"raconte/job-{job_id}"
     dossier = os.path.join(REMOTION, "public", "raconte", f"job-{job_id}")
-    shutil.rmtree(dossier, ignore_errors=True)
-    os.makedirs(dossier)
+    # reprise (14/11/2026) : si un rendu a échoué pour ce même récit, voix, clips et musiques déjà prêts sont réutilisés
+    empreinte = json.dumps(p.get("recit"), sort_keys=True, ensure_ascii=False)
+    deja = os.path.join(dossier, "props.json")
+    reprise = os.path.isfile(deja) and os.path.isfile(os.path.join(dossier, "recit.json")) and open(os.path.join(dossier, "recit.json"), encoding="utf-8").read() == empreinte
+    if not reprise:
+        shutil.rmtree(dossier, ignore_errors=True)
+        os.makedirs(dossier)
+    reussi = False
     try:
         from core.services.social import raconte_v2
-        props = (raconte_v2.construit if (p.get("recit") or {}).get("v") == 2 else construit)(job_id, p, dossier, prefixe)
+        if reprise:
+            props = json.load(open(deja, encoding="utf-8"))
+        else:
+            props = (raconte_v2.construit if (p.get("recit") or {}).get("v") == 2 else construit)(job_id, p, dossier, prefixe)
+            json.dump(props, open(deja, "w", encoding="utf-8"), ensure_ascii=False)
+            open(os.path.join(dossier, "recit.json"), "w", encoding="utf-8").write(empreinte)
         with tempfile.TemporaryDirectory(prefix=f"cauri-raconte-{job_id}-") as tmp:
             brut = os.path.join(tmp, "brut.mp4")
             rendu(props, dossier, brut)
@@ -523,8 +538,10 @@ def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
             if tt:
                 storage.store_media("social", nom_tiktok(nom + ".mp4"), open(tt, "rb").read(), "video/mp4")
             storage.store_media("social", nom + ".jpg", open(vignette, "rb").read(), "image/jpeg")
+            reussi = True
     finally:
-        shutil.rmtree(dossier, ignore_errors=True)
+        if reussi:   # en cas d'échec, les pièces restent pour la reprise
+            shutil.rmtree(dossier, ignore_errors=True)
     maj(job_id, statut="pret", video=nom + ".mp4", vignette=nom + ".jpg")
     return {"statut": "pret", "video": nom + ".mp4"}
 
