@@ -7,12 +7,12 @@ DOCUMENTS = [
         "slug": "cauri-charts-magazine-n46",
         "fichier": "cauri-charts-magazine-n46",
         "date": "2026-11-14",
-        "pages": 18,
+        "pages": 33,
         "titre": "Cauri Charts Magazine N°46",
         "sous_titre": "Tous les classements officiels de la semaine du 9 au 12 novembre 2026",
-        "description": "Le premier Cauri Charts Magazine : le Top 20 Afrique de l'Ouest (N°1 : Heaven Baby d'Ayra Starr feat. ZAYN), les classements complets de 13 pays avec les N°1, les entrées et les mouvements, et les six classements par genre.",
-        "format": "PDF · A3 paysage · 18 pages",
-        "legendes": ['Couverture', 'Les N°1 de la semaine', "Top 20 Afrique de l'Ouest", 'Top Togo', 'Top Nigeria', "Top Côte d'Ivoire", 'Top Ghana', 'Top Sénégal', 'Top Bénin', 'Top Burkina Faso', 'Top Mali', 'Top Guinée', 'Top Sierra Leone', 'Top Cap-Vert', 'Top Guinée-Bissau', 'Top Mauritanie', 'Classements par genre', 'Comment on calcule'],
+        "description": "Le premier Cauri Charts Magazine, avec Ayra Starr et ZAYN en couverture : le Top 20 Afrique de l'Ouest (N°1 : Heaven Baby d'Ayra Starr feat. ZAYN), les classements complets de 13 pays avec les N°1, les entrées et les mouvements, et les six classements par genre.",
+        "format": "PDF · A3 paysage · 33 pages",
+        "legendes": ['Couverture : Ayra Starr et ZAYN, Heaven Baby', 'Les N°1 de la semaine', "Ouverture : Afrique de l'Ouest (Ayra Starr)", "Top 20 Afrique de l'Ouest", 'Ouverture : Togo', 'Top Togo', 'Ouverture : Nigeria', 'Top Nigeria', "Ouverture : Côte d'Ivoire", "Top Côte d'Ivoire", 'Ouverture : Ghana', 'Top Ghana', 'Ouverture : Sénégal', 'Top Sénégal', 'Ouverture : Bénin', 'Top Bénin', 'Ouverture : Burkina Faso', 'Top Burkina Faso', 'Ouverture : Mali', 'Top Mali', 'Ouverture : Guinée', 'Top Guinée', 'Ouverture : Sierra Leone', 'Top Sierra Leone', 'Ouverture : Cap-Vert', 'Top Cap-Vert', 'Ouverture : Guinée-Bissau', 'Top Guinée-Bissau', 'Ouverture : Mauritanie', 'Top Mauritanie', 'Ouverture : par genre', 'Classements par genre', 'Comment on calcule'],
         "sections": [
             [
                 "Top 20 Afrique de l'Ouest (les 10 premiers)",
