@@ -1116,13 +1116,15 @@ function projetRaconte(j) {
   const sup = i => edite ? `<button data-sup="${i}" aria-label="Retirer">×</button>` : '';
   const phrase = (x, i) => x.type === 'chapitre'
     ? `<div class="ph-r" data-ph="${i}" data-type="chapitre" data-numero="${esc(x.numero || '')}" data-extra="${esc(JSON.stringify({annees: x.annees || '', musique: x.musique || ''}))}" style="background:var(--violet-clair)"><div class="tete"><b>${esc(x.numero || 'Chapitre')}${x.annees ? ' · ' + esc(x.annees) : ''}</b>${sup(i)}</div>
+        ${r.v === 4 ? `<label class="champ" style="margin:0">Musique sous la voix<select data-k="musique_mode" ${dis}>${[['instru', 'Instrumentale (chant retiré)'], ['chant', 'Chantée, très douce'], ['aucune', 'Aucune']].map(([v, l]) => `<option value="${v}" ${(x.musique_mode || 'instru') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : ''}
         <input data-k="titre" value="${esc(x.titre)}" ${dis} aria-label="Titre du chapitre"></div>`
     : x.type === 'projet'
-    ? `<div class="ph-r" data-ph="${i}" data-type="projet" data-projet="${esc(JSON.stringify(x))}" style="border-color:#F5C14B"><div class="tete"><b>Projet en musique · ${r.v === 3 ? 9 : 12} s</b>${sup(i)}</div>
+    ? `<div class="ph-r" data-ph="${i}" data-type="projet" data-projet="${esc(JSON.stringify(x))}" style="border-color:#F5C14B"><div class="tete"><b>Projet en musique · ${r.v >= 3 ? 9 : 12} s</b>${sup(i)}</div>
         <div style="display:flex;gap:10px;align-items:center">${x.cover ? `<img src="${esc(x.cover)}" alt="" style="width:64px;height:64px;border-radius:10px;object-fit:cover">` : ''}<span><b>${esc(x.titre)}</b><br><small>${esc(x.invites || '')}</small></span></div>
         <div class="deux"><label class="champ" style="margin:0">Étiquette<input data-k="etiquette" value="${esc(x.etiquette || '')}" ${dis}></label><label class="champ" style="margin:0">Morceau joué<input data-k="morceau" value="${esc(x.morceau || '')}" ${dis}></label></div>
         <label class="champ" style="margin:0">Chiffre affiché<input data-k="chiffre" value="${esc(x.chiffre || '')}" ${dis}></label></div>`
-    : `<div class="ph-r" data-ph="${i}" data-type="voix" data-extra="${esc(JSON.stringify({medias: x.medias, mythe: x.mythe, contrat: x.contrat}))}"><div class="tete"><b>Phrase${x.mythe ? ' · mythe : ' + esc(x.mythe.verdict) : ''}${x.contrat ? ' · contrat' : ''}</b>${(x.medias || []).length ? `<small>${esc(x.medias.map(m => (mediaNom[m] || m)).join(' · '))}</small>` : ''}${sup(i)}</div>
+    : `<div class="ph-r" data-ph="${i}" data-type="voix" data-extra="${esc(JSON.stringify({medias: x.medias, mythe: x.mythe, contrat: x.contrat, secret: x.secret}))}"><div class="tete"><b>Phrase${x.secret ? ' · secret ' + (x.secret.n + 1) + (x.secret.temps === 'rumeur' ? ' · la rumeur' : ' · la vérité') : x.mythe ? ' · mythe : ' + esc(x.mythe.verdict) : ''}${x.contrat ? ' · contrat' : ''}</b>${(x.medias || []).length ? `<small>${esc(x.medias.map(m => (mediaNom[m] || m)).join(' · '))}</small>` : ''}${sup(i)}</div>
+    ${x.secret && x.secret.temps === 'rumeur' ? `<label class="champ" style="margin:0">Bulle au-dessus de la mascotte<input data-k="bulle" value="${esc(x.bulle || '')}" ${dis}></label>` : ''}
     ${x.mythe ? `<p class="fait-r">Mythe : « ${esc(x.mythe.affirmation)} » → ${esc(x.mythe.verdict)}</p>` : ''}${x.contrat ? `<p class="fait-r">Contrat : ${esc(x.contrat.quoi)}${x.contrat.equivalents ? ' · ' + esc(Object.values(x.contrat.equivalents).join(' · ')) : ''}</p>` : ''}
     <textarea data-k="texte" aria-label="Texte affiché" ${dis}>${esc(x.texte)}</textarea>
     <label class="champ" style="margin:0">Ce que dit la voix (émotion + prononciation)<input data-k="voix" value="${esc(x.voix || '')}" ${dis}></label>
@@ -1147,10 +1149,10 @@ function projetRaconte(j) {
   if (!edite) return;
   const lit = () => $$('#ra-phrases [data-ph]').map(b => { const v = k => b.querySelector(`[data-k="${k}"]`);
     const extra = b.dataset.extra ? JSON.parse(b.dataset.extra) : {};
-    if (b.dataset.type === 'chapitre') return Object.assign(extra, {type: 'chapitre', numero: b.dataset.numero, titre: v('titre').value.trim()});
+    if (b.dataset.type === 'chapitre') return Object.assign(extra, {type: 'chapitre', numero: b.dataset.numero, titre: v('titre').value.trim()}, v('musique_mode') ? {musique_mode: v('musique_mode').value} : {});
     if (b.dataset.type === 'projet') return Object.assign(JSON.parse(b.dataset.projet), {etiquette: v('etiquette').value.trim(), morceau: v('morceau').value.trim(), chiffre: v('chiffre').value.trim()});
     const grand = v('grand').value.trim();
-    return Object.assign(extra, {type: 'voix', texte: v('texte').value.trim(), voix: v('voix').value.trim(), carte: grand ? {grand, petit: v('petit').value.trim(), or: v('or').checked} : null}); });
+    return Object.assign(extra, {type: 'voix', texte: v('texte').value.trim(), voix: v('voix').value.trim(), carte: grand ? {grand, petit: v('petit').value.trim(), or: v('or').checked} : null}, v('bulle') ? {bulle: v('bulle').value.trim()} : {}); });
   const redessine = l => { r.phrases = l; projetRaconte(Object.assign({}, j, {params: Object.assign({}, p, {recit: r, legende_fr: $('#cv-fr').value, legende_en: $('#cv-en').value})})); };
   $$('#ra-phrases [data-sup]').forEach(b => b.onclick = () => { const l = lit(); l.splice(+b.dataset.sup, 1); redessine(l); });
   $('#ra-ajout').onclick = () => { const l = lit(); l.splice(l.length - 1, 0, {type: 'voix', texte: '', voix: '', carte: null}); redessine(l); };

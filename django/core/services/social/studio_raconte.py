@@ -265,9 +265,9 @@ def _image(url: str | None) -> bytes | None:
 def prepare(job_id: int, job: dict, p: dict, maj) -> dict:
     maj(job_id, statut="analyse", erreur=None)
     # v3 (15/11/2026) : documentaire 3 à 5 min — médiathèque de toutes les époques, mythes, contrats (v2 : 13/11)
-    from core.services.social import raconte_v3
+    from core.services.social import raconte_v3, raconte_v4   # v4 (15/11) : ton humain, secrets en bulle, instrumentales
     donnees = raconte_v3.dossier(int(p["artiste_id"]), p.get("angle") or "")
-    recit = raconte_v3.ecrit(donnees)
+    recit = raconte_v4.ecrit(donnees)
     p["medias"] = donnees.get("_medias") or []
     vignette = None
     if donnees.get("_photo"):
@@ -512,7 +512,7 @@ def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
     empreinte = json.dumps(p.get("recit"), sort_keys=True, ensure_ascii=False)
     deja = os.path.join(dossier, "props.json")
     reprise = os.path.isfile(deja) and os.path.isfile(os.path.join(dossier, "recit.json")) and open(os.path.join(dossier, "recit.json"), encoding="utf-8").read() == empreinte
-    if not reprise and (p.get("recit") or {}).get("v") != 3:
+    if not reprise and (p.get("recit") or {}).get("v") not in (3, 4):
         shutil.rmtree(dossier, ignore_errors=True)
     os.makedirs(dossier, exist_ok=True)   # v3 : clips et prises de voix déjà là sont réutilisés (relance sans tout refaire)
     reussi = False
@@ -523,7 +523,8 @@ def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
         else:
             from core.services.social import raconte_v3
             v = (p.get("recit") or {}).get("v")
-            props = (raconte_v3.construit if v == 3 else raconte_v2.construit if v == 2 else construit)(job_id, p, dossier, prefixe)
+            from core.services.social import raconte_v4
+            props = {4: raconte_v4.construit, 3: raconte_v3.construit, 2: raconte_v2.construit}.get(v, construit)(job_id, p, dossier, prefixe)
             json.dump(props, open(deja, "w", encoding="utf-8"), ensure_ascii=False)
             open(os.path.join(dossier, "recit.json"), "w", encoding="utf-8").write(empreinte)
         with tempfile.TemporaryDirectory(prefix=f"cauri-raconte-{job_id}-") as tmp:
@@ -569,7 +570,7 @@ def recit_valide(r: dict) -> dict | None:
         if sorte == "chapitre":
             if str(x.get("titre") or "").strip():
                 phrases.append({"type": "chapitre", "numero": str(x.get("numero") or "")[:20], "titre": str(x["titre"]).strip()[:28],
-                                **{k: str(x.get(k) or "")[:20] for k in ("annees", "musique") if x.get(k)}})
+                                **{k: str(x.get(k) or "")[:20] for k in ("annees", "musique", "musique_mode") if x.get(k)}})
             continue
         if sorte == "projet":
             if x.get("album_id") and str(x.get("titre") or "").strip():
@@ -588,12 +589,17 @@ def recit_valide(r: dict) -> dict | None:
         for k in ("mythe", "contrat"):
             if isinstance(x.get(k), dict):
                 phrases[-1][k] = x[k]
+        # v4 : secret (rumeur / vérité) et sa bulle de BD
+        if isinstance(x.get("secret"), dict) and x["secret"].get("temps") in ("rumeur", "verite"):
+            phrases[-1]["secret"] = {"n": x["secret"].get("n"), "temps": x["secret"]["temps"]}
+        if str(x.get("bulle") or "").strip():
+            phrases[-1]["bulle"] = str(x["bulle"]).strip().upper()[:90]
     if sum(1 for x in phrases if x["type"] == "voix") < 3:
         return None
     fin = r.get("fin") or {}
     out = {"titre": {"haut": str(t.get("haut") or "")[:14], "nom": str(t.get("nom") or "")[:22], "bas": str(t.get("bas") or "")[:60]},
            "phrases": phrases, "fin": {"titre": str(fin.get("titre") or "TON ARTISTE ?")[:24], "texte": str(fin.get("texte") or "")[:80]},
            "sources": str(r.get("sources") or "")[:220]}
-    if r.get("v") in (2, 3):
+    if r.get("v") in (2, 3, 4):
         out["v"] = r["v"]
     return out
