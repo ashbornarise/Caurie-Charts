@@ -402,21 +402,20 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         if genre == "titre":
             titres.append({"d": round(t, 3), "f": round(t + PAUSE_CHAPITRE, 3), "numero": x.get("numero") or "", "titre": x["titre"],
                            "annees": x.get("annees") or "", "_b": x})
-            sfx.append({"src": SFX["titre"], "d": round(t, 3), "vol": 0.42})
+            # 15/11/2026 : « plus de riser à chaque début » : le titre de chapitre arrive en silence, avec son titre chanté
             pauses.append((t, t + PAUSE_CHAPITRE))
             t += PAUSE_CHAPITRE + 0.15
             continue
         if genre == "jauge":
             secrets.append({"d": round(t, 3), "k": k_secret, "total": total_secrets, "_n": x})
-            sfx.append({"src": SFX["swell"], "d": round(t, 3), "vol": 0.22})
-            sfx.append({"src": SFX["unlock"], "d": round(t + 1.2, 3), "vol": 0.5})
+            sfx.append({"src": SFX["unlock"], "d": round(t + 1.2, 3), "vol": 0.45, "dur": PAUSE_SECRET - 1.3})
             pauses.append((t, t + PAUSE_SECRET))
             k_secret += 1
             t += PAUSE_SECRET + 0.1
             continue
         if genre == "projet":
             projets.append({**x, "d": round(t, 3), "f": round(t + DUREE_PROJET, 3)})
-            sfx.append({"src": SFX["projet"], "d": round(max(0, t - 0.4), 3), "vol": 0.3})
+            sfx.append({"src": SFX["projet"], "d": round(max(0, t - 0.4), 3), "vol": 0.28, "dur": 1.8})
             t += DUREE_PROJET + 0.3
             continue
         dites = [b for b in x if b.get("type") == "voix"]
@@ -425,7 +424,10 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             v = b.get("voix") or b["texte"]
             bal = re.match(r"\s*(\[[a-z ]{3,20}\])\s*", v)
             textes.append(((bal.group(1) + " ") if bal else "") + (v[bal.end():] if bal else v))
-        brut, memo = os.path.join(dossier, f"v{k_voix:02d}.mp3"), os.path.join(dossier, f"v{k_voix:02d}.json")
+        import hashlib   # prises gardées dans le cache, par texte : une relance ne repaie jamais ElevenLabs
+        cle_voix = hashlib.sha1(" ".join(textes).encode("utf-8")).hexdigest()[:16]
+        os.makedirs(os.path.join(CACHE, "voix"), exist_ok=True)
+        brut, memo = os.path.join(CACHE, "voix", cle_voix + ".mp3"), os.path.join(CACHE, "voix", cle_voix + ".json")
         dits = None
         try:
             m0 = json.load(open(memo, encoding="utf-8"))
@@ -476,12 +478,12 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         cote = "gauche" if len(bulles) % 2 == 0 else "droite"
         bulles.append({"d": round(a - 0.1, 3), "f": round(z, 3), "texte": texte, "cote": cote, "cri": "PSST !" if len(bulles) % 2 == 0 else "CHUT…"})
         mascottes.append({"src": POSES["question"], "d": round(a - 0.2, 3), "f": round(z + 0.1, 3), "cote": cote, "h": 820})
-        sfx.append({"src": SFX["bulle"], "d": round(a - 0.1, 3), "vol": 0.45})
+        sfx.append({"src": SFX["bulle"], "d": round(a - 0.1, 3), "vol": 0.4, "dur": 0.6})
         fin_suspense = ver[0][0] if ver else z
         suspense.append((s["d"], fin_suspense))
         if ver:
             verites.append({"d": round(ver[0][0], 3), "f": round(ver[0][0] + 2, 3)})
-            sfx.append({"src": SFX["verite"], "d": round(ver[0][0] - 0.05, 3), "vol": 0.42})
+            sfx.append({"src": SFX["verite"], "d": round(ver[0][0] - 0.05, 3), "vol": 0.3, "dur": 1.6})
 
     # 4) cartes et contrats (jamais en même temps qu'une bulle, « la vérité », un titre ou une jauge : plus de chevauchement)
     occupes = [(b["d"] - 0.2, b["f"] + 0.2) for b in bulles] + [(v["d"] - 0.2, v["f"]) for v in verites] + \
@@ -500,14 +502,14 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                 contrats.append({"d": round(a, 3), "f": round(fin, 3), "quoi": quoi[:48], "avec": re.split(r"\s*\(", c.get("avec") or "")[0][:40],
                                  "annee": c.get("annee") or "", "montant": eq.get("usd") or "", "devises": [x for x in (eq.get("ngn"), eq.get("xof")) if x]})
                 occupes.append((a, fin))
-                sfx.append({"src": SFX["carte"], "d": round(a, 3), "vol": 0.18})
+                sfx.append({"src": SFX["carte"], "d": round(a, 3), "vol": 0.16, "dur": 1.2})
         elif b.get("carte"):
             c = b["carte"]
             d0, f0 = a + 0.12, min(max(z, a + 1.8), a + 4.4)
             if libre(d0, f0):
                 cartes.append({"d": round(d0, 3), "f": round(f0, 3), "grand": c["grand"], "petit": c.get("petit") or "", "or": bool(c.get("or"))})
                 occupes.append((d0, f0))
-                sfx.append({"src": SFX["carte"], "d": round(d0, 3), "vol": 0.16})
+                sfx.append({"src": SFX["carte"], "d": round(d0, 3), "vol": 0.14, "dur": 1.2})
 
     # 5) plans : accroche en plans éclair, puis les médias de chaque phrase ; rien sous les écrans plein cadre
     n_plan = [0]
@@ -632,9 +634,9 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         mid = x["_b"].get("musique") if x["_b"].get("musique") in prets else None
         src = extrait(mid, PAUSE_CHAPITRE + 0.5, False) if mid else None
         if src:
-            musiques.append({"src": src, "d": x["d"], "f": round(x["f"] + 0.3, 3), "depuis": 0, "vol": 0.55})
+            musiques.append({"src": src, "d": x["d"], "f": x["f"], "depuis": 0, "vol": 0.4})   # s'efface avant que la voix reparte
     for a, b in suspense:
-        musiques.append({"src": SFX["suspense"], "d": round(a + 0.4, 3), "f": round(b, 3), "depuis": 0, "vol": 0.3})
+        musiques.append({"src": SFX["suspense"], "d": round(a + 0.4, 3), "f": round(b, 3), "depuis": 0, "vol": 0.14})
     for j2, pr in enumerate(projets):
         mid = _morceau(p, prets, medias, pr.get("morceau") or pr["titre"])
         if mid and "_duree" not in prets[mid]:

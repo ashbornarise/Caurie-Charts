@@ -34,7 +34,7 @@ PHONETIQUE = {"Asake": "Achaké", "Juru": "Jourou", "Shogun": "Shogoune", "Lagos
               "Burna Boy": "Beurna Boï", "Rema": "Réma", "Olamide": "Olamidé", "YBNL": "Ouaille Bi Ène Èl", "Afrobeats": "Afrobits",
               "Amapiano": "Amapiano", "Spotify": "Spotifaï", "Billboard": "Billboard", "Grammy": "Grammie", "Grammys": "Grammies",
               "Wizkid": "Ouizkid", "Mr Money": "Mister Money", "Lungu Boy": "Lounngou Boï", "Work of Art": "Weurk of Art",
-              "Ololade": "Ololadé", "Fuji": "Foudji"}
+              "Ololade": "Ololadé", "Fuji": "Foudji", "Banky W": "Banki Doubeul-iou"}
 
 SYSTEME = """Tu écris le texte d'une vidéo verticale « Cauri raconte » (une minute, voix off française posée et captivante,
 façon récit de chaîne YouTube culturelle) sur un artiste, pour Cauri Charts, « la référence de la musique ouest-africaine ».
