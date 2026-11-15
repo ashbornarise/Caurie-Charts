@@ -121,7 +121,9 @@ class CauriMiddleware:
 
 
 # Adresses internes qui n'ont pas de version anglaise (fichiers, API, outils du fondateur)
-_SANS_EN = r"(?!(?:en(?:/|\b)|assets/|static/|media/|api/|admin|studio|robots\.txt|sitemap|favicon|langue/|apercu/|og/|sw\.js|manifest|/))"
+# 15/11/2026 : jamais de /en devant un fichier (PDF des Documents et de la presse, images, vidéos) : /en/…pdf n'existe pas
+_SANS_EN = (r"(?!(?:en(?:/|\b)|assets/|static/|media/|api/|admin|studio|robots\.txt|sitemap|favicon|langue/|apercu/|og/|sw\.js|manifest|/"
+            r"|[^\"?#]*\.(?:pdf|jpe?g|png|webp|gif|svg|mp4|mp3|wav|zip|txt|xml|json|ico)[\"?#]))")
 _LIEN = re.compile(r'((?:href|action)=")(/' + _SANS_EN + r')')
 _ABS = None
 
