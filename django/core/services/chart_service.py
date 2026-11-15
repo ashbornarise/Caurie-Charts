@@ -170,7 +170,7 @@ class ChartService:
         if not tracks:
             return []
         deltas = self._platform_deltas(cid, period)
-        chart_points = self._chart_points(cid, period, int(formula.get("chart_depth") or 100))
+        chart_points = self._chart_points(cid, period, int(formula.get("chart_depth") or 100), bool(formula.get("tops_du_pays")))
         declarations = self._declarations(cid, period)
         history = self._score_history(cid, period.start, int(formula["anti_fraud"]["spike_history_weeks"]))
         decisions = {int(r["track_id"]): r["decision"] for r in db.all("SELECT track_id, decision FROM track_reviews WHERE week_start = ?", [period.start])}
@@ -336,12 +336,15 @@ class ChartService:
                 o["likes"] = (o.get("likes") or 0) + int(r["end_likes"]) - int(r["base_likes"] or 0)
         return out
 
-    def _chart_points(self, cid: int, period: Period, depth: int) -> dict:
-        """Points de position (v1.2) : moyenne sur les jours de (profondeur + 1 - position), sommée sur les pays."""
-        rows = db.all("""SELECT o.track_id, o.source, o.country_id, AVG(GREATEST(0, ? + 1 - o.position)) AS pts
+    def _chart_points(self, cid: int, period: Period, depth: int, seul_pays: bool = False) -> dict:
+        """Points de position (v1.2) : moyenne sur les jours de (profondeur + 1 - position), sommée sur les pays.
+        v6 (15/11/2026, décision du fondateur) : pour le classement d'un pays, seuls les tops de CE pays comptent
+        (« Taper Créer » était N°1 en Côte d'Ivoire avec ses places Boomplay au Burkina, au Togo, au Niger…)."""
+        filtre = " AND o.country_id = ?" if seul_pays else ""
+        rows = db.all(f"""SELECT o.track_id, o.source, o.country_id, AVG(GREATEST(0, ? + 1 - o.position)) AS pts
                          FROM chart_observations o JOIN tracks t ON t.id = o.track_id JOIN artists a ON a.id = t.artist_id
-                         WHERE a.submission_country_id = ? AND a.status = 'active' AND o.observed_on BETWEEN ? AND ?
-                         GROUP BY o.track_id, o.source, o.country_id""", [depth, cid, period.start, period.end])
+                         WHERE a.submission_country_id = ? AND a.status = 'active' AND o.observed_on BETWEEN ? AND ?{filtre}
+                         GROUP BY o.track_id, o.source, o.country_id""", [depth, cid, period.start, period.end] + ([cid] if seul_pays else []))
         out: dict = {}
         for r in rows:
             d = out.setdefault(int(r["track_id"]), {})

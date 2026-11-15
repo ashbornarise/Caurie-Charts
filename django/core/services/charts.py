@@ -325,8 +325,10 @@ class ChartRanker:
         for i in items:
             sortie = str(i.get("release_date") or "")[:10]
             ancien = bool(sortie) and sortie < limite
-            # v4 : la progression se mesure sur le score brut (même échelle d'une semaine à l'autre)
-            sc, pv = float(i.get("score_brut", i["score"])), float(i.get("prev_brut", i.get("prev_score")) or 0)
+            # 15/11/2026 : avec la formule normalisée (v4 et suivantes), on compare les scores sur 10 000 points, qui ne
+            # dépendent pas de la durée de la semaine. Le score brut, ramené à la durée (semaine de transition de 4 jours),
+            # gonflait de 75 % les points de place, qui sont des moyennes : 14 titres anciens sont restés dans les Tops S46.
+            sc, pv = float(i["score"]), float(i.get("prev_score") or 0)
             regain = pv > 0 and sc >= 1.5 * pv
             if not ancien or regain:
                 garde.append(i)

@@ -275,3 +275,13 @@ Titres gardés d'une semaine à l'autre dans le Top 10 :
 | Très instables | Guinée-Bissau, Mauritanie, Cap-Vert (0 à 4), pays à une seule source |
 
 **Formulation juste à adopter :** les classements sont **« une photographie hebdomadaire des données observées »**. Avec 5 semaines d'historique, une formule v3 entrée en vigueur cette semaine et Boomplay tout juste ajouté, **nous ne revendiquons ni tendance de fond, ni représentativité complète du marché**. Ce sera possible après 12 semaines de données stables.
+
+
+---
+
+## 14. Formule v6 (15 novembre 2026, à partir de la semaine 47)
+
+- **Classement d'un pays = tops de ce pays.** Les places dans les tops Apple Music et Boomplay ne comptent plus que pour le pays du classement. Avant, elles s'additionnaient sur tous les pays : en semaine 46, « Taper Créer » (Himra) était N°1 en Côte d'Ivoire avec 427 points de place Boomplay, dont 330 venus des tops du Burkina, du Bénin, de la Guinée, du Niger et du Togo.
+- **Correction de la règle des titres de plus d'un an.** Le « vrai regain » (+ 50 %) se mesure maintenant sur le score normalisé (10 000 points par pays), qui ne dépend pas de la durée de la semaine. En semaine 46 (transition de 4 jours), le score brut de la semaine précédente avait été ramené à 4/7 alors que les points de place sont des moyennes : 14 titres anciens ont paru faire un bond et sont restés dans les Tops.
+- **Semaine 46** : publiée et diffusée (site, réseaux, partenaires, magazine N°46), elle n'est pas recalculée ; l'explication figure dans la note publique de la formule v6.
+- Les dates de sortie au 1er janvier (titres anciens des catalogues) ne sont pas des erreurs : les plateformes ne donnent que l'année.
