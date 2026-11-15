@@ -267,6 +267,15 @@ body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:tran
 <div id="flashinfo"><b>FLASH INFO</b><span></span></div><div id="citation" class="verre"></div><div id="defi" class="verre"></div>
 
 <script nonce="{{ nonce }}">
+// 15/11/2026 : l'écran s'adapte à n'importe quelle taille de cadre (source « Link » de LIVE Studio, fenêtre de navigateur) :
+// la page 1080 × 1920 est mise à l'échelle et centrée, jamais coupée
+(function ajuste() {
+  const k = Math.min(innerWidth / 1080, innerHeight / 1920), h = document.documentElement;
+  const x = Math.max(0, (innerWidth - 1080 * k) / 2), y = Math.max(0, (innerHeight - 1920 * k) / 2);
+  h.style.transformOrigin = "0 0";
+  h.style.transform = Math.abs(k - 1) < 0.01 ? "" : `translate(${x}px, ${y}px) scale(${k})`;
+  addEventListener("resize", () => { clearTimeout(ajuste.t); ajuste.t = setTimeout(ajuste, 150); }, { once: true });
+})();
 const BASE = "{{ base }}", MODE = "{{ mode }}", Q = MODE ? "?mode=" + MODE : "";
 // aperçu de la régie (?apercu=1) : muet, YouTube en petite qualité, ne signale rien à la régie (seul le vrai écran compte)
 const APERCU = new URLSearchParams(location.search).has("apercu");
