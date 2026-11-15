@@ -264,9 +264,11 @@ def _image(url: str | None) -> bytes | None:
 
 def prepare(job_id: int, job: dict, p: dict, maj) -> dict:
     maj(job_id, statut="analyse", erreur=None)
-    from core.services.social import raconte_v2   # v2 (13/11/2026) : dossier complet, chapitres, projets en musique
-    donnees = raconte_v2.dossier(int(p["artiste_id"]), p.get("angle") or "")
-    recit = raconte_v2.ecrit(donnees)
+    # v3 (15/11/2026) : documentaire 3 à 5 min — médiathèque de toutes les époques, mythes, contrats (v2 : 13/11)
+    from core.services.social import raconte_v3
+    donnees = raconte_v3.dossier(int(p["artiste_id"]), p.get("angle") or "")
+    recit = raconte_v3.ecrit(donnees)
+    p["medias"] = donnees.get("_medias") or []
     vignette = None
     if donnees.get("_photo"):
         corps = _image(donnees["_photo"])
@@ -493,7 +495,7 @@ def rendu(props: dict, dossier: str, sortie: str) -> None:
     json.dump(props, open(fichier, "w", encoding="utf-8"), ensure_ascii=False)
     # 14/11/2026 : délai par image allongé (clips 1080p lourds, PC à court de mémoire) ; journal complet gardé
     r = subprocess.run(f'npx remotion render src/index.ts CauriRaconte "{sortie}" --props="{fichier}" --concurrency=2 --timeout=120000',
-                       cwd=REMOTION, shell=True, capture_output=True, text=True, timeout=5400, encoding="utf-8", errors="replace")
+                       cwd=REMOTION, shell=True, capture_output=True, text=True, timeout=12600, encoding="utf-8", errors="replace")
     if r.returncode or not os.path.isfile(sortie):
         open(os.path.join(dossier, "rendu.log"), "w", encoding="utf-8").write((r.stdout or "") + "\n----\n" + (r.stderr or ""))
         propre = re.sub(r"\x1b\[[0-9;]*m", "", r.stderr or r.stdout or "")
@@ -510,16 +512,18 @@ def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
     empreinte = json.dumps(p.get("recit"), sort_keys=True, ensure_ascii=False)
     deja = os.path.join(dossier, "props.json")
     reprise = os.path.isfile(deja) and os.path.isfile(os.path.join(dossier, "recit.json")) and open(os.path.join(dossier, "recit.json"), encoding="utf-8").read() == empreinte
-    if not reprise:
+    if not reprise and (p.get("recit") or {}).get("v") != 3:
         shutil.rmtree(dossier, ignore_errors=True)
-        os.makedirs(dossier)
+    os.makedirs(dossier, exist_ok=True)   # v3 : clips et prises de voix déjà là sont réutilisés (relance sans tout refaire)
     reussi = False
     try:
         from core.services.social import raconte_v2
         if reprise:
             props = json.load(open(deja, encoding="utf-8"))
         else:
-            props = (raconte_v2.construit if (p.get("recit") or {}).get("v") == 2 else construit)(job_id, p, dossier, prefixe)
+            from core.services.social import raconte_v3
+            v = (p.get("recit") or {}).get("v")
+            props = (raconte_v3.construit if v == 3 else raconte_v2.construit if v == 2 else construit)(job_id, p, dossier, prefixe)
             json.dump(props, open(deja, "w", encoding="utf-8"), ensure_ascii=False)
             open(os.path.join(dossier, "recit.json"), "w", encoding="utf-8").write(empreinte)
         with tempfile.TemporaryDirectory(prefix=f"cauri-raconte-{job_id}-") as tmp:
@@ -558,17 +562,18 @@ def recit_valide(r: dict) -> dict | None:
         return None
     t = r.get("titre") or {}
     phrases = []
-    for x in r["phrases"][:40]:
+    for x in r["phrases"][:120]:
         if not isinstance(x, dict):
             continue
         sorte = x.get("type") or "voix"
         if sorte == "chapitre":
             if str(x.get("titre") or "").strip():
-                phrases.append({"type": "chapitre", "numero": str(x.get("numero") or "")[:20], "titre": str(x["titre"]).strip()[:28]})
+                phrases.append({"type": "chapitre", "numero": str(x.get("numero") or "")[:20], "titre": str(x["titre"]).strip()[:28],
+                                **{k: str(x.get(k) or "")[:20] for k in ("annees", "musique") if x.get(k)}})
             continue
         if sorte == "projet":
             if x.get("album_id") and str(x.get("titre") or "").strip():
-                phrases.append({"type": "projet", **{k: str(x.get(k) or "")[:300] for k in ("titre", "cover", "etiquette", "morceau", "chiffre", "invites")},
+                phrases.append({"type": "projet", **{k: str(x.get(k) or "")[:300] for k in ("titre", "cover", "etiquette", "morceau", "chiffre", "invites", "media")},
                                 "album_id": x["album_id"]})
             continue
         if not str(x.get("texte") or "").strip():
@@ -577,12 +582,18 @@ def recit_valide(r: dict) -> dict | None:
         phrases.append({"type": "voix", "texte": str(x["texte"]).strip()[:260],
                         "voix": _chiffres_dits(str(x.get("voix") or _phonetique(str(x["texte"]))).strip())[:300],
                         "carte": {"grand": str(c["grand"]).strip()[:18], "petit": str(c.get("petit") or "").strip()[:60], "or": bool(c.get("or"))} if c else None})
+        # v3 : images choisies, mythe (vrai/faux), contrat
+        if isinstance(x.get("medias"), list):
+            phrases[-1]["medias"] = [str(m)[:8] for m in x["medias"][:3]]
+        for k in ("mythe", "contrat"):
+            if isinstance(x.get(k), dict):
+                phrases[-1][k] = x[k]
     if sum(1 for x in phrases if x["type"] == "voix") < 3:
         return None
     fin = r.get("fin") or {}
     out = {"titre": {"haut": str(t.get("haut") or "")[:14], "nom": str(t.get("nom") or "")[:22], "bas": str(t.get("bas") or "")[:60]},
            "phrases": phrases, "fin": {"titre": str(fin.get("titre") or "TON ARTISTE ?")[:24], "texte": str(fin.get("texte") or "")[:80]},
            "sources": str(r.get("sources") or "")[:220]}
-    if r.get("v") == 2:
-        out["v"] = 2
+    if r.get("v") in (2, 3):
+        out["v"] = r["v"]
     return out

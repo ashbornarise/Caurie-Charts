@@ -348,7 +348,7 @@ h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
       <h1>Cauri raconte</h1>
       <div class="etapes" id="ra-etapes"><span></span></div>
       <div data-etape="1">
-        <p class="sous">La mascotte raconte un artiste en une minute : voix d'Henri, clips officiels, vrais chiffres. Tu relis le texte avant la fabrication.</p>
+        <p class="sous">Un documentaire de 3 à 5 minutes sur un artiste : ses images de toutes les époques, ses projets en musique, ses mythes et ses contrats, de vrais chiffres. Tu relis le texte avant la fabrication.</p>
         <div class="carte">
           <label class="champ">Artiste<div class="ligne-champ"><input id="ra-cherche" placeholder="Chercher un artiste suivi…" autocomplete="off"></div></label>
           <div class="resultats" id="ra-resultats"></div>
@@ -1110,18 +1110,20 @@ function projetRaconte(j) {
   const r = p.recit; if (!r) return;
   const edite = j.statut === 'a_valider', dis = edite ? '' : 'disabled';
   const d = p.donnees || {}, faits = d.faits_peu_connus_verifies || [];
+  const mediaNom = Object.fromEntries((d.mediatheque || []).map(m => [m.id, (m.type === 'photo' ? 'photo ' : '') + m.titre.slice(0, 28) + (m.annee ? ' (' + m.annee + ')' : '')]));
   const ligneFait = f => `<p class="fait-r">${esc(f.fait)} <small>(${esc((f.sources || []).join(', '))})</small></p>`;
   // v2 (13/11/2026) : chapitres et projets entre les phrases dites
   const sup = i => edite ? `<button data-sup="${i}" aria-label="Retirer">×</button>` : '';
   const phrase = (x, i) => x.type === 'chapitre'
-    ? `<div class="ph-r" data-ph="${i}" data-type="chapitre" data-numero="${esc(x.numero || '')}" style="background:var(--violet-clair)"><div class="tete"><b>${esc(x.numero || 'Chapitre')}</b>${sup(i)}</div>
+    ? `<div class="ph-r" data-ph="${i}" data-type="chapitre" data-numero="${esc(x.numero || '')}" data-extra="${esc(JSON.stringify({annees: x.annees || '', musique: x.musique || ''}))}" style="background:var(--violet-clair)"><div class="tete"><b>${esc(x.numero || 'Chapitre')}${x.annees ? ' · ' + esc(x.annees) : ''}</b>${sup(i)}</div>
         <input data-k="titre" value="${esc(x.titre)}" ${dis} aria-label="Titre du chapitre"></div>`
     : x.type === 'projet'
-    ? `<div class="ph-r" data-ph="${i}" data-type="projet" data-projet="${esc(JSON.stringify(x))}" style="border-color:#F5C14B"><div class="tete"><b>Projet en musique · 12 s</b>${sup(i)}</div>
+    ? `<div class="ph-r" data-ph="${i}" data-type="projet" data-projet="${esc(JSON.stringify(x))}" style="border-color:#F5C14B"><div class="tete"><b>Projet en musique · ${r.v === 3 ? 9 : 12} s</b>${sup(i)}</div>
         <div style="display:flex;gap:10px;align-items:center">${x.cover ? `<img src="${esc(x.cover)}" alt="" style="width:64px;height:64px;border-radius:10px;object-fit:cover">` : ''}<span><b>${esc(x.titre)}</b><br><small>${esc(x.invites || '')}</small></span></div>
         <div class="deux"><label class="champ" style="margin:0">Étiquette<input data-k="etiquette" value="${esc(x.etiquette || '')}" ${dis}></label><label class="champ" style="margin:0">Morceau joué<input data-k="morceau" value="${esc(x.morceau || '')}" ${dis}></label></div>
         <label class="champ" style="margin:0">Chiffre affiché<input data-k="chiffre" value="${esc(x.chiffre || '')}" ${dis}></label></div>`
-    : `<div class="ph-r" data-ph="${i}" data-type="voix"><div class="tete"><b>Phrase</b>${sup(i)}</div>
+    : `<div class="ph-r" data-ph="${i}" data-type="voix" data-extra="${esc(JSON.stringify({medias: x.medias, mythe: x.mythe, contrat: x.contrat}))}"><div class="tete"><b>Phrase${x.mythe ? ' · mythe : ' + esc(x.mythe.verdict) : ''}${x.contrat ? ' · contrat' : ''}</b>${(x.medias || []).length ? `<small>${esc(x.medias.map(m => (mediaNom[m] || m)).join(' · '))}</small>` : ''}${sup(i)}</div>
+    ${x.mythe ? `<p class="fait-r">Mythe : « ${esc(x.mythe.affirmation)} » → ${esc(x.mythe.verdict)}</p>` : ''}${x.contrat ? `<p class="fait-r">Contrat : ${esc(x.contrat.quoi)}${x.contrat.equivalents ? ' · ' + esc(Object.values(x.contrat.equivalents).join(' · ')) : ''}</p>` : ''}
     <textarea data-k="texte" aria-label="Texte affiché" ${dis}>${esc(x.texte)}</textarea>
     <label class="champ" style="margin:0">Ce que dit la voix (émotion + prononciation)<input data-k="voix" value="${esc(x.voix || '')}" ${dis}></label>
     <div class="carte-r"><input data-k="grand" placeholder="Carte : 4,66 MD" value="${esc((x.carte || {}).grand || '')}" ${dis} aria-label="Gros texte de la carte">
@@ -1134,15 +1136,21 @@ function projetRaconte(j) {
       ${d.spotify ? `<p class="fait-r">Spotify : ${esc(d.spotify.ecoutes_totales)} d'écoutes · ${esc(d.spotify.auditeurs_mensuels || '—')} auditeurs par mois</p>` : ''}
       ${(d.rivaux_du_pays_spotify || []).map(x => `<p class="fait-r">${esc(x.nom)} : ${esc(x.streams_spotify)} d'écoutes Spotify</p>`).join('')}
       ${(d.classements_officiels_cauri || []).map(x => `<p class="fait-r">${esc(x.classement)} : meilleure place ${esc(x.meilleure_place)}, ${esc(x.semaines_presentes)} semaine(s)</p>`).join('')}
-      ${faits.map(ligneFait).join('')}<p class="fait-r"><small>${esc(r.sources || '')}</small></p></div></div>
+      ${faits.map(ligneFait).join('')}
+      ${(d.mythes_et_secrets_verifies || []).map(m => `<p class="fait-r">Mythe : « ${esc(m.affirmation)} » → <b>${esc(m.verdict)}</b> <small>(${esc((m.sources || []).join(', '))})</small></p>`).join('')}
+      ${(d.rumeurs_des_forums_non_verifiees || []).slice(0, 8).map(x => `<p class="fait-r"><small>${esc(x.forum)} (rumeur, non vérifiée) :</small> ${esc(x.rumeur)}</p>`).join('')}
+      ${(d.contrats_connus || []).map(c => `<p class="fait-r">Contrat : ${esc(c.quoi)}${c.annee ? ' (' + esc(c.annee) + ')' : ''}${c.equivalents ? ' · ' + esc(Object.values(c.equivalents).join(' · ')) : ''} <small>(${esc((c.sources || []).join(', '))})</small></p>`).join('')}
+      ${(d.mediatheque || []).length ? `<p class="fait-r">Médiathèque : ${(d.mediatheque || []).filter(m => m.type !== 'photo').length} vidéos, ${(d.mediatheque || []).filter(m => m.type === 'photo').length} photos</p>` : ''}
+      <p class="fait-r"><small>${esc(r.sources || '')}</small></p></div></div>
     <div class="carte">${champ('cv-fr', 'Légende en français', p.legende_fr || '', 1)}${champ('cv-en', 'Légende en anglais', p.legende_en || '', 1)}</div>`;
   replie($('#ra-plus'), $('#ra-faits'));
   if (!edite) return;
   const lit = () => $$('#ra-phrases [data-ph]').map(b => { const v = k => b.querySelector(`[data-k="${k}"]`);
-    if (b.dataset.type === 'chapitre') return {type: 'chapitre', numero: b.dataset.numero, titre: v('titre').value.trim()};
+    const extra = b.dataset.extra ? JSON.parse(b.dataset.extra) : {};
+    if (b.dataset.type === 'chapitre') return Object.assign(extra, {type: 'chapitre', numero: b.dataset.numero, titre: v('titre').value.trim()});
     if (b.dataset.type === 'projet') return Object.assign(JSON.parse(b.dataset.projet), {etiquette: v('etiquette').value.trim(), morceau: v('morceau').value.trim(), chiffre: v('chiffre').value.trim()});
     const grand = v('grand').value.trim();
-    return {type: 'voix', texte: v('texte').value.trim(), voix: v('voix').value.trim(), carte: grand ? {grand, petit: v('petit').value.trim(), or: v('or').checked} : null}; });
+    return Object.assign(extra, {type: 'voix', texte: v('texte').value.trim(), voix: v('voix').value.trim(), carte: grand ? {grand, petit: v('petit').value.trim(), or: v('or').checked} : null}); });
   const redessine = l => { r.phrases = l; projetRaconte(Object.assign({}, j, {params: Object.assign({}, p, {recit: r, legende_fr: $('#cv-fr').value, legende_en: $('#cv-en').value})})); };
   $$('#ra-phrases [data-sup]').forEach(b => b.onclick = () => { const l = lit(); l.splice(+b.dataset.sup, 1); redessine(l); });
   $('#ra-ajout').onclick = () => { const l = lit(); l.splice(l.length - 1, 0, {type: 'voix', texte: '', voix: '', carte: null}); redessine(l); };
