@@ -538,7 +538,9 @@ function intermede() {
   const s = $("sonPassage"); s.currentTime = 0; s.volume = .8; s.play().catch(() => {});
   clearTimeout(minuteurInter); minuteurInter = setTimeout(() => el.classList.remove("on"), Math.max(3000, Math.min(5000, (m.duree || 4000) * .6)));   // 3 à 5 s, puis fondu
 }
+let derniereDanse = 0;
 function rendu() {
+  if (E.danse && E.danse !== derniereDanse) { const neuf = derniereDanse !== 0 || Date.now() - E.danse < 8000; derniereDanse = E.danse; if (neuf) danse(10000); }   // paliers de j'aime, gros cadeaux
   document.querySelectorAll(".scene").forEach((s) => s.classList.toggle("on", s.id === E.scene));
   plateau();
   if (E.gong !== dernierGong) { const neuf = dernierGong !== 0 || Date.now() - E.gong < 4000; dernierGong = E.gong; if (E.gong && neuf) { const g = $("sonGong"); g.currentTime = 0; g.play().catch(() => {}); $("gong").animate([{ transform: "scale(1.4)" }, { transform: "scale(1)" }], 600); } }

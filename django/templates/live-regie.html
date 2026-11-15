@@ -136,6 +136,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
   </div>
   <div class="col droite">
     <div class="panel musique" data-tour="musique"><h3>Musique & clips</h3>
+      <div id="demRoses"></div>
       <input id="recherche" type="search" placeholder="Un artiste ou un titre…" autocomplete="off">
       <div id="resultats"></div></div>
     <div id="lecteur">
@@ -593,7 +594,16 @@ function conseils() {
   if (E.media && E.media.t && now - E.media.t > 110000 && !E.media.pause) L.push({ id: "long" + E.media.t, titre: "La musique tourne depuis 2 minutes", texte: "Coupe-la pour limiter le risque de son coupé par TikTok ?", f: () => set({ media: null }) });
   return L.filter((c) => !(reportes[c.id] > now));
 }
+// 1 rose = 1 son (15/11/2026) : les demandes payées d'une rose, à chercher puis lancer
+function rendRoses() {
+  const L = E.demandes || [], el = $("demRoses"); if (!el) return;
+  el.innerHTML = L.length ? `<div class="groupe">DEMANDES (1 ROSE = 1 SON) · ${L.length}</div>` + L.map((x, i) => `<div class="res"><div class="t"><b>${esc(x.texte)}</b><small>demandé par ${esc(x.nom)}</small></div><button class="v" data-dem="${i}">Chercher</button><button data-demx="${i}">Fait</button></div>`).join("") : "";
+  el.querySelectorAll("[data-dem]").forEach((b) => b.onclick = () => { const x = L[+b.dataset.dem]; $("recherche").value = x.texte; $("recherche").oninput();
+    set({ bandeau: `LE SON DE ${x.nom.toUpperCase()} ARRIVE · MERCI POUR LA ROSE`, demandes: L.filter((_, j) => j !== +b.dataset.dem) }); });
+  el.querySelectorAll("[data-demx]").forEach((b) => b.onclick = () => set({ demandes: L.filter((_, j) => j !== +b.dataset.demx) }));
+}
 function rendIA() {
+  rendRoses();
   const c = conseils()[0]; conseilCourant = c; $("ia").style.display = c && aLaMain ? "flex" : "none";
   if (c) { $("iaTitre").textContent = c.titre; $("iaTexte").textContent = c.texte; }
 }

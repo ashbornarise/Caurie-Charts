@@ -37,6 +37,8 @@ ETAT_DEFAUT = {
     # v3.1 : la mascotte passe à l'écran entre les étapes (ce qui vient de se passer, ce qui arrive, anecdotes)
     "mascotte": None, "lecture": None,
     # chat TikTok (connecteur du PC) : cadeaux, classement des donateurs, spectateurs, « j'aime », abonnés
+    # 15/11/2026 : « 1 rose = 1 son » : une rose donne droit à une demande ; le prochain commentaire devient la demande
+    "creditsSon": {}, "demandes": [], "palierLikes": 0, "danse": 0,
     "donateurs": {}, "cadeau": None, "likes": 0, "spectateurs": None, "pic": 0, "abonnes": 0, "reglesCadeaux": True, "topFans": True,
     # jeux et studio (13/11) : devine le titre, qui est-ce, mot mystère, roue, sondage, « d'où tu nous regardes », tirage au sort,
     # roi du live, objectif de « j'aime », bienvenue aux abonnés ; disposition des éléments et déroulé modifiables
@@ -292,6 +294,12 @@ def _commentaire(e: dict, user: str, texte: str, nom: str | None = None) -> None
         e["chat"] = (e.get("chat") or [])[-119:] + [int(time.time())]   # rythme du chat (conseils de l'agent)
         e["chatteurs"] = [c for c in (e.get("chatteurs") or []) if c[0] != user][-299:] + [[user, nom]]   # pour le tirage au sort
     if _jeu_commentaire(e, user, nom, t):
+        return
+    credits = e.setdefault("creditsSon", {})
+    if int(credits.get(user) or 0) > 0 and len(texte.strip()) >= 3 and not user.startswith("régie"):
+        credits[user] = int(credits[user]) - 1
+        e["demandes"] = (e.get("demandes") or [])[-19:] + [{"user": user, "nom": nom, "texte": texte.strip()[:80], "t": int(time.time() * 1000)}]
+        e["dernier"] = ([{"user": user, "texte": "demande : " + texte.strip()[:60]}] + e.get("dernier", []))[:6]
         return
     if e["scene"] == "versus":
         votants = set(e.get("votants", []))
@@ -598,15 +606,22 @@ def _cadeau(e: dict, g: dict) -> None:
             e["mascotte"] = {"titre": "NOUVEAU ROI DU LIVE !", "texte": f"{roi[1]['nom']} prend la couronne avec {roi[1]['diamants']} diamants.",
                              "pose": "m4-appel", "duree": 7000, "t": now}; e["mascAuto"] = now
     e["cadeau"] = {"user": user, "nom": nom, "cadeau": cad, "n": n, "diamants": d, "t": now}
+    if "rose" in cad.lower():   # 1 rose = 1 son (jusqu'à 3 demandes en attente par personne)
+        cr = e.setdefault("creditsSon", {})
+        cr[user] = min(3, int(cr.get(user) or 0) + n)
+        if now - int(e.get("mascRose") or 0) > 12000:
+            e["mascotte"] = {"titre": f"MERCI {nom.upper()} POUR LA ROSE !", "texte": "Écris en commentaire le son que tu veux entendre : il passe juste après.",
+                             "pose": "m4-appel", "duree": 7000, "t": now}; e["mascRose"] = now; e["mascAuto"] = now
     e["dernier"] = ([{"user": user, "texte": f"envoie {n} × {cad}"}] + e.get("dernier", []))[:6]
     if not e.get("reglesCadeaux", True):
         return
     dernier_fx, dernier_masc = int(e.get("fxAuto") or 0), int(e.get("mascAuto") or 0)
     if d >= 500:
-        e["gong"] = now; e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now
+        e["gong"] = now; e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now; e["danse"] = now
         e["mascotte"] = {"titre": f"MERCI {nom.upper()} !", "texte": f"{n} × {cad} : tu fais trembler la Nuit Cauri Charts !", "pose": "m4-appel", "duree": 8000, "t": now}; e["mascAuto"] = now
     elif d >= 100 and now - dernier_fx > 8000:
         e["fx"] = {"type": "cauris", "t": now}; e["fxAuto"] = now
+        e["danse"] = now   # gros cadeau : la mascotte danse
         if now - dernier_masc > 20000:
             e["mascotte"] = {"titre": f"Merci {nom} !", "texte": f"{n} × {cad}, quelle générosité !", "pose": "m4-appel", "duree": 6000, "t": now}; e["mascAuto"] = now
     elif d >= 5 and now - dernier_fx > 8000:
@@ -626,6 +641,23 @@ def regie_commentaires(request, jeton):
     return S._json({"ok": True})
 
 
+def _paliers_likes(e: dict) -> None:
+    """15/11/2026 : « à chaque palier de j'aime, un truc arrive automatiquement » : tous les 1 000 j'aime, confettis ou
+    cauris + la mascotte annonce le palier ; tous les 5 000, feu d'artifice et la mascotte danse."""
+    palier = int(e.get("likes") or 0) // 1000
+    if palier <= int(e.get("palierLikes") or 0):
+        return
+    e["palierLikes"] = palier
+    now = int(time.time() * 1000)
+    grand = palier % 5 == 0
+    e["fx"] = {"type": "artifice" if grand else ("confettis" if palier % 2 else "cauris"), "t": now}; e["fxAuto"] = now
+    e["mascotte"] = {"titre": f"{palier * 1000:,} J'AIME !".replace(",", " "),
+                     "texte": "Merci ! Continuez à taper l'écran : prochain palier à " + f"{(palier + 1) * 1000:,}".replace(",", " ") + ".",
+                     "pose": "m4-appel", "duree": 7000, "t": now}; e["mascAuto"] = now
+    if grand:
+        e["danse"] = now   # l'écran fait danser la mascotte
+
+
 def _paquet(e: dict, m: dict) -> None:
     for c in (m.get("liste") or [])[:200]:
         _commentaire(e, str(c.get("user") or "?")[:30], str(c.get("texte") or "")[:200], str(c.get("nom") or "")[:30] or None)
@@ -636,6 +668,7 @@ def _paquet(e: dict, m: dict) -> None:
         e["abonne"] = {"nom": str(u)[:30], "t": int(time.time() * 1000)}
         e["dernier"] = ([{"user": str(u)[:30], "texte": "s'abonne !"}] + e.get("dernier", []))[:6]
     e["likes"] = int(e.get("likes") or 0) + int(m.get("likes") or 0)
+    _paliers_likes(e)
     if m.get("spectateurs") is not None:
         e["spectateurs"] = int(m["spectateurs"]); e["pic"] = max(int(e.get("pic") or 0), e["spectateurs"])
 
