@@ -56,6 +56,36 @@ html,body{width:1080px;height:1920px;overflow:hidden;position:relative;backgroun
 #troupe .d{position:absolute;bottom:40px;height:760px;transform-origin:50% 100%;animation:choree .5s ease-in-out infinite alternate}
 #troupe .d img{height:100%;filter:drop-shadow(0 30px 40px rgba(0,0,0,.6))}
 @keyframes choree{0%{transform:translateY(0) rotate(-8deg) scale(1,1)}50%{transform:translateY(-90px) rotate(0deg) scale(.95,1.06)}100%{transform:translateY(0) rotate(8deg) scale(1.05,.95)}}
+/* 16/11/2026 : PLATINE : le son passe sans clip (pochette, vinyle, barres) : plus de lag, plus de « contenu reproduit » */
+body.audio-seul #yt,body.audio-seul #clip,body.audio-seul #voileClip{opacity:0!important;pointer-events:none}
+body.audio-seul #yt{inset:auto;left:0;top:0;width:240px;height:136px}body.audio-seul #yt iframe{width:240px;height:136px;left:0;margin-left:0}
+#platineV{position:absolute;inset:0;z-index:3;display:none;flex-direction:column;align-items:center;padding-top:300px;background:radial-gradient(ellipse at 50% 38%,#3a2a8a 0%,#120c2c 60%,#07050f 100%)}
+#platineV.on{display:flex}
+#platineV .disque{position:relative;width:720px;height:720px;border-radius:50%;background:repeating-radial-gradient(circle,#111 0 6px,#1d1d1d 6px 8px);box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 0 10px rgba(245,193,75,.85);animation:tourne 3.2s linear infinite}
+#platineV .disque img{position:absolute;inset:170px;width:380px;height:380px;border-radius:50%;object-fit:cover;border:8px solid #F5C14B}
+#platineV .disque:after{content:"";position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px;border-radius:50%;background:#07050f}
+@keyframes tourne{to{transform:rotate(360deg)}}
+#platineV .bras{position:absolute;top:250px;right:150px;width:16px;height:420px;background:linear-gradient(#ddd,#888);border-radius:8px;transform-origin:50% 0;transform:rotate(24deg);box-shadow:0 10px 20px rgba(0,0,0,.5)}
+#platineV .titreP{margin-top:60px;font-family:Anton,Impact;font-size:96px;line-height:1;color:#fff;text-align:center;max-width:960px;text-shadow:0 8px 30px rgba(0,0,0,.6)}
+#platineV .artP{margin-top:14px;font-weight:900;font-size:46px;color:#8FD3FF;text-align:center}
+#platineV .barres{display:flex;gap:12px;align-items:flex-end;height:110px;margin-top:40px}
+#platineV .barres i{width:22px;border-radius:11px;background:linear-gradient(#F5C14B,#7B5CFF);animation:eq .9s ease-in-out infinite alternate}
+@keyframes eq{0%{height:18px}100%{height:110px}}
+#platineV .parP{margin-top:34px;font-weight:900;font-size:38px;color:#14102a;background:#F5C14B;padding:14px 30px;border-radius:999px;display:none}
+#platineV .parP.on{display:block}
+/* HUD permanent : objectif cadeaux + podium des fans ; bienvenue aux arrivants */
+#hud{position:absolute;left:40px;right:40px;bottom:150px;z-index:24;pointer-events:none}
+#hud .obj{background:rgba(13,10,31,.78);border:2px solid rgba(245,193,75,.6);border-radius:24px;padding:14px 20px}
+#hud .obj b{display:flex;justify-content:space-between;font-size:30px;font-weight:900;color:#F5C14B;letter-spacing:2px}
+#hud .jauge{height:22px;border-radius:11px;background:rgba(255,255,255,.15);margin-top:10px;overflow:hidden}
+#hud .jauge i{display:block;height:100%;width:0;background:linear-gradient(90deg,#F5C14B,#FFE9A8);border-radius:11px;transition:width .8s}
+#hud .podium{display:flex;gap:10px;margin-top:10px;font-weight:800;font-size:26px;color:#fff}
+#hud .podium span{background:rgba(123,92,255,.55);padding:8px 16px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:330px}
+#hud .podium span:first-child{background:#F5C14B;color:#14102a}
+#bienvenue{position:absolute;right:30px;top:170px;z-index:24;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none}
+#bienvenue span{font-weight:800;font-size:28px;color:#fff;background:rgba(13,10,31,.8);border-left:6px solid #8FD3FF;padding:10px 18px;border-radius:12px;animation:arrive .5s ease-out}
+@keyframes arrive{from{transform:translateX(120%);opacity:0}}
+#base i{animation:none!important}   /* 16/11 : les taches floues animées faisaient laguer la carte graphique intégrée */
 @keyframes danse{0%{transform:translateY(0) rotate(-7deg) scale(1,1)}45%{transform:translateY(-70px) rotate(4deg) scale(.96,1.05)}100%{transform:translateY(0) rotate(8deg) scale(1.05,.95)}}
 #interlude.bas{top:1160px}   /* pendant un jeu : sous la carte du jeu */
 #intImg{position:absolute;left:-70px;top:30px;height:560px;transform:translateX(-560px) rotate(12deg);transition:transform .6s cubic-bezier(.2,1.5,.4,1);filter:drop-shadow(0 20px 26px rgba(0,0,0,.5))}
@@ -169,7 +199,7 @@ body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:tran
 #ticker{transition:opacity .4s}
 .direct{display:inline-flex;align-items:center;gap:10px;background:#e5384a;font-weight:900;font-size:26px;letter-spacing:3px;padding:10px 18px;border-radius:999px}.direct i{width:14px;height:14px;border-radius:50%;background:#fff;animation:clig 1s infinite}@keyframes clig{50%{opacity:.25}}
 </style></head><body>
-<div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="troupe"><div class="sol"></div><div class="spot" style="left:5%"></div><div class="spot b" style="left:45%"></div><div class="titre" id="troupeTitre">ON DANSE !</div><div id="danseurs"></div></div><div id="danseur"><img id="danseImg" src="/assets/live/m2-presente.png" alt=""></div><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
+<div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="platineV"><div class="disque"><img id="platImg" src="/assets/live/logo.png" alt=""></div><div class="bras"></div><div class="titreP" id="platTitre"></div><div class="artP" id="platArt"></div><div class="barres"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="parP" id="platPar"></div></div><div id="hud"><div class="obj"><b><span id="objTxt">OBJECTIF CADEAUX</span><span id="objNb"></span></b><div class="jauge"><i id="objJauge"></i></div><div class="podium" id="podium"></div></div></div><div id="bienvenue"></div><div id="troupe"><div class="sol"></div><div class="spot" style="left:5%"></div><div class="spot b" style="left:45%"></div><div class="titre" id="troupeTitre">ON DANSE !</div><div id="danseurs"></div></div><div id="danseur"><img id="danseImg" src="/assets/live/m2-presente.png" alt=""></div><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
 <audio id="sonPassage" src="/assets/live/sfx/balayage.mp3" preload="auto"></audio><div id="merci"></div><div id="topfans"></div><div id="roi"></div><div id="devineurs"></div><div id="objectif"></div><div id="repet">RÉPÉTITION · rien n'est à l'antenne</div><button id="activer">Cliquer ici pour activer le son</button>
 <div id="titreSon" style="opacity:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8FD3FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span></span></div>
 
@@ -570,8 +600,36 @@ function choree(ms, titre) {
   tChoreePas = setInterval(() => { k++; D.querySelectorAll("img").forEach((im, i) => { im.src = "/assets/live/" + poses[(k + i) % poses.length] + ".png"; im.style.transform = (k + i) % 2 ? "scaleX(-1)" : "none"; }); }, 1040);
   tChoree = setTimeout(() => { T.classList.remove("on"); clearInterval(tChoreePas); }, ms);
 }
+// la platine : la musique passe sans clip ; pochette = photo de l'artiste, sinon la vignette YouTube
+function platine() {
+  const m = E.media, on = E.platine !== false && !!m && ["youtube", "clip", "son"].includes(m.type);
+  document.body.classList.toggle("audio-seul", on);
+  const P = $("platineV"); P.classList.toggle("on", on && ["artiste", "camera"].includes(E.scene));
+  if (!on) return;
+  const a = (D.artistes || []).find((x) => x.id === m.artisteId);
+  const img = (a && a.photo) || (m.yt ? "https://i.ytimg.com/vi/" + m.yt + "/hqdefault.jpg" : "/assets/live/logo.png");
+  if ($("platImg").getAttribute("src") !== img) $("platImg").src = img;
+  $("platTitre").textContent = (m.titre || "").toUpperCase(); $("platArt").textContent = m.artiste || "";
+  $("platPar").textContent = m.par ? "DEMANDÉ PAR " + m.par.toUpperCase() + " · MERCI POUR LA ROSE" : ""; $("platPar").classList.toggle("on", !!m.par);
+  document.querySelectorAll("#platineV .barres i").forEach((b, i) => { b.style.animationDelay = (-i * 0.13) + "s"; b.style.animationPlayState = m.pause ? "paused" : "running"; });
+  $("platineV").querySelector(".disque").style.animationPlayState = m.pause ? "paused" : "running";
+}
+// objectif cadeaux + podium des fans + bienvenue
+let dernieresArrivees = "";
+function hud() {
+  const don = Object.values(E.donateurs || {}), total = don.reduce((s, x) => s + (x.diamants || 0), 0);
+  const obj = E.objectif || 300, fait = Math.max(0, total - (E.objectifBase || 0)), reste = Math.max(0, obj - fait);
+  $("objTxt").textContent = reste ? `ENCORE ${reste} DIAMANTS : LA TROUPE DANSE` : "OBJECTIF ATTEINT !";
+  $("objNb").textContent = `${Math.min(fait, obj)} / ${obj}`; $("objJauge").style.width = Math.min(100, fait * 100 / obj) + "%";
+  const top = don.sort((a, b) => b.diamants - a.diamants).slice(0, 3);
+  $("podium").innerHTML = top.length ? top.map((d, i) => `<span>${i ? i + 1 + ". " : "ROI · "}${esc(d.nom)} · ${d.diamants}</span>`).join("") : "<span>1 ROSE = 1 SON · ÉCRIS TON TITRE</span>";
+  $("hud").style.display = ["attente", "fin"].includes(E.scene) ? "none" : "block";
+  const arr = (E.arrivees || []).filter((x) => Date.now() - x.t < 9000), cle = arr.map((x) => x.t).join();
+  if (cle !== dernieresArrivees) { dernieresArrivees = cle; $("bienvenue").innerHTML = arr.map((x) => `<span>Bienvenue ${esc(x.nom)} !</span>`).join(""); }
+}
 let derniereDanse = 0;
 function rendu() {
+  platine(); hud();
   if (E.choree && E.choree !== derniereChoree) { const neuf = derniereChoree !== 0 || Date.now() - E.choree < 8000; derniereChoree = E.choree; if (neuf) choree(11000, E.likes >= 1000 ? Math.floor(E.likes / 1000) * 1000 + " J'AIME !" : "MERCI !"); }
   if (E.danse && E.danse !== derniereDanse) { const neuf = derniereDanse !== 0 || Date.now() - E.danse < 8000; derniereDanse = E.danse; if (neuf) danse(10000); }   // paliers de j'aime, gros cadeaux
   document.querySelectorAll(".scene").forEach((s) => s.classList.toggle("on", s.id === E.scene));

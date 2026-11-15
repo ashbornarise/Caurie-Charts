@@ -128,7 +128,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
   <div class="pastille horsantenne" id="antenne" title="Démarrer ou arrêter le chrono du live"><i></i><span>HORS ANTENNE</span></div>
   <div class="pastille connecte" id="connexion"><i></i><span>Connexion…</span></div>
   <div class="esp"></div>
-  <button id="repetBtn" title="S'entraîner sur un écran de test : rien ne part à l'antenne">Mode répétition</button>
+  <button id="repetBtn" title="S'entraîner sur un écran de test : rien ne part à l'antenne">Mode répétition</button><button id="piloteBtn" title="Le programme tourne tout seul : un jeu, un son, un vote… toutes les 4 min 30">Pilote auto</button><button id="platineBtn" title="Le son passe sans clip : pochette et vinyle (évite le lag et le « contenu reproduit »)">Platine</button>
   <button id="copier" title="Le lien de l'écran à ajouter dans LIVE Studio">Lien de l'écran</button>
   <button id="aide">? Aide</button>
   <a href="" id="modeDj" class="petit" style="text-decoration:none">Mode DJ</a>
@@ -545,7 +545,8 @@ async function joue(artiste, titre, extra = {}) {
         const x = tt.find((k) => titre && norm(k.titre).includes(norm(titre).slice(0, 8))) || tt[0]; if (x) repli = { son: x.url }; } } catch (e) {}
   }
   if (!l.length && !repli) { notif("Aucune vidéo ni extrait trouvé pour " + artiste); return false; }
-  set({ media: { type: "youtube", liste: l, repli, yt: l[0]?.id || null, flou: !(l[0] && l[0].officiel), titre: titre || (l[0] && l[0].titre) || "", artiste, artisteId: extra.artisteId || null, t: Date.now() },
+  const par = window.demandeur || null; window.demandeur = null;   // 1 rose = 1 son : le pseudo s'affiche sur la platine
+  set({ media: { type: "youtube", liste: l, repli, yt: l[0]?.id || null, flou: !(l[0] && l[0].officiel), titre: titre || (l[0] && l[0].titre) || "", artiste, artisteId: extra.artisteId || null, par, t: Date.now() },
         scene: "artiste", fiche: !!extra.fiche, flou: false, ...(extra.set || {}) });
   return true;
 }
@@ -610,11 +611,35 @@ function conseils() {
 function rendRoses() {
   const L = E.demandes || [], el = $("demRoses"); if (!el) return;
   el.innerHTML = L.length ? `<div class="groupe">DEMANDES (1 ROSE = 1 SON) · ${L.length}</div>` + L.map((x, i) => `<div class="res"><div class="t"><b>${esc(x.texte)}</b><small>demandé par ${esc(x.nom)}</small></div><button class="v" data-dem="${i}">Chercher</button><button data-demx="${i}">Fait</button></div>`).join("") : "";
-  el.querySelectorAll("[data-dem]").forEach((b) => b.onclick = () => { const x = L[+b.dataset.dem]; $("recherche").value = x.texte; $("recherche").oninput();
+  el.querySelectorAll("[data-dem]").forEach((b) => b.onclick = () => { const x = L[+b.dataset.dem]; window.demandeur = x.nom; $("recherche").value = x.texte; $("recherche").oninput();
     set({ bandeau: `LE SON DE ${x.nom.toUpperCase()} ARRIVE · MERCI POUR LA ROSE`, demandes: L.filter((_, j) => j !== +b.dataset.dem) }); });
   el.querySelectorAll("[data-demx]").forEach((b) => b.onclick = () => set({ demandes: L.filter((_, j) => j !== +b.dataset.demx) }));
 }
+// pilote automatique (16/11/2026) : l'écran bouge tout le temps, sans clic ; l'écran du téléphone reste allumé
+const CYCLE = ["dou", "musique", "blind", "versus", "musique", "photo", "top3", "musique", "mot", "sondage", "musique", "mur"];
+let piloteK = 0, piloteT = null, verrouEcran = null;
+async function etapePilote() {
+  if (!E.pilote || !aLaMain) return;
+  if (E.jeu && E.jeu.phase === "jeu") { piloteT = setTimeout(etapePilote, 30000); return; }   // un jeu est en cours : on attend
+  const id = CYCLE[piloteK++ % CYCLE.length];
+  try {
+    if (id === "musique") { const d = (E.demandes || [])[0];
+      if (d) { window.demandeur = d.nom; set({ demandes: (E.demandes || []).slice(1) }); $("recherche").value = d.texte; $("recherche").oninput(); notif("Pilote : demande de " + d.nom + " → choisis le titre et ▶"); }
+      else if (pistes.length) { const p = pistes[Math.floor(Math.random() * Math.min(pistes.length, 40))];
+        await joue(p.artiste, p.titre, { artisteId: p.artisteId, set: { carte: p.artisteId, carteExt: null }, repli: { video: p.video || null, son: p.son } }); } }
+    else if (ETAPES[id] && ETAPES[id].jeu) await lanceJeu(id);
+    else va(id);
+  } catch (e) {}
+  piloteT = setTimeout(etapePilote, 270000);
+}
+function majPilote() { $("piloteBtn").classList.toggle("on", !!E.pilote); $("piloteBtn").textContent = E.pilote ? "Pilote auto : ON" : "Pilote auto";
+  $("platineBtn").classList.toggle("on", E.platine !== false); $("platineBtn").textContent = E.platine !== false ? "Platine : ON" : "Platine : OFF"; }
+$("piloteBtn").onclick = async () => { const on = !E.pilote; set({ pilote: on }); clearTimeout(piloteT);
+  if (on) { try { verrouEcran = await navigator.wakeLock.request("screen"); } catch (e) {} piloteT = setTimeout(etapePilote, 1500); }
+  else if (verrouEcran) { verrouEcran.release().catch(() => {}); verrouEcran = null; } };
+$("platineBtn").onclick = () => set({ platine: E.platine === false });
 function rendIA() {
+  majPilote();
   rendRoses();
   const c = conseils()[0]; conseilCourant = c; $("ia").style.display = c && aLaMain ? "flex" : "none";
   if (c) { $("iaTitre").textContent = c.titre; $("iaTexte").textContent = c.texte; }

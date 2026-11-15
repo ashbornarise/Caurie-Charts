@@ -39,6 +39,8 @@ ETAT_DEFAUT = {
     # chat TikTok (connecteur du PC) : cadeaux, classement des donateurs, spectateurs, « j'aime », abonnés
     # 15/11/2026 : « 1 rose = 1 son » : une rose donne droit à une demande ; le prochain commentaire devient la demande
     "creditsSon": {}, "demandes": [], "palierLikes": 0, "danse": 0, "choree": 0,
+    # 16/11/2026 : platine (le son passe sans clip : plus de lag, plus de « contenu reproduit »), objectif cadeaux, arrivées
+    "platine": True, "objectif": 300, "objectifBase": 0, "arrivees": [], "pilote": False,
     "donateurs": {}, "cadeau": None, "likes": 0, "spectateurs": None, "pic": 0, "abonnes": 0, "reglesCadeaux": True, "topFans": True,
     # jeux et studio (13/11) : devine le titre, qui est-ce, mot mystère, roue, sondage, « d'où tu nous regardes », tirage au sort,
     # roi du live, objectif de « j'aime », bienvenue aux abonnés ; disposition des éléments et déroulé modifiables
@@ -606,6 +608,13 @@ def _cadeau(e: dict, g: dict) -> None:
             e["mascotte"] = {"titre": "NOUVEAU ROI DU LIVE !", "texte": f"{roi[1]['nom']} prend la couronne avec {roi[1]['diamants']} diamants.",
                              "pose": "m4-appel", "duree": 7000, "t": now}; e["mascAuto"] = now
     e["cadeau"] = {"user": user, "nom": nom, "cadeau": cad, "n": n, "diamants": d, "t": now}
+    # objectif cadeaux : la barre se remplit à l'écran ; atteinte = chorégraphie, puis un nouvel objectif
+    total = sum(int(x.get("diamants") or 0) for x in e["donateurs"].values())
+    if total - int(e.get("objectifBase") or 0) >= int(e.get("objectif") or 300):
+        e["objectifBase"] = total
+        e["choree"] = now
+        e["mascotte"] = {"titre": "OBJECTIF ATTEINT !", "texte": "Merci à tous ! La troupe danse pour vous. Nouvel objectif lancé.", "pose": "m4-appel",
+                         "duree": 8000, "t": now}; e["mascAuto"] = now
     if "rose" in cad.lower():   # 1 rose = 1 son (jusqu'à 3 demandes en attente par personne)
         cr = e.setdefault("creditsSon", {})
         cr[user] = min(3, int(cr.get(user) or 0) + n)
@@ -663,6 +672,10 @@ def _paquet(e: dict, m: dict) -> None:
         _commentaire(e, str(c.get("user") or "?")[:30], str(c.get("texte") or "")[:200], str(c.get("nom") or "")[:30] or None)
     for g in (m.get("cadeaux") or [])[:100]:
         _cadeau(e, g)
+    for u in (m.get("arrivees") or [])[:50]:   # « bienvenue » à l'écran (les 4 derniers arrivés)
+        nom_a = str(u)[:24]
+        if nom_a and nom_a not in [x["nom"] for x in e.get("arrivees") or []]:
+            e["arrivees"] = ((e.get("arrivees") or []) + [{"nom": nom_a, "t": int(time.time() * 1000)}])[-4:]
     for u in (m.get("abonnes") or [])[:100]:
         e["abonnes"] = int(e.get("abonnes") or 0) + 1
         e["abonne"] = {"nom": str(u)[:30], "t": int(time.time() * 1000)}
