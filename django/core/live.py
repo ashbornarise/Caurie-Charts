@@ -38,7 +38,7 @@ ETAT_DEFAUT = {
     "mascotte": None, "lecture": None,
     # chat TikTok (connecteur du PC) : cadeaux, classement des donateurs, spectateurs, « j'aime », abonnés
     # 15/11/2026 : « 1 rose = 1 son » : une rose donne droit à une demande ; le prochain commentaire devient la demande
-    "creditsSon": {}, "demandes": [], "palierLikes": 0, "danse": 0,
+    "creditsSon": {}, "demandes": [], "palierLikes": 0, "danse": 0, "choree": 0,
     "donateurs": {}, "cadeau": None, "likes": 0, "spectateurs": None, "pic": 0, "abonnes": 0, "reglesCadeaux": True, "topFans": True,
     # jeux et studio (13/11) : devine le titre, qui est-ce, mot mystère, roue, sondage, « d'où tu nous regardes », tirage au sort,
     # roi du live, objectif de « j'aime », bienvenue aux abonnés ; disposition des éléments et déroulé modifiables
@@ -617,7 +617,7 @@ def _cadeau(e: dict, g: dict) -> None:
         return
     dernier_fx, dernier_masc = int(e.get("fxAuto") or 0), int(e.get("mascAuto") or 0)
     if d >= 500:
-        e["gong"] = now; e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now; e["danse"] = now
+        e["gong"] = now; e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now; e["choree"] = now
         e["mascotte"] = {"titre": f"MERCI {nom.upper()} !", "texte": f"{n} × {cad} : tu fais trembler la Nuit Cauri Charts !", "pose": "m4-appel", "duree": 8000, "t": now}; e["mascAuto"] = now
     elif d >= 100 and now - dernier_fx > 8000:
         e["fx"] = {"type": "cauris", "t": now}; e["fxAuto"] = now
@@ -650,12 +650,12 @@ def _paliers_likes(e: dict) -> None:
     e["palierLikes"] = palier
     now = int(time.time() * 1000)
     grand = palier % 5 == 0
-    e["fx"] = {"type": "artifice" if grand else ("confettis" if palier % 2 else "cauris"), "t": now}; e["fxAuto"] = now
+    e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now   # « les confettis suffisent »
     e["mascotte"] = {"titre": f"{palier * 1000:,} J'AIME !".replace(",", " "),
                      "texte": "Merci ! Continuez à taper l'écran : prochain palier à " + f"{(palier + 1) * 1000:,}".replace(",", " ") + ".",
                      "pose": "m4-appel", "duree": 7000, "t": now}; e["mascAuto"] = now
     if grand:
-        e["danse"] = now   # l'écran fait danser la mascotte
+        e["choree"] = now   # tous les 5 000 : la troupe de mascottes monte sur scène
 
 
 def _paquet(e: dict, m: dict) -> None:
