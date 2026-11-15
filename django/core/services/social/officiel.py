@@ -17,6 +17,9 @@ def _au(code: str) -> str:
 
 
 def _vues(n: int) -> str:
+    # 15/11/2026 : « Himra (0 vues cette semaine) » publié alors qu'il était N°1 grâce aux écoutes (Boomplay) : jamais « 0 vues »
+    if n <= 0:
+        return "porté par les écoutes en streaming"
     if n >= 1_000_000:
         m = f"{n / 1e6:.1f}".replace(".", ",").replace(",0", "")
         return m + (" million" if n < 2_000_000 else " millions") + " de vues cette semaine"   # 1,1 million, 2,3 millions
@@ -49,7 +52,7 @@ def post(jour: date, due: datetime, essai: bool = False) -> dict | None:
         vues = _vues(int(n1.get("views") or 0))
         lignes = [(f"CLASSEMENT OFFICIEL · {country_name(t['code']).upper()} :", "petit"),
                   (n1["title"].split(" (")[0].upper(), "or"), (f"de {n1['artist_name']} est", "petit"),
-                  ("LE TITRE LE PLUS VU", "moyen"), (_au(t["code"]).upper(), "grand"), (vues, "petit")]
+                  ("N°1 DE LA SEMAINE", "moyen"), (_au(t["code"]).upper(), "grand"), (vues, "petit")]
         photo = _photo(n1)
         debut, fin = t["period_start"], t["period_end"]
         sous = f"Classement officiel Cauri Charts · {debut[8:10]}/{debut[5:7]} – {fin[8:10]}/{fin[5:7]}"
@@ -62,7 +65,7 @@ def post(jour: date, due: datetime, essai: bool = False) -> dict | None:
     if essai:
         return {"fichiers": [str(PI.DIR / f["file"]) for f in fichiers]}
     legende = (f"🏆 Le classement officiel Cauri Charts de la semaine ({semaine}).\n\n" + "\n".join(lignes_legende)
-               + "\n\nVues YouTube des clips officiels sur la semaine, contrôles anti-fraude appliqués. "
+               + "\n\nVues YouTube des clips officiels (50 %) et écoutes Spotify, Apple Music et Boomplay (50 %), contrôles anti-fraude appliqués. "
                  "Le top complet de chaque pays sur cauricharts.com.")
     return E.save_post("format-officiel", jour.isoformat(), f"Classement officiel {semaine}", legende,
                        "#CauriCharts #ClassementOfficiel #Afrobeats #MusiqueAfricaine", fichiers,
