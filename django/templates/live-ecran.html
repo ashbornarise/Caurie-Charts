@@ -39,6 +39,11 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#0d0a1f;color:va
 /* la mascotte entre par la gauche, tête à l'endroit, légèrement penchée, sous les titres du haut ; 3 à 5 s puis fondu */
 #interlude{position:absolute;left:0;right:0;top:500px;height:640px;z-index:26;pointer-events:none;opacity:0;transition:opacity .45s}
 #interlude.on{opacity:1}
+/* 15/11/2026 : la mascotte danse (bouton « Mascotte : danse » de la régie), en bas à droite, jamais sur les textes du haut */
+#danseur{position:absolute;right:30px;bottom:-30px;height:820px;z-index:27;pointer-events:none;opacity:0;transition:opacity .4s;transform-origin:50% 100%}
+#danseur.on{opacity:1;animation:danse .52s ease-in-out infinite alternate}
+#danseur img{height:100%;filter:drop-shadow(0 30px 40px rgba(0,0,0,.55))}
+@keyframes danse{0%{transform:translateY(0) rotate(-7deg) scale(1,1)}45%{transform:translateY(-70px) rotate(4deg) scale(.96,1.05)}100%{transform:translateY(0) rotate(8deg) scale(1.05,.95)}}
 #interlude.bas{top:1160px}   /* pendant un jeu : sous la carte du jeu */
 #intImg{position:absolute;left:-70px;top:30px;height:560px;transform:translateX(-560px) rotate(12deg);transition:transform .6s cubic-bezier(.2,1.5,.4,1);filter:drop-shadow(0 20px 26px rgba(0,0,0,.5))}
 #interlude.on #intImg{transform:translateX(0) rotate(12deg)}
@@ -151,7 +156,7 @@ body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:tran
 #ticker{transition:opacity .4s}
 .direct{display:inline-flex;align-items:center;gap:10px;background:#e5384a;font-weight:900;font-size:26px;letter-spacing:3px;padding:10px 18px;border-radius:999px}.direct i{width:14px;height:14px;border-radius:50%;background:#fff;animation:clig 1s infinite}@keyframes clig{50%{opacity:.25}}
 </style></head><body>
-<div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
+<div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="danseur"><img id="danseImg" src="/assets/live/m2-presente.png" alt=""></div><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
 <audio id="sonPassage" src="/assets/live/sfx/balayage.mp3" preload="auto"></audio><div id="merci"></div><div id="topfans"></div><div id="roi"></div><div id="devineurs"></div><div id="objectif"></div><div id="repet">RÉPÉTITION · rien n'est à l'antenne</div><button id="activer">Cliquer ici pour activer le son</button>
 <div id="titreSon" style="opacity:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8FD3FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span></span></div>
 
@@ -653,7 +658,14 @@ function effets() {
 }
 // effets en plus : lumières, image, sons, messages
 const corps = (cls, ms) => { document.body.classList.remove(cls); void document.body.offsetWidth; document.body.classList.add(cls); setTimeout(() => document.body.classList.remove(cls), ms); };
-let defiFin = 0, tFlash = null, tCit = null, tLaser = null;
+let defiFin = 0, tFlash = null, tCit = null, tLaser = null, tDanse = null, tPas = null;
+// la mascotte danse : rebonds au tempo (~115 BPM), elle change de pose et se retourne à chaque temps fort
+function danse(ms) {
+  const d = $("danseur"), im = $("danseImg"), poses = ["m2-presente", "m4-appel", "m1-question", "m4-appel"];
+  let k = 0; d.classList.add("on"); clearInterval(tPas); clearTimeout(tDanse);
+  tPas = setInterval(() => { k++; im.src = "/assets/live/" + poses[k % poses.length] + ".png"; im.style.transform = k % 2 ? "scaleX(-1)" : "none"; }, 1040);
+  tDanse = setTimeout(() => { d.classList.remove("on"); clearInterval(tPas); }, ms);
+}
 function autresFx(f) {
   const t = f.type, SFX = { boom: "boom", montee: "montee", ding: "ding", whoosh: "balayage" };
   if (SFX[t]) joueSfx(SFX[t]);
@@ -662,6 +674,7 @@ function autresFx(f) {
   if (t === "glitch") corps("glitch", 2900);
   if (t === "arcenciel") corps("arcenciel", 4100);
   if (t === "pulse") corps("pulse", 4900);
+  if (t === "danse") danse(f.duree || 12000);
   if (t === "lasers") { $("lasers").classList.add("on"); clearTimeout(tLaser); tLaser = setTimeout(() => $("lasers").classList.remove("on"), 6000); }
   if (t === "strobe") $("flash").animate([{ opacity: .9 }, { opacity: 0 }], { duration: 120, iterations: 14 });
   if (t === "rideau") { const g = $("rideauG"), d = $("rideauD"); for (const el of [g, d]) { el.style.transition = "none"; el.style.transform = "none"; } void g.offsetWidth;
