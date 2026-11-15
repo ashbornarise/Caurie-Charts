@@ -1,31 +1,43 @@
-<style>
-.docs-page{max-width:1100px;padding-top:24px;padding-bottom:48px}
-.docs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px;margin-top:28px}
-.doc-card{display:flex;flex-direction:column;border:1px solid #e4e7f3;border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 14px 34px rgba(40,50,120,.08);color:inherit;text-decoration:none}
-.doc-card img{width:100%;aspect-ratio:420/297;object-fit:cover;display:block;border-bottom:1px solid #eef0f8}
-.doc-card div{padding:18px 20px 20px;display:flex;flex-direction:column;gap:8px}
-.doc-card h2{margin:0;font-size:1.35rem}
-.doc-card p{margin:0;color:#5d5a78;font-size:.95rem;line-height:1.5}
-.doc-card .doc-meta{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#2fa8ff;font-weight:700}
-.doc-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
-</style>
-<div class="wrap docs-page">
-    <p class="eyebrow">{{ tr("Documents") }}</p>
-    <h1>{{ tr("Comprendre les classements Cauri Charts") }}</h1>
-    <p class="lead">{{ tr("Des documents illustrés à feuilleter en ligne ou à télécharger en PDF : comment les titres sont relevés, vérifiés et classés dans 16 pays d’Afrique de l’Ouest, et où nous allons.") }}</p>
-    <div class="docs-grid">
-        {% for d in docs %}
-        <article class="doc-card">
-            <a href="{{ d.url }}"><img src="{{ d.images[0] }}" alt="{{ d.titre }}, première page du document Cauri Charts" width="1600" height="1131" loading="lazy"></a>
-            <div>
-                <span class="doc-meta">{{ d.format }}</span>
-                <h2><a href="{{ d.url }}">{{ d.titre }}</a></h2>
-                <p>{{ d.description }}</p>
-                <p class="doc-actions"><a class="button button--small" href="{{ d.url }}">{{ tr("Feuilleter") }}</a>
-                    <a class="button button--ghost button--small" href="{{ d.pdf }}" download>{{ tr("Télécharger le PDF") }}</a></p>
-            </div>
-        </article>
+<link rel="stylesheet" href="{{ asset('css/documents.css') }}">
+<div class="wrap yt">
+    <div class="yt-tete">
+        <div>
+            <p class="eyebrow">{{ tr("Documents") }}</p>
+            <h1>{{ tr("Magazines et guides Cauri Charts") }}</h1>
+            <p>{{ tr("Les classements de la semaine en magazine, et les guides pour comprendre comment nous comptons : à feuilleter en ligne ou à télécharger en PDF.") }}</p>
+        </div>
+    </div>
+
+    <div class="yt-chips" role="tablist">
+        <button class="yt-chip on" data-f="">{{ tr("Tous") }}</button>
+        {% for c in categories %}<button class="yt-chip" data-f="{{ c }}">{{ c }}</button>{% endfor %}
+    </div>
+
+    {% set une = docs[0] %}
+    <section class="yt-une" data-cat="{{ une.categorie }}">
+        <a href="{{ une.url }}" class="vig"><img src="{{ une.images[0] }}" alt="{{ une.titre }}, couverture" width="1600" height="1131"><span class="cat">{{ tr("Nouveau") }}</span><span class="badge">{{ une.pages }} pages</span></a>
+        <div>
+            <p class="eyebrow yt-sur">{{ une.categorie }} · {{ une.date_fr }}</p>
+            <h2><a href="{{ une.url }}">{{ une.titre }}</a></h2>
+            <p>{{ une.description }}</p>
+            <p class="yt-actions"><a class="button" href="{{ une.url }}">{{ tr("Feuilleter") }}</a>
+                <a class="button button--ghost" href="{{ une.pdf }}" download>{{ tr("Télécharger le PDF") }}</a></p>
+        </div>
+    </section>
+
+    <div class="yt-grille">
+        {% for d in docs[1:] %}
+        <a class="yt-carte" href="{{ d.url }}" data-cat="{{ d.categorie }}">
+            <span class="vig"><img src="{{ d.images[0] }}" alt="{{ d.titre }}, première page" width="1600" height="1131" loading="lazy"><span class="cat">{{ d.categorie }}</span><span class="badge">{{ d.pages }} pages</span></span>
+            <span class="yt-info">
+                <span class="yt-av"><img src="{{ asset('img/brand/favicon-192.png') }}" alt=""></span>
+                <span><h3>{{ d.titre }}</h3>
+                    <span class="yt-meta"><b>Cauri Charts</b><br>PDF · {{ d.date_fr }}</span></span>
+            </span>
+        </a>
         {% endfor %}
     </div>
-    <p style="margin-top:32px">{{ tr("La méthode complète, source par source :") }} <a href="{{ path('methodologie') }}">{{ tr("méthodologie et indice de fiabilité") }}</a> · <a href="{{ path('presse') }}">{{ tr("espace presse") }}</a></p>
+
+    <p class="yt-bas">{{ tr("La méthode complète, source par source :") }} <a href="{{ path('methodologie') }}">{{ tr("méthodologie et indice de fiabilité") }}</a> · <a href="{{ path('presse') }}">{{ tr("espace presse") }}</a></p>
 </div>
+<script src="{{ asset('js/documents.js') }}" defer></script>

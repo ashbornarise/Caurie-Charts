@@ -550,7 +550,7 @@ def documents_liste(request):
     from core import documents as D
     docs = D.tous()
     return render(request, "documents", {
-        "docs": docs,
+        "docs": docs, "categories": D.CATEGORIES,
         "meta": {"title": "Documents · Comprendre les classements · " + brand(),
                  "description": "Les documents illustrés de Cauri Charts à feuilleter et télécharger en PDF : comment les titres "
                                 "sont relevés, vérifiés et classés en Afrique de l'Ouest, et nos perspectives.",

@@ -5,6 +5,7 @@ from core.helpers import url
 DOCUMENTS = [
     {
         "slug": "cauri-charts-magazine-n46",
+        "categorie": "Magazines",
         "fichier": "cauri-charts-magazine-n46",
         "date": "2026-11-14",
         "pages": 36,
@@ -78,6 +79,7 @@ DOCUMENTS = [
     },
     {
         "slug": "le-voyage-d-un-titre",
+        "categorie": "Comprendre",
         "fichier": "cauri-charts-le-voyage-d-un-titre",
         "date": "2026-11-14",
         "pages": 10,
@@ -110,6 +112,7 @@ DOCUMENTS = [
     },
     {
         "slug": "comprendre-nos-classements",
+        "categorie": "Comprendre",
         "fichier": "cauri-charts-comprendre-nos-classements",
         "date": "2026-11-14",
         "pages": 2,
@@ -134,8 +137,17 @@ DOCUMENTS = [
 
 def _complet(d: dict) -> dict:
     base = "documents/apercus/" + d["fichier"]
-    return {**d, "url": url("documents/" + d["slug"]), "pdf": url("documents/" + d["fichier"] + ".pdf"),
+    return {**d, "date_fr": date_fr(d["date"]), "url": url("documents/" + d["slug"]), "pdf": url("documents/" + d["fichier"] + ".pdf"),
             "images": [url(f"{base}/page-{i:02d}.jpg") for i in range(1, d["pages"] + 1)]}
+
+
+CATEGORIES = ["Magazines", "Comprendre"]
+
+
+def date_fr(d: str) -> str:
+    mois = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."]
+    a, m, j = d[:10].split("-")
+    return f"{int(j)} {mois[int(m) - 1]} {a}"
 
 
 def tous() -> list:
