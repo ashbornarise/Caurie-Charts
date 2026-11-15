@@ -1,43 +1,63 @@
 <link rel="stylesheet" href="{{ asset('css/documents.css') }}">
-<div class="wrap yt">
-    <div class="yt-tete">
+{% set une = docs[0] %}
+<section class="dc-hero">
+    <div class="dc-w dc-hero-in">
         <div>
-            <p class="eyebrow">{{ tr("Documents") }}</p>
-            <h1>{{ tr("Magazines et guides Cauri Charts") }}</h1>
-            <p>{{ tr("Les classements de la semaine en magazine, et les guides pour comprendre comment nous comptons : à feuilleter en ligne ou à télécharger en PDF.") }}</p>
+            <nav class="dc-fil"><a href="{{ path('/') }}">Cauri Charts</a> › {{ tr("Documents") }}</nav>
+            <span class="dc-chip">{{ tr("La bibliothèque Cauri Charts") }}</span>
+            <h1 class="dc-titre">{{ tr("Magazines") }} <em>{{ tr("et guides") }}</em></h1>
+            <p class="dc-promesse">{{ tr("Chaque vendredi, le magazine avec tous les classements officiels de la semaine. Et des guides illustrés pour comprendre comment nous comptons. À lire en ligne ou à télécharger, gratuitement.") }}</p>
+            <div class="dc-reperes"><span>{{ tr("Magazine chaque vendredi") }}</span><span>{{ tr("Guides illustrés") }}</span><span>PDF {{ tr("gratuits") }}</span></div>
+            <div class="dc-btns">
+                <a class="dc-b pri" href="{{ une.url }}">{{ tr("Lire le dernier magazine") }}</a>
+                <a class="dc-b sec" href="{{ une.pdf }}" download>{{ tr("Télécharger le PDF") }}</a>
+            </div>
         </div>
+        <a class="dc-couv" href="{{ une.url }}">
+            <img src="{{ une.images[0] }}" alt="{{ une.titre }}, couverture" width="1600" height="1131">
+            <span class="dc-tag">{{ tr("Nouveau") }} · {{ une.date_fr }}<b>{{ une.titre }}</b></span>
+        </a>
+    </div>
+</section>
+
+<div class="dc-w">
+    <h2 class="dc-h2">{{ tr("Le magazine de la semaine") }}</h2>
+    <p class="dc-sous">{{ tr("Tous les classements officiels, pays par pays, avec les N°1 en photo. Il sort chaque vendredi soir.") }}</p>
+    <div class="dc-chap">
+        {% for d in docs if d.categorie == 'Magazines' %}
+        <a class="ch c4" href="{{ d.url }}">
+            <span class="ch-img"><img src="{{ d.images[0] }}" alt="{{ d.titre }}" loading="lazy" width="1600" height="1131"><span class="ch-p">{{ d.pages }} pages</span></span>
+            <span class="ch-t"><b>{{ d.titre }}</b></span><span class="ch-s">{{ d.date_fr }} · PDF</span>
+        </a>
+        {% endfor %}
+        <a class="ch c8" href="{{ path('classements/afrique-de-l-ouest') }}">
+            <span class="ch-img"><span class="dc-bientot">N°47</span></span>
+            <span class="ch-t"><b>{{ tr("Magazine N°47") }}</b></span><span class="ch-s">{{ tr("vendredi 20 novembre, 19 h GMT") }}</span>
+        </a>
     </div>
 
-    <div class="yt-chips" role="tablist">
-        <button class="yt-chip on" data-f="">{{ tr("Tous") }}</button>
-        {% for c in categories %}<button class="yt-chip" data-f="{{ c }}">{{ c }}</button>{% endfor %}
-    </div>
-
-    {% set une = docs[0] %}
-    <section class="yt-une" data-cat="{{ une.categorie }}">
-        <a href="{{ une.url }}" class="vig"><img src="{{ une.images[0] }}" alt="{{ une.titre }}, couverture" width="1600" height="1131"><span class="cat">{{ tr("Nouveau") }}</span><span class="badge">{{ une.pages }} pages</span></a>
-        <div>
-            <p class="eyebrow yt-sur">{{ une.categorie }} · {{ une.date_fr }}</p>
-            <h2><a href="{{ une.url }}">{{ une.titre }}</a></h2>
-            <p>{{ une.description }}</p>
-            <p class="yt-actions"><a class="button" href="{{ une.url }}">{{ tr("Feuilleter") }}</a>
-                <a class="button button--ghost" href="{{ une.pdf }}" download>{{ tr("Télécharger le PDF") }}</a></p>
-        </div>
-    </section>
-
-    <div class="yt-grille">
-        {% for d in docs[1:] %}
-        <a class="yt-carte" href="{{ d.url }}" data-cat="{{ d.categorie }}">
-            <span class="vig"><img src="{{ d.images[0] }}" alt="{{ d.titre }}, première page" width="1600" height="1131" loading="lazy"><span class="cat">{{ d.categorie }}</span><span class="badge">{{ d.pages }} pages</span></span>
-            <span class="yt-info">
-                <span class="yt-av"><img src="{{ asset('img/brand/favicon-192.png') }}" alt=""></span>
-                <span><h3>{{ d.titre }}</h3>
-                    <span class="yt-meta"><b>Cauri Charts</b><br>PDF · {{ d.date_fr }}</span></span>
-            </span>
+    <h2 class="dc-h2">{{ tr("Les guides pour comprendre") }}</h2>
+    <p class="dc-sous">{{ tr("D’où viennent les chiffres, comment on les vérifie, comment un titre devient N°1.") }}</p>
+    <div class="dc-chap">
+        {% for d in docs if d.categorie == 'Comprendre' %}
+        <a class="ch c{{ loop.index }}" href="{{ d.url }}">
+            <span class="ch-img"><img src="{{ d.images[0] }}" alt="{{ d.titre }}" loading="lazy" width="1600" height="1131"><span class="ch-p">{{ d.pages }} pages</span></span>
+            <span class="ch-t"><b>{{ d.titre }}</b></span><span class="ch-s">{{ d.sous_titre }}</span>
         </a>
         {% endfor %}
     </div>
 
-    <p class="yt-bas">{{ tr("La méthode complète, source par source :") }} <a href="{{ path('methodologie') }}">{{ tr("méthodologie et indice de fiabilité") }}</a> · <a href="{{ path('presse') }}">{{ tr("espace presse") }}</a></p>
+    <div class="dc-duo">
+        <section class="dc-carte">
+            <span class="dc-chip">{{ tr("Comprendre") }}</span>
+            <h3>{{ tr("Comment est fait le classement ?") }}</h3>
+            <p>{{ tr("Chaque semaine, chaque pays a 10 000 points à partager : la moitié selon les vues YouTube des clips officiels, l’autre selon les écoutes (Spotify, Apple Music, Boomplay). Pour un pays, seuls ses propres tops comptent.") }}</p>
+            <p><a class="dc-b sec" href="{{ path('methodologie') }}">{{ tr("Lire la méthode complète") }}</a></p>
+        </section>
+        <aside class="dc-carte">
+            <h3>{{ tr("Presse et partenaires") }}</h3>
+            <p>{{ tr("Communiqués, logos et contact presse : tout est dans l’espace presse.") }}</p>
+            <p><a class="dc-b sec" href="{{ path('presse') }}">{{ tr("Espace presse") }}</a></p>
+        </aside>
+    </div>
 </div>
-<script src="{{ asset('js/documents.js') }}" defer></script>

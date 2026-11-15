@@ -155,7 +155,8 @@ def tous() -> list:
 
 
 def par_slug(slug: str) -> dict | None:
-    return next((_complet(d) for d in DOCUMENTS if d["slug"] == slug), None)
+    d = next((_complet(d) for d in DOCUMENTS if d["slug"] == slug), None)
+    return enrichi(d) if d else None
 
 
 def ld(d: dict) -> dict:
@@ -168,3 +169,62 @@ def ld(d: dict) -> dict:
             "keywords": "Cauri Charts, classement musical, Afrique de l'Ouest, musique ouest-africaine, méthodologie",
             "about": {"@type": "Thing", "name": "Classements musicaux de l'Afrique de l'Ouest"},
             "author": {"@id": url("/") + "#organisation"}, "publisher": {"@id": url("/") + "#organisation"}}
+
+
+# 15/11/2026 : sommaire visuel (« Dans ce numéro »), tuiles de chiffres clés et accroche de la couverture
+ICONES = {
+    "trophee": '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.7V17c0 .6-.5 1-1 1.2C7.9 18.8 7 20.2 7 22M14 14.7V17c0 .6.5 1 1 1.2 1.1.6 2 2 2 3.8M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+    "globe": '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/>',
+    "note": '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    "calc": '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h8"/>',
+    "route": '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
+    "horloge": '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    "couches": '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
+}
+PAYS_MAG = [("tg", "Togo", "Migbo (Remix) · Sethlo"), ("ng", "Nigeria", "Heaven Baby · Ayra Starr"), ("ci", "Côte d'Ivoire", "Taper Créer · Himra"),
+            ("gh", "Ghana", "Faith · Kweku Smoke"), ("sn", "Sénégal", "Dugi-dugi · Amadeus"), ("bj", "Bénin", "Dans la poussière · Axel Merryl"),
+            ("bf", "Burkina Faso", "Velar · Babi Tape"), ("ml", "Mali", "Dali · Seydou Chée"), ("gn", "Guinée", "Fidjou · Saifond"),
+            ("sl", "Sierra Leone", "Scatter · Bakitenno"), ("cv", "Cap-Vert", "Erro & Acerto · Loose jr"), ("gw", "Guinée-Bissau", "Mistin · As One 1820"),
+            ("mr", "Mauritanie", "Mbiida Yonaani · Bab's OG")]
+PLUS = {
+    "cauri-charts-magazine-n46": {
+        "taille": "15 Mo", "coupe": ("Cauri Charts", "Magazine N°46"), "badge": "Le magazine de la semaine", "accroche": ("N°1 Afrique de l'Ouest", "Heaven Baby · Ayra Starr"),
+        "tuiles": [("trophee", "Top 20", "Afrique de l'Ouest"), ("globe", "13 pays", "classés cette semaine"),
+                   ("note", "6 genres", "du rap au coupé-décalé"), ("calc", "3 pages", "pour comprendre les points")],
+        "chapitres": [("Couverture", "Ayra Starr & ZAYN", 1, 1, ""), ("Les N°1 de la semaine", "un titre par pays", 2, 2, ""),
+                      ("Top 20 Afrique de l'Ouest", "tous les pays ensemble", 3, 4, "")]
+                     + [(f"Top {nom}", n1, 5 + 2 * k, 6 + 2 * k, c) for k, (c, nom, n1) in enumerate(PAYS_MAG)]
+                     + [("Par genre", "rap, mbalax, afrobeats…", 31, 32, ""), ("Comment on compte les points", "le gâteau de 10 000 points", 33, 35, ""),
+                        ("Prochain numéro", "vendredi soir, 19 h GMT", 36, 36, "")],
+    },
+    "le-voyage-d-un-titre": {
+        "taille": "7 Mo", "coupe": ("Le voyage", "d'un titre"), "badge": "Guide illustré", "accroche": ("Le guide", "du clic au classement"),
+        "tuiles": [("route", "9 étapes", "du clic au classement"), ("couches", "6 plateformes", "relevées"),
+                   ("calc", "10 000 points", "par pays et par semaine"), ("horloge", "Vendredi 19 h", "publication automatique")],
+        "chapitres": [("Couverture", "le départ", 1, 1, ""), ("Les sources", "six plateformes", 2, 2, ""), ("La nuit", "les relevés", 3, 3, ""),
+                      ("Le tri", "un titre = son clip officiel", 4, 4, ""), ("La vérification", "les alertes", 5, 5, ""),
+                      ("Le calcul", "moitié vues, moitié écoutes", 6, 6, ""), ("Le classement", "règles et six classements", 7, 7, ""),
+                      ("La publication", "vendredi soir", 8, 8, ""), ("La carte", "pays et fiabilité", 9, 9, ""), ("L'horizon", "nos perspectives", 10, 10, "")],
+    },
+    "comprendre-nos-classements": {
+        "taille": "4,5 Mo", "coupe": ("Comprendre", "nos classements"), "badge": "Guide express", "accroche": ("En 2 pages", "la méthode en clair"),
+        "tuiles": [("route", "5 étapes", "le parcours d'un titre"), ("calc", "50 / 50", "vues et écoutes"),
+                   ("trophee", "6 classements", "Prime, Buzz, Fresh…"), ("globe", "13 pays", "classés")],
+        "chapitres": [("La méthode, en clair", "parcours, score, semaine", 1, 1, ""), ("Règles et perspectives", "classements, pays, la suite", 2, 2, "")],
+    },
+}
+
+
+def enrichi(d: dict) -> dict:
+    from markupsafe import Markup
+    plus = PLUS.get(d["slug"], {})
+    chap = [{"titre": t, "sous": s_, "debut": a, "fin": b, "drapeau": url(f"assets/img/flags/{c}.svg") if c else "",
+             "image": d["images"][a - 1], "pages": f"p. {a}" if a == b else f"p. {a}–{b}", "couleur": k % 9}
+            for k, (t, s_, a, b, c) in enumerate(plus.get("chapitres", []))]
+    tuiles = [{"svg": Markup(f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{ICONES[i]}</svg>'),
+               "grand": g, "petit": p_} for i, g, p_ in plus.get("tuiles", [])]
+    import json as _json
+    debut, fin = plus.get("coupe", (d["titre"], ""))
+    reperes = Markup(_json.dumps([[c["debut"], c["fin"], c["titre"]] for c in chap], ensure_ascii=False).replace("</", "<\/"))
+    return {**d, "titre_debut": debut, "titre_fin": fin, "sections_json": reperes, "taille": plus.get("taille", ""), "badge": plus.get("badge", d.get("categorie", "")), "accroche": plus.get("accroche"),
+            "chapitres": chap, "tuiles": tuiles}
