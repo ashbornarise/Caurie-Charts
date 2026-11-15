@@ -225,6 +225,6 @@ def enrichi(d: dict) -> dict:
                "grand": g, "petit": p_} for i, g, p_ in plus.get("tuiles", [])]
     import json as _json
     debut, fin = plus.get("coupe", (d["titre"], ""))
-    reperes = Markup(_json.dumps([[c["debut"], c["fin"], c["titre"]] for c in chap], ensure_ascii=False).replace("</", "<\/"))
+    reperes = Markup(_json.dumps([[c["debut"], c["fin"], c["titre"]] for c in chap], ensure_ascii=False).replace("</", "<\\/"))
     return {**d, "titre_debut": debut, "titre_fin": fin, "sections_json": reperes, "taille": plus.get("taille", ""), "badge": plus.get("badge", d.get("categorie", "")), "accroche": plus.get("accroche"),
             "chapitres": chap, "tuiles": tuiles}
