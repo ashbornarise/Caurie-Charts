@@ -446,7 +446,7 @@ function cadeaux() {
   if (edition && !$("merci").children.length) $("merci").innerHTML = '<div class="merci exemple" style="animation:none">Merci Exemple !<small>1 × Rose</small></div>';
   voirW("merci", true);
   const top = Object.values(E.donateurs || {}).sort((a, b) => b.diamants - a.diamants).slice(0, 3);
-  if (voirW("topfans", E.topFans !== false && top.length && SCENES_W.includes(E.scene)))
+  if (voirW("topfans", false))   // 16/11 : le podium du bas (objectif cadeaux) le remplace
     $("topfans").innerHTML = "<b>TOP FANS</b>" + (top.length ? top : [{ nom: "Exemple", diamants: 120 }]).map((d, i) => `<div>${i + 1}. ${esc(d.nom)} <span>${d.diamants}</span></div>`).join("");
 }
 let abVu = 0, abDernier = 0;
@@ -607,8 +607,8 @@ function platine() {
   const P = $("platineV"); P.classList.toggle("on", on && ["artiste", "camera"].includes(E.scene));
   if (!on) return;
   const a = (D.artistes || []).find((x) => x.id === m.artisteId);
-  const img = (a && a.photo) || (m.yt ? "https://i.ytimg.com/vi/" + m.yt + "/hqdefault.jpg" : "/assets/live/logo.png");
-  if ($("platImg").getAttribute("src") !== img) $("platImg").src = img;
+  const img = (a && a.photo) || (m.yt ? "https://i.ytimg.com/vi/" + m.yt + "/maxresdefault.jpg" : "/assets/live/logo.png");   // 16:9 sans bandes noires
+  if ($("platImg").getAttribute("src") !== img) { $("platImg").onerror = () => { if (m.yt) $("platImg").src = "https://i.ytimg.com/vi/" + m.yt + "/mqdefault.jpg"; }; $("platImg").src = img; }
   $("platTitre").textContent = (m.titre || "").toUpperCase(); $("platArt").textContent = m.artiste || "";
   $("platPar").textContent = m.par ? "DEMANDÉ PAR " + m.par.toUpperCase() + " · MERCI POUR LA ROSE" : ""; $("platPar").classList.toggle("on", !!m.par);
   document.querySelectorAll("#platineV .barres i").forEach((b, i) => { b.style.animationDelay = (-i * 0.13) + "s"; b.style.animationPlayState = m.pause ? "paused" : "running"; });
