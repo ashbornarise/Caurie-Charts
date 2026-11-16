@@ -264,7 +264,7 @@ body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:tran
 #courseV{position:absolute;inset:0;z-index:18;display:none;color:#fff;font-family:Montserrat,Arial,sans-serif;background:#2c3a1c}
 body.course-on #courseV{display:block}
 body.course-on #hud,body.course-on #platineV,body.course-on #naissV,body.course-on #naissB,body.course-on #camera,body.course-on #roi,body.course-on #topfans,body.course-on #devineurs,body.course-on #objectif,body.course-on #aSuivre,body.course-on #murChat,body.course-on #ticker,body.course-on #bandeau,body.course-on #themeC,body.course-on #titreSon,body.course-on #base,body.course-on .scene{display:none!important}
-body.course-on #fondV,body.course-on #interlude,body.course-on #troupe,body.course-on #danseur,body.course-on #megaV,body.course-on #dedicV{display:none!important}
+body.course-on #fondV,body.course-on #merci,body.course-on #interlude,body.course-on #troupe,body.course-on #danseur,body.course-on #megaV,body.course-on #dedicV{display:none!important}
 #crC{position:absolute;inset:0;width:1080px;height:1920px}
 #courseV .haut{position:absolute;top:0;left:0;right:0;padding:44px 40px 70px;text-align:center;background:linear-gradient(180deg,rgba(8,6,18,.85),rgba(8,6,18,0))}
 #courseV .t1{font:400 64px Anton,Impact;letter-spacing:2px;background:linear-gradient(180deg,#FFE29A,#F5C14B 60%,#c9902a);-webkit-background-clip:text;color:transparent}
@@ -272,12 +272,22 @@ body.course-on #fondV,body.course-on #interlude,body.course-on #troupe,body.cour
 #courseV .vict{position:absolute;top:190px;right:26px;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
 #courseV .vict span{display:flex;align-items:center;gap:8px;font:900 22px Montserrat;background:rgba(8,6,18,.7);padding:6px 12px;border-radius:20px}
 #courseV .vict i{width:34px;height:23px;border-radius:4px}
-#courseV .bas{position:absolute;left:0;right:0;bottom:0;padding:80px 30px 46px;text-align:center;background:linear-gradient(0deg,rgba(8,6,18,.88),rgba(8,6,18,0))}
-#courseV .bas b{display:block;font:900 40px Montserrat;margin-bottom:12px}
-#courseV .bas span{display:inline-block;margin:0 8px;font:700 26px Montserrat;color:#e6e1ff}
+#courseV .bas{position:absolute;left:0;right:0;bottom:0;padding:110px 24px 40px;text-align:center;background:linear-gradient(0deg,rgba(8,6,18,.94) 40%,rgba(8,6,18,0))}
+#courseV .bas b{display:block;font:400 76px Anton,Impact;letter-spacing:1px;line-height:1;margin-bottom:16px;color:#fff;text-shadow:0 4px 18px rgba(0,0,0,.7)}
+#courseV .bas span{display:inline-block;margin:6px 6px 0;font:900 34px Montserrat;color:#fff;padding:8px 20px;border-radius:30px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.25)}
+#courseV .bas span.l{background:rgba(255,77,128,.28);border-color:#ff6f9a}
+/* l'étoile-annonce : une grande étoile lumineuse traverse l'écran, le message écrit dessus */
+#crAnnonce{position:absolute;top:170px;left:0;width:540px;height:540px;transform:translateX(1150px);pointer-events:none;display:flex;align-items:center;justify-content:center;text-align:center}
+#crAnnonce.passe{animation:etoilePasse 7.5s cubic-bezier(.3,.1,.3,1) forwards}
+@keyframes etoilePasse{0%{transform:translateX(1150px) rotate(25deg) scale(.7);opacity:0}12%{opacity:1}22%,70%{transform:translateX(270px) rotate(0) scale(1);opacity:1}100%{transform:translateX(-750px) rotate(-25deg) scale(.7);opacity:0}}
+#crAnnonce svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 40px rgba(255,214,90,.9)) drop-shadow(0 0 90px rgba(255,170,40,.6));animation:etoileTourne 7.5s linear}
+@keyframes etoileTourne{from{rotate:-8deg}to{rotate:8deg}}
+#crAnnonce .halo{position:absolute;inset:-60px;border-radius:50%;background:radial-gradient(circle,rgba(255,226,140,.55),rgba(255,180,60,.15) 45%,rgba(255,180,60,0) 70%)}
+#crAnnonce .txt{position:relative;max-width:330px;font:400 64px Anton,Impact;line-height:1.02;color:#2a1600;text-shadow:0 2px 0 rgba(255,255,255,.5)}
+#crAnnonce .txt small{display:block;font:900 26px Montserrat;letter-spacing:2px;margin-top:8px;color:#5a2d00}
 #crDecompte{position:absolute;left:0;right:0;top:760px;display:none;justify-content:center;font:400 260px Anton,Impact;line-height:1;text-shadow:0 10px 40px rgba(0,0,0,.6)}
 #crDecompte.n3{color:#ff4b4b}#crDecompte.n2{color:#ffb020}#crDecompte.n1{color:#ffe14b}#crDecompte.go{color:#5dff8a;font-size:170px}
-#courseV .evt{position:absolute;left:50%;top:1480px;transform:translate(-50%,0) scale(.7);opacity:0;white-space:nowrap;font:900 36px Montserrat;padding:14px 30px;border-radius:36px;transition:opacity .25s,transform .25s;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#courseV .evt{position:absolute;left:50%;top:1330px;transform:translate(-50%,0) scale(.7);opacity:0;white-space:nowrap;font:900 36px Montserrat;padding:14px 30px;border-radius:36px;transition:opacity .25s,transform .25s;box-shadow:0 10px 30px rgba(0,0,0,.4)}
 #courseV .evt.on{opacity:1;transform:translate(-50%,0) scale(1)}
 #courseV .evt.boost{background:linear-gradient(90deg,#ff3d7f,#ff7a3c)}#courseV .evt.choc{background:linear-gradient(90deg,#d62828,#7a0d0d)}
 #courseV .finV{position:absolute;left:0;right:0;top:215px;display:none;flex-direction:column;align-items:center;text-align:center}
@@ -1023,7 +1033,7 @@ function boucleCourse() {
   const scroll = tete / 100 * DISTANCE;   // la caméra suit la voiture de tête
   dessineMonde(scroll);
   const X0 = (CR.W - CR.route) / 2, YT = 820, K = 30;   // la tête à 820 px ; 1 % de retard = 30 px plus bas
-  const yEcran = (v) => Math.min(1560, YT + (tete - v) * K);
+  const yEcran = (v) => Math.min(1440, YT + (tete - v) * K);
   const yMonde = (v, cale) => YT + cale - (v - tete) / 100 * DISTANCE;   // un point fixe de la route (v = % de piste)
   const yD = yMonde(0, 150);
   if (yD > -60 && yD < CR.H + 300) { ligneTravers(yD, "depart"); c.pays.forEach((p, l) => { dessineDrapeau(g, p, X0 + l * CR.piste + 25, yD + 64, 100, 66); g.strokeStyle = "rgba(255,255,255,.7)"; g.lineWidth = 3; g.strokeRect(X0 + l * CR.piste + 25, yD + 64, 100, 66); }); }
@@ -1049,6 +1059,11 @@ function boucleCourse() {
     dessineDrapeau(g, p, ex + 58, ey + 10, 30, 20); g.fillStyle = "#fff"; g.font = "800 16px Montserrat,Arial"; g.fillText(CODE3[p] || p, ex + 92, ey + 21);
     if (ch && now - ch.t < 1400) { g.fillStyle = "#ff5a3c"; g.font = "900 30px Montserrat,Arial"; g.textAlign = "center"; g.fillText("BOUSCULÉ !", cx, y + 150); }
   });
+  // « +Nom » : chaque joueur voit qu'il pousse bien SA voiture
+  CR.noms = (CR.noms || []).filter((n) => now - n.t < 1600);
+  CR.noms.forEach((n) => { const l = c.pays.indexOf(n.p); if (l < 0) return; const k = (now - n.t) / 1600, cx = X0 + l * CR.piste + CR.piste / 2 + n.dx, y = yEcran(CR.aff[n.p]) - 190 - k * 120;
+    g.globalAlpha = Math.min(1, (1 - k) * 2); g.font = "900 34px Montserrat,Arial"; g.textAlign = "center"; g.lineWidth = 7; g.strokeStyle = "rgba(0,0,0,.75)"; g.strokeText("+" + n.nom, cx, y);
+    g.fillStyle = "#fff"; g.fillText("+" + n.nom, cx, y); g.globalAlpha = 1; });
   // étincelles des chocs
   CR.etincelles = CR.etincelles.filter((s) => (s.vie -= dt) > 0);
   CR.etincelles.forEach((s) => { s.x += s.vx * dt * 60; s.y += s.vy * dt * 60; s.vy += .4; g.fillStyle = `rgba(255,${180 + Math.random() * 60 | 0},80,${Math.min(1, s.vie * 2)})`; g.fillRect(s.x, s.y, 4, 4); });
@@ -1069,12 +1084,19 @@ function course() {
   if (!CR.g) { V.innerHTML = `<canvas id="crC" width="1080" height="1920"></canvas>
       <div class="haut"><div class="t1">LA COURSE DES CAURIS</div><div class="t2" id="crManche"></div></div>
       <div class="vict" id="crVict"></div><div id="crDecompte"></div><div class="evt" id="crEvt"></div>
-      <div class="bas"><b>Écris ton pays pour accélérer</b><span>🌹 rose = boost</span><span>🎁 10 pièces = bouscule</span></div><div class="finV" id="crFin"></div>`;
+      <div class="bas"><b>ÉCRIS TON PAYS POUR ACCÉLÉRER</b><span class="l">❤ like = boost ton pays</span><span>🌹 rose = turbo</span><span>🎁 10 pièces = bouscule</span></div><div class="finV" id="crFin"></div>
+      <div id="crAnnonce"><div class="halo"></div><svg viewBox="0 0 100 100"><defs><radialGradient id="eg" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#fffbe0"/><stop offset=".55" stop-color="#ffd84a"/><stop offset="1" stop-color="#f29a12"/></radialGradient></defs>
+        <polygon points="50,2 61.8,35 97,36 69,57.5 79.5,92 50,71.5 20.5,92 31,57.5 3,36 38.2,35" fill="url(#eg)" stroke="#fff3b0" stroke-width="1.2" stroke-linejoin="round"/></svg><div class="txt" id="crAnnTxt"></div></div>`;
     CR.g = $("crC").getContext("2d"); }
   const cle = c.manche + "|" + c.pays.join(",");
-  if (cle !== CR.cle) { CR.cle = cle; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
+  if (cle !== CR.cle) { CR.cle = cle; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
   const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
   $("crVict").innerHTML = vic.map(([p, n]) => `<span><i style="background:url('/assets/img/flags/${p}.svg') center/cover,linear-gradient(90deg,${(COUL_PAYS[p] || ["#888", "#ccc", "#555"]).join(",")})"></i>${n} 🏆</span>`).join("");
+  // nouveaux noms qui poussent (les 2 derniers de chaque pays) → « +Nom » au-dessus de la voiture
+  const vus = CR.vusNoms || (CR.vusNoms = {});
+  c.pays.forEach((p) => { const d = (c.derniers || {})[p] || [], cleN = d.join("|"); if (vus[p] !== undefined && vus[p] !== cleN && d[0]) (CR.noms = CR.noms || []).push({ p, nom: d[0], t: Date.now(), dx: (Math.random() - .5) * 60 }); vus[p] = cleN; });
+  if (!CR.annonceT) annonceSuivante();
+  if (c.manche !== CR.mancheAnn) { CR.mancheAnn = c.manche; annonce(c.manche === 1 ? "1<sup style='font-size:.5em'>RE</sup> MANCHE" : "MANCHE " + c.manche, "C'EST PARTI !"); }
   const b = c.boost; if (b && b.t !== CR.boostT) { CR.boostT = b.t; CR.boosts[b.code] = Date.now(); evtCourse(`🌹 ${esc(b.nom)} : BOOST ${esc(CODE3[b.code] || b.code)}`, "boost"); joueSfx("montee"); }
   const ch = c.choc; if (ch && ch.t !== CR.chocT) { CR.chocT = ch.t; const lA = c.pays.indexOf(ch.de), lB = c.pays.indexOf(ch.vers);
     CR.chocs[ch.vers] = { t: Date.now() }; CR.chocs["de" + ch.de] = { t: Date.now(), sens: Math.sign(lB - lA) || 1 };
@@ -1086,6 +1108,18 @@ function course() {
     $("crFin").innerHTML = gg ? `<i class="dr" style="background:url('/assets/img/flags/${gg}.svg') center/cover,linear-gradient(90deg,${(COUL_PAYS[gg] || ["#888", "#ccc", "#555"]).join(",")})"></i><div class="g">${esc(((c.noms || {})[gg] || gg).toUpperCase())}</div><div class="g2">GAGNE LA MANCHE</div>${c.meilleur ? `<div class="s">Meilleur pilote : ${esc(c.meilleur)}</div>` : ""}<div class="s" id="crSuite"></div>` : "";
     if (gg) { joueSfx("merci"); try { $("sonGong").currentTime = 0; $("sonGong").play().catch(() => {}); } catch (e) {} } }
   if (!CR.anim) boucleCourse();
+}
+// l'étoile-annonce : un message toutes les ~16 s (jamais deux fois le même de suite) ; « dernière ligne droite » à 85 %
+const ANNONCES = [["❤ LIKE", "POUR BOOSTER TON PAYS"], ["ÉCRIS TON PAYS", "ET TA VOITURE ACCÉLÈRE"], ["🌹 1 ROSE", "= TURBO POUR TON PAYS"],
+  ["🎁 10 PIÈCES", "= BOUSCULE CELUI DE DEVANT"], ["APPELLE TES POTES", "TON PAYS A BESOIN DE TOI"], ["QUI VA GAGNER ?", "ÇA SE JOUE DANS LE CHAT"]];
+function annonce(titre, sous) { const el = $("crAnnonce"); if (!el) return; $("crAnnTxt").innerHTML = titre + (sous ? `<small>${sous}</small>` : "");
+  el.classList.remove("passe"); void el.offsetWidth; el.classList.add("passe"); joueSfx("passage"); CR.derAnn = Date.now(); }
+function annonceSuivante() {
+  clearTimeout(CR.annonceT); CR.annonceT = setTimeout(annonceSuivante, 16000);
+  const c = E.course; if (!c || !c.on || c.phase !== "course" || Date.now() - (CR.derAnn || 0) < 9000 || (c.t - Date.now() - CR.off) > 0) return;
+  const tete = Math.max(...c.pays.map((p) => CR.aff[p] || 0));
+  if (tete > 85 && !CR.dernLigne) { CR.dernLigne = c.manche; annonce("DERNIÈRE LIGNE DROITE !", "TOUT LE MONDE DANS LE CHAT"); return; }
+  let i; do { i = Math.floor(Math.random() * ANNONCES.length); } while (i === CR.annI && ANNONCES.length > 1); CR.annI = i; annonce(...ANNONCES[i]);
 }
 function evtCourse(html, type) { const el = $("crEvt"); el.innerHTML = html; el.className = "evt on " + type; clearTimeout(evtCourse.t); evtCourse.t = setTimeout(() => (el.className = "evt"), 3200); }
 setInterval(() => { const c = E.course, s = $("crSuite"); if (c && c.on && c.phase === "fin" && s) s.textContent = "Prochaine manche dans " + Math.max(0, Math.ceil((c.tFin + 14000 - Date.now() - CR.off) / 1000)) + " s"; }, 250);

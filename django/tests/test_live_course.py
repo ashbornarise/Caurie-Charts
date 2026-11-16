@@ -104,3 +104,12 @@ def test_etat_public_ne_montre_pas_les_joueurs():
     p = live._public(e)
     assert "joueurs" not in p["course"] and "vu" not in p["course"] and "courseFan" not in p
     assert p["course"]["top"][0]["nom"] == "Awa" and p["course"]["srv"] > 0
+
+
+def test_likes_d_un_joueur_inscrit_boostent_son_pays():
+    e = _etat()
+    live.course_commentaire(e, "a1", "Awa", "togo", live._norm("togo"))
+    avant = e["course"]["bonus"]["tg"]
+    live.course_likes(e, 60, {"a1": 40, "inconnu": 20})
+    assert e["course"]["bonus"]["tg"] == avant + 1   # 40 likes = +1 % pour le Togo
+    assert e["course"]["aide"]["code"] != "tg"      # les 20 likes d'un inconnu aident le dernier

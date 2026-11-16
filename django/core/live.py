@@ -865,7 +865,7 @@ def _paquet(e: dict, m: dict) -> None:
         e["dernier"] = ([{"user": str(u)[:30], "texte": "s'abonne !"}] + e.get("dernier", []))[:6]
     e["likes"] = int(e.get("likes") or 0) + int(m.get("likes") or 0)
     _paliers_likes(e)
-    course_likes(e, int(m.get("likes") or 0))
+    course_likes(e, int(m.get("likes") or 0), m.get("likesPar") if isinstance(m.get("likesPar"), dict) else None)
     course_tick(e)
     if m.get("spectateurs") is not None:
         e["spectateurs"] = int(m["spectateurs"]); e["pic"] = max(int(e.get("pic") or 0), e["spectateurs"])
@@ -1041,14 +1041,33 @@ def course_cadeau(e: dict, user: str, nom: str, diamants: int, cadeau: str = "")
     _course_bonus(e, code, 2)
 
 
-def course_likes(e: dict, n: int) -> None:
-    """Les j'aime aident le pays en dernière position (80 j'aime = +1 %, au plus 3 % par paquet) : personne n'est largué."""
+COURSE_LIKES = 40       # j'aime d'un joueur inscrit = +1 % pour SON pays (au plus +1 % par joueur et par paquet de 2 s)
+
+
+def course_likes(e: dict, n: int, par: dict | None = None) -> None:
+    """« Like pour booster ton pays » : les j'aime d'un joueur déjà inscrit (il a écrit son pays) vont à son pays ;
+    les autres aident le pays en dernière position (80 j'aime = +1 %, au plus 3 % par paquet) : personne n'est largué."""
     c = e.get("course") or {}
     if not c.get("on") or c.get("phase") != "course" or n <= 0 or _maintenant() < int(c.get("t") or 0):
         return
-    dernier = min(c["pays"], key=lambda p: course_pos(c, p))
-    c["aide"] = {"code": dernier, "t": _maintenant()}
-    _course_bonus(e, dernier, min(3.0, n / 80))
+    reste = n
+    if par:
+        fans = {**(e.get("courseFan") or {}), **(c.get("joueurs") or {})}
+        gains: dict = {}
+        for u, k in list(par.items())[:500]:
+            code, k = fans.get(str(u)[:30]), max(0, int(k or 0))
+            if code in c["pays"] and k:
+                gains[code] = gains.get(code, 0.0) + min(1.0, k / COURSE_LIKES)
+                reste -= k
+        for code, pas in gains.items():
+            if c.get("phase") == "course":
+                _course_bonus(e, code, pas)
+        if gains:
+            c["likesPays"] = {"codes": sorted(gains, key=lambda x: -gains[x]), "t": _maintenant()}
+    if reste > 0 and c.get("phase") == "course":
+        dernier = min(c["pays"], key=lambda p: course_pos(c, p))
+        c["aide"] = {"code": dernier, "t": _maintenant()}
+        _course_bonus(e, dernier, min(3.0, reste / 80))
 
 
 def course_a_avancer(e: dict) -> bool:
