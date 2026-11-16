@@ -144,7 +144,7 @@ def _public(e: dict) -> dict:
     if isinstance(p.get("course"), dict):   # la course : seulement ce que l'écran affiche (pas la liste de tous les joueurs)
         c = p["course"]
         top = sorted((c.get("coureurs") or {}).values(), key=lambda x: -int(x.get("n") or 0))[:5]
-        p["course"] = {**{k: v for k, v in c.items() if k not in ("joueurs", "vu", "coureurs")}, "top": top}
+        p["course"] = {**{k: v for k, v in c.items() if k not in ("joueurs", "vu", "coureurs")}, "top": top, "srv": int(time.time() * 1000)}
     j = p.get("jeu")
     if isinstance(j, dict) and ("paris" in j or "votants" in j):   # les listes de joueurs restent sur le serveur
         p["jeu"] = {**{k: v for k, v in j.items() if k not in ("paris", "votants")}, "nParis": len(j.get("paris") or j.get("votants") or {})}
@@ -667,7 +667,7 @@ def _cadeau(e: dict, g: dict) -> None:
             e["mascotte"] = {"titre": f"MERCI {nom.upper()} POUR LA ROSE !", "texte": "Écris en commentaire le son que tu veux entendre : il passe juste après.",
                              "pose": "m4-appel", "duree": 7000, "t": now}; e["mascRose"] = now; e["mascAuto"] = now
     e["dernier"] = ([{"user": user, "texte": f"envoie {n} × {cad}"}] + e.get("dernier", []))[:6]
-    if not e.get("reglesCadeaux", True):
+    if not e.get("reglesCadeaux", True) or (e.get("course") or {}).get("on"):   # pendant la course, le cadeau agit sur la route
         return
     dernier_fx, dernier_masc = int(e.get("fxAuto") or 0), int(e.get("mascAuto") or 0)
     # paliers (diamants du cadeau) : 30 dédicace plein écran · 100 + 2 sons au choix · 500 prise de pouvoir + 3 sons ·
@@ -835,6 +835,9 @@ def _paliers_likes(e: dict) -> None:
     palier = int(e.get("likes") or 0) // 1000
     if palier <= int(e.get("palierLikes") or 0):
         return
+    if (e.get("course") or {}).get("on"):   # la course occupe l'écran : on compte le palier sans fête
+        e["palierLikes"] = palier
+        return
     e["palierLikes"] = palier
     now = int(time.time() * 1000)
     grand = palier % 5 == 0
@@ -881,23 +884,27 @@ def ecran_statut(request, jeton):
     return S._json({"ok": True})
 
 
-# ---------------------------------------------------------------- La Course des Cauris (16/11/2026)
-# « Un jeu à nous » : 4 pays par manche (jamais tous à la fois), groupes sans pays en tension, que du positif (on pousse son
-# pays, on ne freine jamais un autre), les messages insultants ne comptent pas et rien de ce que le chat écrit n'est affiché :
-# seulement les pseudos. Écrire son pays = un pas ; une rose ou un cadeau = turbo pour son pays ; les j'aime aident le dernier.
+# ---------------------------------------------------------------- La Course des Cauris (16/11/2026, v2 « course de voitures »)
+# Route verticale, 4 pays par manche (jamais tous à la fois), une voiture aux couleurs de chaque pays. Au départ, toutes
+# roulent à la même vitesse ; écrire son pays = accélérer ; une rose = boost ; un cadeau de 10 pièces ou plus = on bouscule
+# la voiture juste devant (ou juste derrière si on est en tête). Les j'aime aident le dernier. Les messages insultants ne
+# comptent pas et rien de ce que le chat écrit n'est affiché : seulement les pseudos.
+# Positions calculées à partir de l'heure : pos = vitesse × temps écoulé + bonus (l'écran anime, le serveur arbitre).
 COURSE_GROUPES = [["ci", "tg", "bj", "cm"], ["ng", "sn", "ga", "cd"], ["gh", "gn", "bf", "ne"], ["fr", "be", "ca", "us"],
                   ["ci", "ng", "sn", "cm"], ["tg", "gh", "bj", "ga"], ["ml", "gn", "cm", "cd"], ["ci", "fr", "bj", "ga"]]
 COURSE_ARRIVEE = 100
-COURSE_DUREE = 240      # s par manche ; à la fin du temps, le pays en tête gagne
+COURSE_VITESSE = 0.5    # % de piste par seconde pour tout le monde : 200 s si personne ne joue
+COURSE_DEPART = 4       # s de compte à rebours (3, 2, 1, partez)
 COURSE_PAUSE = 14       # s d'annonce du vainqueur avant la manche suivante
-COURSE_ESPACE = 1500    # ms entre deux pas d'un même joueur (anti-spam)
+COURSE_ESPACE = 1500    # ms entre deux accélérations d'un même joueur (anti-spam)
+COURSE_PAS = 0.5        # un commentaire = +0,5 % de piste (1 s d'avance)
 ALIAS_PAYS = {"civ": "ci", "rci": "ci", "cmr": "cm", "sen": "sn", "gab": "ga", "bfa": "bf", "gha": "gh", "nga": "ng", "ben": "bj",
               "tgo": "tg", "gin": "gn", "mli": "ml", "rdc": "cd", "drc": "cd", "usa": "us", "fra": "fr", "bel": "be", "can": "ca"}
 MOTS_BANNIS = {"con", "conne", "connard", "connasse", "pute", "putain", "salope", "encule", "enculer", "fdp", "ntm", "nique", "niquer",
                "batard", "negre", "negro", "nigga", "nigger", "singe", "singes", "macaque", "nazi", "fuck", "fucking", "bitch", "shit",
                "merde", "pd", "tapette", "debile", "abruti", "cafard", "cafards", "esclave", "esclaves"}
 # pendant la course seulement (un pays face à un autre) : les mots qui rabaissent ne comptent pas non plus
-MOTS_NEGATIFS = {"nul", "nuls", "nulle", "pourri", "pourris", "honte", "chien", "chiens", "sale", "sales", "clochard", "voleur", "voleurs", "minable", "nuls"}
+MOTS_NEGATIFS = {"nul", "nuls", "nulle", "pourri", "pourris", "honte", "chien", "chiens", "sale", "sales", "clochard", "voleur", "voleurs", "minable"}
 
 
 def _insulte(texte: str, course: bool = False) -> bool:
@@ -922,6 +929,18 @@ def _pays_course(texte: str, t: str, codes: list):
     return None
 
 
+def _maintenant() -> int:
+    return int(time.time() * 1000)
+
+
+def course_pos(c: dict, p: str, now: int | None = None) -> float:
+    if c.get("phase") == "fin":
+        return float((c.get("posFin") or {}).get(p) or 0)
+    now = now or _maintenant()
+    roule = max(0.0, (now - int(c.get("t") or now)) / 1000) * float(c.get("vitesse") or COURSE_VITESSE)
+    return max(0.0, min(COURSE_ARRIVEE, roule + float((c.get("bonus") or {}).get(p) or 0)))
+
+
 def course_action(e: dict, a: str, pays=None) -> None:
     if a == "demarre":
         choisis = [p for p in (pays or []) if p in PAYS_NOMS][:4]
@@ -935,42 +954,36 @@ def course_action(e: dict, a: str, pays=None) -> None:
 
 def course_demarre(e: dict, pays=None) -> None:
     c = e.get("course") or {}
-    now = int(time.time() * 1000)
+    now = _maintenant()
     k = int(c.get("k", -1)) + (0 if pays else 1)
     pays = pays or COURSE_GROUPES[k % len(COURSE_GROUPES)]
     e["course"] = {"on": True, "k": k, "manche": int(c.get("manche") or 0) + 1, "pays": pays, "noms": {p: PAYS_NOMS.get(p, p) for p in pays},
-                   "pos": {p: 0 for p in pays}, "pousses": {p: 0 for p in pays}, "derniers": {p: [] for p in pays},
-                   "phase": "course", "t": now, "fin": now + COURSE_DUREE * 1000, "gagnant": None, "turbo": None, "aide": None,
+                   "t": now + COURSE_DEPART * 1000, "vitesse": COURSE_VITESSE, "bonus": {p: 0.0 for p in pays},
+                   "derniers": {p: [] for p in pays}, "phase": "course", "gagnant": None, "boost": None, "choc": None, "aide": None,
                    "victoires": c.get("victoires") or {}, "coureurs": c.get("coureurs") or {}, "joueurs": {}, "vu": {}}
-    noms = ", ".join(PAYS_NOMS.get(p, p) for p in pays[:-1]) + " et " + PAYS_NOMS.get(pays[-1], pays[-1])
-    e["mascotte"] = {"titre": f"MANCHE {e['course']['manche']} : C'EST PARTI !", "texte": f"{noms} : écris ton pays pour faire avancer son cauri !",
-                     "pose": "m2-presente", "duree": 7000, "t": now}
-    e["mascAuto"] = now
 
 
-def _course_avance(e: dict, code: str, pas: float) -> None:
+def _course_bonus(e: dict, code: str, pas: float) -> None:
     c = e["course"]
-    c["pos"][code] = min(COURSE_ARRIVEE, float(c["pos"].get(code) or 0) + pas)
-    if c["pos"][code] >= COURSE_ARRIVEE and c["phase"] == "course":
+    c["bonus"][code] = float(c["bonus"].get(code) or 0) + pas
+    if course_pos(c, code) >= COURSE_ARRIVEE and c["phase"] == "course":
         _course_fin(e, code)
 
 
 def _course_fin(e: dict, code) -> None:
-    c, now = e["course"], int(time.time() * 1000)
+    c, now = e["course"], _maintenant()
+    c["posFin"] = {p: round(course_pos(c, p, now), 2) for p in c["pays"]}
     c["phase"], c["gagnant"], c["tFin"] = "fin", code, now
     if not code:
         return
+    c["posFin"][code] = COURSE_ARRIVEE
     c["victoires"][code] = int(c["victoires"].get(code) or 0) + 1
     fans = [(u, int((c["coureurs"].get(u) or {}).get("n") or 0)) for u, p in (c.get("joueurs") or {}).items() if p == code]
     meilleur = max(fans, key=lambda un: un[1], default=None)
     pseudo = (c["coureurs"].get(meilleur[0]) or {}).get("nom") if meilleur else None
     e["fx"] = {"type": "confettis", "t": now}
     e["fxAuto"] = now
-    e["danse"] = now
-    e["mascotte"] = {"titre": f"{PAYS_NOMS.get(code, code).upper()} GAGNE LA MANCHE !",
-                     "texte": (f"Bravo à tous, et mention spéciale à {pseudo} ! " if pseudo else "Bravo à tous ! ") + "Prochaine manche dans quelques secondes.",
-                     "pose": "m4-appel", "duree": 9000, "t": now}
-    e["mascAuto"] = now
+    c["meilleur"] = pseudo
 
 
 def course_commentaire(e: dict, user: str, nom: str, texte: str, t: str) -> bool:
@@ -982,7 +995,7 @@ def course_commentaire(e: dict, user: str, nom: str, texte: str, t: str) -> bool
     code = _pays_course(texte, t, c.get("pays") or [])
     if not code:
         return False
-    now = int(time.time() * 1000)
+    now = _maintenant()
     vu = c.setdefault("vu", {})
     if now - int(vu.get(user) or 0) < COURSE_ESPACE:
         return True
@@ -998,48 +1011,62 @@ def course_commentaire(e: dict, user: str, nom: str, texte: str, t: str) -> bool
     co[user] = {"nom": nom[:24], "n": int((co.get(user) or {}).get("n") or 0) + 1, "pays": code}
     if len(co) > 400:
         c["coureurs"] = dict(sorted(co.items(), key=lambda kv: -int(kv[1]["n"]))[:300])
-    c["pousses"][code] = int(c["pousses"].get(code) or 0) + 1
-    c["derniers"][code] = ([nom[:18]] + [x for x in c["derniers"].get(code) or [] if x != nom[:18]])[:3]
-    _course_avance(e, code, 1)
+    c["derniers"][code] = ([nom[:18]] + [x for x in c["derniers"].get(code) or [] if x != nom[:18]])[:2]
+    if now >= int(c.get("t") or 0):   # pendant le compte à rebours, on s'inscrit mais on n'avance pas encore
+        _course_bonus(e, code, COURSE_PAS)
     return True
 
 
-def course_cadeau(e: dict, user: str, nom: str, diamants: int) -> None:
+def course_cadeau(e: dict, user: str, nom: str, diamants: int, cadeau: str = "") -> None:
     c = e.get("course") or {}
-    if not c.get("on") or c.get("phase") != "course" or _insulte(nom):
+    if not c.get("on") or c.get("phase") != "course" or _insulte(nom) or _maintenant() < int(c.get("t") or 0):
         return
     code = (c.get("joueurs") or {}).get(user) or (e.get("courseFan") or {}).get(user)
     if code not in (c.get("pays") or []):
         return
-    pas = 3 if diamants < 5 else 6 if diamants < 30 else 12 if diamants < 100 else 25
-    c["turbo"] = {"code": code, "nom": nom[:24], "pas": pas, "t": int(time.time() * 1000)}
-    _course_avance(e, code, pas)
+    now = _maintenant()
+    if diamants < 10:   # une rose (ou un petit cadeau) = boost
+        pas = 3 * min(5, max(1, diamants))
+        c["boost"] = {"code": code, "nom": nom[:24], "pas": pas, "t": now}
+        _course_bonus(e, code, pas)
+        return
+    # 10 pièces ou plus : on bouscule la voiture juste devant (ou la plus proche derrière si on mène), et on prend un peu d'élan
+    moi = course_pos(c, code, now)
+    autres = sorted(((course_pos(c, p, now), p) for p in c["pays"] if p != code), key=lambda x: x[0])
+    devant = [x for x in autres if x[0] >= moi]
+    cible = (min(devant) if devant else max(autres))[1]
+    force = 4 if diamants < 100 else 8 if diamants < 500 else 14
+    c["bonus"][cible] = float(c["bonus"].get(cible) or 0) - force
+    c["choc"] = {"de": code, "vers": cible, "nom": nom[:24], "force": force, "t": now}
+    _course_bonus(e, code, 2)
 
 
 def course_likes(e: dict, n: int) -> None:
-    """Les j'aime aident le pays en dernière position (50 j'aime = 1 pas, au plus 4 pas par paquet) : personne n'est largué."""
+    """Les j'aime aident le pays en dernière position (80 j'aime = +1 %, au plus 3 % par paquet) : personne n'est largué."""
     c = e.get("course") or {}
-    if not c.get("on") or c.get("phase") != "course" or n <= 0:
+    if not c.get("on") or c.get("phase") != "course" or n <= 0 or _maintenant() < int(c.get("t") or 0):
         return
-    dernier = min(c["pays"], key=lambda p: float(c["pos"].get(p) or 0))
-    c["aide"] = {"code": dernier, "t": int(time.time() * 1000)}
-    _course_avance(e, dernier, min(4.0, n / 50))
+    dernier = min(c["pays"], key=lambda p: course_pos(c, p))
+    c["aide"] = {"code": dernier, "t": _maintenant()}
+    _course_bonus(e, dernier, min(3.0, n / 80))
 
 
 def course_a_avancer(e: dict) -> bool:
     c = e.get("course") or {}
     if not c.get("on"):
         return False
-    now = int(time.time() * 1000)
-    return (c.get("phase") == "course" and now > int(c.get("fin") or 0)) or (c.get("phase") == "fin" and now > int(c.get("tFin") or 0) + COURSE_PAUSE * 1000)
+    now = _maintenant()
+    if c.get("phase") == "course":
+        return any(course_pos(c, p, now) >= COURSE_ARRIVEE for p in c.get("pays") or [])
+    return c.get("phase") == "fin" and now > int(c.get("tFin") or 0) + COURSE_PAUSE * 1000
 
 
 def course_tick(e: dict) -> None:
     if not course_a_avancer(e):
         return
     c = e["course"]
-    if c["phase"] == "course":   # temps écoulé : le pays en tête gagne (s'il a bougé)
-        tete = max(c["pays"], key=lambda p: float(c["pos"].get(p) or 0))
-        _course_fin(e, tete if float(c["pos"].get(tete) or 0) > 0 else None)
+    if c["phase"] == "course":   # la première voiture à franchir la ligne (à vitesse égale : le plus gros bonus)
+        now = _maintenant()
+        _course_fin(e, max(c["pays"], key=lambda p: (course_pos(c, p, now), float(c["bonus"].get(p) or 0))))
     else:
         course_demarre(e)

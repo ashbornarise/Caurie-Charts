@@ -260,53 +260,32 @@ body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:tran
 #ticker{transition:opacity .4s}
 .direct{display:inline-flex;align-items:center;gap:10px;background:#e5384a;font-weight:900;font-size:26px;letter-spacing:3px;padding:10px 18px;border-radius:999px}.direct i{width:14px;height:14px;border-radius:50%;background:#fff;animation:clig 1s infinite}@keyframes clig{50%{opacity:.25}}
 
-/* 16/11/2026 : LA COURSE DES CAURIS : notre jeu (aucune musique ni clip d'artiste) ; 4 pays par manche, le chat les pousse */
-#courseV{position:absolute;inset:0;z-index:18;display:none;color:#fff;font-family:Montserrat,Arial,sans-serif}
+/* 16/11/2026 : LA COURSE DES CAURIS v2 : course de voitures vue du ciel, habillage minimal (la route parle d'elle-même) */
+#courseV{position:absolute;inset:0;z-index:18;display:none;color:#fff;font-family:Montserrat,Arial,sans-serif;background:#2c3a1c}
 body.course-on #courseV{display:block}
 body.course-on #hud,body.course-on #platineV,body.course-on #naissV,body.course-on #naissB,body.course-on #camera,body.course-on #roi,body.course-on #topfans,body.course-on #devineurs,body.course-on #objectif,body.course-on #aSuivre,body.course-on #murChat,body.course-on #ticker,body.course-on #bandeau,body.course-on #themeC,body.course-on #titreSon,body.course-on #base,body.course-on .scene{display:none!important}
-#courseV .voile{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,6,20,.9) 0%,rgba(8,6,20,.62) 28%,rgba(8,6,20,.62) 72%,rgba(8,6,20,.92) 100%)}
-#courseV .tete{position:absolute;top:70px;left:0;right:0;text-align:center}
-#courseV .marque{font:800 26px Montserrat;letter-spacing:8px;color:#8FD3FF}
-#courseV .titre{font:400 112px Anton,Impact;line-height:1;margin-top:8px;background:linear-gradient(180deg,#FFE29A,#F5C14B 55%,#c9902a);-webkit-background-clip:text;color:transparent;filter:drop-shadow(0 6px 24px rgba(245,193,75,.35))}
-#courseV .infos{display:flex;justify-content:center;gap:18px;margin-top:18px}
-#courseV .pill{font:900 30px Montserrat;padding:10px 26px;border-radius:40px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.25)}
-#courseV .pill.temps{background:#7B5CFF;border-color:#a894ff}
-#courseV .consigne{position:absolute;top:385px;left:40px;right:40px;text-align:center}
-#courseV .consigne b{display:block;font:900 40px Montserrat;letter-spacing:.5px;white-space:nowrap}
-#courseV .consigne span{display:inline-block;margin:14px 8px 0;font:700 27px Montserrat;color:#d9d3ff;background:rgba(123,92,255,.25);padding:8px 18px;border-radius:30px}
-#courseV .pistes{position:absolute;top:585px;left:40px;right:40px;display:flex;flex-direction:column;gap:20px}
-#courseV .couloir{position:relative;height:205px;border-radius:28px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.14);padding:18px 26px 0 26px;transition:box-shadow .4s,border-color .4s}
-#courseV .couloir.tete-course{border-color:#F5C14B;box-shadow:0 0 40px rgba(245,193,75,.35)}
-#courseV .couloir.turbo{animation:turboC .9s ease-out}
-@keyframes turboC{0%{box-shadow:0 0 0 rgba(255,120,60,0)}30%{box-shadow:0 0 70px rgba(255,120,60,.9)}100%{box-shadow:0 0 0 rgba(255,120,60,0)}}
-#courseV .ident{display:flex;align-items:center;gap:18px;height:62px}
-#courseV .drap{width:84px;height:56px;border-radius:9px;box-shadow:0 3px 10px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.25);background-size:100% 100%;flex:none}
-#courseV .nomP{font:900 40px Montserrat;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-#courseV .score{font:400 46px Anton;color:#F5C14B}
-#courseV .piste{position:relative;height:84px;margin-top:10px;border-radius:14px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.13) 0 26px,transparent 26px 52px) center/100% 4px no-repeat,rgba(0,0,0,.25)}
-#courseV .arrivee{position:absolute;right:0;top:0;bottom:0;width:28px;border-radius:0 14px 14px 0;background:conic-gradient(#fff 25%,#111 0 50%,#fff 0 75%,#111 0) 0 0/14px 14px}
-#courseV .cauri{position:absolute;top:2px;width:110px;height:80px;transition:left .45s cubic-bezier(.2,.9,.3,1.2);filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
-#courseV .cauri svg{width:100%;height:100%}
-#courseV .trace{position:absolute;left:0;top:34px;height:16px;border-radius:8px;transition:width .45s;opacity:.55}
-#courseV .derniers{font:700 23px Montserrat;color:#cfc8ff;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#courseV .aide{position:absolute;right:44px;top:20px;font:800 22px Montserrat;color:#ff8fb0;opacity:0;transition:opacity .4s}
-#courseV .aide.on{opacity:1}
-#courseV .bas{position:absolute;left:40px;right:40px;bottom:50px;display:grid;grid-template-columns:1fr 1fr;gap:22px}
-#courseV .bloc{background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.14);border-radius:26px;padding:22px 26px;min-height:250px}
-#courseV .bloc h4{font:900 24px Montserrat;letter-spacing:3px;color:#8FD3FF;margin-bottom:14px}
-#courseV .ligne{display:flex;align-items:center;gap:12px;font:800 27px Montserrat;margin:9px 0;white-space:nowrap;overflow:hidden}
-#courseV .ligne .drap{width:44px;height:30px;border-radius:5px}
-#courseV .ligne em{font-style:normal;margin-left:auto;color:#F5C14B}
-#courseV .vide{font:600 24px Montserrat;color:#aaa3d6}
-#courseV .turboT{position:absolute;left:50%;top:1500px;transform:translate(-50%,0) scale(.6);opacity:0;white-space:nowrap;font:900 40px Montserrat;padding:16px 34px;border-radius:40px;background:linear-gradient(90deg,#ff7a3c,#ff3d7f);box-shadow:0 10px 40px rgba(255,90,80,.5);transition:opacity .3s,transform .3s}
-#courseV .turboT.on{opacity:1;transform:translate(-50%,0) scale(1)}
-#courseV .finV{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:330px!important;text-align:center;background:radial-gradient(ellipse at 50% 45%,rgba(60,40,140,.85),rgba(5,3,12,.95) 70%);padding:0 60px}
-#courseV.fin .finV{display:flex;animation:entre .6s ease-out}
-#courseV .finV .drap{width:300px;height:200px;border-radius:22px;margin-bottom:46px;animation:flotte 2.4s ease-in-out infinite}
-@keyframes flotte{0%,100%{transform:rotate(-3deg) translateY(0)}50%{transform:rotate(3deg) translateY(-14px)}}
-#courseV .finV .gagne{font:400 120px Anton;line-height:1.02;color:#F5C14B;text-shadow:0 0 50px rgba(245,193,75,.5)}
-#courseV .finV .sous{font:800 40px Montserrat;margin-top:26px}
-#courseV .finV .suite{font:700 30px Montserrat;color:#cfc8ff;margin-top:40px}
+body.course-on #fondV,body.course-on #interlude,body.course-on #troupe,body.course-on #danseur,body.course-on #megaV,body.course-on #dedicV{display:none!important}
+#crC{position:absolute;inset:0;width:1080px;height:1920px}
+#courseV .haut{position:absolute;top:0;left:0;right:0;padding:44px 40px 70px;text-align:center;background:linear-gradient(180deg,rgba(8,6,18,.85),rgba(8,6,18,0))}
+#courseV .t1{font:400 64px Anton,Impact;letter-spacing:2px;background:linear-gradient(180deg,#FFE29A,#F5C14B 60%,#c9902a);-webkit-background-clip:text;color:transparent}
+#courseV .t2{font:800 22px Montserrat;letter-spacing:3px;color:#dcd6ff;margin-top:6px;text-transform:uppercase}
+#courseV .vict{position:absolute;top:190px;right:26px;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+#courseV .vict span{display:flex;align-items:center;gap:8px;font:900 22px Montserrat;background:rgba(8,6,18,.7);padding:6px 12px;border-radius:20px}
+#courseV .vict i{width:34px;height:23px;border-radius:4px}
+#courseV .bas{position:absolute;left:0;right:0;bottom:0;padding:80px 30px 46px;text-align:center;background:linear-gradient(0deg,rgba(8,6,18,.88),rgba(8,6,18,0))}
+#courseV .bas b{display:block;font:900 40px Montserrat;margin-bottom:12px}
+#courseV .bas span{display:inline-block;margin:0 8px;font:700 26px Montserrat;color:#e6e1ff}
+#crDecompte{position:absolute;left:0;right:0;top:760px;display:none;justify-content:center;font:400 260px Anton,Impact;line-height:1;text-shadow:0 10px 40px rgba(0,0,0,.6)}
+#crDecompte.n3{color:#ff4b4b}#crDecompte.n2{color:#ffb020}#crDecompte.n1{color:#ffe14b}#crDecompte.go{color:#5dff8a;font-size:170px}
+#courseV .evt{position:absolute;left:50%;top:1480px;transform:translate(-50%,0) scale(.7);opacity:0;white-space:nowrap;font:900 36px Montserrat;padding:14px 30px;border-radius:36px;transition:opacity .25s,transform .25s;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#courseV .evt.on{opacity:1;transform:translate(-50%,0) scale(1)}
+#courseV .evt.boost{background:linear-gradient(90deg,#ff3d7f,#ff7a3c)}#courseV .evt.choc{background:linear-gradient(90deg,#d62828,#7a0d0d)}
+#courseV .finV{position:absolute;left:0;right:0;top:215px;display:none;flex-direction:column;align-items:center;text-align:center}
+#courseV.fin .finV{display:flex;animation:entre .5s ease-out}
+#courseV .finV .dr{width:180px;height:120px;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.6);margin-bottom:20px}
+#courseV .finV .g{font:400 100px Anton;line-height:1;color:#F5C14B;text-shadow:0 6px 40px rgba(0,0,0,.7)}
+#courseV .finV .g2{font:900 44px Montserrat;letter-spacing:4px;margin-top:10px;text-shadow:0 4px 20px rgba(0,0,0,.8)}
+#courseV .finV .s{font:700 26px Montserrat;margin-top:16px;background:rgba(8,6,18,.7);padding:8px 20px;border-radius:20px}
 </style></head><body>
 <div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="fondV"><video muted playsinline loop preload="auto"></video><video muted playsinline loop preload="auto"></video></div><canvas id="themeC" width="540" height="960"></canvas><div id="platineV"><div class="disque"><img id="platImg" src="/assets/live/logo.png" alt=""></div><div class="bras"></div><div class="titreP" id="platTitre"></div><div class="artP" id="platArt"></div><div class="barres"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="parP" id="platPar"></div></div><div id="megaV"><div class="rayons"></div><div class="niv" id="mgNiv"></div><div class="nom" id="mgNom"></div><div class="cad" id="mgCad"></div><div class="don" id="mgDon"></div></div><div id="dedicV"><div class="sur">DÉDICACE</div><div class="msg" id="ddMsg"></div><div class="de" id="ddDe"></div></div><div id="naissB"><div class="l1" id="nbL1"></div><div class="l2" id="nbL2"></div></div><div id="naissV"><div class="sur">LE SON DE TA NAISSANCE</div><div class="mois" id="nvMois"></div><div class="an" id="nvAn"></div><div class="filet"></div><div class="phrase" id="nvPhrase"></div><div class="choix" id="nvChoix"></div><div class="pour" id="nvPour"></div></div><div id="courseV"></div><div id="hud"><div class="naiss" id="hudNaiss">Écris ton mois de naissance : on te joue le tube mondial · avec une rose, ton nom à l'écran</div><div class="obj"><b><span id="objTxt">OBJECTIF CADEAUX</span><span id="objNb"></span></b><div class="jauge"><i id="objJauge"></i></div><div class="podium" id="podium"></div><div class="legendes" id="legendes"></div></div></div><div id="bienvenue"></div><div id="troupe"><div class="sol"></div><div class="spot" style="left:5%"></div><div class="spot b" style="left:45%"></div><div class="titre" id="troupeTitre">ON DANSE !</div><div id="danseurs"></div></div><div id="danseur"><img id="danseImg" src="/assets/live/m2-presente.png" alt=""></div><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
 <audio id="sonPassage" src="/assets/live/sfx/balayage.mp3" preload="auto"></audio><div id="merci"></div><div id="topfans"></div><div id="roi"></div><div id="devineurs"></div><div id="objectif"></div><div id="repet">RÉPÉTITION · rien n'est à l'antenne</div><button id="activer">Cliquer ici pour activer le son</button>
@@ -890,79 +869,227 @@ function majTheme() {
   if (!themeMinuteur) dessineTheme();
 }
 
-// ---------------------------------------------------------------- LA COURSE DES CAURIS (16/11/2026)
-const DRAP_CSS = {
-  ci: "linear-gradient(90deg,#F77F00 33.3%,#fff 33.3% 66.6%,#009E60 66.6%)", ng: "linear-gradient(90deg,#008751 33.3%,#fff 33.3% 66.6%,#008751 66.6%)",
-  tg: "linear-gradient(#D21034,#D21034) 0 0/40% 60% no-repeat,linear-gradient(#006A4E 20%,#FFCE00 20% 40%,#006A4E 40% 60%,#FFCE00 60% 80%,#006A4E 80%)",
-  gh: "linear-gradient(#CE1126 33.3%,#FCD116 33.3% 66.6%,#006B3F 66.6%)", bj: "linear-gradient(90deg,#008751 40%,transparent 40%),linear-gradient(#FCD116 50%,#E8112D 50%)",
-  sn: "linear-gradient(90deg,#00853F 33.3%,#FDEF42 33.3% 66.6%,#E31B23 66.6%)", ml: "linear-gradient(90deg,#14B53A 33.3%,#FCD116 33.3% 66.6%,#CE1126 66.6%)",
-  bf: "linear-gradient(#EF2B2D 50%,#009E49 50%)", gn: "linear-gradient(90deg,#CE1126 33.3%,#FCD116 33.3% 66.6%,#009460 66.6%)",
-  ne: "linear-gradient(#E05206 33.3%,#fff 33.3% 66.6%,#0DB02B 66.6%)", cm: "linear-gradient(90deg,#007A5E 33.3%,#CE1126 33.3% 66.6%,#FCD116 66.6%)",
-  fr: "linear-gradient(90deg,#0055A4 33.3%,#fff 33.3% 66.6%,#EF4135 66.6%)", be: "linear-gradient(90deg,#111 33.3%,#FAE042 33.3% 66.6%,#ED2939 66.6%)",
-  ca: "linear-gradient(90deg,#D52B1E 25%,#fff 25% 75%,#D52B1E 75%)", us: "linear-gradient(#3C3B6E,#3C3B6E) 0 0/40% 54% no-repeat,repeating-linear-gradient(#B22234 0 7.7%,#fff 7.7% 15.4%)",
-  cd: "linear-gradient(150deg,#007FFF 38%,#F7D618 38% 42%,#CE1021 42% 58%,#F7D618 58% 62%,#007FFF 62%)", ga: "linear-gradient(#009E60 33.3%,#FCD116 33.3% 66.6%,#3A75C4 66.6%)",
-  ma: "#C1272D", lr: "linear-gradient(#002868,#002868) 0 0/42% 45% no-repeat,repeating-linear-gradient(#BF0A30 0 9%,#fff 9% 18%)",
-  sl: "linear-gradient(#1EB53A 33.3%,#fff 33.3% 66.6%,#0072C6 66.6%)", gm: "linear-gradient(#CE1126 30%,#fff 30% 35%,#0C1C8C 35% 65%,#fff 65% 70%,#3A7728 70%)",
-  cv: "linear-gradient(#003893 55%,#fff 55% 62%,#CF2027 62% 70%,#fff 70% 77%,#003893 77%)", mr: "linear-gradient(#D01C1F 15%,#00A95C 15% 85%,#D01C1F 85%)",
-  gw: "linear-gradient(90deg,#CE1126 35%,transparent 35%),linear-gradient(#FCD116 50%,#009E49 50%)" };
-const COUL_PISTE = ["#F5C14B", "#8FD3FF", "#ff8fb0", "#9cf5b8"];
-const CAURI_SVG = (c) => `<svg viewBox="0 0 110 80"><defs><radialGradient id="cg${c}" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fffaf0"/><stop offset=".6" stop-color="#f1e4c8"/><stop offset="1" stop-color="#c7a874"/></radialGradient></defs>
-  <ellipse cx="55" cy="40" rx="50" ry="33" fill="url(#cg${c})" stroke="#9c7a45" stroke-width="3"/>
-  <path d="M14 41 C 35 33, 75 33, 96 41" stroke="#5a3d1c" stroke-width="5" fill="none" stroke-linecap="round"/>
-  ${Array.from({ length: 9 }, (_, i) => { const x = 22 + i * 8.2; return `<line x1="${x}" y1="${35.5 + Math.abs(4 - i) * .5}" x2="${x}" y2="${46 - Math.abs(4 - i) * .5}" stroke="#5a3d1c" stroke-width="2.4" stroke-linecap="round"/>`; }).join("")}
-  <ellipse cx="40" cy="22" rx="16" ry="5" fill="#fff" opacity=".55"/></svg>`;
-// les vrais drapeaux du site (/assets/img/flags) ; à défaut, le dessin CSS
-const drapC = (c) => `<i class="drap" style="background:url('/assets/img/flags/${c}.svg') center/cover no-repeat,${DRAP_CSS[c] || "#555"}"></i>`;
-let courseVue = { cle: "", pos: {}, turboT: 0, finT: 0, sonT: 0 };
-function mmss(ms) { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+// ---------------------------------------------------------------- LA COURSE DES CAURIS v2 (16/11/2026) : course de voitures
+// Route verticale vue du ciel, 4 pistes, une voiture aux couleurs de chaque pays, vraies textures (asphalte, latérite, herbe
+// de savane), décor qui défile (arbres, palmiers, tribunes, panneaux), départ avec drapeaux et feux, boosts et bousculades.
+const CR = { W: 1080, H: 1920, route: 600, piste: 150, img: {}, sprites: {}, aff: {}, cle: "", off: 0, scroll: 0, derT: 0,
+  boostT: 0, chocT: 0, finT: 0, departVu: 0, chocs: {}, boosts: {}, etincelles: [], anim: null };
+const COUL_PAYS = { ci: ["#F77F00", "#FFFFFF", "#009E60"], tg: ["#006A4E", "#FFCE00", "#D21034"], bj: ["#008751", "#FCD116", "#E8112D"],
+  cm: ["#007A5E", "#CE1126", "#FCD116"], ng: ["#008751", "#FFFFFF", "#008751"], sn: ["#00853F", "#FDEF42", "#E31B23"],
+  ga: ["#009E60", "#FCD116", "#3A75C4"], cd: ["#007FFF", "#F7D618", "#CE1021"], gh: ["#CE1126", "#FCD116", "#006B3F"],
+  gn: ["#CE1126", "#FCD116", "#009460"], bf: ["#EF2B2D", "#FCD116", "#009E49"], ne: ["#E05206", "#FFFFFF", "#0DB02B"],
+  ml: ["#14B53A", "#FCD116", "#CE1126"], fr: ["#0055A4", "#FFFFFF", "#EF4135"], be: ["#1d1d1d", "#FAE042", "#ED2939"],
+  ca: ["#D52B1E", "#FFFFFF", "#D52B1E"], us: ["#3C3B6E", "#FFFFFF", "#B22234"], ma: ["#C1272D", "#006233", "#C1272D"] };
+const DRAP_HORIZ = new Set(["gh", "ga", "bf", "ne", "sl", "gm"]);
+const CODE3 = { ci: "CIV", tg: "TOG", bj: "BEN", cm: "CMR", ng: "NGA", sn: "SEN", ga: "GAB", cd: "RDC", gh: "GHA", gn: "GUI", bf: "BFA",
+  ne: "NIG", ml: "MLI", fr: "FRA", be: "BEL", ca: "CAN", us: "USA", ma: "MAR" };
+const DISTANCE = 40000;   // px de route pour 100 % : à vitesse de base, la route défile à 200 px/s
+function chargeImg(nom, src) { const i = new Image(); i.src = src; CR.img[nom] = i; return i; }
+["asphalte", "laterite", "herbe"].forEach((n) => chargeImg(n, "/assets/live/course/" + n + ".jpg"));
+function hasard(n) { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+// ---- sprites dessinés une fois (voitures aux couleurs du pays, arbres, palmiers, buissons)
+// chaque voiture de la manche prend une couleur de carrosserie bien distincte (parmi les couleurs de son drapeau)
+function choisitCorps(pays) {
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)), dist = (a, b) => Math.hypot(...rgb(a).map((v, i) => v - rgb(b)[i]));
+  const pris = [], res = {};
+  pays.forEach((p) => { const cs = COUL_PAYS[p] || ["#888888", "#ffffff", "#444444"], cand = cs.filter((c) => c.toUpperCase() !== "#FFFFFF");
+    const corps = cand.find((c) => pris.every((q) => dist(c, q) > 130)) || cand.sort((a, b) => Math.min(...pris.map((q) => dist(b, q))) - Math.min(...pris.map((q) => dist(a, q))))[0] || cs[0];
+    pris.push(corps); const autres = cs.filter((c) => c !== corps); res[p] = [corps, autres[0] || "#ffffff", autres[1] || autres[0] || "#222222"]; });
+  return res;
+}
+function spriteVoiture(code) {
+  const liv = (CR.corps || {})[code] || COUL_PAYS[code] || ["#888888", "#ffffff", "#444444"], cleV = "v" + code + liv[0];
+  if (CR.sprites[cleV]) return CR.sprites[cleV];
+  const [c1, c2, c3] = liv, cv = document.createElement("canvas"); cv.width = 130; cv.height = 230;
+  const g = cv.getContext("2d"), X = 65;
+  g.save(); g.filter = "blur(9px)"; g.fillStyle = "rgba(0,0,0,.55)"; g.beginPath(); g.ellipse(X + 6, 124, 46, 98, 0, 0, 6.283); g.fill(); g.restore();
+  g.fillStyle = "#111"; [[14, 38], [94, 38], [14, 150], [94, 150]].forEach(([x, y]) => { g.beginPath(); g.roundRect(x, y, 22, 44, 6); g.fill(); });
+  const corps = new Path2D(); corps.moveTo(X - 30, 22); corps.quadraticCurveTo(X, 6, X + 30, 22); corps.lineTo(X + 44, 70); corps.lineTo(X + 46, 168);
+  corps.quadraticCurveTo(X + 44, 206, X + 30, 212); corps.lineTo(X - 30, 212); corps.quadraticCurveTo(X - 44, 206, X - 46, 168); corps.lineTo(X - 44, 70); corps.closePath();
+  const lg = g.createLinearGradient(X - 46, 0, X + 46, 0); lg.addColorStop(0, "rgba(0,0,0,.45)"); lg.addColorStop(.25, "rgba(0,0,0,0)"); lg.addColorStop(.5, "rgba(255,255,255,.18)"); lg.addColorStop(.75, "rgba(0,0,0,0)"); lg.addColorStop(1, "rgba(0,0,0,.45)");
+  g.fillStyle = c1; g.fill(corps);
+  g.save(); g.clip(corps); g.fillStyle = c3; g.fillRect(X - 17, 0, 34, 230); g.fillStyle = c2; g.fillRect(X - 12, 0, 24, 230); g.restore();
+  g.fillStyle = lg; g.fill(corps); g.lineWidth = 2; g.strokeStyle = "rgba(0,0,0,.55)"; g.stroke(corps);
+  const vitre = (y1, y2, l1, l2) => { const p = new Path2D(); p.moveTo(X - l1, y1); p.lineTo(X + l1, y1); p.lineTo(X + l2, y2); p.lineTo(X - l2, y2); p.closePath();
+    const vg = g.createLinearGradient(0, y1, 0, y2); vg.addColorStop(0, "#9fd0ff"); vg.addColorStop(.35, "#1b2a3a"); vg.addColorStop(1, "#0a1018"); g.fillStyle = vg; g.fill(p);
+    g.strokeStyle = "rgba(255,255,255,.25)"; g.lineWidth = 1.5; g.stroke(p); };
+  vitre(70, 104, 30, 36); vitre(160, 180, 34, 30);
+  g.fillStyle = c1; g.beginPath(); g.roundRect(X - 34, 104, 68, 56, 10); g.fill(); g.save(); g.beginPath(); g.roundRect(X - 34, 104, 68, 56, 10); g.clip();
+  g.fillStyle = c3; g.fillRect(X - 17, 100, 34, 64); g.fillStyle = c2; g.fillRect(X - 12, 100, 24, 64); g.restore();
+  g.fillStyle = "rgba(255,255,255,.92)"; g.beginPath(); g.arc(X, 132, 17, 0, 6.283); g.fill(); g.fillStyle = "#111"; g.font = "900 15px Montserrat,Arial"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(CODE3[code] || code.toUpperCase(), X, 133);
+  g.fillStyle = "#fff8d0"; g.shadowColor = "#fff3a0"; g.shadowBlur = 10; [[X - 24, 26], [X + 24, 26]].forEach(([x, y]) => { g.beginPath(); g.ellipse(x, y, 8, 4, 0, 0, 6.283); g.fill(); });
+  g.shadowBlur = 0; g.fillStyle = "#c4001c"; [[X - 30, 206], [X + 30, 206]].forEach(([x, y]) => { g.beginPath(); g.roundRect(x - 9, y - 3, 18, 6, 2); g.fill(); });
+  g.fillStyle = "#151515"; g.beginPath(); g.roundRect(X - 46, 214, 92, 10, 3); g.fill(); g.fillStyle = c1; g.fillRect(X - 44, 216, 88, 5);
+  return (CR.sprites[cleV] = cv);
+}
+function spriteArbre(k) {
+  const cle = "a" + k; if (CR.sprites[cle]) return CR.sprites[cle];
+  const cv = document.createElement("canvas"); cv.width = cv.height = 200; const g = cv.getContext("2d");
+  g.save(); g.filter = "blur(8px)"; g.fillStyle = "rgba(0,0,0,.45)"; g.beginPath(); g.ellipse(112, 112, 70, 66, 0, 0, 6.283); g.fill(); g.restore();
+  const base = [["#2f5a24", "#4f8a34", "#7bb24a"], ["#3a5f1f", "#5f8f2c", "#9cbc52"], ["#2b4f2a", "#467a3b", "#6fa65a"]][k % 3];
+  for (let i = 0; i < 16; i++) { const a = hasard(k * 31 + i) * 6.283, r = 18 + hasard(k * 17 + i) * 34, x = 100 + Math.cos(a) * r, y = 100 + Math.sin(a) * r, s = 26 + hasard(k + i * 7) * 22;
+    const rg = g.createRadialGradient(x - s * .3, y - s * .3, 2, x, y, s); rg.addColorStop(0, base[2]); rg.addColorStop(.55, base[1]); rg.addColorStop(1, base[0]); g.fillStyle = rg; g.beginPath(); g.arc(x, y, s, 0, 6.283); g.fill(); }
+  return (CR.sprites[cle] = cv);
+}
+function spritePalmier(k) {
+  const cle = "p" + k; if (CR.sprites[cle]) return CR.sprites[cle];
+  const cv = document.createElement("canvas"); cv.width = cv.height = 220; const g = cv.getContext("2d");
+  g.save(); g.filter = "blur(6px)"; g.translate(16, 16); for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283 + k; g.fillStyle = "rgba(0,0,0,.35)"; g.beginPath(); g.ellipse(110 + Math.cos(a) * 46, 110 + Math.sin(a) * 46, 52, 12, a, 0, 6.283); g.fill(); } g.restore();
+  for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283 + k, x = 110 + Math.cos(a) * 46, y = 110 + Math.sin(a) * 46;
+    const lg = g.createLinearGradient(110, 110, 110 + Math.cos(a) * 96, 110 + Math.sin(a) * 96); lg.addColorStop(0, "#2e5e1d"); lg.addColorStop(1, "#7cae3c");
+    g.fillStyle = lg; g.beginPath(); g.ellipse(x, y, 52, 12, a, 0, 6.283); g.fill(); g.strokeStyle = "rgba(20,50,10,.6)"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(110, 110); g.lineTo(110 + Math.cos(a) * 96, 110 + Math.sin(a) * 96); g.stroke(); }
+  g.fillStyle = "#6b4a22"; g.beginPath(); g.arc(110, 110, 11, 0, 6.283); g.fill();
+  return (CR.sprites[cle] = cv);
+}
+function spriteTribune(k) {
+  const cle = "t" + k; if (CR.sprites[cle]) return CR.sprites[cle];
+  const cv = document.createElement("canvas"); cv.width = 150; cv.height = 360; const g = cv.getContext("2d");
+  g.fillStyle = "rgba(0,0,0,.4)"; g.fillRect(18, 14, 132, 346); g.fillStyle = "#7d8590"; g.fillRect(0, 0, 132, 346);
+  for (let r = 0; r < 6; r++) { g.fillStyle = r % 2 ? "#9aa3ad" : "#8a929c"; g.fillRect(r * 22, 0, 22, 346);
+    for (let s = 0; s < 30; s++) { const h = hasard(k * 97 + r * 31 + s); if (h < .2) continue; const c = ["#F77F00", "#fff", "#009E60", "#FCD116", "#CE1126", "#7B5CFF", "#8FD3FF", "#2a2a2a", "#c98b5a", "#5a3a22"][Math.floor(hasard(s * 13 + r + k) * 10)];
+      g.fillStyle = c; g.beginPath(); g.arc(r * 22 + 11, s * 11.5 + 6, 4.6, 0, 6.283); g.fill(); g.fillStyle = "#3b2414"; g.beginPath(); g.arc(r * 22 + 11, s * 11.5 + 5, 2.6, 0, 6.283); g.fill(); } }
+  g.fillStyle = "#c62828"; g.fillRect(0, 0, 132, 8); g.fillStyle = "#e9e9e9"; g.fillRect(0, 338, 132, 8);
+  return (CR.sprites[cle] = cv);
+}
+function spritePanneau() {
+  if (CR.sprites.pan) return CR.sprites.pan;
+  const cv = document.createElement("canvas"); cv.width = 70; cv.height = 300; const g = cv.getContext("2d");
+  g.fillStyle = "rgba(0,0,0,.4)"; g.fillRect(16, 12, 50, 288); const lg = g.createLinearGradient(0, 0, 50, 0); lg.addColorStop(0, "#5b3fd6"); lg.addColorStop(1, "#7B5CFF");
+  g.fillStyle = lg; g.fillRect(0, 0, 50, 288); g.save(); g.translate(25, 144); g.rotate(-Math.PI / 2); g.fillStyle = "#fff"; g.font = "900 26px Montserrat,Arial"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("CAURI CHARTS", 0, 0); g.restore();
+  g.fillStyle = "#F5C14B"; g.fillRect(0, 0, 50, 6); g.fillRect(0, 282, 50, 6);
+  return (CR.sprites.pan = cv);
+}
+function dessineDrapeau(g, code, x, y, w, h) {
+  const im = CR.img["f" + code] || chargeImg("f" + code, "/assets/img/flags/" + code + ".svg");
+  if (im.complete && im.naturalWidth) { g.drawImage(im, x, y, w, h); return; }
+  const c = COUL_PAYS[code] || ["#888", "#ccc", "#555"];
+  c.forEach((k, i) => { g.fillStyle = k; DRAP_HORIZ.has(code) ? g.fillRect(x, y + i * h / 3, w, h / 3 + 1) : g.fillRect(x + i * w / 3, y, w / 3 + 1, h); });
+}
+
+// ---- le monde : textures qui défilent, bas-côtés, décor déterministe (le même à chaque passage)
+function motif(nom) { const i = CR.img[nom]; if (!i || !i.complete || !i.naturalWidth) return null; return CR["m" + nom] || (CR["m" + nom] = CR.g.createPattern(i, "repeat")); }
+function bande(nom, x, w, decal, secours) { const g = CR.g, m = motif(nom); g.save(); g.beginPath(); g.rect(x, 0, w, CR.H); g.clip();
+  if (m) { g.translate(0, decal % 512); g.fillStyle = m; g.fillRect(x, -512, w, CR.H + 1024); } else { g.fillStyle = secours; g.fillRect(x, 0, w, CR.H); } g.restore(); }
+function dessineMonde(scroll) {
+  const g = CR.g, X0 = (CR.W - CR.route) / 2, X1 = X0 + CR.route, bord = 20, lat = 70;
+  bande("herbe", 0, X0 - bord - lat, scroll, "#56702f"); bande("herbe", X1 + bord + lat, CR.W, scroll, "#56702f");
+  bande("laterite", X0 - bord - lat, lat, scroll, "#8f4a2c"); bande("laterite", X1 + bord, lat, scroll, "#8f4a2c");
+  bande("asphalte", X0, CR.route, scroll, "#3b3d42");
+  // ombre douce de la latérite sur l'herbe, usure des pistes
+  const og = g.createLinearGradient(X0 - bord - lat - 24, 0, X0 - bord - lat, 0); og.addColorStop(0, "rgba(0,0,0,0)"); og.addColorStop(1, "rgba(0,0,0,.25)"); g.fillStyle = og; g.fillRect(X0 - bord - lat - 24, 0, 24, CR.H);
+  const od = g.createLinearGradient(X1 + bord + lat + 24, 0, X1 + bord + lat, 0); od.addColorStop(0, "rgba(0,0,0,0)"); od.addColorStop(1, "rgba(0,0,0,.25)"); g.fillStyle = od; g.fillRect(X1 + bord + lat, 0, 24, CR.H);
+  for (let l = 0; l < 4; l++) { const cx = X0 + CR.piste * l + CR.piste / 2; g.fillStyle = "rgba(0,0,0,.10)"; g.fillRect(cx - 44, 0, 18, CR.H); g.fillRect(cx + 26, 0, 18, CR.H); }
+  // vibreurs rouge et blanc
+  const blocs = 46, d = scroll % (blocs * 2);
+  for (let y = -blocs * 2 + d; y < CR.H; y += blocs) { const k = Math.round((y - d) / blocs) & 1; g.fillStyle = k ? "#d7262e" : "#f2f2f2"; g.fillRect(X0 - bord, y, bord, blocs); g.fillRect(X1, y, bord, blocs); }
+  g.fillStyle = "rgba(0,0,0,.18)"; g.fillRect(X0 - bord, 0, 3, CR.H); g.fillRect(X1 + bord - 3, 0, 3, CR.H);
+  // lignes blanches pointillées entre les pistes, lignes de bord continues
+  g.fillStyle = "rgba(240,240,235,.85)"; g.fillRect(X0 + 6, 0, 6, CR.H); g.fillRect(X1 - 12, 0, 6, CR.H);
+  const tir = 70, pas = 150, dd = scroll % pas;
+  for (let l = 1; l < 4; l++) { const x = X0 + CR.piste * l - 3; for (let y = -pas + dd; y < CR.H; y += pas) g.fillRect(x, y, 6, tir); }
+  // décor : toutes les 240 px de route, de chaque côté, un élément choisi au hasard (toujours le même à cette distance)
+  const seg = 240, premier = Math.floor(-scroll / seg) - 2;
+  for (let i = premier; i < premier + Math.ceil(CR.H / seg) + 4; i++) {
+    const y = i * seg + scroll;
+    [0, 1].forEach((cote) => { const h = hasard(i * 2 + cote), xa = cote ? X1 + bord + lat + 20 : 0, larg = X0 - bord - lat - 20;
+      let sp = null, x = 0, yy = y;
+      if (i % 9 === 4 + cote) { sp = spriteTribune(i & 3); x = cote ? xa + 6 : larg - 138; }
+      else if (h < .42) { sp = spriteArbre(Math.floor(h * 100)); x = xa + 10 + hasard(i * 5 + cote) * (larg - 190); }
+      else if (h < .68) { sp = spritePalmier(Math.floor(h * 100) % 6); x = xa + hasard(i * 3 + cote) * (larg - 200); }
+      else if (h < .74) { sp = spritePanneau(); x = cote ? xa + 4 : larg - 52; }
+      if (sp) g.drawImage(sp, x, yy - sp.height / 2); });
+  }
+}
+function ligneTravers(y, type) {   // départ (blanc + damier) ou arrivée (damier)
+  const g = CR.g, X0 = (CR.W - CR.route) / 2, c = 24;
+  for (let r = 0; r < 2; r++) for (let k = 0; k < CR.route / c; k++) { g.fillStyle = (k + r) % 2 ? "#111" : "#f4f4f4"; g.fillRect(X0 + k * c, y + r * c, c, c); }
+  if (type === "arrivee") { g.fillStyle = "rgba(255,255,255,.9)"; g.font = "900 34px Montserrat,Arial"; g.textAlign = "center"; g.fillText("ARRIVÉE", CR.W / 2, y - 18); }
+}
+
+// ---- positions : calculées comme sur le serveur, lissées à l'écran
+function posCible(c, p) {
+  if (c.phase === "fin") return +(c.posFin || {})[p] || 0;
+  const now = Date.now() + CR.off, roule = Math.max(0, (now - c.t) / 1000) * (c.vitesse || .5);
+  return Math.max(0, Math.min(100, roule + (+(c.bonus || {})[p] || 0)));
+}
+function boucleCourse() {
+  const c = E.course; CR.anim = null;
+  if (!c || !c.on) return;
+  CR.anim = setTimeout(boucleCourse, 33);   // ~30 images/s : léger pour le PC du live
+  const g = CR.g, now = Date.now(), dt = Math.min(.1, (now - (CR.derT || now)) / 1000); CR.derT = now;
+  c.pays.forEach((p) => { const cible = posCible(c, p); CR.aff[p] = CR.aff[p] == null ? cible : CR.aff[p] + (cible - CR.aff[p]) * Math.min(1, dt * 5); });
+  const tete = Math.max(...c.pays.map((p) => CR.aff[p]));
+  const scroll = tete / 100 * DISTANCE;   // la caméra suit la voiture de tête
+  dessineMonde(scroll);
+  const X0 = (CR.W - CR.route) / 2, YT = 820, K = 30;   // la tête à 820 px ; 1 % de retard = 30 px plus bas
+  const yEcran = (v) => Math.min(1560, YT + (tete - v) * K);
+  const yMonde = (v, cale) => YT + cale - (v - tete) / 100 * DISTANCE;   // un point fixe de la route (v = % de piste)
+  const yD = yMonde(0, 150);
+  if (yD > -60 && yD < CR.H + 300) { ligneTravers(yD, "depart"); c.pays.forEach((p, l) => { dessineDrapeau(g, p, X0 + l * CR.piste + 25, yD + 64, 100, 66); g.strokeStyle = "rgba(255,255,255,.7)"; g.lineWidth = 3; g.strokeRect(X0 + l * CR.piste + 25, yD + 64, 100, 66); }); }
+  const yA = yMonde(100, -118); if (yA > -80 && yA < CR.H) ligneTravers(yA - 48, "arrivee");
+  // voitures
+  const classement = [...c.pays].sort((a, b) => CR.aff[b] - CR.aff[a]);
+  c.pays.forEach((p, l) => {
+    const v = CR.aff[p], cx = X0 + l * CR.piste + CR.piste / 2; let y = yEcran(v), ang = 0, dx = 0;
+    const ch = CR.chocs[p]; if (ch && now - ch.t < 1400) { const k = (now - ch.t) / 1400; ang = Math.sin(k * 28) * .32 * (1 - k); dx = Math.sin(k * 20) * 26 * (1 - k); }
+    const at = CR.chocs["de" + p]; if (at && now - at.t < 500) { const k = (now - at.t) / 500; dx += Math.sin(k * Math.PI) * at.sens * 60; }
+    // traînée de vitesse, et flammes si boost
+    const bo = CR.boosts[p], enBoost = bo && now - bo < 2600;
+    g.save(); const tg = g.createLinearGradient(0, y + 100, 0, y + 100 + (enBoost ? 260 : 120)); const [c1] = COUL_PAYS[p] || ["#fff"];
+    tg.addColorStop(0, enBoost ? "rgba(120,200,255,.55)" : "rgba(255,255,255,.12)"); tg.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = tg;
+    g.fillRect(cx + dx - 40, y + 100, 80, enBoost ? 260 : 120); g.restore();
+    if (enBoost) { for (let f = 0; f < 2; f++) { const fx = cx + dx + (f ? 22 : -22), fl = 40 + Math.random() * 40, fg = g.createLinearGradient(0, y + 104, 0, y + 104 + fl);
+      fg.addColorStop(0, "#fff7c0"); fg.addColorStop(.3, "#ffb300"); fg.addColorStop(1, "rgba(255,60,0,0)"); g.fillStyle = fg; g.beginPath(); g.moveTo(fx - 9, y + 104); g.lineTo(fx + 9, y + 104); g.lineTo(fx, y + 104 + fl); g.fill(); } }
+    g.save(); g.translate(cx + dx, y); g.rotate(ang); g.drawImage(spriteVoiture(p), -65, -115); g.restore();
+    // étiquette : rang + drapeau + nom, à côté de la voiture
+    const rang = classement.indexOf(p) + 1, ex = cx + dx - 62, ey = y - 168;
+    g.fillStyle = "rgba(10,8,22,.78)"; g.beginPath(); g.roundRect(ex, ey, 124, 40, 20); g.fill();
+    g.fillStyle = rang === 1 ? "#F5C14B" : "#fff"; g.font = "900 22px Montserrat,Arial"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(rang + (rang === 1 ? "er" : "e"), ex + 12, ey + 21);
+    dessineDrapeau(g, p, ex + 58, ey + 10, 30, 20); g.fillStyle = "#fff"; g.font = "800 16px Montserrat,Arial"; g.fillText(CODE3[p] || p, ex + 92, ey + 21);
+    if (ch && now - ch.t < 1400) { g.fillStyle = "#ff5a3c"; g.font = "900 30px Montserrat,Arial"; g.textAlign = "center"; g.fillText("BOUSCULÉ !", cx, y + 150); }
+  });
+  // étincelles des chocs
+  CR.etincelles = CR.etincelles.filter((s) => (s.vie -= dt) > 0);
+  CR.etincelles.forEach((s) => { s.x += s.vx * dt * 60; s.y += s.vy * dt * 60; s.vy += .4; g.fillStyle = `rgba(255,${180 + Math.random() * 60 | 0},80,${Math.min(1, s.vie * 2)})`; g.fillRect(s.x, s.y, 4, 4); });
+  // vignette (profondeur)
+  const vg = g.createRadialGradient(CR.W / 2, CR.H / 2, 500, CR.W / 2, CR.H / 2, 1150); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.45)"); g.fillStyle = vg; g.fillRect(0, 0, CR.W, CR.H);
+  // compte à rebours
+  const reste = (c.t - (now + CR.off)) / 1000;
+  const cd = $("crDecompte");
+  if (c.phase === "course" && reste > -1) { const n = Math.ceil(reste); cd.style.display = "flex"; cd.textContent = reste > 0 ? n : "PARTEZ !"; cd.className = reste > 0 ? "n" + n : "go";
+    if (n !== CR.departVu && reste > 0 && n <= 3) { CR.departVu = n; joueSfx("ding"); } if (reste <= 0 && CR.departVu !== "go") { CR.departVu = "go"; joueSfx("boom"); } }
+  else cd.style.display = "none";
+}
 function course() {
   const c = E.course, V = $("courseV"), on = !!(c && c.on);
   document.body.classList.toggle("course-on", on);
-  if (!on) { courseVue.cle = ""; return; }
+  if (!on) { CR.cle = ""; return; }
+  if (c.srv) CR.off = c.srv - Date.now();
+  if (!CR.g) { V.innerHTML = `<canvas id="crC" width="1080" height="1920"></canvas>
+      <div class="haut"><div class="t1">LA COURSE DES CAURIS</div><div class="t2" id="crManche"></div></div>
+      <div class="vict" id="crVict"></div><div id="crDecompte"></div><div class="evt" id="crEvt"></div>
+      <div class="bas"><b>Écris ton pays pour accélérer</b><span>🌹 rose = boost</span><span>🎁 10 pièces = bouscule</span></div><div class="finV" id="crFin"></div>`;
+    CR.g = $("crC").getContext("2d"); }
   const cle = c.manche + "|" + c.pays.join(",");
-  if (cle !== courseVue.cle) {   // nouvelle manche : on dessine les 4 couloirs
-    courseVue = { ...courseVue, cle, pos: {} };
-    V.innerHTML = `<div class="voile"></div><div class="tete"><div class="marque">CAURI CHARTS · LIVE</div><div class="titre">LA COURSE DES CAURIS</div>
-      <div class="infos"><span class="pill">MANCHE ${c.manche}</span><span class="pill temps" id="crTemps"></span></div></div>
-      <div class="consigne"><b>ÉCRIS TON PAYS DANS LE CHAT</b><span>🌹 une rose = TURBO pour ton pays</span><span>❤ les j'aime aident le dernier</span></div>
-      <div class="pistes">${c.pays.map((p, i) => `<div class="couloir" id="crc-${p}"><div class="ident">${drapC(p)}<div class="nomP">${esc((c.noms || {})[p] || p)}</div><div class="score" id="crs-${p}">0</div></div>
-        <div class="piste"><div class="trace" id="crt-${p}" style="background:${COUL_PISTE[i]}"></div><div class="arrivee"></div><div class="cauri" id="cra-${p}">${CAURI_SVG(p)}</div><div class="aide" id="crh-${p}">❤ coup de pouce</div></div>
-        <div class="derniers" id="crd-${p}"></div></div>`).join("")}</div>
-      <div class="turboT" id="crTurbo"></div>
-      <div class="bas"><div class="bloc"><h4>VICTOIRES DE LA SOIRÉE</h4><div id="crVict"></div></div><div class="bloc"><h4>MEILLEURS COUREURS</h4><div id="crTop"></div></div></div>
-      <div class="finV" id="crFin"></div>`;
-    joueSfx("montee");
-  }
-  const tete = Math.max(...c.pays.map((p) => +c.pos[p] || 0));
-  c.pays.forEach((p) => {
-    const v = Math.min(100, +c.pos[p] || 0), a = $("cra-" + p); if (!a) return;
-    const largeur = a.parentNode.clientWidth - 28 - 110;
-    a.style.left = (v / 100 * largeur) + "px"; $("crt-" + p).style.width = (v / 100 * largeur + 55) + "px";
-    $("crs-" + p).textContent = Math.floor(v) + " %";
-    $("crc-" + p).classList.toggle("tete-course", v > 0 && v === tete);
-    const d = (c.derniers || {})[p] || []; $("crd-" + p).textContent = d.length ? "poussé par " + d.join(" · ") : "écris « " + ((c.noms || {})[p] || p) + " » pour démarrer";
-    $("crh-" + p).classList.toggle("on", !!(c.aide && c.aide.code === p && Date.now() - c.aide.t < 4000));
-    if (v > (courseVue.pos[p] || 0) && Date.now() - courseVue.sonT > 1200) { courseVue.sonT = Date.now(); joueSfx("pop"); }
-    courseVue.pos[p] = v;
-  });
-  const tb = c.turbo;
-  if (tb && tb.t !== courseVue.turboT) { courseVue.turboT = tb.t; const el = $("crTurbo"); el.innerHTML = `🚀 TURBO ! ${esc(tb.nom)} propulse ${esc((c.noms || {})[tb.code] || tb.code)} +${tb.pas}`;
-    el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 3500); const cc = $("crc-" + tb.code); if (cc) { cc.classList.remove("turbo"); void cc.offsetWidth; cc.classList.add("turbo"); } joueSfx("paillettes"); }
-  const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  $("crVict").innerHTML = vic.length ? vic.map(([p, n]) => `<div class="ligne">${drapC(p)}<span>${esc(({ ...(c.noms || {}) })[p] || PAYS_NOM_C[p] || p)}</span><em>${n} 🏆</em></div>`).join("") : `<div class="vide">Première manche : à vous de jouer !</div>`;
-  const top = c.top || [];
-  $("crTop").innerHTML = top.length ? top.map((x, i) => `<div class="ligne">${drapC(x.pays)}<span>${i + 1}. ${esc(x.nom)}</span><em>${x.n}</em></div>`).join("") : `<div class="vide">Écris ton pays pour entrer ici.</div>`;
+  if (cle !== CR.cle) { CR.cle = cle; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
+  const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  $("crVict").innerHTML = vic.map(([p, n]) => `<span><i style="background:url('/assets/img/flags/${p}.svg') center/cover,linear-gradient(90deg,${(COUL_PAYS[p] || ["#888", "#ccc", "#555"]).join(",")})"></i>${n} 🏆</span>`).join("");
+  const b = c.boost; if (b && b.t !== CR.boostT) { CR.boostT = b.t; CR.boosts[b.code] = Date.now(); evtCourse(`🌹 ${esc(b.nom)} : BOOST ${esc(CODE3[b.code] || b.code)}`, "boost"); joueSfx("montee"); }
+  const ch = c.choc; if (ch && ch.t !== CR.chocT) { CR.chocT = ch.t; const lA = c.pays.indexOf(ch.de), lB = c.pays.indexOf(ch.vers);
+    CR.chocs[ch.vers] = { t: Date.now() }; CR.chocs["de" + ch.de] = { t: Date.now(), sens: Math.sign(lB - lA) || 1 };
+    const X0 = (CR.W - CR.route) / 2, cx = X0 + lB * CR.piste + CR.piste / 2;
+    for (let i = 0; i < 40; i++) CR.etincelles.push({ x: cx, y: 760, vx: (Math.random() - .5) * 14, vy: -Math.random() * 10, vie: .6 + Math.random() * .5 });
+    evtCourse(`💥 ${esc(ch.nom)} bouscule ${esc((c.noms || {})[ch.vers] || ch.vers)} !`, "choc"); joueSfx("boom"); }
   V.classList.toggle("fin", c.phase === "fin");
-  if (c.phase === "fin" && c.tFin !== courseVue.finT) { courseVue.finT = c.tFin; const g = c.gagnant;
-    $("crFin").innerHTML = g ? `${drapC(g)}<div class="gagne">${esc(((c.noms || {})[g] || g).toUpperCase())}<br>GAGNE LA MANCHE !</div><div class="sous">Bravo à tous les coureurs 👏</div><div class="suite" id="crSuite"></div>`
-      : `<div class="gagne">MANCHE<br>TERMINÉE</div><div class="sous">Personne n'a bougé… à vous la prochaine !</div><div class="suite" id="crSuite"></div>`;
-    if (g) { joueSfx("merci"); try { $("sonGong").currentTime = 0; $("sonGong").play().catch(() => {}); } catch (e) {} } }
+  if (c.phase === "fin" && c.tFin !== CR.finT) { CR.finT = c.tFin; const gg = c.gagnant;
+    $("crFin").innerHTML = gg ? `<i class="dr" style="background:url('/assets/img/flags/${gg}.svg') center/cover,linear-gradient(90deg,${(COUL_PAYS[gg] || ["#888", "#ccc", "#555"]).join(",")})"></i><div class="g">${esc(((c.noms || {})[gg] || gg).toUpperCase())}</div><div class="g2">GAGNE LA MANCHE</div>${c.meilleur ? `<div class="s">Meilleur pilote : ${esc(c.meilleur)}</div>` : ""}<div class="s" id="crSuite"></div>` : "";
+    if (gg) { joueSfx("merci"); try { $("sonGong").currentTime = 0; $("sonGong").play().catch(() => {}); } catch (e) {} } }
+  if (!CR.anim) boucleCourse();
 }
-const PAYS_NOM_C = { ci: "Côte d'Ivoire", ng: "Nigeria", tg: "Togo", gh: "Ghana", bj: "Bénin", sn: "Sénégal", ml: "Mali", bf: "Burkina Faso", gn: "Guinée", ne: "Niger",
-  cm: "Cameroun", fr: "France", us: "États-Unis", ca: "Canada", be: "Belgique", cd: "RD Congo", ga: "Gabon", ma: "Maroc" };
-setInterval(() => { const c = E.course; if (!c || !c.on) return; const t = $("crTemps"), s = $("crSuite");
-  if (t) t.textContent = c.phase === "course" ? "⏱ " + mmss(c.fin - Date.now()) : "MANCHE TERMINÉE";
-  if (s) s.textContent = "Prochaine manche dans " + Math.max(0, Math.ceil((c.tFin + 14000 - Date.now()) / 1000)) + " s"; }, 250);
+function evtCourse(html, type) { const el = $("crEvt"); el.innerHTML = html; el.className = "evt on " + type; clearTimeout(evtCourse.t); evtCourse.t = setTimeout(() => (el.className = "evt"), 3200); }
+setInterval(() => { const c = E.course, s = $("crSuite"); if (c && c.on && c.phase === "fin" && s) s.textContent = "Prochaine manche dans " + Math.max(0, Math.ceil((c.tFin + 14000 - Date.now() - CR.off) / 1000)) + " s"; }, 250);
+
 let derniereDanse = 0;
 function rendu() {
   vuePlatine(); hud(); naiss(); mega(); majTheme(); course();
