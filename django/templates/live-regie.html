@@ -239,7 +239,7 @@ async function poste(corps, prendre) {
 const AVEC_CARTE = ["attente", "rituel", "top3", "versus", "mur", "finale", "fin", "jeu"];
 const set = (s) => { if (s.fiche === true && AVEC_CARTE.includes(s.scene || E.scene)) s.scene = (s.media || E.media) && ((s.media || E.media).video || (s.media || E.media).yt) ? "artiste" : "camera"; return poste({ set: s }); };
 async function suit() {
-  try { const r = await fetch(API + "/etat" + Q(), { cache: "no-store", headers: { "X-Regie": ID } }); const d = await r.json(); E = d; aLaMain = d.aLaMain !== false; enLigne = true; rendu(); }
+  try { const r = await fetch(API + "/etat" + Q(), { cache: "no-store", headers: { "X-Regie": ID } }); const d = await r.json(); E = d; aLaMain = d.aLaMain !== false; enLigne = true; rendu(); relanceBoucles(); }
   catch (e) { enLigne = false; rendu(); }
   setTimeout(suit, 1000);
 }
@@ -621,7 +621,7 @@ function rendRoses() {
 const CYCLE = ["dou", "musique", "blind", "versus", "musique", "photo", "top3", "musique", "mot", "sondage", "musique", "mur"];
 let piloteK = 0, piloteT = null, verrouEcran = null;
 async function etapePilote() {
-  if (!E.pilote || !aLaMain) return;
+  if (!E.pilote || !aLaMain) { piloteT = null; return; }
   if (E.jeu && E.jeu.phase === "jeu") { piloteT = setTimeout(etapePilote, 30000); return; }   // un jeu est en cours : on attend
   // 16/11 : ordre mélangé à chaque tour du cycle, jamais deux fois la même étape de suite
   if (!window.ordrePilote || !window.ordrePilote.length) { const o = [...CYCLE].sort(() => Math.random() - .5);
@@ -651,8 +651,20 @@ const PHRASES = [
 ];
 const NOMS_M = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 let naissT = null, naissK = 0;
+// 16/11 : « le mode auto ne tourne pas » : si la page a été rechargée ou mise en veille, les minuteurs étaient perdus alors que
+// l'état disait encore ON. Ici, la régie qui a la main relance d'elle-même les boucles allumées (et les relance si elles se sont figées)
+let vuBoucle = Date.now();
+function relanceBoucles() {
+  if (!aLaMain) return;
+  const fige = Date.now() - vuBoucle > 90000;   // le téléphone a dormi : un minuteur en retard de plus de 90 s
+  if (E.naissanceOn && (!naissT || fige)) { clearTimeout(naissT); naissT = setTimeout(etapeNaissance, 1000); }
+  if (E.pilote && (!piloteT || fige)) { clearTimeout(piloteT); piloteT = setTimeout(etapePilote, 5000); }
+  if (fige || !vuBoucle) vuBoucle = Date.now();
+}
+setInterval(() => { vuBoucle = Date.now(); }, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { vuBoucle = 0; relanceBoucles(); } });
 async function etapeNaissance() {
-  if (!E.naissanceOn || !aLaMain) return;
+  if (!E.naissanceOn || !aLaMain) { naissT = null; return; }
   if (E.jeu && E.jeu.phase === "jeu") { naissT = setTimeout(etapeNaissance, 20000); return; }
   const f = E.naissances || [], x = f[0] || { mois: 1 + Math.floor(Math.random() * 12), annee: null, nom: "" };   // au hasard : une superstar
   try {
