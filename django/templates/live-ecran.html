@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>La Nuit Cauri Charts</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@600;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@600;800;900&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Cinzel:wght@700;900&family=Abril+Fatface&family=Bodoni+Moda:ital,wght@0,700;1,700&family=DM+Serif+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,700;1,700&family=Italiana&family=Marcellus&family=Yeseva+One&family=Prata&family=Limelight&family=Poiret+One&display=swap" rel="stylesheet">
 <style>
 :root{--ciel:#8FD3FF;--violet:#7B5CFF;--or:#F5C14B;--fond:#0d0a1f;--blanc:#fff}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -91,6 +91,11 @@ body.audio-seul #yt{inset:auto;left:0;top:0;width:240px;height:136px}body.audio-
   background:radial-gradient(ellipse at 50% 40%,#2a2140 0%,#0b0812 62%,#050308 100%);opacity:0;pointer-events:none;transition:opacity .7s}
 #naissV.on{opacity:1}
 #naissV .sur{font-family:Montserrat;font-weight:800;font-size:30px;letter-spacing:14px;color:#c9a227}
+#naissV{--c1:#F5C14B;--c2:#c9a227;--f:"Playfair Display";background:radial-gradient(ellipse at 50% 40%,var(--b1,#2a2140) 0%,var(--b2,#0b0812) 62%,#050308 100%)!important}
+#naissV .sur,#naissV .choix b{color:var(--c2)!important}#naissV .an,#naissB .l1 i{color:var(--c1)!important}#naissV .pour{background:var(--c1)!important}
+#naissV .filet{background:linear-gradient(90deg,transparent,var(--c1),transparent)!important}
+#naissV .mois,#naissV .an,#naissV .phrase,#naissB .l1{font-family:var(--f),"Playfair Display",Georgia,serif!important}
+#naissV .mois,#naissV .phrase,#naissV .choix span{overflow-wrap:anywhere}
 #naissV .mois{font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:200px;line-height:1;color:#fff;margin-top:24px;letter-spacing:4px}
 #naissV .an{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:110px;color:#F5C14B;line-height:1}
 #naissV .filet{width:320px;height:2px;margin:40px auto;background:linear-gradient(90deg,transparent,#F5C14B,transparent)}
@@ -154,8 +159,14 @@ body.audio-seul #yt{inset:auto;left:0;top:0;width:240px;height:136px}body.audio-
 #fxc{position:absolute;inset:0;z-index:20;pointer-events:none}
 #flash{position:absolute;inset:0;z-index:21;background:#fff;opacity:0;pointer-events:none}
 #projo{position:absolute;inset:0;z-index:19;pointer-events:none;opacity:0;transition:opacity .5s;background:radial-gradient(circle 360px at var(--x,50%) var(--y,40%),rgba(255,255,255,0) 0%,rgba(255,255,255,0) 60%,rgba(5,4,12,.82) 100%)}
-#bandeau{position:absolute;left:0;right:0;top:1580px;z-index:18;height:110px;background:linear-gradient(90deg,#c9142c,#ff4d5e);overflow:hidden;display:flex;align-items:center;transform:translateX(-110%);transition:transform .6s cubic-bezier(.2,1,.3,1);box-shadow:0 12px 40px rgba(0,0,0,.5)}
-#bandeau.on{transform:none}#bandeau span{white-space:nowrap;font-family:Anton,Impact;font-size:76px;padding-left:100%;animation:defile 14s linear infinite}
+/* 16/11/2026 : le bandeau devient un générique de fin de film : les annonces montent doucement, en fondu haut et bas */
+#bandeau{position:absolute;left:80px;right:80px;top:1260px;z-index:18;height:250px;overflow:hidden;opacity:0;transition:opacity .6s;
+  -webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent)}
+#bandeau.on{opacity:1}
+#bandeau span{display:block;text-align:center;animation:generique 16s linear infinite}
+#bandeau span b{display:block;font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:44px;line-height:1.5;color:#fff;text-shadow:0 4px 18px rgba(0,0,0,.8)}
+#bandeau span b:nth-child(odd){color:#F5C14B}
+@keyframes generique{from{transform:translateY(250px)}to{transform:translateY(-100%)}}
 @keyframes defile{to{transform:translateX(-100%)}}
 #grand{position:absolute;inset:0;z-index:22;display:flex;align-items:center;justify-content:center;pointer-events:none;font-family:Anton,Impact;text-align:center;line-height:1}
 body.secousse{animation:secousse .5s}@keyframes secousse{10%,50%,90%{transform:translate(-18px,8px) rotate(-.6deg)}30%,70%{transform:translate(18px,-8px) rotate(.6deg)}}
@@ -388,15 +399,22 @@ function majFlou() { const m = E.media; const f = !!(E.flou || platine.flou || (
 function bloque() { if (!APERCU) $("activer").style.display = "block"; }
 $("activer") && ($("activer").onclick = () => { $("activer").style.display = "none"; cleMedia = ""; actx && actx.resume(); platine(); });
 // qualité : on demande la 4K, sinon la 1080p (YouTube garde le dernier mot, mais notre lecteur fait 3414×1920 px)
-function hd(p) { if (APERCU) { try { p.mute(); p.setPlaybackQuality("small"); } catch (e) {} return; } try { const q = p.getAvailableQualityLevels ? p.getAvailableQualityLevels() : []; const v = ["hd2160", "hd1440", "hd1080"].find((k) => q.includes(k)) || "hd1080";
+function hd(p) { if (APERCU || document.body.classList.contains("audio-seul")) { try { p.mute(); p.setPlaybackQuality("small"); } catch (e) {} return; } try { const q = p.getAvailableQualityLevels ? p.getAvailableQualityLevels() : []; const v = ["hd2160", "hd1440", "hd1080"].find((k) => q.includes(k)) || "hd1080";
   if (p.getPlaybackQuality && p.getPlaybackQuality() !== v) p.setPlaybackQuality(v); } catch (e) {} }
 function chargeYT(id, debut) {
   if (!window.YT) { if (!document.getElementById("ytapi")) { const sc = document.createElement("script"); sc.id = "ytapi"; sc.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(sc); }
     ytAttente = [id, debut]; window.onYouTubeIframeAPIReady = () => { ytPret = true; const [i, d] = ytAttente; chargeYT(i, d); }; return; }
   if (!yt) yt = new YT.Player("ytp", { videoId: id, playerVars: { autoplay: 1, controls: 0, start: debut || 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, origin: location.origin, enablejsapi: 1, vq: APERCU ? "small" : "hd2160" },
     events: { onReady: (ev) => { hd(ev.target); ev.target.setVolume(Math.round((E.volume ?? .85) * 100)); ev.target.playVideo(); }, onError: (ev) => { window.ytErreur = ev.data; candidatSuivant(); },
-               onStateChange: (ev) => { if (ev.data === 3 || ev.data === -1) hd(ev.target); if (ev.data === 1) { hd(ev.target); $("yt").classList.add("on"); statut("lecture", "YouTube"); } } } });
+               onStateChange: (ev) => { if (ev.data === 3 || ev.data === -1) hd(ev.target); if (ev.data === 1) { hd(ev.target); $("yt").classList.add("on"); statut("lecture", "YouTube"); auRefrain(ev.target); } } } });
   else yt.loadVideoById({ videoId: id, startSeconds: debut || 0, suggestedQuality: "hd2160" });
+}
+// 16/11/2026 : « que les sons aillent au refrain » : en platine, le titre part vers 30 % de sa durée (35 à 80 s)
+let refrainFait = "";
+function auRefrain(p) {
+  try { const id = p.getVideoData().video_id, m = E.media || {};
+    if (!id || refrainFait === id + "|" + m.t || E.platine === false) return; refrainFait = id + "|" + m.t;
+    const d = p.getDuration(); if (d > 100) { const t = Math.max(35, Math.min(80, d * 0.3)); if (p.getCurrentTime() < t - 5) p.seekTo(t, true); } } catch (e) {}
 }
 function arreteTout() { const v = $("clip"), a = $("son"); v.classList.remove("on"); v.pause(); v.removeAttribute("src"); v.load(); a.pause(); a.removeAttribute("src"); if (yt && yt.stopVideo) yt.stopVideo(); $("yt").classList.remove("on"); }
 function platine() {
@@ -641,7 +659,8 @@ function choree(ms, titre) {
   tChoree = setTimeout(() => { T.classList.remove("on"); clearInterval(tChoreePas); }, ms);
 }
 // la platine : la musique passe sans clip ; pochette = photo de l'artiste, sinon la vignette YouTube
-function platine() {
+// (16/11/2026 : s'appelait aussi « platine() » et écrasait le lecteur de musique : plus de lancement ni d'arrêt des sons)
+function vuePlatine() {
   const m = E.media, on = E.platine !== false && !!m && ["youtube", "clip", "son"].includes(m.type);
   document.body.classList.toggle("audio-seul", on);
   const P = $("platineV"); P.classList.toggle("on", on && ["artiste", "camera"].includes(E.scene));
@@ -650,6 +669,7 @@ function platine() {
   const img = (a && a.photo) || (m.yt ? "https://i.ytimg.com/vi/" + m.yt + "/maxresdefault.jpg" : "/assets/live/logo.png");   // 16:9 sans bandes noires
   if ($("platImg").getAttribute("src") !== img) { $("platImg").onerror = () => { if (m.yt) $("platImg").src = "https://i.ytimg.com/vi/" + m.yt + "/mqdefault.jpg"; }; $("platImg").src = img; }
   $("platTitre").textContent = (m.titre || "").toUpperCase(); $("platArt").textContent = m.artiste || "";
+  const lt = (m.titre || "").length; $("platTitre").style.fontSize = (lt > 34 ? 56 : lt > 22 ? 72 : 96) + "px"; $("platArt").style.fontSize = ((m.artiste || "").length > 30 ? 34 : 46) + "px";
   $("platPar").textContent = m.par ? "DEMANDÉ PAR " + m.par.toUpperCase() + " · MERCI POUR LA ROSE" : ""; $("platPar").classList.toggle("on", !!m.par);
   document.querySelectorAll("#platineV .barres i").forEach((b, i) => { b.style.animationDelay = (-i * 0.13) + "s"; b.style.animationPlayState = m.pause ? "paused" : "running"; });
   $("platineV").querySelector(".disque").style.animationPlayState = m.pause ? "paused" : "running";
@@ -668,6 +688,17 @@ function hud() {
   if (cle !== dernieresArrivees) { dernieresArrivees = cle; $("bienvenue").innerHTML = arr.map((x) => `<span>Bienvenue ${esc(x.nom)} !</span>`).join(""); }
 }
 // « Le son de ta naissance » : la carte chic 7 s, puis le bandeau au-dessus de la platine pendant le son
+// un style par mois : [couleur vive, couleur douce, fond haut, fond bas, police]
+const STYLE_MOIS = [null,
+  ["#9fd8ff", "#cfe9ff", "#16304a", "#060b14", "Cinzel"], ["#ff5c8a", "#ffb3c7", "#4a1028", "#12040b", "Abril Fatface"],
+  ["#5be3a1", "#b7f2d4", "#0f3b2a", "#04110c", "Bodoni Moda"], ["#c9a7ff", "#e6d8ff", "#33205a", "#0c0717", "Italiana"],
+  ["#ff8a65", "#ffc8b4", "#4a1e12", "#120705", "DM Serif Display"], ["#ffd23f", "#ffe9a3", "#4a3a06", "#120e02", "Yeseva One"],
+  ["#2ee6d6", "#a8f5ee", "#0b3d3a", "#03100f", "Marcellus"], ["#ff9f1c", "#ffd29a", "#4d2604", "#130901", "Limelight"],
+  ["#e05a7a", "#f2b6c4", "#4a0f22", "#120309", "Prata"], ["#f28c28", "#f8c891", "#45240a", "#110802", "Cormorant Garamond"],
+  ["#9b7bff", "#d1c4ff", "#251a52", "#08051a", "Poiret One"], ["#3ddc84", "#f5c14b", "#0e3a24", "#031009", "Playfair Display"]];
+// le texte rétrécit tant qu'il dépasse sa boîte (fini les débordements)
+function ajusteTexte(el, max, min) { el.style.fontSize = max + "px"; let t = max;
+  while (t > min && (el.scrollWidth > el.clientWidth + 2 || el.scrollHeight > el.clientHeight + 2 && el.dataset.une)) { t -= 6; el.style.fontSize = t + "px"; } }
 const MOIS_FR = ["", "JANVIER", "FÉVRIER", "MARS", "AVRIL", "MAI", "JUIN", "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE"];
 function naiss() {
   const n = E.naissance, on = !!n && E.naissanceOn;
@@ -676,11 +707,14 @@ function naiss() {
   $("naissV").classList.toggle("on", carte);
   $("naissB").classList.toggle("on", on && !carte && !!E.media && ["artiste", "camera"].includes(E.scene));
   if (!on) return;
+  const st = STYLE_MOIS[n.mois] || STYLE_MOIS[12], V = $("naissV"), B = $("naissB");
+  for (const el of [V, B]) { el.style.setProperty("--c1", st[0]); el.style.setProperty("--c2", st[1]); el.style.setProperty("--b1", st[2]); el.style.setProperty("--b2", st[3]); el.style.setProperty("--f", `"${st[4]}"`); }
   $("nvMois").textContent = MOIS_FR[n.mois] || ""; $("nvAn").textContent = n.annee || "";
+  $("nvMois").style.whiteSpace = "nowrap"; $("nvMois").style.width = "100%"; ajusteTexte($("nvMois"), 200, 90);
   $("nvPhrase").textContent = n.phrase || ""; $("nvPour").textContent = n.pour ? "POUR " + n.pour.toUpperCase() : ""; $("nvPour").style.display = n.pour ? "inline-block" : "none";
   $("nvChoix").innerHTML = (n.choix || []).map((c) => `<div><b>${esc(c.zone)}${c.annee && c.annee !== n.annee ? " · " + c.annee : ""}</b><span>« ${esc(c.titre)} » · ${esc(c.artiste)}</span></div>`).join("");
   const c = (n.choix || [])[n.pick || 0] || {};
-  $("nbL1").innerHTML = `${esc(MOIS_FR[n.mois] || "")} <i>${esc(String(c.annee || n.annee || ""))}</i>`;
+  $("nbL1").innerHTML = `${esc(MOIS_FR[n.mois] || "")} <i>${esc(String(c.annee || n.annee || ""))}</i>`; $("nbL1").style.whiteSpace = "nowrap"; ajusteTexte($("nbL1"), 64, 34);
   $("nbL2").textContent = [c.zone, n.pour ? "POUR " + n.pour.toUpperCase() : ""].filter(Boolean).join(" · ");
 }
 // gros cadeaux : 9 s plein écran au nom du donateur, puis la troupe danse (roi, légende)
@@ -700,7 +734,7 @@ function mega() {
 }
 let derniereDanse = 0;
 function rendu() {
-  platine(); hud(); naiss(); mega();
+  vuePlatine(); hud(); naiss(); mega();
   const dd = E.dedicace, ddOn = !!dd && Date.now() - dd.t < 12000; $("dedicV").classList.toggle("on", ddOn);
   if (dd) { $("ddMsg").textContent = "« " + dd.texte + " »"; $("ddDe").textContent = "— " + dd.nom; }
   if (E.choree && E.choree !== derniereChoree) { const neuf = derniereChoree !== 0 || Date.now() - E.choree < 8000; derniereChoree = E.choree; if (neuf) choree(11000, E.likes >= 1000 ? Math.floor(E.likes / 1000) * 1000 + " J'AIME !" : "MERCI !"); }
@@ -808,7 +842,10 @@ function dessineFx() {
 requestAnimationFrame(dessineFx);
 let dernierFx = 0, tProjo = null;
 function effets() {
-  $("bandeau").classList.toggle("on", !!E.bandeau); if (E.bandeau && $("bandeau").firstChild.textContent !== E.bandeau) $("bandeau").firstChild.textContent = E.bandeau + "   ·   " + E.bandeau;
+  $("bandeau").classList.toggle("on", !!E.bandeau);
+  if (E.bandeau && $("bandeau").dataset.t !== E.bandeau) { $("bandeau").dataset.t = E.bandeau;   // une ligne par « · », comme un générique
+    const lignes = E.bandeau.split(/\s*[·|]\s*/).filter(Boolean); $("bandeau").firstChild.innerHTML = lignes.map((l) => `<b>${esc(l)}</b>`).join("");
+    $("bandeau").firstChild.style.animationDuration = Math.max(10, lignes.length * 3.5) + "s"; }
   if (E.minuteur && E.minuteur > Date.now()) { const r = Math.ceil((E.minuteur - Date.now()) / 1000); $("grand").innerHTML = `<div style="font-size:520px;color:#F5C14B;text-shadow:0 0 80px rgba(245,193,75,.7)">${r}</div>`; }
   else if ($("grand").dataset.mode !== "texte") $("grand").innerHTML = "";
   const f = E.fx; if (!f || f.t === dernierFx) return; const nouveau = dernierFx !== 0 || Date.now() - f.t < 4000; dernierFx = f.t; if (!nouveau) return;
