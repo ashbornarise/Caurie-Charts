@@ -41,6 +41,8 @@ ETAT_DEFAUT = {
     "creditsSon": {}, "demandes": [], "palierLikes": 0, "danse": 0, "choree": 0,
     # 16/11/2026 : platine (le son passe sans clip : plus de lag, plus de « contenu reproduit »), objectif cadeaux, arrivées
     "platine": True, "objectif": 300, "objectifBase": 0, "arrivees": [], "pilote": False,
+    # 16/11/2026 : « Le son de ta naissance » (monde + France + Afrique de l'Ouest) : file des mois écrits dans le chat
+    "naissanceOn": False, "naissances": [], "naissance": None,
     "donateurs": {}, "cadeau": None, "likes": 0, "spectateurs": None, "pic": 0, "abonnes": 0, "reglesCadeaux": True, "topFans": True,
     # jeux et studio (13/11) : devine le titre, qui est-ce, mot mystère, roue, sondage, « d'où tu nous regardes », tirage au sort,
     # roi du live, objectif de « j'aime », bienvenue aux abonnés ; disposition des éléments et déroulé modifiables
@@ -296,6 +298,8 @@ def _commentaire(e: dict, user: str, texte: str, nom: str | None = None) -> None
         e["chat"] = (e.get("chat") or [])[-119:] + [int(time.time())]   # rythme du chat (conseils de l'agent)
         e["chatteurs"] = [c for c in (e.get("chatteurs") or []) if c[0] != user][-299:] + [[user, nom]]   # pour le tirage au sort
     if _jeu_commentaire(e, user, nom, t):
+        return
+    if e.get("naissanceOn") and _naissance_commentaire(e, user, nom, texte):
         return
     credits = e.setdefault("creditsSon", {})
     if int(credits.get(user) or 0) > 0 and len(texte.strip()) >= 3 and not user.startswith("régie"):
@@ -648,6 +652,93 @@ def regie_commentaires(request, jeton):
     with _verrou(mode) as e:
         _paquet(e, m)
     return S._json({"ok": True})
+
+
+MOIS_NOMS = {"janvier": 1, "january": 1, "janv": 1, "fevrier": 2, "février": 2, "february": 2, "fevr": 2, "mars": 3, "march": 3,
+             "avril": 4, "april": 4, "mai": 5, "may": 5, "juin": 6, "june": 6, "juillet": 7, "july": 7, "aout": 8, "août": 8,
+             "august": 8, "septembre": 9, "september": 9, "sept": 9, "octobre": 10, "october": 10, "novembre": 11, "november": 11,
+             "decembre": 12, "décembre": 12, "december": 12}
+_HITS = None
+_NAISS_CACHE: dict = {}
+
+
+def _naissance_commentaire(e: dict, user: str, nom: str, texte: str) -> bool:
+    """« mars », « né en mars 2004 », « 03/2004 » : le mois (et l'année) passent dans la file ; avec une rose, en tête de file."""
+    t = texte.lower()
+    m = next((n for mot, n in MOIS_NOMS.items() if re.search(rf"(?<![a-zà-ÿ]){mot}(?![a-zà-ÿ])", t)), None)
+    an = re.search(r"\b(19[5-9]\d|20[0-2]\d)\b", t)
+    if not m:
+        x = re.search(r"\b(0?[1-9]|1[0-2])\s*[/.-]\s*(19[5-9]\d|20[0-2]\d)\b", t)
+        if not x:
+            return False
+        m, an = int(x.group(1)), x
+        an_v = int(x.group(2))
+    else:
+        an_v = int(an.group(1)) if an else None
+    file = [x for x in (e.get("naissances") or []) if x["user"] != user]
+    credits = e.setdefault("creditsSon", {})
+    rose = int(credits.get(user) or 0) > 0
+    if rose:
+        credits[user] = int(credits[user]) - 1
+    item = {"user": user, "nom": nom[:24], "mois": m, "annee": an_v, "rose": rose, "t": int(time.time() * 1000)}
+    e["naissances"] = ([item] + file if rose else file + [item])[:30]
+    e["dernier"] = ([{"user": user, "texte": f"son de naissance : {texte.strip()[:40]}"}] + e.get("dernier", []))[:6]
+    return True
+
+
+def naissance(mois: int, annee: int | None = None) -> dict:
+    """Les hits d'un mois : N°1 américain, N°1 français (Wikipédia), clip ouest-africain le plus vu sorti ce mois-là."""
+    import json as _js
+    import os as _os
+    import random
+    global _HITS
+    if _HITS is None:
+        try:
+            _HITS = _js.load(open(_os.path.join(_os.path.dirname(__file__), "data", "hits_mois.json"), encoding="utf-8"))
+        except OSError:
+            _HITS = {}
+    cle = (mois, annee)
+    if cle in _NAISS_CACHE:
+        return _NAISS_CACHE[cle]
+    annees = [int(k[:4]) for k in _HITS if int(k[5:7]) == mois]
+    an_monde = annee if annee and f"{annee}-{mois:02d}" in _HITS else (random.choice(annees) if annees else None)
+    h = _HITS.get(f"{an_monde}-{mois:02d}", {}) if an_monde else {}
+    hf = h if "france" in h else {}
+    if not hf:
+        ans_fr = [int(k[:4]) for k, v in _HITS.items() if int(k[5:7]) == mois and "france" in v]
+        an_fr = min(ans_fr, key=lambda x: abs(x - (an_monde or 2015))) if ans_fr else None
+        hf = _HITS.get(f"{an_fr}-{mois:02d}", {}) if an_fr else {}
+    else:
+        an_fr = an_monde
+    choix = []
+    if h.get("monde"):
+        choix.append({**h["monde"], "zone": "LE MONDE", "annee": an_monde})
+    if hf.get("france"):
+        choix.append({**hf["france"], "zone": "LA FRANCE", "annee": an_fr})
+    try:
+        from core.services.social.souvenirs import _clips
+        cond = "EXTRACT(MONTH FROM tpi.published_at) = ?" + (" AND EXTRACT(YEAR FROM tpi.published_at) = ?" if annee and annee >= 2010 else "")
+        c = _clips(cond, [mois] + ([annee] if annee and annee >= 2010 else []), 3)
+        if c:
+            choix.append({"titre": c[0]["titre"], "artiste": c[0]["artiste"], "zone": "L'AFRIQUE DE L'OUEST", "annee": int(str(c[0]["sortie"])[:4]) if c[0].get("sortie") else annee,
+                          "classement": "clip le plus vu", "artisteId": c[0]["artist_id"], "yt": c[0]["video_id"]})
+    except Exception:  # noqa: BLE001
+        pass
+    r = {"mois": mois, "annee": annee, "choix": choix}
+    _NAISS_CACHE[cle] = r
+    return r
+
+
+def regie_naissance(request, jeton):
+    _verifie_regie(jeton)
+    try:
+        mois = int(request.GET.get("mois") or 0)
+        annee = int(request.GET.get("annee")) if request.GET.get("annee") else None
+    except ValueError:
+        mois, annee = 0, None
+    if not 1 <= mois <= 12:
+        return S._json({"erreur": "mois invalide"}, 400)
+    return S._json(naissance(mois, annee))
 
 
 def _paliers_likes(e: dict) -> None:

@@ -128,7 +128,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
   <div class="pastille horsantenne" id="antenne" title="Démarrer ou arrêter le chrono du live"><i></i><span>HORS ANTENNE</span></div>
   <div class="pastille connecte" id="connexion"><i></i><span>Connexion…</span></div>
   <div class="esp"></div>
-  <button id="repetBtn" title="S'entraîner sur un écran de test : rien ne part à l'antenne">Mode répétition</button><button id="piloteBtn" title="Le programme tourne tout seul : un jeu, un son, un vote… toutes les 4 min 30">Pilote auto</button><button id="platineBtn" title="Le son passe sans clip : pochette et vinyle (évite le lag et le « contenu reproduit »)">Platine</button>
+  <button id="repetBtn" title="S'entraîner sur un écran de test : rien ne part à l'antenne">Mode répétition</button><button id="piloteBtn" title="Le programme tourne tout seul : un jeu, un son, un vote… toutes les 4 min 30">Pilote auto</button><button id="naissBtn" title="Le son de ta naissance : un mois, un hit du monde, de France ou d'Afrique de l'Ouest, en boucle ; le chat écrit son mois">Naissance</button><button id="platineBtn" title="Le son passe sans clip : pochette et vinyle (évite le lag et le « contenu reproduit »)">Platine</button>
   <button id="copier" title="Le lien de l'écran à ajouter dans LIVE Studio">Lien de l'écran</button>
   <button id="aide">? Aide</button>
   <a href="" id="modeDj" class="petit" style="text-decoration:none">Mode DJ</a>
@@ -632,7 +632,37 @@ async function etapePilote() {
   } catch (e) {}
   piloteT = setTimeout(etapePilote, 270000);
 }
-function majPilote() { $("piloteBtn").classList.toggle("on", !!E.pilote); $("piloteBtn").textContent = E.pilote ? "Pilote auto : ON" : "Pilote auto";
+// « Le son de ta naissance » (16/11/2026) : en boucle toutes les 75 s ; le chat écrit son mois (une rose = en tête de file)
+const PHRASES = [
+  (m, a, c) => `${m} ${a}. Pendant que le monde fredonnait « ${c[0] ? c[0].titre : "…"} », quelque part, tu arrivais.`,
+  (m, a, c) => `Il y a des mois qui ont une bande-son. ${m} ${a} avait la sienne.`,
+  (m, a, c) => `${m} ${a} : les radios ne passaient que ça. Et toi, tu ouvrais les yeux.`,
+  (m, a, c) => `On ne choisit pas son mois de naissance. Mais on peut choisir sa musique.`,
+  (m, a, c) => `${m} ${a}, entre Paris, New York et Abidjan : trois hits, une seule époque.`,
+  (m, a, c) => `Un mois, trois continents, une émotion. Voici ${m.toLowerCase()} ${a}.`,
+  (m, a, c) => `Si ${m.toLowerCase()} ${a} était une chanson, ce serait celle-ci.`,
+];
+const NOMS_M = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+let naissT = null, naissK = 0;
+async function etapeNaissance() {
+  if (!E.naissanceOn || !aLaMain) return;
+  if (E.jeu && E.jeu.phase === "jeu") { naissT = setTimeout(etapeNaissance, 20000); return; }
+  const f = E.naissances || [], x = f[0] || { mois: 1 + Math.floor(Math.random() * 12), annee: 1990 + Math.floor(Math.random() * 36), nom: "" };
+  try {
+    const d = await (await fetch(API + "/naissance?mois=" + x.mois + (x.annee ? "&annee=" + x.annee : ""))).json();
+    const choix = d.choix || []; if (!choix.length) throw new Error("vide");
+    const pick = x.rose ? 0 : naissK++ % choix.length, c = choix[pick], an = x.annee || c.annee;
+    const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)](NOMS_M[x.mois], an || "", choix);
+    set({ naissances: f.slice(f[0] ? 1 : 0), naissance: { mois: x.mois, annee: an, pour: x.nom || "", choix, pick, phrase, t: Date.now() } });
+    setTimeout(() => { if (!E.naissanceOn) return; window.demandeur = x.rose ? x.nom : null;
+      joue(c.artiste.replace(/\s+(featuring|feat\.?|ft\.?|et|&|and)\s+.*$/i, ""), c.titre, { artisteId: c.artisteId || null }); }, 6500);
+  } catch (e) {}
+  naissT = setTimeout(etapeNaissance, 75000);
+}
+$("naissBtn").onclick = () => { const on = !E.naissanceOn; set({ naissanceOn: on, ...(on ? {} : { naissance: null }) }); clearTimeout(naissT);
+  if (on) naissT = setTimeout(etapeNaissance, 800); };
+function majPilote() {
+  $("naissBtn").classList.toggle("on", !!E.naissanceOn); $("naissBtn").textContent = E.naissanceOn ? "Naissance : ON" : "Naissance"; $("piloteBtn").classList.toggle("on", !!E.pilote); $("piloteBtn").textContent = E.pilote ? "Pilote auto : ON" : "Pilote auto";
   $("platineBtn").classList.toggle("on", E.platine !== false); $("platineBtn").textContent = E.platine !== false ? "Platine : ON" : "Platine : OFF"; }
 $("piloteBtn").onclick = async () => { const on = !E.pilote; set({ pilote: on }); clearTimeout(piloteT);
   if (on) { try { verrouEcran = await navigator.wakeLock.request("screen"); } catch (e) {} piloteT = setTimeout(etapePilote, 1500); }

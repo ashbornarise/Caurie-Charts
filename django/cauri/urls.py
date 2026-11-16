@@ -40,6 +40,7 @@ urlpatterns = [
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie/etat$", live.regie_lien_etat),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie/donnees$", live.regie_lien_donnees),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie/cherche$", live.regie_cherche),
+    re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie/naissance$", live.regie_naissance),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie/dj$", live.regie_lien),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie/youtube$", live.regie_youtube),
     re_path(r"^live/(?P<jeton>[0-9a-f]{28})/regie/clip$", live.regie_clip),
