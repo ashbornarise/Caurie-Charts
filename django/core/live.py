@@ -981,9 +981,7 @@ def _course_fin(e: dict, code) -> None:
     fans = [(u, int((c["coureurs"].get(u) or {}).get("n") or 0)) for u, p in (c.get("joueurs") or {}).items() if p == code]
     meilleur = max(fans, key=lambda un: un[1], default=None)
     pseudo = (c["coureurs"].get(meilleur[0]) or {}).get("nom") if meilleur else None
-    e["fx"] = {"type": "confettis", "t": now}
-    e["fxAuto"] = now
-    c["meilleur"] = pseudo
+    c["meilleur"] = pseudo   # pas de confettis : l'écran de victoire suffit (et le PC du live respire)
 
 
 def course_commentaire(e: dict, user: str, nom: str, texte: str, t: str) -> bool:

@@ -197,7 +197,7 @@ body.edition .widget.eteint{opacity:.35!important}
 #objectif small{display:block;font-weight:900;font-size:20px;letter-spacing:3px;color:#ff8a95}#objectif b{display:block;font-family:Anton,Impact;font-size:34px;margin:4px 0 10px}
 .jauge{height:26px;border-radius:999px;background:rgba(255,255,255,.15);overflow:hidden}.jauge i{display:block;height:100%;background:linear-gradient(90deg,#ff4d5e,#F5C14B);transition:width .8s}
 /* ===== jeux ===== */
-.voileJeu{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(43,31,99,.8),rgba(13,10,31,.92) 75%);backdrop-filter:blur(26px)}
+.voileJeu{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(43,31,99,.8),rgba(13,10,31,.96) 75%)}
 #jeuCorps{position:absolute;left:70px;right:70px;top:200px;text-align:center}
 .jcarte{padding:46px 40px}.jtitre{font-family:Anton,Impact;font-size:96px;line-height:1;text-wrap:balance}
 .jsous{font-weight:900;font-size:40px;color:var(--ciel);margin-top:24px}.jpetit{font-weight:700;font-size:32px;opacity:.88;margin-top:12px}
@@ -1332,13 +1332,15 @@ function dessineFx(now) {
   const c = $("fxc"), x = c.getContext("2d"); x.clearRect(0, 0, 1080, 1920);
   fx.parts = fx.parts.filter((p) => p.vie < 150 && p.y < 2100 && p.y > -700 && p.x > -400 && p.x < 1500);   // 2,5 s au plus
   for (const p of fx.parts) {
-    p.vie++; if (p.vie < 0) continue;
-    p.x += p.vx; p.y += p.vy; p.r += p.vr;
-    if (p.type === "confettis") { p.vy += .7; p.vx *= .985; }
-    else if (p.type === "artifice") { p.vx *= .96; p.vy = p.vy * .96 + .18; }
-    else if (p.type === "paillettes") { p.vy += .05; p.x += Math.sin((p.vie + p.s * 9) / 10) * .8; }
-    else if (p.type === "ballons" || p.type === "notes") p.x += Math.sin((p.vie + p.s) / 14) * 1.4;
-    else if (p.type !== "etoiles") { p.vy += p.type === "drapeaux" ? .25 : .6; p.x += Math.sin((p.vie + p.s) / 12) * 1.2; }
+    for (let k = 0; k < 2; k++) {   // 2 pas de physique par image (30 images/s, même vitesse qu'avant)
+      p.vie++; if (p.vie <= 0) continue;
+      p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      if (p.type === "confettis") { p.vy += .7; p.vx *= .985; }
+      else if (p.type === "artifice") { p.vx *= .96; p.vy = p.vy * .96 + .18; }
+      else if (p.type === "paillettes") { p.vy += .05; p.x += Math.sin((p.vie + p.s * 9) / 10) * .8; }
+      else if (p.type === "ballons" || p.type === "notes") p.x += Math.sin((p.vie + p.s) / 14) * 1.4;
+      else if (p.type !== "etoiles") { p.vy += p.type === "drapeaux" ? .25 : .6; p.x += Math.sin((p.vie + p.s) / 12) * 1.2; } }
+    if (p.vie < 0) continue;
     x.save(); x.globalAlpha = Math.max(0, Math.min(1, (150 - p.vie) / 35)); x.translate(p.x, p.y); x.rotate(p.r);
     if (p.type === "confettis") { x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); }
     else if (p.type === "cauris") { // coquillage cauri vu de dessous : dôme nacré, fente centrale bordée de petites dents
