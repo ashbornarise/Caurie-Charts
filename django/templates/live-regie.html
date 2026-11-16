@@ -622,7 +622,7 @@ const CYCLE = ["dou", "musique", "blind", "versus", "musique", "photo", "top3", 
 let piloteK = 0, piloteT = null, verrouEcran = null;
 async function etapePilote() {
   if (!E.pilote || !aLaMain) { piloteT = null; return; }
-  if (E.jeu && E.jeu.phase === "jeu") { piloteT = setTimeout(etapePilote, 30000); return; }   // un jeu est en cours : on attend
+  if (await jeuEnCours()) { piloteT = setTimeout(etapePilote, 15000); return; }   // un jeu est en cours : on attend (90 s au plus)
   // 16/11 : ordre mélangé à chaque tour du cycle, jamais deux fois la même étape de suite
   if (!window.ordrePilote || !window.ordrePilote.length) { const o = [...CYCLE].sort(() => Math.random() - .5);
     if (o[0] === window.dernierPilote) o.push(o.shift()); window.ordrePilote = o; }
@@ -651,6 +651,14 @@ const PHRASES = [
 ];
 const NOMS_M = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 let naissT = null, naissK = 0;
+// 16/11 : un jeu à deviner que personne ne trouve bloquait tout le mode auto. Au bout de 90 s, la réponse se révèle toute seule
+async function jeuEnCours() {
+  const j = E.jeu; if (!j || j.phase !== "jeu") return false;
+  const cle = JSON.stringify([j.type, j.t || "", (j.reponse || {}).titre || "", (j.reponse || {}).artiste || ""]);
+  if (window.jeuCle !== cle) { window.jeuCle = cle; window.jeuDepuis = Date.now(); }
+  if (Date.now() - window.jeuDepuis > 90000) { try { await poste({ jeuAction: "reveler" }); } catch (e) {} }
+  return true;
+}
 // 16/11 : « le mode auto ne tourne pas » : si la page a été rechargée ou mise en veille, les minuteurs étaient perdus alors que
 // l'état disait encore ON. Ici, la régie qui a la main relance d'elle-même les boucles allumées (et les relance si elles se sont figées)
 let vuBoucle = Date.now();
@@ -665,7 +673,7 @@ setInterval(() => { vuBoucle = Date.now(); }, 30000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { vuBoucle = 0; relanceBoucles(); } });
 async function etapeNaissance() {
   if (!E.naissanceOn || !aLaMain) { naissT = null; return; }
-  if (E.jeu && E.jeu.phase === "jeu") { naissT = setTimeout(etapeNaissance, 20000); return; }
+  if (await jeuEnCours()) { naissT = setTimeout(etapeNaissance, 15000); return; }
   const f = E.naissances || [], x = f[0] || { mois: 1 + Math.floor(Math.random() * 12), annee: null, nom: "" };   // au hasard : une superstar
   try {
     const d = await (await fetch(API + "/naissance?mois=" + x.mois + (x.annee ? "&annee=" + x.annee : ""))).json();
