@@ -143,6 +143,9 @@ def _public(e: dict) -> dict:
     if isinstance(j, dict) and ("paris" in j or "votants" in j):   # les listes de joueurs restent sur le serveur
         p["jeu"] = {**{k: v for k, v in j.items() if k not in ("paris", "votants")}, "nParis": len(j.get("paris") or j.get("votants") or {})}
     p["nChatteurs"] = len(e.get("chatteurs") or [])
+    # 16/11/2026 : la version en ligne : l'écran (source « Link » de LIVE Studio) se recharge tout seul après une mise en ligne
+    import os as _os
+    p["build"] = (_os.environ.get("VERCEL_GIT_COMMIT_SHA") or "")[:10]
     return p
 
 
@@ -654,14 +657,14 @@ def _cadeau(e: dict, g: dict) -> None:
         e["mascotte"] = {"titre": f"MERCI {nom.upper()} !", "texte": f"{n} × {cad} : tu entres dans la légende du live !", "pose": "m4-appel", "duree": 8000, "t": now}; e["mascAuto"] = now
     elif d >= 500:
         e["gong"] = now; e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now; e["choree"] = now + 9000
-        e["mascotte"] = {"titre": f"MERCI {nom.upper()} !", "texte": f"{n} × {cad} : tu fais trembler la Nuit Cauri Charts !", "pose": "m4-appel", "duree": 8000, "t": now}; e["mascAuto"] = now
+        e["mascotte"] = {"titre": f"MERCI {nom.upper()} !", "texte": _merci(e, nom, n, cad), "pose": "m4-appel", "duree": 8000, "t": now}; e["mascAuto"] = now
     elif d >= 100 and now - dernier_fx > 8000:
-        e["fx"] = {"type": "cauris", "t": now}; e["fxAuto"] = now
+        e["fx"] = {"type": _varie(e, "fete", FETES), "t": now}; e["fxAuto"] = now
         e["danse"] = now   # gros cadeau : la mascotte danse
         if now - dernier_masc > 20000:
-            e["mascotte"] = {"titre": f"Merci {nom} !", "texte": f"{n} × {cad}, quelle générosité !", "pose": "m4-appel", "duree": 6000, "t": now}; e["mascAuto"] = now
+            e["mascotte"] = {"titre": f"Merci {nom} !", "texte": _merci(e, nom, n, cad), "pose": "m4-appel", "duree": 6000, "t": now}; e["mascAuto"] = now
     elif d >= 5 and now - dernier_fx > 8000:
-        e["fx"] = {"type": "coeurs", "t": now}; e["fxAuto"] = now
+        e["fx"] = {"type": _varie(e, "petit", ["coeurs", "paillettes", "notes", "etoiles"], 2), "t": now}; e["fxAuto"] = now
 
 
 @csrf_exempt
@@ -776,6 +779,26 @@ def regie_naissance(request, jeton):
     return S._json(naissance(mois, annee))
 
 
+# 16/11/2026 : « pas d'effets ni de sons redondants, sinon on perd toute l'attractivité » : on tourne, sans répéter les derniers
+FETES = ["confettis", "paillettes", "etoiles", "ballons", "notes", "cauris", "coeurs"]
+MERCIS = ["{n} × {cad} : merci {nom}, tu régales !", "{nom}, ton {cad} vient d'allumer le live !", "Gros respect à {nom} pour {n} × {cad} !",
+          "{nom} envoie {n} × {cad} : le live te dit merci !", "{n} × {cad} de {nom} : ça, c'est du soutien !", "Merci {nom} ! {n} × {cad}, on ne t'oublie pas."]
+
+
+def _varie(e: dict, cle: str, choix: list, garde: int = 3):
+    """Un élément de « choix » qui n'est pas parmi les « garde » derniers utilisés (historique dans l'état)."""
+    import random
+    hist = (e.get("hist") or {}).get(cle) or []
+    libres = [c for c in choix if c not in hist[-garde:]] or choix
+    x = random.choice(libres)
+    e.setdefault("hist", {})[cle] = (hist + [x])[-8:]
+    return x
+
+
+def _merci(e: dict, nom: str, n: int, cad: str) -> str:
+    return _varie(e, "merci", MERCIS).format(nom=nom, n=n, cad=cad)
+
+
 def _paliers_likes(e: dict) -> None:
     """15/11/2026 : « à chaque palier de j'aime, un truc arrive automatiquement » : tous les 1 000 j'aime, confettis ou
     cauris + la mascotte annonce le palier ; tous les 5 000, feu d'artifice et la mascotte danse."""
@@ -785,7 +808,7 @@ def _paliers_likes(e: dict) -> None:
     e["palierLikes"] = palier
     now = int(time.time() * 1000)
     grand = palier % 5 == 0
-    e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now   # « les confettis suffisent »
+    e["fx"] = {"type": _varie(e, "fete", FETES[:5]), "t": now}; e["fxAuto"] = now   # une fête différente à chaque palier
     e["mascotte"] = {"titre": f"{palier * 1000:,} J'AIME !".replace(",", " "),
                      "texte": "Merci ! Continuez à taper l'écran : prochain palier à " + f"{(palier + 1) * 1000:,}".replace(",", " ") + ".",
                      "pose": "m4-appel", "duree": 7000, "t": now}; e["mascAuto"] = now

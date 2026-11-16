@@ -131,6 +131,11 @@ body.audio-seul #yt{inset:auto;left:0;top:0;width:240px;height:136px}body.audio-
 #dedicV .sur{font-family:Montserrat;font-weight:900;font-size:28px;letter-spacing:12px;color:#c9a227}
 #dedicV .msg{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:62px;line-height:1.25;color:#fff;margin-top:18px}
 #dedicV .de{font-family:Montserrat;font-weight:800;font-size:32px;color:#F5C14B;margin-top:20px}
+/* 16/11/2026 : animation dessinée au crayon, une par mois (flocons, cœurs, fleurs…), derrière la platine et la carte naissance */
+#themeC{position:absolute;inset:0;width:1080px;height:1920px;z-index:2;pointer-events:none;opacity:0;transition:opacity .8s}
+#themeC.on{opacity:1}
+body.theme-on #platineV{background:radial-gradient(ellipse at 50% 38%,rgba(20,14,40,.35) 0%,rgba(7,5,15,.75) 75%)!important}
+body.theme-on #naissV{background:radial-gradient(ellipse at 50% 40%,rgba(20,14,40,.55) 0%,rgba(5,3,8,.85) 70%)!important}
 @keyframes danse{0%{transform:translateY(0) rotate(-7deg) scale(1,1)}45%{transform:translateY(-70px) rotate(4deg) scale(.96,1.05)}100%{transform:translateY(0) rotate(8deg) scale(1.05,.95)}}
 #interlude.bas{top:1160px}   /* pendant un jeu : sous la carte du jeu */
 #intImg{position:absolute;left:-70px;top:30px;height:560px;transform:translateX(-560px) rotate(12deg);transition:transform .6s cubic-bezier(.2,1.5,.4,1);filter:drop-shadow(0 20px 26px rgba(0,0,0,.5))}
@@ -250,7 +255,7 @@ body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:tran
 #ticker{transition:opacity .4s}
 .direct{display:inline-flex;align-items:center;gap:10px;background:#e5384a;font-weight:900;font-size:26px;letter-spacing:3px;padding:10px 18px;border-radius:999px}.direct i{width:14px;height:14px;border-radius:50%;background:#fff;animation:clig 1s infinite}@keyframes clig{50%{opacity:.25}}
 </style></head><body>
-<div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="platineV"><div class="disque"><img id="platImg" src="/assets/live/logo.png" alt=""></div><div class="bras"></div><div class="titreP" id="platTitre"></div><div class="artP" id="platArt"></div><div class="barres"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="parP" id="platPar"></div></div><div id="megaV"><div class="rayons"></div><div class="niv" id="mgNiv"></div><div class="nom" id="mgNom"></div><div class="cad" id="mgCad"></div><div class="don" id="mgDon"></div></div><div id="dedicV"><div class="sur">DÉDICACE</div><div class="msg" id="ddMsg"></div><div class="de" id="ddDe"></div></div><div id="naissB"><div class="l1" id="nbL1"></div><div class="l2" id="nbL2"></div></div><div id="naissV"><div class="sur">LE SON DE TA NAISSANCE</div><div class="mois" id="nvMois"></div><div class="an" id="nvAn"></div><div class="filet"></div><div class="phrase" id="nvPhrase"></div><div class="choix" id="nvChoix"></div><div class="pour" id="nvPour"></div></div><div id="hud"><div class="naiss" id="hudNaiss">Écris ton mois de naissance : on te joue le tube mondial · avec une rose, ton nom à l'écran</div><div class="obj"><b><span id="objTxt">OBJECTIF CADEAUX</span><span id="objNb"></span></b><div class="jauge"><i id="objJauge"></i></div><div class="podium" id="podium"></div><div class="legendes" id="legendes"></div></div></div><div id="bienvenue"></div><div id="troupe"><div class="sol"></div><div class="spot" style="left:5%"></div><div class="spot b" style="left:45%"></div><div class="titre" id="troupeTitre">ON DANSE !</div><div id="danseurs"></div></div><div id="danseur"><img id="danseImg" src="/assets/live/m2-presente.png" alt=""></div><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
+<div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><canvas id="themeC" width="540" height="960"></canvas><div id="platineV"><div class="disque"><img id="platImg" src="/assets/live/logo.png" alt=""></div><div class="bras"></div><div class="titreP" id="platTitre"></div><div class="artP" id="platArt"></div><div class="barres"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="parP" id="platPar"></div></div><div id="megaV"><div class="rayons"></div><div class="niv" id="mgNiv"></div><div class="nom" id="mgNom"></div><div class="cad" id="mgCad"></div><div class="don" id="mgDon"></div></div><div id="dedicV"><div class="sur">DÉDICACE</div><div class="msg" id="ddMsg"></div><div class="de" id="ddDe"></div></div><div id="naissB"><div class="l1" id="nbL1"></div><div class="l2" id="nbL2"></div></div><div id="naissV"><div class="sur">LE SON DE TA NAISSANCE</div><div class="mois" id="nvMois"></div><div class="an" id="nvAn"></div><div class="filet"></div><div class="phrase" id="nvPhrase"></div><div class="choix" id="nvChoix"></div><div class="pour" id="nvPour"></div></div><div id="hud"><div class="naiss" id="hudNaiss">Écris ton mois de naissance : on te joue le tube mondial · avec une rose, ton nom à l'écran</div><div class="obj"><b><span id="objTxt">OBJECTIF CADEAUX</span><span id="objNb"></span></b><div class="jauge"><i id="objJauge"></i></div><div class="podium" id="podium"></div><div class="legendes" id="legendes"></div></div></div><div id="bienvenue"></div><div id="troupe"><div class="sol"></div><div class="spot" style="left:5%"></div><div class="spot b" style="left:45%"></div><div class="titre" id="troupeTitre">ON DANSE !</div><div id="danseurs"></div></div><div id="danseur"><img id="danseImg" src="/assets/live/m2-presente.png" alt=""></div><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
 <audio id="sonPassage" src="/assets/live/sfx/balayage.mp3" preload="auto"></audio><div id="merci"></div><div id="topfans"></div><div id="roi"></div><div id="devineurs"></div><div id="objectif"></div><div id="repet">RÉPÉTITION · rien n'est à l'antenne</div><button id="activer">Cliquer ici pour activer le son</button>
 <div id="titreSon" style="opacity:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8FD3FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span></span></div>
 
@@ -468,7 +473,20 @@ function ambiance(type) {
     const s = bruit(.05), g2 = actx.createGain(); g2.gain.value = .35; s.connect(g2); g2.connect(out); s.start(t); }
   if (type === "tic") { const o = actx.createOscillator(), g = actx.createGain(); o.type = "triangle"; o.frequency.value = 1500; g.gain.setValueAtTime(.25, t); g.gain.exponentialRampToValueAtTime(.001, t + .05); o.connect(g); g.connect(out); o.start(t); o.stop(t + .06); }
 }
-const joueSfx = (nom) => { if (APERCU) return; try { const a = new Audio("/assets/live/sfx/" + nom + ".mp3"); a.volume = .9; a.play().catch(() => {}); } catch (e) {} };
+// 16/11/2026 : « pas de sons redondants » : chaque son a des variantes ; on ne rejoue pas les 2 derniers de sa famille,
+// ni le même fichier dans les 20 s ; le volume varie un peu
+const FAMILLES_SFX = { passage: ["balayage", "whoosh", "sparkle", "bulle-pop2", "notif"], ding: ["ding", "ok-positif", "ok-recompense", "ok-anneau", "ok-cloche"],
+  boom: ["boom", "ok-poof", "unlock"], merci: ["tresor", "ok-bonus", "ok-bling", "ok-reussite", "ok-arcade", "ok-niveau"], pop: ["pop", "bulle-pop", "bulle-pop2"],
+  paillettes: ["paillettes", "sparkle", "ok-poof"], montee: ["montee", "unlock2"] };
+const derniersSfx = {}, quandSfx = {};
+function choixSfx(nom) {
+  const f = FAMILLES_SFX[nom]; if (!f) return nom;
+  const h = derniersSfx[nom] || [], maintenant = Date.now();
+  const libres = f.filter((x) => !h.slice(-2).includes(x) && maintenant - (quandSfx[x] || 0) > 20000);
+  const x = (libres.length ? libres : f.filter((y) => y !== h[h.length - 1]))[Math.floor(Math.random() * (libres.length || f.length - 1))] || f[0];
+  derniersSfx[nom] = [...h, x].slice(-4); quandSfx[x] = maintenant; return x;
+}
+const joueSfx = (nom) => { if (APERCU) return; try { const a = new Audio("/assets/live/sfx/" + choixSfx(nom) + ".mp3"); a.volume = .7 + Math.random() * .2; a.play().catch(() => {}); } catch (e) {} };
 
 // ---- le plateau : le chat en grand (c'est lui la vedette), ce qui arrive ensuite, des messages qui tournent
 const PROCHAIN = { attente: "Le décompte", rituel: "Le rituel du pays mystère", top3: "Le top 3, pays par pays", versus: "Le versus", mur: "Ton artiste ? Le mur des réclamations", finale: "Le grand final",
@@ -647,7 +665,7 @@ function intermede() {
   const neuf = dernierInter !== 0 || Date.now() - m.t < 12000; dernierInter = m.t; if (!neuf) return;
   $("intImg").src = "/assets/live/" + (m.pose || "m2-presente") + ".png"; $("intTitre").textContent = m.titre || ""; $("intTexte").textContent = m.texte || "";
   const el = $("interlude"); el.classList.remove("on"); el.classList.toggle("bas", E.scene === "jeu"); void el.offsetWidth; el.classList.add("on");
-  const s = $("sonPassage"); s.currentTime = 0; s.volume = .8; s.play().catch(() => {});
+  joueSfx("passage");   // une variante différente à chaque passage de la mascotte
   clearTimeout(minuteurInter); minuteurInter = setTimeout(() => el.classList.remove("on"), Math.max(3000, Math.min(5000, (m.duree || 4000) * .6)));   // 3 à 5 s, puis fondu
 }
 // la chorégraphie : 5 mascottes (tenues de couleurs différentes), décalées en vague, qui changent de pose au tempo
@@ -734,9 +752,61 @@ function mega() {
   $("mgDon").textContent = g.sons ? `ÉCRIS TA DÉDICACE, PUIS TES ${g.sons} SONS EN COMMENTAIRE` : "ÉCRIS TA DÉDICACE EN COMMENTAIRE";
   joueSfx("boom"); particules("artifice");
 }
+// ---- animations dessinées au crayon : le trait « vibre » (redessiné 8 fois/s avec un léger tremblé), aux couleurs du mois
+const THEME = { mois: 0, objets: [], t: 0 };
+function alea(a, b) { return a + Math.random() * (b - a); }
+function crayon(ctx, pts, ferme) {   // 2 passages tremblés = un vrai trait de crayon
+  for (let k = 0; k < 2; k++) { ctx.beginPath(); pts.forEach(([x, y], i) => { const jx = x + alea(-1.4, 1.4), jy = y + alea(-1.4, 1.4); i ? ctx.lineTo(jx, jy) : ctx.moveTo(jx, jy); });
+    if (ferme) ctx.closePath(); ctx.stroke(); } }
+function cercle(cx, cy, r, n = 18) { return Array.from({ length: n }, (_, i) => [cx + r * Math.cos(i / n * 6.283), cy + r * Math.sin(i / n * 6.283)]); }
+const FORMES = {
+  flocon: (c, o) => { for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283 + o.r; crayon(c, [[o.x, o.y], [o.x + o.s * Math.cos(a), o.y + o.s * Math.sin(a)]]); } },
+  coeur: (c, o) => crayon(c, Array.from({ length: 24 }, (_, i) => { const t = i / 24 * 6.283; return [o.x + o.s / 16 * 16 * Math.pow(Math.sin(t), 3), o.y - o.s / 16 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]; }), true),
+  fleur: (c, o) => { crayon(c, [[o.x, o.y + o.s * 2.4], [o.x, o.y]]); for (let i = 0; i < 5; i++) { const a = i / 5 * 6.283 + o.r; crayon(c, cercle(o.x + o.s * .55 * Math.cos(a), o.y + o.s * .55 * Math.sin(a), o.s * .45, 10), true); } },
+  goutte: (c, o) => crayon(c, [[o.x, o.y], [o.x - 3, o.y + o.s]]),
+  papillon: (c, o) => { const b = Math.abs(Math.sin(THEME.t / 3 + o.r)) * .8 + .2; crayon(c, cercle(o.x - o.s * .5 * b, o.y, o.s * .5 * b, 10), true); crayon(c, cercle(o.x + o.s * .5 * b, o.y, o.s * .5 * b, 10), true); crayon(c, [[o.x, o.y - o.s * .5], [o.x, o.y + o.s * .5]]); },
+  soleil: (c, o) => { crayon(c, cercle(o.x, o.y, o.s, 28), true); for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + THEME.t / 40; crayon(c, [[o.x + o.s * 1.25 * Math.cos(a), o.y + o.s * 1.25 * Math.sin(a)], [o.x + o.s * 1.7 * Math.cos(a), o.y + o.s * 1.7 * Math.sin(a)]]); } },
+  vague: (c, o) => crayon(c, Array.from({ length: 30 }, (_, i) => [i * 19, o.y + Math.sin(i / 3 + THEME.t / 6 + o.r) * o.s])),
+  etoile: (c, o) => crayon(c, Array.from({ length: 10 }, (_, i) => { const a = i / 10 * 6.283 - 1.57 + o.r, r = i % 2 ? o.s * .45 : o.s; return [o.x + r * Math.cos(a), o.y + r * Math.sin(a)]; }), true),
+  filante: (c, o) => { FORMES.etoile(c, o); crayon(c, [[o.x - 10, o.y - 6], [o.x - o.s * 6, o.y - o.s * 3.5]]); },
+  feuille: (c, o) => { const a = o.r; const p = [[0, -1], [.55, -.3], [.4, .45], [0, 1], [-.4, .45], [-.55, -.3]].map(([x, y]) => [o.x + o.s * (x * Math.cos(a) - y * Math.sin(a)), o.y + o.s * (x * Math.sin(a) + y * Math.cos(a))]);
+    crayon(c, p, true); crayon(c, [p[0], p[3]]); },
+  nuage: (c, o) => crayon(c, [...cercle(o.x, o.y, o.s * .6, 12).slice(6, 12), ...cercle(o.x + o.s * .7, o.y - o.s * .3, o.s * .7, 12).slice(6, 12), ...cercle(o.x + o.s * 1.5, o.y, o.s * .6, 12).slice(6, 12)], false),
+};
+// par mois : [forme, nombre, taille, vitesse (dx, dy), rotation]
+const THEMES_MOIS = [null, ["flocon", 26, [8, 20], [0, 1.2], 0.02], ["coeur", 18, [10, 22], [0, -1.1], 0], ["fleur", 12, [14, 24], [0, 0], 0.01],
+  ["goutte", 60, [16, 26], [-.4, 6], 0], ["papillon", 14, [16, 26], [.8, -.4], 0], ["soleil", 1, [70, 70], [0, 0], 0], ["vague", 7, [10, 22], [0, 0], 0],
+  ["filante", 10, [8, 14], [3.2, 1.8], 0], ["feuille", 20, [12, 20], [.4, 1.3], 0.03], ["feuille", 24, [12, 22], [-.6, 1.6], 0.05],
+  ["nuage", 7, [40, 70], [.35, 0], 0], ["etoile", 28, [6, 16], [0, .35], 0.01]];
+function theme(mois) {
+  const T = THEMES_MOIS[mois] || THEMES_MOIS[12], [forme, n, [a, b]] = T;
+  THEME.mois = mois; THEME.objets = Array.from({ length: n }, (_, i) => ({ f: forme, x: forme === "soleil" ? 270 : alea(0, 540),
+    y: forme === "soleil" ? 230 : forme === "vague" ? 560 + i * 55 : forme === "fleur" ? alea(620, 900) : alea(-100, 960), s: alea(a, b), r: alea(0, 6.28) }));
+  if (forme === "nuage") THEME.objets.forEach((o) => { o.y = alea(40, 420); });
+  if (mois === 11) THEME.objets.push(...Array.from({ length: 40 }, () => ({ f: "goutte", x: alea(0, 540), y: alea(0, 960), s: alea(12, 20), r: 0, pluie: 1 })));
+}
+let themeMinuteur = null;
+function dessineTheme() {
+  const C = $("themeC"), on = C.classList.contains("on");
+  if (on) { const c = C.getContext("2d"), T = THEMES_MOIS[THEME.mois] || THEMES_MOIS[12], st = STYLE_MOIS[THEME.mois] || STYLE_MOIS[12];
+    c.clearRect(0, 0, 540, 960); c.lineCap = "round"; c.lineJoin = "round"; c.lineWidth = 1.6; THEME.t++;
+    THEME.objets.forEach((o, i) => { c.strokeStyle = i % 3 ? st[0] : st[1]; c.globalAlpha = .75;
+      const v = o.pluie ? [-.3, 7] : T[3]; o.x += v[0] * (o.s / 18); o.y += v[1] * (o.s / 18); o.r += T[4];
+      if (o.f === "fleur") o.s = Math.min(o.s + .02, 26);
+      if (o.y > 1000) { o.y = -40; o.x = alea(0, 540); } if (o.y < -60) { o.y = 1000; o.x = alea(0, 540); } if (o.x > 600) o.x = -60; if (o.x < -60) o.x = 600;
+      FORMES[o.f](c, o); }); }
+  themeMinuteur = setTimeout(dessineTheme, 125);   // 8 images/s : le rythme d'une animation faite main
+}
+function majTheme() {
+  const n = E.naissance, mois = E.naissanceOn && n ? n.mois : (new Date().getMonth() + 1);
+  const on = E.theme !== false && ((E.naissanceOn && !!n) || (!!E.media && E.platine !== false)) && ["artiste", "camera"].includes(E.scene);
+  $("themeC").classList.toggle("on", on); document.body.classList.toggle("theme-on", on);
+  if (mois !== THEME.mois) theme(mois);
+  if (!themeMinuteur) dessineTheme();
+}
 let derniereDanse = 0;
 function rendu() {
-  vuePlatine(); hud(); naiss(); mega();
+  vuePlatine(); hud(); naiss(); mega(); majTheme();
   const dd = E.dedicace, ddOn = !!dd && Date.now() - dd.t < 12000; $("dedicV").classList.toggle("on", ddOn);
   if (dd) { $("ddMsg").textContent = "« " + dd.texte + " »"; $("ddDe").textContent = "— " + dd.nom; }
   if (E.choree && E.choree !== derniereChoree) { const neuf = derniereChoree !== 0 || Date.now() - E.choree < 8000; derniereChoree = E.choree; if (neuf) choree(11000, E.likes >= 1000 ? Math.floor(E.likes / 1000) * 1000 + " J'AIME !" : "MERCI !"); }
@@ -902,7 +972,10 @@ setInterval(() => { const el = $("defi"); if (!defiFin) return; const r = Math.c
 setInterval(() => E.minuteur && effets(), 250);
 let empreinte = "";
 async function interroge() {
-  try { const r = await fetch(BASE + "/etat" + Q, { cache: "no-store" }); const t = await r.text(); if (t !== empreinte) { empreinte = t; E = JSON.parse(t); rendu(); } } catch (e) {}
+  try { const r = await fetch(BASE + "/etat" + Q, { cache: "no-store" }); const t = await r.text(); if (t !== empreinte) { empreinte = t; E = JSON.parse(t);
+      // nouvelle version mise en ligne : on recharge la page (une seule fois par version), sinon l'écran garde l'ancien code
+      if (E.build) { if (!window.BUILD) window.BUILD = E.build; else if (E.build !== window.BUILD && !window.recharge) { window.recharge = 1; setTimeout(() => location.reload(), 1500); } }
+      rendu(); } } catch (e) {}
   setTimeout(interroge, 500);
 }
 fetch(BASE + "/donnees").then((r) => r.json()).then((d) => { D = d; interroge(); });

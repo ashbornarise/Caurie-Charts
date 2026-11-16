@@ -623,11 +623,16 @@ let piloteK = 0, piloteT = null, verrouEcran = null;
 async function etapePilote() {
   if (!E.pilote || !aLaMain) return;
   if (E.jeu && E.jeu.phase === "jeu") { piloteT = setTimeout(etapePilote, 30000); return; }   // un jeu est en cours : on attend
-  const id = CYCLE[piloteK++ % CYCLE.length];
+  // 16/11 : ordre mélangé à chaque tour du cycle, jamais deux fois la même étape de suite
+  if (!window.ordrePilote || !window.ordrePilote.length) { const o = [...CYCLE].sort(() => Math.random() - .5);
+    if (o[0] === window.dernierPilote) o.push(o.shift()); window.ordrePilote = o; }
+  const id = window.ordrePilote.shift(); window.dernierPilote = id; piloteK++;
   try {
     if (id === "musique") { const d = (E.demandes || [])[0];
       if (d) { window.demandeur = d.nom; set({ demandes: (E.demandes || []).slice(1) }); $("recherche").value = d.texte; $("recherche").oninput(); notif("Pilote : demande de " + d.nom + " → choisis le titre et ▶"); }
-      else if (pistes.length) { const p = pistes[Math.floor(Math.random() * Math.min(pistes.length, 40))];
+      else if (pistes.length) { const deja = window.dejaJoues || (window.dejaJoues = new Set());
+        const libres = pistes.slice(0, 60).filter((x) => !deja.has(x.artiste + "|" + x.titre)); const p = (libres.length ? libres : pistes)[Math.floor(Math.random() * (libres.length || Math.min(pistes.length, 40)))];
+        deja.add(p.artiste + "|" + p.titre);
         await joue(p.artiste, p.titre, { artisteId: p.artisteId, set: { carte: p.artisteId, carteExt: null }, repli: { video: p.video || null, son: p.son } }); } }
     else if (ETAPES[id] && ETAPES[id].jeu) await lanceJeu(id);
     else va(id);
@@ -654,8 +659,14 @@ async function etapeNaissance() {
     const d = await (await fetch(API + "/naissance?mois=" + x.mois + (x.annee ? "&annee=" + x.annee : ""))).json();
     const choix = d.choix || []; if (!choix.length) throw new Error("vide");
     // 16/11 : « privilégie les sons qui ont fait des tubes partout dans le monde » : le N°1 mondial d'abord
-    const pick = Math.max(0, choix.findIndex((k) => k.zone === "LE MONDE")), c = choix[pick], an = x.annee || c.annee;
-    const phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)](NOMS_M[x.mois], an || "", choix);
+    // « les sons doivent venir aléatoirement, infiniment » : jamais deux fois le même titre dans un live (sauf demande)
+    const deja = window.dejaJoues || (window.dejaJoues = new Set()), cleT = (k) => k.artiste + "|" + k.titre;
+    let pick = Math.max(0, choix.findIndex((k) => k.zone === "LE MONDE"));
+    if (!f[0] && deja.has(cleT(choix[pick]))) { const autre = choix.findIndex((k) => !deja.has(cleT(k))); if (autre < 0) { naissT = setTimeout(etapeNaissance, 300); return; } pick = autre; }
+    const c = choix[pick], an = x.annee || c.annee; deja.add(cleT(c));
+    const hp = window.phrasesVues || (window.phrasesVues = []), libresP = PHRASES.map((_, i) => i).filter((i) => !hp.slice(-4).includes(i));
+    const ip = libresP[Math.floor(Math.random() * libresP.length)]; hp.push(ip);
+    const phrase = PHRASES[ip](NOMS_M[x.mois], an || "", choix);
     set({ naissances: f.slice(f[0] ? 1 : 0), naissance: { mois: x.mois, annee: an, pour: x.rose ? x.nom : "", choix, pick, phrase, t: Date.now() } });
     setTimeout(() => { if (!E.naissanceOn) return; window.demandeur = x.rose ? x.nom : null;
       joue(c.artiste.replace(/\s+(featuring|feat\.?|ft\.?|et|&|and)\s+.*$/i, ""), c.titre, { artisteId: c.artisteId || null }); }, 6500);
