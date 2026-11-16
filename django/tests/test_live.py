@@ -107,7 +107,9 @@ def test_cadeaux_classement_et_regles(base):
     assert e["donateurs"]["ama"]["diamants"] == 3 and e["spectateurs"] == 120 and e["likes"] == 40 and not e.get("fx")   # petit cadeau : merci seulement
     envoi({"cadeaux": [{"user": "kofi", "nom": "Kofi", "cadeau": "Lion", "n": 1, "diamants": 29999}], "abonnes": ["x"]})
     e = base[live.CLE_ETAT]
-    assert e["gong"] and e["fx"]["type"] == "confettis" and "KOFI" in e["mascotte"]["titre"] and e["abonnes"] == 1
+    # 16/11/2026 : 1 000 diamants et plus = légende : feu d'artifice, scène plein écran, 5 sons au choix, nom sur le mur des légendes
+    assert e["gong"] and e["fx"]["type"] == "artifice" and "KOFI" in e["mascotte"]["titre"] and e["abonnes"] == 1
+    assert e["mega"]["niveau"] == "legende" and e["creditsSon"]["kofi"] == 5 and "Kofi" in e["legendes"]
     envoi({"set": {}, "cadeaux": [{"user": "ama", "cadeau": "Rose", "n": 1, "diamants": 1}]})
     assert base[live.CLE_ETAT]["donateurs"]["ama"]["diamants"] == 4
 

@@ -651,6 +651,7 @@ def _cadeau(e: dict, g: dict) -> None:
             e["legendes"] = ((e.get("legendes") or []) + [nom])[-6:]
     if d >= 1000:
         e["gong"] = now; e["fx"] = {"type": "artifice", "t": now}; e["fxAuto"] = now; e["choree"] = now + 9000
+        e["mascotte"] = {"titre": f"MERCI {nom.upper()} !", "texte": f"{n} × {cad} : tu entres dans la légende du live !", "pose": "m4-appel", "duree": 8000, "t": now}; e["mascAuto"] = now
     elif d >= 500:
         e["gong"] = now; e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now; e["choree"] = now + 9000
         e["mascotte"] = {"titre": f"MERCI {nom.upper()} !", "texte": f"{n} × {cad} : tu fais trembler la Nuit Cauri Charts !", "pose": "m4-appel", "duree": 8000, "t": now}; e["mascAuto"] = now
