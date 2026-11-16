@@ -218,7 +218,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
 const API = "{{ api }}", CSRF = "{{ csrf }}", ECRAN = "{{ ecran }}";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const norm = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const norm = (s) => String(s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const fmt = (s) => { s = Math.max(0, s | 0); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
 const notif = (t) => { $("notif").textContent = t; $("notif").classList.add("on"); clearTimeout(notif.t); notif.t = setTimeout(() => $("notif").classList.remove("on"), 2200); };
 const memo = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
@@ -664,8 +664,13 @@ async function etapeNaissance() {
 }
 // la même fonction depuis l'onglet Jeux ; « Passer ce mois » met un mois écrit à la main en tête de file
 $("nsLance").onclick = () => $("naissBtn").onclick();
-$("nsAjout").onclick = () => { const t = $("nsMois").value.toLowerCase(); const m = NOMS_M.findIndex((x, i) => i && t.includes(x.toLowerCase())) ;
-  const an = (t.match(/(19[5-9]\d|20[0-2]\d)/) || [])[1]; if (m < 1) return notif("Écris un mois, ex. « mars 2004 »");
+$("nsAjout").onclick = () => { const t = $("nsMois").value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // « mars 2004 », « 09/2003 », « 9-2003 », « 2003-09 » (16/11 : le format chiffré n'était pas compris)
+  const num = t.match(/(0?[1-9]|1[0-2])\s*[\/.-]\s*((?:19|20)\d\d)/) || t.match(/((?:19|20)\d\d)\s*[\/.-]\s*(0?[1-9]|1[0-2])/);
+  let m = NOMS_M.findIndex((x, i) => i && t.includes(x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
+  let an = (t.match(/(19[5-9]\d|20[0-2]\d)/) || [])[1];
+  if (num) { const a = +num[1] > 12 ? +num[2] : +num[1], y = +num[1] > 12 ? +num[1] : +num[2]; m = a; an = String(y); }
+  if (m < 1) return notif("Écris un mois, ex. « mars 2004 » ou « 09/2003 »");
   set({ naissances: [{ user: "régie", nom: "", mois: m, annee: an ? +an : null, rose: false, t: Date.now() }, ...(E.naissances || [])] });
   if (!E.naissanceOn) $("naissBtn").onclick(); else { clearTimeout(naissT); naissT = setTimeout(etapeNaissance, 500); } $("nsMois").value = ""; };
 $("naissBtn").onclick = () => { const on = !E.naissanceOn; set({ naissanceOn: on, ...(on ? {} : { naissance: null }) }); clearTimeout(naissT);

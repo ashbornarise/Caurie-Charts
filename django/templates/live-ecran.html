@@ -413,8 +413,10 @@ function chargeYT(id, debut) {
 let refrainFait = "";
 function auRefrain(p) {
   try { const id = p.getVideoData().video_id, m = E.media || {};
-    if (!id || refrainFait === id + "|" + m.t || E.platine === false) return; refrainFait = id + "|" + m.t;
-    const d = p.getDuration(); if (d > 100) { const t = Math.max(35, Math.min(80, d * 0.3)); if (p.getCurrentTime() < t - 5) p.seekTo(t, true); } } catch (e) {}
+    if (!id || refrainFait === id + "|" + m.t || E.platine === false) return;
+    const d = p.getDuration(); if (!d) { setTimeout(() => auRefrain(p), 700); return; }   // la durée arrive un peu après le début de lecture
+    refrainFait = id + "|" + m.t;
+    if (d > 100) { const t = Math.max(35, Math.min(80, d * 0.3)); if (p.getCurrentTime() < t - 5) p.seekTo(t, true); } } catch (e) {}
 }
 function arreteTout() { const v = $("clip"), a = $("son"); v.classList.remove("on"); v.pause(); v.removeAttribute("src"); v.load(); a.pause(); a.removeAttribute("src"); if (yt && yt.stopVideo) yt.stopVideo(); $("yt").classList.remove("on"); }
 function platine() {
