@@ -135,7 +135,7 @@ body.audio-seul #yt{inset:auto;left:0;top:0;width:240px;height:136px}body.audio-
 /* 16/11/2026 : plans calmes en fond (Japon, plaines, ciel ; Mixkit libres), fondu enchaîné toutes les 30 s */
 #fondV{position:absolute;inset:0;width:1080px;height:1920px;z-index:1;pointer-events:none;opacity:0;transition:opacity 1.2s;background:#05030a}
 #fondV.on{opacity:1}
-#fondV video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 2.5s ease;filter:saturate(.9) brightness(.8)}
+#fondV video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 2.5s ease;filter:saturate(1.15) brightness(.85) sepia(.12)}
 #fondV video.vis{opacity:1}
 #themeC{position:absolute;inset:0;width:1080px;height:1920px;z-index:2;pointer-events:none;opacity:0;transition:opacity .8s}
 #themeC.on{opacity:1}
@@ -790,26 +790,31 @@ function theme(mois) {
   if (forme === "nuage") THEME.objets.forEach((o) => { o.y = alea(40, 420); });
   if (mois === 11) THEME.objets.push(...Array.from({ length: 40 }, () => ({ f: "goutte", x: alea(0, 540), y: alea(0, 960), s: alea(12, 20), r: 0, pluie: 1 })));
 }
-// ---- fonds vidéo calmes : 01-07 Japon, 08-12 + 16 plaines et champs, 13-15 ciel et nuit ; la saison passe d'abord
-const FONDS = { japon: [1, 2, 3, 4, 5, 6, 7], plaines: [8, 9, 10, 11, 12, 16], ciel: [13, 14, 15] };
-const SAISON_FOND = (m) => [3, 4, 5].includes(m) ? "japon" : [6, 7, 8, 9].includes(m) ? "plaines" : [12, 1, 2].includes(m) ? "ciel" : "plaines";
+// ---- fonds vidéo (Mixkit libres) : « des plans chauds, mouvementés, selon le moment » (16/11) : la palette suit l'heure du live
+// matin = soleil qui se lève ; après-midi = plages, dunes, tournesols ; soir = couchers de soleil, ville au crépuscule ;
+// nuit = feux de camp, feux d'artifice, villes la nuit, néons. Quelques plans calmes restent dans chaque moment.
+const FONDS = {
+  matin: ["c-6850", "c-6734", "c-20425", "c-21168", "c-31629", "c-9582", "08", "01"],
+  aprem: ["c-44383", "c-44378", "c-51500", "c-4149", "c-52012", "c-45276", "c-44395", "10"],
+  soir: ["c-2168", "c-44370", "c-41375", "c-48359", "c-1568", "c-4999", "11", "16"],
+  nuit: ["c-45676", "c-513", "c-4064", "c-4157", "c-49878", "c-42343", "c-4332", "c-4240", "14", "06", "07"] };
+const MOMENT = () => { const h = new Date().getHours(); return h >= 6 && h < 12 ? "matin" : h >= 12 && h < 17 ? "aprem" : h >= 17 && h < 21 ? "soir" : "nuit"; };
 const FOND = { file: [], dernier: 0, k: 0, mois: 0, minuteur: null, on: false };
 function prochainFond() {
-  if (!FOND.file.length) {   // un tour complet sans répétition : la saison du mois d'abord, le reste mélangé
-    const melange = (a) => [...a].sort(() => Math.random() - .5), pref = SAISON_FOND(FOND.mois);
-    FOND.file = [...melange(FONDS[pref]), ...melange(Object.keys(FONDS).filter((g) => g !== pref).flatMap((g) => FONDS[g]))];
+  const m = MOMENT(); if (m !== FOND.moment) { FOND.moment = m; FOND.file = []; }
+  if (!FOND.file.length) {   // un tour complet du moment de la journée, sans répétition
+    FOND.file = [...FONDS[m]].sort(() => Math.random() - .5);
     if (FOND.file[0] === FOND.dernier) FOND.file.push(FOND.file.shift());
   }
   return (FOND.dernier = FOND.file.shift());
 }
 function changeFond() {
   const vs = document.querySelectorAll("#fondV video"), v = vs[FOND.k % 2], autre = vs[(FOND.k + 1) % 2]; FOND.k++;
-  v.src = "/assets/live/fonds/" + String(prochainFond()).padStart(2, "0") + ".mp4";
+  v.src = "/assets/live/fonds/" + prochainFond() + ".mp4";
   v.oncanplay = () => { v.oncanplay = null; v.play().catch(() => {}); v.classList.add("vis"); autre.classList.remove("vis"); setTimeout(() => { if (!autre.classList.contains("vis")) autre.pause(); }, 2800); };
 }
 function majFond(on, mois) {
   $("fondV").classList.toggle("on", on);
-  if (mois !== FOND.mois) { FOND.mois = mois; FOND.file = []; }
   if (on && !FOND.on) { changeFond(); FOND.minuteur = setInterval(changeFond, 30000); }   // 30 s, le rythme des sons
   if (!on && FOND.on) { clearInterval(FOND.minuteur); setTimeout(() => { if (!FOND.on) document.querySelectorAll("#fondV video").forEach((v) => v.pause()); }, 1300); }
   FOND.on = on;
