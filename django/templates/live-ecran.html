@@ -266,6 +266,7 @@ body.course-on #courseV{display:block}
 body.course-on #hud,body.course-on #platineV,body.course-on #naissV,body.course-on #naissB,body.course-on #camera,body.course-on #roi,body.course-on #topfans,body.course-on #devineurs,body.course-on #objectif,body.course-on #aSuivre,body.course-on #murChat,body.course-on #ticker,body.course-on #bandeau,body.course-on #themeC,body.course-on #titreSon,body.course-on #base,body.course-on .scene{display:none!important}
 body.course-on #fondV,body.course-on #merci,body.course-on #interlude,body.course-on #troupe,body.course-on #danseur,body.course-on #megaV,body.course-on #dedicV{display:none!important}
 #crC{position:absolute;inset:0;width:1080px;height:1920px}
+#courseV .vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,0) 45%,rgba(0,0,0,.45) 100%)}
 #courseV .haut{position:absolute;top:0;left:0;right:0;padding:44px 40px 70px;text-align:center;background:linear-gradient(180deg,rgba(8,6,18,.85),rgba(8,6,18,0))}
 #courseV .t1{font:400 64px Anton,Impact;letter-spacing:2px;background:linear-gradient(180deg,#FFE29A,#F5C14B 60%,#c9902a);-webkit-background-clip:text;color:transparent}
 #courseV .t2{font:800 22px Montserrat;letter-spacing:3px;color:#dcd6ff;margin-top:6px;text-transform:uppercase}
@@ -1121,7 +1122,7 @@ function posCible(c, p) {
 function boucleCourse() {
   const c = E.course; CR.anim = null;
   if (!c || !c.on) return;
-  CR.anim = setTimeout(boucleCourse, 33);   // ~30 images/s : léger pour le PC du live
+  CR.anim = setTimeout(boucleCourse, 42);   // 24 images/s (17/11 : « ça rame de ouf » sur le portable du live)
   const g = CR.g, now = Date.now(), dt = Math.min(.1, (now - (CR.derT || now)) / 1000); CR.derT = now;
   c.pays.forEach((p) => { const cible = posCible(c, p); CR.aff[p] = CR.aff[p] == null ? cible : CR.aff[p] + (cible - CR.aff[p]) * Math.min(1, dt * 5); });
   const tete = Math.max(...c.pays.map((p) => CR.aff[p]));
@@ -1174,7 +1175,7 @@ function boucleCourse() {
   CR.etincelles = CR.etincelles.filter((s) => (s.vie -= dt) > 0);
   CR.etincelles.forEach((s) => { s.x += s.vx * dt * 60; s.y += s.vy * dt * 60; s.vy += .4; g.fillStyle = `rgba(255,${180 + Math.random() * 60 | 0},80,${Math.min(1, s.vie * 2)})`; g.fillRect(s.x, s.y, 4, 4); });
   // vignette (profondeur)
-  const vg = g.createRadialGradient(CR.W / 2, CR.H / 2, 500, CR.W / 2, CR.H / 2, 1150); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.45)"); g.fillStyle = vg; g.fillRect(0, 0, CR.W, CR.H);
+
   // compte à rebours
   const reste = (c.t - (now + CR.off)) / 1000;
   const cd = $("crDecompte");
@@ -1188,13 +1189,13 @@ function course() {
   if (!on) { CR.cle = ""; ambianceCourse(false); return; }
   ambianceCourse(c.phase === "course");
   if (c.srv) CR.off = c.srv - Date.now();
-  if (!CR.g) { V.innerHTML = `<canvas id="crC" width="1080" height="1920"></canvas>
+  if (!CR.g) { V.innerHTML = `<canvas id="crC" width="540" height="960"></canvas><div class="vignette"></div>
       <div class="haut"><div class="t1">LA COURSE DES CAURIS</div><div class="t2" id="crManche"></div></div>
       <div class="vict" id="crVict"></div><div id="crDecompte"></div><div class="evt" id="crEvt"></div>
       <div class="bas"><b>ÉCRIS TON PAYS POUR ACCÉLÉRER</b><span class="l">❤ like = boost ton pays</span><span>💬 appelle tes potes</span></div><div class="finV" id="crFin"></div><div id="crPhase"></div>
       <div id="crAnnonce"><div class="halo"></div><svg viewBox="0 0 100 100"><defs><radialGradient id="eg" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#fffbe0"/><stop offset=".55" stop-color="#ffd84a"/><stop offset="1" stop-color="#f29a12"/></radialGradient></defs>
         <polygon points="50,2 61.8,35 97,36 69,57.5 79.5,92 50,71.5 20.5,92 31,57.5 3,36 38.2,35" fill="url(#eg)" stroke="#fff3b0" stroke-width="1.2" stroke-linejoin="round"/></svg><div class="txt" id="crAnnTxt"></div></div>`;
-    CR.g = $("crC").getContext("2d"); }
+    CR.g = $("crC").getContext("2d", { alpha: false }); CR.g.scale(.5, .5); }
   const cle = c.manche + "|" + c.pays.join(",");
   if (cle !== CR.cle) { CR.cle = cle; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; CR.phaseVue = 0; CR.tete = null; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
   const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
