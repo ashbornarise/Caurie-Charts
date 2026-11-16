@@ -276,6 +276,17 @@ body.course-on #fondV,body.course-on #merci,body.course-on #interlude,body.cours
 #courseV .bas b{display:block;font:400 76px Anton,Impact;letter-spacing:1px;line-height:1;margin-bottom:16px;color:#fff;text-shadow:0 4px 18px rgba(0,0,0,.7)}
 #courseV .bas span{display:inline-block;margin:6px 6px 0;font:900 34px Montserrat;color:#fff;padding:8px 20px;border-radius:30px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.25)}
 #courseV .bas span.l{background:rgba(255,77,128,.28);border-color:#ff6f9a}
+/* fin de phase : panneau des positions (1er, 2e… et l'écart en secondes) */
+#crPhase{position:absolute;left:90px;right:90px;top:250px;padding:30px 34px 26px;border-radius:30px;background:rgba(10,8,24,.88);border:3px solid #F5C14B;box-shadow:0 20px 60px rgba(0,0,0,.6);opacity:0;transform:translateY(-30px) scale(.95);transition:opacity .35s,transform .35s;pointer-events:none}
+#crPhase.on{opacity:1;transform:none}
+#crPhase .ph1{font:400 70px Anton,Impact;color:#F5C14B;text-align:center;line-height:1}
+#crPhase .ph2{font:800 28px Montserrat;text-align:center;color:#dcd6ff;margin:8px 0 18px}
+#crPhase .lg{display:flex;align-items:center;gap:16px;font:900 38px Montserrat;padding:10px 6px;border-top:1px solid rgba(255,255,255,.12)}
+#crPhase .lg b{width:44px;text-align:center;font:400 46px Anton}
+#crPhase .lg i{width:66px;height:44px;border-radius:7px;flex:none}
+#crPhase .lg span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#crPhase .lg em{font-style:normal;font-size:30px;color:#bfb8e6}
+#crPhase .lg.p1 b,#crPhase .lg.p1 em{color:#F5C14B}
 /* l'étoile-annonce : une grande étoile lumineuse traverse l'écran, le message écrit dessus */
 #crAnnonce{position:absolute;top:170px;left:0;width:540px;height:540px;transform:translateX(1150px);pointer-events:none;display:flex;align-items:center;justify-content:center;text-align:center}
 #crAnnonce.passe{animation:etoilePasse 7.5s cubic-bezier(.3,.1,.3,1) forwards}
@@ -890,6 +901,7 @@ const COUL_PAYS = { ci: ["#F77F00", "#FFFFFF", "#009E60"], tg: ["#006A4E", "#FFC
   gn: ["#CE1126", "#FCD116", "#009460"], bf: ["#EF2B2D", "#FCD116", "#009E49"], ne: ["#E05206", "#FFFFFF", "#0DB02B"],
   ml: ["#14B53A", "#FCD116", "#CE1126"], fr: ["#0055A4", "#FFFFFF", "#EF4135"], be: ["#1d1d1d", "#FAE042", "#ED2939"],
   ca: ["#D52B1E", "#FFFFFF", "#D52B1E"], us: ["#3C3B6E", "#FFFFFF", "#B22234"], ma: ["#C1272D", "#006233", "#C1272D"] };
+const bandesDrap = (p) => { const [a, b, c] = COUL_PAYS[p] || ["#888", "#ccc", "#555"]; return `linear-gradient(${DRAP_HORIZ.has(p) ? "180deg" : "90deg"},${a} 33.3%,${b} 33.3% 66.6%,${c} 66.6%)`; };
 const DRAP_HORIZ = new Set(["gh", "ga", "bf", "ne", "sl", "gm"]);
 const CODE3 = { ci: "CIV", tg: "TOG", bj: "BEN", cm: "CMR", ng: "NGA", sn: "SEN", ga: "GAB", cd: "RDC", gh: "GHA", gn: "GUI", bf: "BFA",
   ne: "NIG", ml: "MLI", fr: "FRA", be: "BEL", ca: "CAN", us: "USA", ma: "MAR" };
@@ -981,36 +993,119 @@ function dessineDrapeau(g, code, x, y, w, h) {
 function motif(nom) { const i = CR.img[nom]; if (!i || !i.complete || !i.naturalWidth) return null; return CR["m" + nom] || (CR["m" + nom] = CR.g.createPattern(i, "repeat")); }
 function bande(nom, x, w, decal, secours) { const g = CR.g, m = motif(nom); g.save(); g.beginPath(); g.rect(x, 0, w, CR.H); g.clip();
   if (m) { g.translate(0, decal % 512); g.fillStyle = m; g.fillRect(x, -512, w, CR.H + 1024); } else { g.fillStyle = secours; g.fillRect(x, 0, w, CR.H); } g.restore(); }
-function dessineMonde(scroll) {
-  const g = CR.g, X0 = (CR.W - CR.route) / 2, X1 = X0 + CR.route, bord = 20, lat = 70;
-  bande("herbe", 0, X0 - bord - lat, scroll, "#56702f"); bande("herbe", X1 + bord + lat, CR.W, scroll, "#56702f");
-  bande("laterite", X0 - bord - lat, lat, scroll, "#8f4a2c"); bande("laterite", X1 + bord, lat, scroll, "#8f4a2c");
+// ---- environnements (17/11) : chaque manche traverse 3 décors, un par phase (savane, désert, neige, ville la nuit, plage)
+const ENVS = {
+  savane: { nom: "SAVANE", va: "Direction la savane !", cote: "herbe", bord: "laterite", secCote: "#56702f", secBord: "#8f4a2c" },
+  desert: { nom: "DÉSERT", va: "Direction le désert !", cote: "sable", bord: "sable", secCote: "#d6b076", secBord: "#c49a5e", poussiere: "rgba(214,176,118,.12)" },
+  neige: { nom: "NEIGE", va: "Direction la neige !", cote: "neige", bord: "neige", secCote: "#eef3fb", secBord: "#dfe7f2", poussiere: "rgba(255,255,255,.10)" },
+  ville: { nom: "VILLE LA NUIT", va: "Direction la ville, de nuit !", cote: "trottoir", bord: "trottoir", secCote: "#8e9096", secBord: "#7d8086", nuit: true },
+  plage: { nom: "PLAGE", va: "Direction la plage !", cote: "sable", bord: "sable", secCote: "#e2c58e", secBord: "#d8b87c", mer: true },
+};
+const SEQ_ENVS = [["savane", "desert", "ville"], ["plage", "savane", "neige"], ["desert", "ville", "plage"], ["neige", "plage", "savane"], ["ville", "neige", "desert"]];
+["sable", "neige", "trottoir", "mer"].forEach((n) => chargeImg(n, "/assets/live/course/" + n + ".jpg"));
+const envsManche = (c) => SEQ_ENVS[((c.manche || 1) - 1) % SEQ_ENVS.length];
+const phaseDe = (v) => (v < 100 / 3 ? 0 : v < 200 / 3 ? 1 : 2);
+
+function spriteRocher(k, neige) {
+  const cle = "r" + k + (neige ? "n" : ""); if (CR.sprites[cle]) return CR.sprites[cle];
+  const cv = document.createElement("canvas"); cv.width = cv.height = 150; const g = cv.getContext("2d");
+  g.save(); g.filter = "blur(6px)"; g.fillStyle = "rgba(0,0,0,.4)"; g.beginPath(); g.ellipse(84, 84, 50, 40, .4, 0, 6.283); g.fill(); g.restore();
+  const pts = Array.from({ length: 9 }, (_, i) => { const a = i / 9 * 6.283, r = 34 + hasard(k * 7 + i) * 22; return [72 + Math.cos(a) * r, 72 + Math.sin(a) * r * .8]; });
+  const rg = g.createRadialGradient(58, 56, 4, 72, 72, 60); rg.addColorStop(0, neige ? "#ffffff" : "#b49a7c"); rg.addColorStop(.6, neige ? "#cfd8e6" : "#8a6f55"); rg.addColorStop(1, neige ? "#8a95a8" : "#5b4535");
+  g.fillStyle = rg; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fill(); g.strokeStyle = "rgba(0,0,0,.25)"; g.lineWidth = 2; g.stroke();
+  return (CR.sprites[cle] = cv);
+}
+function spriteAcacia(k) {   // arbre du désert : couronne plate, branches visibles
+  const cle = "ac" + k; if (CR.sprites[cle]) return CR.sprites[cle];
+  const cv = document.createElement("canvas"); cv.width = cv.height = 220; const g = cv.getContext("2d");
+  g.save(); g.filter = "blur(7px)"; g.fillStyle = "rgba(0,0,0,.4)"; g.beginPath(); g.ellipse(124, 124, 88, 60, .3, 0, 6.283); g.fill(); g.restore();
+  for (let i = 0; i < 22; i++) { const a = hasard(k + i * 3) * 6.283, r = hasard(k * 5 + i) * 70, x = 110 + Math.cos(a) * r, y = 110 + Math.sin(a) * r * .7, s = 16 + hasard(i + k) * 18;
+    g.fillStyle = ["#6f7f3a", "#5c6d2e", "#839448"][i % 3]; g.globalAlpha = .9; g.beginPath(); g.arc(x, y, s, 0, 6.283); g.fill(); }
+  g.globalAlpha = 1; return (CR.sprites[cle] = cv);
+}
+function spriteSapin(k) {   // sapin enneigé vu du ciel : étoile verte, neige sur les pointes
+  const cle = "sa" + k; if (CR.sprites[cle]) return CR.sprites[cle];
+  const cv = document.createElement("canvas"); cv.width = cv.height = 180; const g = cv.getContext("2d");
+  g.save(); g.filter = "blur(6px)"; g.fillStyle = "rgba(20,30,60,.35)"; g.beginPath(); g.arc(100, 100, 66, 0, 6.283); g.fill(); g.restore();
+  [[64, "#1f4a2e"], [48, "#2a5e3a"], [32, "#3a7448"], [16, "#4f8a58"]].forEach(([r, c], j) => { g.fillStyle = c; g.beginPath();
+    for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283 + j * .2 + k, rr = i % 2 ? r * .62 : r; g.lineTo(90 + Math.cos(a) * rr, 90 + Math.sin(a) * rr); } g.closePath(); g.fill();
+    g.fillStyle = "rgba(255,255,255,.85)"; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283 + j * .2 + k; g.beginPath(); g.arc(90 + Math.cos(a) * r * .8, 90 + Math.sin(a) * r * .8, 4 + (3 - j), 0, 6.283); g.fill(); } });
+  return (CR.sprites[cle] = cv);
+}
+function spriteImmeuble(k) {   // toit d'immeuble la nuit : climatiseurs, château d'eau, fenêtres éclairées sur le bord
+  const cle = "im" + k; if (CR.sprites[cle]) return CR.sprites[cle];
+  const w = 120 + Math.floor(hasard(k) * 40), h = 170 + Math.floor(hasard(k + 1) * 90), cv = document.createElement("canvas"); cv.width = w + 24; cv.height = h + 24; const g = cv.getContext("2d");
+  g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(18, 18, w, h);
+  g.fillStyle = ["#2b2f3a", "#33303a", "#262b33", "#3a3640"][k % 4]; g.fillRect(0, 0, w, h); g.strokeStyle = "#555b68"; g.lineWidth = 4; g.strokeRect(2, 2, w - 4, h - 4);
+  for (let i = 0; i < 4; i++) { g.fillStyle = "#6b7280"; g.fillRect(14 + hasard(k * 3 + i) * (w - 44), 14 + hasard(k * 5 + i) * (h - 44), 26, 18); g.fillStyle = "#4b5260"; g.beginPath(); g.arc(27 + hasard(k * 3 + i) * (w - 44), 23 + hasard(k * 5 + i) * (h - 44), 6, 0, 6.283); g.fill(); }
+  g.fillStyle = "#59606e"; g.beginPath(); g.arc(w * .7, h * .7, 16, 0, 6.283); g.fill();
+  for (let y = 8; y < h - 8; y += 16) if (hasard(k * 11 + y) > .45) { g.fillStyle = hasard(y + k) > .5 ? "#ffd27a" : "#9fd7ff"; g.fillRect(w - 6, y, 4, 9); }
+  return (CR.sprites[cle] = cv);
+}
+function spriteParasol(k) {
+  const cle = "pa" + k; if (CR.sprites[cle]) return CR.sprites[cle];
+  const cv = document.createElement("canvas"); cv.width = cv.height = 130; const g = cv.getContext("2d"), cs = [["#ff5a5a", "#fff"], ["#2f80ed", "#fff"], ["#F5C14B", "#ff7a3c"], ["#7B5CFF", "#8FD3FF"]][k % 4];
+  g.save(); g.filter = "blur(5px)"; g.fillStyle = "rgba(0,0,0,.35)"; g.beginPath(); g.arc(76, 76, 48, 0, 6.283); g.fill(); g.restore();
+  for (let i = 0; i < 8; i++) { g.fillStyle = cs[i % 2]; g.beginPath(); g.moveTo(62, 62); g.arc(62, 62, 48, i / 8 * 6.283, (i + 1) / 8 * 6.283); g.closePath(); g.fill(); }
+  g.fillStyle = "#fff"; g.beginPath(); g.arc(62, 62, 5, 0, 6.283); g.fill();
+  g.fillStyle = cs[0]; g.globalAlpha = .9; g.fillRect(84, 96, 40, 22); g.globalAlpha = 1;   // serviette
+  return (CR.sprites[cle] = cv);
+}
+function spriteLampadaire() {
+  if (CR.sprites.lamp) return CR.sprites.lamp;
+  const cv = document.createElement("canvas"); cv.width = cv.height = 260; const g = cv.getContext("2d");
+  const rg = g.createRadialGradient(130, 130, 4, 130, 130, 125); rg.addColorStop(0, "rgba(255,214,140,.75)"); rg.addColorStop(.35, "rgba(255,190,100,.28)"); rg.addColorStop(1, "rgba(255,190,100,0)");
+  g.fillStyle = rg; g.fillRect(0, 0, 260, 260); g.fillStyle = "#fff6d8"; g.beginPath(); g.arc(130, 130, 9, 0, 6.283); g.fill();
+  return (CR.sprites.lamp = cv);
+}
+
+function dessineMonde(scroll, envNom) {
+  const g = CR.g, X0 = (CR.W - CR.route) / 2, X1 = X0 + CR.route, bord = 20, lat = 70, E2 = ENVS[envNom] || ENVS.savane;
+  if (E2.mer) { bande(E2.cote, 0, X0 - bord - lat, scroll, E2.secCote); bande("mer", X1 + bord + lat + 60, CR.W, scroll * .6, "#1f8fa8");
+    bande(E2.cote, X1 + bord + lat, 60, scroll, E2.secCote);
+    const t = Date.now() / 900; g.strokeStyle = "rgba(255,255,255,.75)"; g.lineWidth = 5; g.beginPath();   // l'écume qui va et vient
+    for (let y = 0; y <= CR.H; y += 20) { const x = X1 + bord + lat + 60 + Math.sin(y / 70 + t + scroll / 140) * 10 + Math.sin(t * 1.7) * 6; y ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+  else { bande(E2.cote, 0, X0 - bord - lat, scroll, E2.secCote); bande(E2.cote, X1 + bord + lat, CR.W, scroll, E2.secCote); }
+  bande(E2.bord, X0 - bord - lat, lat, scroll, E2.secBord); bande(E2.bord, X1 + bord, lat, scroll, E2.secBord);
   bande("asphalte", X0, CR.route, scroll, "#3b3d42");
-  // ombre douce de la latérite sur l'herbe, usure des pistes
-  const og = g.createLinearGradient(X0 - bord - lat - 24, 0, X0 - bord - lat, 0); og.addColorStop(0, "rgba(0,0,0,0)"); og.addColorStop(1, "rgba(0,0,0,.25)"); g.fillStyle = og; g.fillRect(X0 - bord - lat - 24, 0, 24, CR.H);
-  const od = g.createLinearGradient(X1 + bord + lat + 24, 0, X1 + bord + lat, 0); od.addColorStop(0, "rgba(0,0,0,0)"); od.addColorStop(1, "rgba(0,0,0,.25)"); g.fillStyle = od; g.fillRect(X1 + bord + lat, 0, 24, CR.H);
+  if (E2.poussiere) { g.fillStyle = E2.poussiere; g.fillRect(X0, 0, CR.route, CR.H); }
+  if (envNom === "neige") { const ng = g.createLinearGradient(X0, 0, X0 + 70, 0); ng.addColorStop(0, "rgba(255,255,255,.7)"); ng.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = ng; g.fillRect(X0, 0, 70, CR.H);
+    const nd = g.createLinearGradient(X1, 0, X1 - 70, 0); nd.addColorStop(0, "rgba(255,255,255,.7)"); nd.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = nd; g.fillRect(X1 - 70, 0, 70, CR.H); }
+  const og = g.createLinearGradient(X0 - bord - lat - 24, 0, X0 - bord - lat, 0); og.addColorStop(0, "rgba(0,0,0,0)"); og.addColorStop(1, "rgba(0,0,0,.22)"); g.fillStyle = og; g.fillRect(X0 - bord - lat - 24, 0, 24, CR.H);
   for (let l = 0; l < 4; l++) { const cx = X0 + CR.piste * l + CR.piste / 2; g.fillStyle = "rgba(0,0,0,.10)"; g.fillRect(cx - 44, 0, 18, CR.H); g.fillRect(cx + 26, 0, 18, CR.H); }
-  // vibreurs rouge et blanc
-  const blocs = 46, d = scroll % (blocs * 2);
-  for (let y = -blocs * 2 + d; y < CR.H; y += blocs) { const k = Math.round((y - d) / blocs) & 1; g.fillStyle = k ? "#d7262e" : "#f2f2f2"; g.fillRect(X0 - bord, y, bord, blocs); g.fillRect(X1, y, bord, blocs); }
-  g.fillStyle = "rgba(0,0,0,.18)"; g.fillRect(X0 - bord, 0, 3, CR.H); g.fillRect(X1 + bord - 3, 0, 3, CR.H);
-  // lignes blanches pointillées entre les pistes, lignes de bord continues
+  const blocs = 46, d = scroll % (blocs * 2), coulV = envNom === "ville" ? ["#F5C14B", "#222"] : envNom === "neige" ? ["#2f6fd6", "#f2f2f2"] : ["#d7262e", "#f2f2f2"];
+  for (let y = -blocs * 2 + d; y < CR.H; y += blocs) { const k = Math.round((y - d) / blocs) & 1; g.fillStyle = k ? coulV[0] : coulV[1]; g.fillRect(X0 - bord, y, bord, blocs); g.fillRect(X1, y, bord, blocs); }
   g.fillStyle = "rgba(240,240,235,.85)"; g.fillRect(X0 + 6, 0, 6, CR.H); g.fillRect(X1 - 12, 0, 6, CR.H);
   const tir = 70, pas = 150, dd = scroll % pas;
   for (let l = 1; l < 4; l++) { const x = X0 + CR.piste * l - 3; for (let y = -pas + dd; y < CR.H; y += pas) g.fillRect(x, y, 6, tir); }
-  // décor : toutes les 240 px de route, de chaque côté, un élément choisi au hasard (toujours le même à cette distance)
-  const seg = 240, premier = Math.floor(-scroll / seg) - 2;
+  // décor de l'environnement : toutes les 240 px de route, de chaque côté (toujours le même à cette distance)
+  const seg = 240, premier = Math.floor(-scroll / seg) - 2, lampes = [];
   for (let i = premier; i < premier + Math.ceil(CR.H / seg) + 4; i++) {
     const y = i * seg + scroll;
-    [0, 1].forEach((cote) => { const h = hasard(i * 2 + cote), xa = cote ? X1 + bord + lat + 20 : 0, larg = X0 - bord - lat - 20;
-      let sp = null, x = 0, yy = y;
-      if (i % 9 === 4 + cote) { sp = spriteTribune(i & 3); x = cote ? xa + 6 : larg - 138; }
-      else if (h < .42) { sp = spriteArbre(Math.floor(h * 100)); x = xa + 10 + hasard(i * 5 + cote) * (larg - 190); }
-      else if (h < .68) { sp = spritePalmier(Math.floor(h * 100) % 6); x = xa + hasard(i * 3 + cote) * (larg - 200); }
-      else if (h < .74) { sp = spritePanneau(); x = cote ? xa + 4 : larg - 52; }
-      if (sp) g.drawImage(sp, x, yy - sp.height / 2); });
+    [0, 1].forEach((cote) => { if (E2.mer && cote) return;
+      const h = hasard(i * 2 + cote + envNom.length * 13), xa = cote ? X1 + bord + lat + 20 : 0, larg = X0 - bord - lat - 20, r = hasard(i * 5 + cote);
+      let sp = null, x = 0;
+      if (envNom === "savane") { if (i % 9 === 4 + cote) { sp = spriteTribune(i & 3); x = cote ? xa + 6 : larg - 138; } else if (h < .42) { sp = spriteArbre(Math.floor(h * 100)); x = xa + 10 + r * (larg - 190); }
+        else if (h < .68) { sp = spritePalmier(Math.floor(h * 100) % 6); x = xa + r * (larg - 200); } else if (h < .74) { sp = spritePanneau(); x = cote ? xa + 4 : larg - 52; } }
+      else if (envNom === "desert") { if (h < .3) { sp = spriteRocher(Math.floor(h * 50), false); x = xa + r * (larg - 150); } else if (h < .5) { sp = spriteAcacia(Math.floor(h * 30)); x = xa + r * (larg - 200); }
+        else if (h < .56) { sp = spritePanneau(); x = cote ? xa + 4 : larg - 52; } }
+      else if (envNom === "neige") { if (h < .55) { sp = spriteSapin(Math.floor(h * 40)); x = xa + r * (larg - 170); } else if (h < .7) { sp = spriteRocher(Math.floor(h * 40), true); x = xa + r * (larg - 150); }
+        else if (i % 9 === 4 + cote) { sp = spriteTribune(i & 3); x = cote ? xa + 6 : larg - 138; } }
+      else if (envNom === "ville") { sp = spriteImmeuble(Math.floor(h * 20)); x = cote ? xa + 30 : larg - sp.width - 10; if (i % 2 === cote) lampes.push([cote ? X1 + bord + 30 : X0 - bord - 30, y]); }
+      else if (envNom === "plage") { if (h < .45) { sp = spritePalmier(Math.floor(h * 100) % 6); x = xa + r * (larg - 200); } else if (h < .8) { sp = spriteParasol(Math.floor(h * 40)); x = xa + r * (larg - 130); } }
+      if (sp) g.drawImage(sp, x, y - sp.height / 2); });
   }
+  if (E2.nuit) { g.fillStyle = "rgba(6,8,30,.48)"; g.fillRect(0, 0, CR.W, CR.H); g.save(); g.globalCompositeOperation = "lighter"; const L = spriteLampadaire(); lampes.forEach(([x, y]) => g.drawImage(L, x - 130, y - 130)); g.restore(); }
 }
+function arche(y, texte) {   // portique de fin de phase au-dessus de la route
+  const g = CR.g, X0 = (CR.W - CR.route) / 2, c = 20;
+  g.fillStyle = "rgba(0,0,0,.35)"; g.fillRect(X0 - 40, y + 22, CR.route + 80, 70);
+  g.fillStyle = "#1b1530"; g.fillRect(X0 - 60, y, 30, 64); g.fillRect(X0 + CR.route + 30, y, 30, 64);
+  const lg = g.createLinearGradient(0, y, 0, y + 64); lg.addColorStop(0, "#7B5CFF"); lg.addColorStop(1, "#4b2fb8"); g.fillStyle = lg; g.fillRect(X0 - 30, y + 6, CR.route + 60, 52);
+  for (let k = 0; k < (CR.route + 60) / c; k++) { g.fillStyle = k % 2 ? "#111" : "#fff"; g.fillRect(X0 - 30 + k * c, y + 52, c, 8); }
+  g.fillStyle = "#fff"; g.font = "900 30px Montserrat,Arial"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(texte, CR.W / 2, y + 30);
+}
+
 function ligneTravers(y, type) {   // départ (blanc + damier) ou arrivée (damier)
   const g = CR.g, X0 = (CR.W - CR.route) / 2, c = 24;
   for (let r = 0; r < 2; r++) for (let k = 0; k < CR.route / c; k++) { g.fillStyle = (k + r) % 2 ? "#111" : "#f4f4f4"; g.fillRect(X0 + k * c, y + r * c, c, c); }
@@ -1031,8 +1126,14 @@ function boucleCourse() {
   c.pays.forEach((p) => { const cible = posCible(c, p); CR.aff[p] = CR.aff[p] == null ? cible : CR.aff[p] + (cible - CR.aff[p]) * Math.min(1, dt * 5); });
   const tete = Math.max(...c.pays.map((p) => CR.aff[p]));
   const scroll = tete / 100 * DISTANCE;   // la caméra suit la voiture de tête
-  dessineMonde(scroll);
   const X0 = (CR.W - CR.route) / 2, YT = 820, K = 30;   // la tête à 820 px ; 1 % de retard = 30 px plus bas
+  const envs = envsManche(c), yPh = (v) => YT - 118 - (v - tete) / 100 * DISTANCE;   // la ligne de fin de phase, à l'avant des voitures
+  for (let k = 0; k < 3; k++) {   // la phase k couvre la route entre k/3 et (k+1)/3 : chacune a son décor
+    const bas = k === 0 ? CR.H : Math.min(CR.H, yPh(k * 100 / 3)), haut = k === 2 ? 0 : Math.max(0, yPh((k + 1) * 100 / 3));
+    if (bas <= 0 || haut >= CR.H || bas <= haut) continue;
+    g.save(); g.beginPath(); g.rect(0, haut, CR.W, bas - haut); g.clip(); dessineMonde(scroll, envs[k]); g.restore();
+  }
+  [1, 2].forEach((k) => { const y = yPh(k * 100 / 3) - 64; if (y > -90 && y < CR.H) arche(y, "PHASE " + (k + 1) + " · " + ENVS[envs[k]].nom); });
   const yEcran = (v) => Math.min(1440, YT + (tete - v) * K);
   const yMonde = (v, cale) => YT + cale - (v - tete) / 100 * DISTANCE;   // un point fixe de la route (v = % de piste)
   const yD = yMonde(0, 150);
@@ -1040,6 +1141,11 @@ function boucleCourse() {
   const yA = yMonde(100, -118); if (yA > -80 && yA < CR.H) ligneTravers(yA - 48, "arrivee");
   // voitures
   const classement = [...c.pays].sort((a, b) => CR.aff[b] - CR.aff[a]);
+  // la voiture de tête franchit une arche : fin de phase, panneau des positions, la foule crie
+  const ph = phaseDe(tete);
+  if (c.phase === "course" && ph > (CR.phaseVue || 0)) { CR.phaseVue = ph; finDePhase(c, ph, classement, tete); }
+  if (c.phase === "course" && classement[0] !== CR.tete && CR.tete && now - (CR.depasse || 0) > 4000 && (c.t - now - CR.off) < 0) { CR.depasse = now; sonC("passage", .55); }
+  CR.tete = classement[0];
   c.pays.forEach((p, l) => {
     const v = CR.aff[p], cx = X0 + l * CR.piste + CR.piste / 2; let y = yEcran(v), ang = 0, dx = 0;
     const ch = CR.chocs[p]; if (ch && now - ch.t < 1400) { const k = (now - ch.t) / 1400; ang = Math.sin(k * 28) * .32 * (1 - k); dx = Math.sin(k * 20) * 26 * (1 - k); }
@@ -1073,40 +1179,41 @@ function boucleCourse() {
   const reste = (c.t - (now + CR.off)) / 1000;
   const cd = $("crDecompte");
   if (c.phase === "course" && reste > -1) { const n = Math.ceil(reste); cd.style.display = "flex"; cd.textContent = reste > 0 ? n : "PARTEZ !"; cd.className = reste > 0 ? "n" + n : "go";
-    if (n !== CR.departVu && reste > 0 && n <= 3) { CR.departVu = n; joueSfx("ding"); } if (reste <= 0 && CR.departVu !== "go") { CR.departVu = "go"; joueSfx("boom"); } }
+    if (reste > 0 && CR.departVu !== "son") { CR.departVu = "son"; sonC("decompte", .9); } }
   else cd.style.display = "none";
 }
 function course() {
   const c = E.course, V = $("courseV"), on = !!(c && c.on);
   document.body.classList.toggle("course-on", on);
-  if (!on) { CR.cle = ""; return; }
+  if (!on) { CR.cle = ""; ambianceCourse(false); return; }
+  ambianceCourse(c.phase === "course");
   if (c.srv) CR.off = c.srv - Date.now();
   if (!CR.g) { V.innerHTML = `<canvas id="crC" width="1080" height="1920"></canvas>
       <div class="haut"><div class="t1">LA COURSE DES CAURIS</div><div class="t2" id="crManche"></div></div>
       <div class="vict" id="crVict"></div><div id="crDecompte"></div><div class="evt" id="crEvt"></div>
-      <div class="bas"><b>ÉCRIS TON PAYS POUR ACCÉLÉRER</b><span class="l">❤ like = boost ton pays</span><span>🌹 rose = turbo</span><span>🎁 10 pièces = bouscule</span></div><div class="finV" id="crFin"></div>
+      <div class="bas"><b>ÉCRIS TON PAYS POUR ACCÉLÉRER</b><span class="l">❤ like = boost ton pays</span><span>🌹 rose = turbo</span><span>🎁 10 pièces = bouscule</span></div><div class="finV" id="crFin"></div><div id="crPhase"></div>
       <div id="crAnnonce"><div class="halo"></div><svg viewBox="0 0 100 100"><defs><radialGradient id="eg" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#fffbe0"/><stop offset=".55" stop-color="#ffd84a"/><stop offset="1" stop-color="#f29a12"/></radialGradient></defs>
         <polygon points="50,2 61.8,35 97,36 69,57.5 79.5,92 50,71.5 20.5,92 31,57.5 3,36 38.2,35" fill="url(#eg)" stroke="#fff3b0" stroke-width="1.2" stroke-linejoin="round"/></svg><div class="txt" id="crAnnTxt"></div></div>`;
     CR.g = $("crC").getContext("2d"); }
   const cle = c.manche + "|" + c.pays.join(",");
-  if (cle !== CR.cle) { CR.cle = cle; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
+  if (cle !== CR.cle) { CR.cle = cle; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; CR.phaseVue = 0; CR.tete = null; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
   const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
-  $("crVict").innerHTML = vic.map(([p, n]) => `<span><i style="background:url('/assets/img/flags/${p}.svg') center/cover,linear-gradient(90deg,${(COUL_PAYS[p] || ["#888", "#ccc", "#555"]).join(",")})"></i>${n} 🏆</span>`).join("");
+  $("crVict").innerHTML = vic.map(([p, n]) => `<span><i style="background:url('/assets/img/flags/${p}.svg') center/cover,${bandesDrap(p)}"></i>${n} 🏆</span>`).join("");
   // nouveaux noms qui poussent (les 2 derniers de chaque pays) → « +Nom » au-dessus de la voiture
   const vus = CR.vusNoms || (CR.vusNoms = {});
   c.pays.forEach((p) => { const d = (c.derniers || {})[p] || [], cleN = d.join("|"); if (vus[p] !== undefined && vus[p] !== cleN && d[0]) (CR.noms = CR.noms || []).push({ p, nom: d[0], t: Date.now(), dx: (Math.random() - .5) * 60 }); vus[p] = cleN; });
   if (!CR.annonceT) annonceSuivante();
   if (c.manche !== CR.mancheAnn) { CR.mancheAnn = c.manche; annonce(c.manche === 1 ? "1<sup style='font-size:.5em'>RE</sup> MANCHE" : "MANCHE " + c.manche, "C'EST PARTI !"); }
-  const b = c.boost; if (b && b.t !== CR.boostT) { CR.boostT = b.t; CR.boosts[b.code] = Date.now(); evtCourse(`🌹 ${esc(b.nom)} : BOOST ${esc(CODE3[b.code] || b.code)}`, "boost"); joueSfx("montee"); }
+  const b = c.boost; if (b && b.t !== CR.boostT) { CR.boostT = b.t; CR.boosts[b.code] = Date.now(); evtCourse(`🌹 ${esc(b.nom)} : BOOST ${esc(CODE3[b.code] || b.code)}`, "boost"); sonC("boost", .8); sonC("klaxon", .6); }
   const ch = c.choc; if (ch && ch.t !== CR.chocT) { CR.chocT = ch.t; const lA = c.pays.indexOf(ch.de), lB = c.pays.indexOf(ch.vers);
     CR.chocs[ch.vers] = { t: Date.now() }; CR.chocs["de" + ch.de] = { t: Date.now(), sens: Math.sign(lB - lA) || 1 };
     const X0 = (CR.W - CR.route) / 2, cx = X0 + lB * CR.piste + CR.piste / 2;
     for (let i = 0; i < 40; i++) CR.etincelles.push({ x: cx, y: 760, vx: (Math.random() - .5) * 14, vy: -Math.random() * 10, vie: .6 + Math.random() * .5 });
-    evtCourse(`💥 ${esc(ch.nom)} bouscule ${esc((c.noms || {})[ch.vers] || ch.vers)} !`, "choc"); joueSfx("boom"); }
+    evtCourse(`💥 ${esc(ch.nom)} bouscule ${esc((c.noms || {})[ch.vers] || ch.vers)} !`, "choc"); sonC("choc", .95); }
   V.classList.toggle("fin", c.phase === "fin");
   if (c.phase === "fin" && c.tFin !== CR.finT) { CR.finT = c.tFin; const gg = c.gagnant;
-    $("crFin").innerHTML = gg ? `<i class="dr" style="background:url('/assets/img/flags/${gg}.svg') center/cover,linear-gradient(90deg,${(COUL_PAYS[gg] || ["#888", "#ccc", "#555"]).join(",")})"></i><div class="g">${esc(((c.noms || {})[gg] || gg).toUpperCase())}</div><div class="g2">GAGNE LA MANCHE</div>${c.meilleur ? `<div class="s">Meilleur pilote : ${esc(c.meilleur)}</div>` : ""}<div class="s" id="crSuite"></div>` : "";
-    if (gg) { joueSfx("merci"); try { $("sonGong").currentTime = 0; $("sonGong").play().catch(() => {}); } catch (e) {} } }
+    $("crFin").innerHTML = gg ? `<i class="dr" style="background:url('/assets/img/flags/${gg}.svg') center/cover,${bandesDrap(gg)}"></i><div class="g">${esc(((c.noms || {})[gg] || gg).toUpperCase())}</div><div class="g2">GAGNE LA MANCHE</div>${c.meilleur ? `<div class="s">Meilleur pilote : ${esc(c.meilleur)}</div>` : ""}<div class="s" id="crSuite"></div>` : "";
+    if (gg) { sonC("fanfare", .85); sonC("victoire", .7, 7000); } }
   if (!CR.anim) boucleCourse();
 }
 // l'étoile-annonce : un message toutes les ~16 s (jamais deux fois le même de suite) ; « dernière ligne droite » à 85 %
@@ -1120,6 +1227,29 @@ function annonceSuivante() {
   const tete = Math.max(...c.pays.map((p) => CR.aff[p] || 0));
   if (tete > 85 && !CR.dernLigne) { CR.dernLigne = c.manche; annonce("DERNIÈRE LIGNE DROITE !", "TOUT LE MONDE DANS LE CHAT"); return; }
   let i; do { i = Math.floor(Math.random() * ANNONCES.length); } while (i === CR.annI && ANNONCES.length > 1); CR.annI = i; annonce(...ANNONCES[i]);
+}
+// ---- sons de la course (Mixkit, libres) : musique d'ambiance qui tourne, moteurs, foule, klaxon, choc, fanfare
+const SON_C = "/assets/live/course/sons/";
+function sonC(nom, vol = .8, duree = 0) {
+  if (APERCU) return; try { const a = new Audio(SON_C + nom + ".mp3"); a.volume = vol; a.play().catch(() => {});
+    if (duree) setTimeout(() => { const f = setInterval(() => { if (a.volume <= .07) { a.pause(); clearInterval(f); } else a.volume = Math.max(0, a.volume - .07); }, 60); }, duree);
+    return a; } catch (e) {}
+}
+function ambianceCourse(roule) {
+  if (APERCU) return;
+  if (roule === false && !E.course?.on) { [CR.musique, CR.moteur].forEach((a) => a && a.pause()); CR.musique = CR.moteur = null; return; }
+  if (!CR.musique) { const suivante = () => { const l = [1, 2, 3, 4, 5, 6, 7].filter((n) => n !== CR.mDer); CR.mDer = l[Math.floor(Math.random() * l.length)];
+      const a = new Audio(SON_C + "m" + CR.mDer + ".mp3"); a.volume = .32; a.onended = () => { if (CR.musique === a) { CR.musique = null; ambianceCourse(true); } }; a.play().catch(() => {}); return a; };
+    CR.musique = suivante(); }
+  if (!CR.moteur) { CR.moteur = new Audio(SON_C + "moteur.mp3"); CR.moteur.loop = true; CR.moteur.volume = .1; }
+  if (roule && CR.moteur.paused) CR.moteur.play().catch(() => {}); if (!roule && !CR.moteur.paused) CR.moteur.pause();
+}
+function finDePhase(c, ph, classement, tete) {
+  const el = $("crPhase"), envs = envsManche(c), v = c.vitesse || .5;
+  el.innerHTML = `<div class="ph1">FIN DE LA PHASE ${ph}</div><div class="ph2">${esc(ENVS[envs[ph]].va)}</div>` + classement.map((p, i) =>
+    `<div class="lg ${i ? "" : "p1"}"><b>${i + 1}</b><i style="background:url('/assets/img/flags/${p}.svg') center/cover,${bandesDrap(p)}"></i><span>${esc((c.noms || {})[p] || p)}</span><em>${i ? "+" + ((tete - CR.aff[p]) / v).toFixed(1).replace(".", ",") + " s" : "EN TÊTE"}</em></div>`).join("");
+  el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); clearTimeout(finDePhase.t); finDePhase.t = setTimeout(() => el.classList.remove("on"), 5500);
+  sonC("foule-cri", .7, 4500); sonC("passage", .6);
 }
 function evtCourse(html, type) { const el = $("crEvt"); el.innerHTML = html; el.className = "evt on " + type; clearTimeout(evtCourse.t); evtCourse.t = setTimeout(() => (el.className = "evt"), 3200); }
 setInterval(() => { const c = E.course, s = $("crSuite"); if (c && c.on && c.phase === "fin" && s) s.textContent = "Prochaine manche dans " + Math.max(0, Math.ceil((c.tFin + 14000 - Date.now() - CR.off) / 1000)) + " s"; }, 250);
@@ -1181,19 +1311,24 @@ const fx = { parts: [], t: 0 };
 const COLS = ["#F5C14B", "#7B5CFF", "#8FD3FF", "#ff4d5e", "#2ee59d", "#ffffff"], imgDrap = {};
 const drap = (c) => { if (!imgDrap[c]) { const i = new Image(); i.src = `/assets/img/flags/${c}.svg`; imgDrap[c] = i; } return imgDrap[c]; };
 function particules(type) {
+  if (E.course && E.course.on) return;   // 17/11 : « les confettis font ramer le PC » : rien par-dessus la course
   const R = Math.random, add = (o) => fx.parts.push({ type, r: R() * 6.28, vr: (R() - .5) * .3, c: COLS[fx.parts.length % COLS.length], vie: 0, ...o });
-  if (type === "confettis") for (let i = 0; i < 260; i++) add({ x: 540 + (R() - .5) * 200, y: 1100, vx: (R() - .5) * 34, vy: -18 - R() * 26, s: 10 + R() * 12 });
-  else if (type === "cauris" || type === "coeurs") for (let i = 0; i < (type === "coeurs" ? 70 : 55); i++) add({ x: R() * 1080, y: -60 - R() * 380, vx: (R() - .5) * 3, vy: 14 + R() * 12, s: type === "cauris" ? 38 + R() * 26 : 30 + R() * 30 });
-  else if (type === "paillettes") for (let i = 0; i < 170; i++) add({ x: R() * 1080, y: -20 - R() * 700, vx: (R() - .5) * 1.5, vy: 4 + R() * 6, s: 6 + R() * 12, c: R() < .7 ? "#F5C14B" : "#fff" });
-  else if (type === "artifice") for (let b = 0; b < 6; b++) { const x0 = 150 + R() * 780, y0 = 250 + R() * 800, c = COLS[b % 5];
-    for (let k = 0; k < 70; k++) { const a = k / 70 * 6.28, v = 6 + R() * 9; add({ x: x0, y: y0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: 4 + R() * 4, c, vie: -b * 14 }); } }
-  else if (type === "ballons") for (let i = 0; i < 26; i++) add({ x: 60 + R() * 960, y: 1990, vx: (R() - .5) * 1.5, vy: -10 - R() * 7, s: 60 + R() * 30, r: 0, vr: 0, vie: -Math.floor(R() * 40) });
+  if (type === "confettis") for (let i = 0; i < 110; i++) add({ x: 540 + (R() - .5) * 200, y: 1100, vx: (R() - .5) * 34, vy: -18 - R() * 26, s: 10 + R() * 12 });
+  else if (type === "cauris" || type === "coeurs") for (let i = 0; i < (type === "coeurs" ? 34 : 26); i++) add({ x: R() * 1080, y: -60 - R() * 380, vx: (R() - .5) * 3, vy: 14 + R() * 12, s: type === "cauris" ? 38 + R() * 26 : 30 + R() * 30 });
+  else if (type === "paillettes") for (let i = 0; i < 80; i++) add({ x: R() * 1080, y: -20 - R() * 700, vx: (R() - .5) * 1.5, vy: 4 + R() * 6, s: 6 + R() * 12, c: R() < .7 ? "#F5C14B" : "#fff" });
+  else if (type === "artifice") for (let b = 0; b < 4; b++) { const x0 = 150 + R() * 780, y0 = 250 + R() * 800, c = COLS[b % 5];
+    for (let k = 0; k < 36; k++) { const a = k / 36 * 6.28, v = 6 + R() * 9; add({ x: x0, y: y0, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: 4 + R() * 4, c, vie: -b * 14 }); } }
+  else if (type === "ballons") for (let i = 0; i < 14; i++) add({ x: 60 + R() * 960, y: 1990, vx: (R() - .5) * 1.5, vy: -10 - R() * 7, s: 60 + R() * 30, r: 0, vr: 0, vie: -Math.floor(R() * 40) });
   else if (type === "etoiles") for (let i = 0; i < 12; i++) add({ x: -200 + R() * 700, y: -100 + R() * 700, vx: 26 + R() * 12, vy: 12 + R() * 8, s: 4, r: 0, vr: 0, c: "#fff", vie: -Math.floor(R() * 90) });
-  else if (type === "notes") for (let i = 0; i < 50; i++) add({ x: R() * 1080, y: 1990, vx: (R() - .5) * 2, vy: -8 - R() * 7, s: 50 + R() * 40, g: R() < .5 ? "\u266a" : "\u266b", r: (R() - .5) * .5, vr: 0, vie: -Math.floor(R() * 50) });
+  else if (type === "notes") for (let i = 0; i < 24; i++) add({ x: R() * 1080, y: 1990, vx: (R() - .5) * 2, vy: -8 - R() * 7, s: 50 + R() * 40, g: R() < .5 ? "\u266a" : "\u266b", r: (R() - .5) * .5, vr: 0, vie: -Math.floor(R() * 50) });
   else if (type === "drapeaux") { const codes = E.scene === "top3" && D.pays[E.pays] ? [D.pays[E.pays].code] : (D.pays || []).map((p) => p.code); if (!codes.length) return;
-    for (let i = 0; i < 40; i++) add({ x: R() * 1080, y: -80 - R() * 400, vx: (R() - .5) * 3, vy: 9 + R() * 8, s: 90 + R() * 40, img: drap(codes[i % codes.length]), vr: (R() - .5) * .1 }); }
+    for (let i = 0; i < 18; i++) add({ x: R() * 1080, y: -80 - R() * 400, vx: (R() - .5) * 3, vy: 9 + R() * 8, s: 90 + R() * 40, img: drap(codes[i % codes.length]), vr: (R() - .5) * .1 }); }
 }
-function dessineFx() {
+let fxVide = false, fxDer = 0;
+function dessineFx(now) {
+  requestAnimationFrame(dessineFx);
+  if (!fx.parts.length) { if (!fxVide) { $("fxc").getContext("2d").clearRect(0, 0, 1080, 1920); fxVide = true; } return; }   // rien à dessiner : on ne touche à rien
+  if (now - fxDer < 30) return; fxDer = now; fxVide = false;   // ~30 images/s suffisent
   const c = $("fxc"), x = c.getContext("2d"); x.clearRect(0, 0, 1080, 1920);
   fx.parts = fx.parts.filter((p) => p.vie < 150 && p.y < 2100 && p.y > -700 && p.x > -400 && p.x < 1500);   // 2,5 s au plus
   for (const p of fx.parts) {
@@ -1209,8 +1344,7 @@ function dessineFx() {
     else if (p.type === "cauris") { // coquillage cauri vu de dessous : dôme nacré, fente centrale bordée de petites dents
       const L = p.s, W = p.s * .72;
       const g = x.createRadialGradient(-W * .35, -L * .45, 2, 0, 0, L * 1.1); g.addColorStop(0, "#fffdf6"); g.addColorStop(.45, "#f3e6cc"); g.addColorStop(1, "#c8a46c");
-      x.shadowColor = "rgba(0,0,0,.35)"; x.shadowBlur = 10; x.shadowOffsetY = 4;
-      x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, W, L, 0, 0, 6.28); x.fill(); x.shadowColor = "transparent";
+      x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, W, L, 0, 0, 6.28); x.fill();
       x.fillStyle = "rgba(255,255,255,.65)"; x.beginPath(); x.ellipse(-W * .38, -L * .35, W * .18, L * .32, -.25, 0, 6.28); x.fill();
       x.strokeStyle = "#6b4a24"; x.lineWidth = Math.max(2, W * .09); x.lineCap = "round";
       x.beginPath(); x.moveTo(0, -L * .82); x.bezierCurveTo(W * .16, -L * .3, -W * .16, L * .3, 0, L * .82); x.stroke();
@@ -1219,17 +1353,16 @@ function dessineFx() {
     }
     else if (p.type === "paillettes") { x.globalAlpha *= .5 + .5 * Math.abs(Math.sin(p.vie / 5 + p.s)); x.fillStyle = p.c; const s = p.s;
       x.beginPath(); x.moveTo(0, -s); x.quadraticCurveTo(0, 0, s, 0); x.quadraticCurveTo(0, 0, 0, s); x.quadraticCurveTo(0, 0, -s, 0); x.quadraticCurveTo(0, 0, 0, -s); x.fill(); }
-    else if (p.type === "artifice") { x.fillStyle = p.c; x.shadowColor = p.c; x.shadowBlur = 14; x.beginPath(); x.arc(0, 0, p.s, 0, 6.28); x.fill(); }
+    else if (p.type === "artifice") { x.fillStyle = p.c; x.beginPath(); x.arc(0, 0, p.s * 1.2, 0, 6.28); x.fill(); }
     else if (p.type === "ballons") { x.strokeStyle = "rgba(255,255,255,.7)"; x.lineWidth = 2; x.beginPath(); x.moveTo(0, p.s * .55); x.quadraticCurveTo(8, p.s, 0, p.s * 1.6); x.stroke();
       x.fillStyle = p.c; x.beginPath(); x.ellipse(0, 0, p.s * .42, p.s * .55, 0, 0, 6.28); x.fill(); x.fillStyle = "rgba(255,255,255,.4)"; x.beginPath(); x.ellipse(-p.s * .15, -p.s * .2, p.s * .09, p.s * .16, -.4, 0, 6.28); x.fill(); }
     else if (p.type === "etoiles") { const g = x.createLinearGradient(0, 0, -p.vx * 7, -p.vy * 7); g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(1, "rgba(143,211,255,0)");
-      x.strokeStyle = g; x.lineWidth = 6; x.lineCap = "round"; x.beginPath(); x.moveTo(0, 0); x.lineTo(-p.vx * 7, -p.vy * 7); x.stroke(); x.fillStyle = "#fff"; x.shadowColor = "#8FD3FF"; x.shadowBlur = 20; x.beginPath(); x.arc(0, 0, 7, 0, 6.28); x.fill(); }
+      x.strokeStyle = g; x.lineWidth = 6; x.lineCap = "round"; x.beginPath(); x.moveTo(0, 0); x.lineTo(-p.vx * 7, -p.vy * 7); x.stroke(); x.fillStyle = "#fff"; x.beginPath(); x.arc(0, 0, 7, 0, 6.28); x.fill(); }
     else if (p.type === "notes") { x.fillStyle = p.c; x.font = `${p.s}px serif`; x.fillText(p.g, -p.s / 3, p.s / 3); }
-    else if (p.type === "drapeaux") { if (p.img.complete && p.img.naturalWidth) { x.shadowColor = "rgba(0,0,0,.4)"; x.shadowBlur = 8; x.drawImage(p.img, -p.s / 2, -p.s / 3, p.s, p.s * 2 / 3); } }
+    else if (p.type === "drapeaux") { if (p.img.complete && p.img.naturalWidth) { x.drawImage(p.img, -p.s / 2, -p.s / 3, p.s, p.s * 2 / 3); } }
     else { x.fillStyle = p.c; const s = p.s / 2; x.beginPath(); x.moveTo(0, s * .6); x.bezierCurveTo(-s * 1.4, -s * .3, -s * .5, -s * 1.3, 0, -s * .5); x.bezierCurveTo(s * .5, -s * 1.3, s * 1.4, -s * .3, 0, s * .6); x.fill(); }
     x.restore();
   }
-  requestAnimationFrame(dessineFx);
 }
 requestAnimationFrame(dessineFx);
 let dernierFx = 0, tProjo = null;
