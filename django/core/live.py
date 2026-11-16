@@ -277,6 +277,16 @@ def _jeu_commentaire(e: dict, user: str, nom: str, t: str) -> bool:
     return e.get("scene") == "jeu"   # jeu terminé mais encore à l'écran : les réponses tardives ne vont pas au mur
 
 
+JEU_MAX_AUTO = 90   # s : en mode auto, un jeu que personne ne trouve se révèle tout seul (16/11 : il bloquait tout le live)
+
+
+def _jeu_trop_long(e: dict) -> None:
+    """Côté serveur, pour ne pas dépendre de la version de la page régie ouverte sur le téléphone."""
+    j = e.get("jeu") or {}
+    if (e.get("pilote") or e.get("naissanceOn")) and j.get("phase") in ("jeu", "vote") and j.get("t")             and time.time() * 1000 - float(j["t"]) > JEU_MAX_AUTO * 1000:
+        _jeu_action(e, "reveler")
+
+
 def _jeu_action(e: dict, a: str) -> None:
     j, now = e.get("jeu") or {}, int(time.time() * 1000)
     if a == "reveler" and j.get("phase") in ("jeu", "vote"):
@@ -370,6 +380,7 @@ def _maj_etat(request):
             with _verrou(mode) as e:
                 if (e.get("maitre") or {}).get("id") == ident:
                     e["maitre"] = {"id": ident, "vu": time.time()}
+                    _jeu_trop_long(e)
                 else:
                     e["_pas"] = True
         maitre = e.get("maitre") or {}

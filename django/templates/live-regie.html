@@ -239,7 +239,9 @@ async function poste(corps, prendre) {
 const AVEC_CARTE = ["attente", "rituel", "top3", "versus", "mur", "finale", "fin", "jeu"];
 const set = (s) => { if (s.fiche === true && AVEC_CARTE.includes(s.scene || E.scene)) s.scene = (s.media || E.media) && ((s.media || E.media).video || (s.media || E.media).yt) ? "artiste" : "camera"; return poste({ set: s }); };
 async function suit() {
-  try { const r = await fetch(API + "/etat" + Q(), { cache: "no-store", headers: { "X-Regie": ID } }); const d = await r.json(); E = d; aLaMain = d.aLaMain !== false; enLigne = true; rendu(); relanceBoucles(); }
+  try { const r = await fetch(API + "/etat" + Q(), { cache: "no-store", headers: { "X-Regie": ID } }); const d = await r.json(); E = d; aLaMain = d.aLaMain !== false; enLigne = true; rendu(); relanceBoucles();
+    // 16/11 : la régie du téléphone se met à jour toute seule après une mise en ligne (même onglet = même régie, les boucles repartent)
+    if (d.build) { if (!window.BUILD) window.BUILD = d.build; else if (d.build !== window.BUILD && !window.recharge) { window.recharge = 1; setTimeout(() => location.reload(), 2000); } } }
   catch (e) { enLigne = false; rendu(); }
   setTimeout(suit, 1000);
 }
