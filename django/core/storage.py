@@ -47,7 +47,7 @@ _sleep = time.sleep
 def _blob_put(pathname: str, data: bytes, content_type: str, max_age: int | None = None) -> str:
     for attempt in range(len(RETRY_WAITS) + 1):
         try:
-            r = requests.put(f"https://blob.vercel-storage.com/{pathname}", data=data, timeout=30, headers={
+            r = requests.put(f"https://blob.vercel-storage.com/{pathname}", data=data, timeout=(15, max(60, len(data) // 150_000)), headers={   # 16/11 : gros fichiers (vidéo de 5 min) : ~150 ko/s minimum
                 "authorization": f"Bearer {_blob_token()}", "x-api-version": "7", "x-content-type": content_type,
                 "x-add-random-suffix": "0", **({"x-cache-control-max-age": str(max_age)} if max_age else {})})
             if r.status_code not in (429, 500, 502, 503, 504):

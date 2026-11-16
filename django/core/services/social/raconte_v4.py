@@ -293,11 +293,47 @@ def _vers_mp3(wav: str, sortie: str) -> None:
                     "-ar", "44100", "-ac", "2", "-b:a", "192k", sortie], check=True)
 
 
+def _extrait_parle(x: dict, dossier: str, k: int) -> tuple[str, str, float] | None:
+    """16/11/2026 (« fais passer le podcast là où il le dit, même quelques secondes ») : un passage d'interview où l'artiste
+    parle lui-même. Vidéo verticale (image entière sur fond flou), bandeau « EXTRAIT · source » en haut, sa phrase en grand
+    en bas ; le son de l'interview à la place de la voix off, musique coupée."""
+    src = x["fichier"] if os.path.isabs(x["fichier"]) else os.path.join(CACHE, x["fichier"])
+    if not os.path.isfile(src):
+        return None
+    duree = float(x["duree"])
+    polices = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "resources", "fonts")
+    anton = os.path.abspath(os.path.join(polices, "Anton-Regular.ttf")).replace("\\", "/").replace(":", "\\:")
+    haut = os.path.join(dossier, f"x{k}-haut.txt")
+    open(haut, "w", encoding="utf-8").write(("EXTRAIT · " + (x.get("source") or "")).upper())
+    esc = lambda f: f.replace("\\", "/").replace(":", "\\:")
+    lignes = ""   # la citation : une ligne par drawtext, chacune centrée
+    for j, ligne in enumerate([l for l in (x.get("citation") or "").split("\n") if l.strip()][:3]):
+        fl = os.path.join(dossier, f"x{k}-l{j}.txt")
+        open(fl, "w", encoding="utf-8").write(ligne.strip())
+        lignes += (f"drawtext=fontfile='{anton}':textfile='{esc(fl)}':fontsize=78:fontcolor=0xF5C14B:borderw=5:bordercolor=black@0.85:"
+                   f"x=(w-tw)/2:y={1380 + j * 100},")
+    vf = (f"split[a][b];[a]scale=-2:1920,crop=1080:1920,boxblur=28:2,eq=brightness=-0.22:saturation=1.2[f];[b]scale=1080:-2[v];"
+          f"[f][v]overlay=0:(H-h)/2-80,"
+          f"drawbox=x=0:y=300:w=iw:h=86:color=0x7B5CFF@0.92:t=fill,"
+          f"drawtext=fontfile='{anton}':textfile='{esc(haut)}':fontsize=40:fontcolor=white:x=(w-tw)/2:y=322,"
+          f"{lignes}fps=30,setsar=1")
+    mp4, mp3 = os.path.join(dossier, f"x{k}.mp4"), os.path.join(dossier, f"x{k}.mp3")
+    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-ss", f"{float(x.get('debut') or 0):.2f}", "-i", src, "-t", f"{duree:.2f}", "-an",
+                    "-filter_complex", vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", mp4], check=True)
+    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-ss", f"{float(x.get('debut') or 0):.2f}", "-i", src, "-t", f"{duree:.2f}", "-vn",
+                    "-af", "loudnorm=I=-15:TP=-1.5:LRA=9,afade=t=in:d=0.15,afade=t=out:st=" + f"{max(0, duree - 0.3):.2f}" + ":d=0.3",
+                    "-ar", "44100", "-ac", "2", "-b:a", "192k", mp3], check=True)
+    return mp4, mp3, duree
+
+
 # ---------------------------------------------------------------- images
 
 def _telecharge(m: dict) -> str | None:
     """Clip ou photo, gardé en cache (une relance ne retélécharge rien)."""
     os.makedirs(CACHE, exist_ok=True)
+    if m.get("fichier"):   # 16/11 : extrait préparé à la main (moment précis d'un reportage), dans le cache
+        f = m["fichier"] if os.path.isabs(m["fichier"]) else os.path.join(CACHE, m["fichier"])
+        return f if os.path.isfile(f) else None
     if m["type"] == "photo":
         nom = "ph-" + re.sub(r"[^a-z0-9]", "", _cle(m.get("url") or ""))[-40:] + ".jpg"
         chemin = os.path.join(CACHE, nom)
@@ -356,7 +392,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
     medias = {m["id"]: dict(m) for m in p.get("medias") or []}
     # 1) médias demandés + les plus vus (accroche), en parallèle, depuis le cache
     voulus = {i for b in blocs for i in (b.get("medias") or [])} | {b.get("musique") for b in blocs if b.get("musique")}
-    stars = [m["id"] for m in sorted((m for m in medias.values() if m["type"] != "photo"), key=lambda m: -(m.get("vues") or 0))[:6]]
+    stars = [m["id"] for m in sorted((m for m in medias.values() if m["type"] != "photo" and not m.get("fichier")), key=lambda m: -(m.get("vues") or 0))[:6]]
     voulus = [i for i in voulus | set(stars) if i in medias]
     with ThreadPoolExecutor(3) as pool:
         for i, chemin in zip(voulus, pool.map(lambda i: _telecharge(medias[i]), voulus)):
@@ -380,6 +416,10 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             evts += [("voix", cur)] if cur else []
             cur = []
             evts.append(("projet", b))
+        elif b.get("type") == "extrait":
+            evts += [("voix", cur)] if cur else []
+            cur = []
+            evts.append(("extrait", b))
         elif b.get("type") == "chapitre":
             evts += [("voix", cur)] if cur else []
             cur = []
@@ -396,7 +436,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         evts.append(("voix", cur))
     total_secrets = max(1, len(vus))
     t, mots, morceaux, sfx, bornes = 0.25, [], [], [], []
-    projets, titres, secrets, pauses = [], [], [], []
+    projets, titres, secrets, pauses, extraits = [], [], [], [], []
     k_voix, k_secret, chap_courant = 0, 0, None
     for genre, x in evts:
         if genre == "titre":
@@ -412,6 +452,17 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             pauses.append((t, t + PAUSE_SECRET))
             k_secret += 1
             t += PAUSE_SECRET + 0.1
+            continue
+        if genre == "extrait":
+            r = _extrait_parle(x, dossier, len(extraits))
+            if r:
+                mp4, mp3, dx = r
+                morceaux.append((t, mp3))   # sa vraie voix, dans la piste de la voix off
+                extraits.append({"src": f"{prefixe}/{os.path.basename(mp4)}", "d": round(t, 3), "f": round(t + dx, 3)})
+                pauses.append((t, t + dx))   # musique coupée, aucun autre plan par-dessus
+                t += dx + 0.3
+            else:
+                log_write("studio", "warning", f"raconte v4 : extrait introuvable ({x.get('fichier')})")
             continue
         if genre == "projet":
             projets.append({**x, "d": round(t, 3), "f": round(t + DUREE_PROJET, 3)})
@@ -454,6 +505,8 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         t += d + PAUSE
         k_voix += 1
     fin_voix = t - PAUSE
+    for ex in extraits:   # 16/11 : pendant qu'il parle lui-même, aucun sous-titre de la voix off par-dessus sa citation
+        mots = [m for m in mots if m["f"] <= ex["d"] or m["d"] >= ex["f"]]
     duree = round(fin_voix + 3.6, 2)
     fin_d = bornes[-1][0]
     for i, x in enumerate(bornes):
@@ -539,7 +592,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         V3._plan(m, dossier, nom + ".mp4", m["_duree"] * ratio, b - a, style)
         return {"src": f"{prefixe}/{nom}.mp4", "d": round(a, 3), "f": round(b, 3),
                 **({} if nu else {"annee": m.get("annee") if m["type"] != "clip" else "",
-                                  "libelle": {"live": "LIVE", "coulisses": "COULISSES"}.get(m["type"], "")})}
+                                  "libelle": m.get("libelle") or {"live": "LIVE", "coulisses": "COULISSES"}.get(m["type"], "")})}
 
     plein_ecran = pauses + [(x["d"], x["f"]) for x in projets]
     les_plans, flashs = [], []
@@ -560,7 +613,8 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             continue
         ids = [i for i in (b.get("medias") or []) if i in prets and (prets[i]["type"] == "photo" or i in videos_ok)]
         if not ids:
-            ids = [videos_ok[rot[0] % len(videos_ok)]]
+            hasard_ok = [i for i in videos_ok if not prets[i].get("fichier")] or videos_ok
+            ids = [hasard_ok[rot[0] % len(hasard_ok)]]
             rot[0] += 1
         cur_t, n = a, 0
         while cur_t < z - 0.25:
@@ -574,6 +628,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                 if c:
                     les_plans.append(c)
             cur_t, n = fin, n + 1
+    les_plans += extraits   # les extraits parlés (image et texte déjà montés)
     photo = _photo(p.get("photo"), dossier, "photo.jpg") if p.get("photo") else None
     if photo:
         V3._fond_photo(photo, os.path.join(dossier, "photo-fond.jpg"))
@@ -581,7 +636,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
 
     # 6) musiques : instrumentales sous la voix (réglage par chapitre), titres de chapitre et projets chantés, suspense aux secrets
     musiques, rx, n_mus = [], [], [0]
-    pool_musique = [i for i in sorted(prets, key=lambda i: -(prets[i].get("vues") or 0)) if prets[i]["type"] != "photo"]
+    pool_musique = [i for i in sorted(prets, key=lambda i: -(prets[i].get("vues") or 0)) if prets[i]["type"] != "photo" and not prets[i].get("fichier")]
 
     def extrait(mid, long, instru):
         m = prets.get(mid)
@@ -667,5 +722,6 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                         for x in projets],
             "chapitres": [], "titresChapitre": [{k2: x[k2] for k2 in ("d", "f", "numero", "titre", "annees")} for x in titres],
             "secrets": [{k2: x[k2] for k2 in ("d", "k", "total")} for x in secrets], "bulles": bulles, "verites": verites,
+            "extraits": [{"d": x["d"], "f": x["f"]} for x in extraits],   # sous-titres cachés pendant qu'il parle lui-même
             "sfx": sfx, "mythes": [], "contrats": contrats, "flashs": flashs, "sansBarre": True,
             "fin": {"d": round(fin_d, 3), "titre": recit["fin"]["titre"], "texte": recit["fin"]["texte"]}, "sources": recit.get("sources") or ""}

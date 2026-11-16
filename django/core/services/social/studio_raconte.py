@@ -537,7 +537,16 @@ def fabrique(job_id: int, job: dict, p: dict, maj) -> dict:
                     video = brut.replace(".mp4", "-master.mp4")
             except (subprocess.SubprocessError, OSError):
                 pass
+            if os.path.getsize(video) > 90_000_000:   # 16/11 : 300 Mo pour 4 min 36 : l'envoi au stockage échoue ; ~2,4 Mb/s suffit (TikTok, Reels)
+                leger = os.path.join(tmp, "leger.mp4")
+                subprocess.run([_ffmpeg(), "-v", "error", "-y", "-i", video, "-c:v", "libx264", "-preset", "medium", "-b:v", "2300k", "-maxrate", "2800k",
+                                "-bufsize", "5600k", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", leger], check=True)
+                video = leger
             nom = f"studio-{job_id}-raconte-{os.urandom(3).hex()}"
+            try:   # 16/11 : une copie gardée sur le PC AVANT l'envoi (un envoi coupé ne fait plus perdre 1 h de rendu)
+                shutil.copyfile(video, os.path.join(dossier, "final.mp4"))
+            except OSError:
+                pass
             vignette = os.path.join(tmp, nom + ".jpg")
             subprocess.run([_ffmpeg(), "-v", "error", "-y", "-ss", "1.6", "-i", video, "-frames:v", "1", "-q:v", "3", vignette], check=True)
             storage.store_media("social", nom + ".mp4", open(video, "rb").read(), "video/mp4")
@@ -567,6 +576,12 @@ def recit_valide(r: dict) -> dict | None:
         if not isinstance(x, dict):
             continue
         sorte = x.get("type") or "voix"
+        if sorte == "extrait":   # 16/11 : passage d'interview où l'artiste parle lui-même (fichier préparé dans le cache)
+            if x.get("fichier") and x.get("duree"):
+                phrases.append({"type": "extrait", "fichier": str(x["fichier"])[:200], "debut": float(x.get("debut") or 0),
+                                "duree": min(20.0, float(x["duree"])), "source": str(x.get("source") or "")[:120],
+                                "citation": str(x.get("citation") or "")[:160]})
+            continue
         if sorte == "chapitre":
             if str(x.get("titre") or "").strip():
                 phrases.append({"type": "chapitre", "numero": str(x.get("numero") or "")[:20], "titre": str(x["titre"]).strip()[:28],
