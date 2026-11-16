@@ -43,7 +43,7 @@ def colonnes(df) -> tuple:
     noms = [" ".join(str(x) for x in (c if isinstance(c, tuple) else (c,))).lower() for c in df.columns]
     def premier(*mots):
         return next((i for i, n in enumerate(noms) if any(m in n for m in mots)), None)
-    return premier("issue date", "date", "week ending", "semaine du"), premier("song", "titre", "single"), premier("artist", "artiste")
+    return premier("issue date", "date", "week ending", "semaine du"), premier("song", "title", "titre", "single"), premier("artist", "artiste")
 
 
 def mois_de(texte: str, table: dict) -> int | None:
@@ -76,7 +76,7 @@ def annee(lang: str, titre: str, table_mois: dict) -> dict:
     return meilleur
 
 
-def main(debut: int = 1985, fin: int = 2026):
+def main(debut: int = 1970, fin: int = 2026):
     base = {}
     for an in range(debut, fin + 1):
         us = annee("en", f"List of Billboard Hot 100 number ones of {an}", MOIS_EN)

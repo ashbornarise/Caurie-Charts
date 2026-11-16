@@ -43,6 +43,8 @@ ETAT_DEFAUT = {
     "platine": True, "objectif": 300, "objectifBase": 0, "arrivees": [], "pilote": False,
     # 16/11/2026 : « Le son de ta naissance » (monde + France + Afrique de l'Ouest) : file des mois écrits dans le chat
     "naissanceOn": False, "naissances": [], "naissance": None,
+    # 16/11 : « les cadeaux plus grands, il faut un truc plus grand » : scène plein écran à son nom + mur des légendes
+    "mega": None, "legendes": [], "creditsDedicace": {}, "dedicace": None,
     "donateurs": {}, "cadeau": None, "likes": 0, "spectateurs": None, "pic": 0, "abonnes": 0, "reglesCadeaux": True, "topFans": True,
     # jeux et studio (13/11) : devine le titre, qui est-ce, mot mystère, roue, sondage, « d'où tu nous regardes », tirage au sort,
     # roi du live, objectif de « j'aime », bienvenue aux abonnés ; disposition des éléments et déroulé modifiables
@@ -298,6 +300,12 @@ def _commentaire(e: dict, user: str, texte: str, nom: str | None = None) -> None
         e["chat"] = (e.get("chat") or [])[-119:] + [int(time.time())]   # rythme du chat (conseils de l'agent)
         e["chatteurs"] = [c for c in (e.get("chatteurs") or []) if c[0] != user][-299:] + [[user, nom]]   # pour le tirage au sort
     if _jeu_commentaire(e, user, nom, t):
+        return
+    # 16/11 : « une personnalisation en plus » : après un cadeau de 30 diamants ou plus, le message suivant devient une dédicace
+    dd = e.setdefault("creditsDedicace", {})
+    if int(dd.get(user) or 0) > 0 and len(texte.strip()) >= 3 and not user.startswith("régie"):
+        dd[user] = int(dd[user]) - 1
+        e["dedicace"] = {"nom": nom[:24], "texte": texte.strip()[:110], "t": int(time.time() * 1000)}
         return
     if e.get("naissanceOn") and _naissance_commentaire(e, user, nom, texte):
         return
@@ -629,8 +637,22 @@ def _cadeau(e: dict, g: dict) -> None:
     if not e.get("reglesCadeaux", True):
         return
     dernier_fx, dernier_masc = int(e.get("fxAuto") or 0), int(e.get("mascAuto") or 0)
-    if d >= 500:
-        e["gong"] = now; e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now; e["choree"] = now
+    # paliers (diamants du cadeau) : 30 dédicace plein écran · 100 + 2 sons au choix · 500 prise de pouvoir + 3 sons ·
+    # 1 000 et plus : légende (nom en or sur le mur pendant tout le live, feu d'artifice, troupe, 5 sons)
+    if d >= 30:
+        niveau = "legende" if d >= 1000 else "roi" if d >= 500 else "star" if d >= 100 else "dedicace"
+        sons = {"legende": 5, "roi": 3, "star": 2, "dedicace": 0}[niveau]
+        if sons:
+            cr = e.setdefault("creditsSon", {})
+            cr[user] = min(8, int(cr.get(user) or 0) + sons)
+        e["mega"] = {"nom": nom, "cadeau": cad, "n": n, "diamants": d, "niveau": niveau, "sons": sons, "t": now}
+        e.setdefault("creditsDedicace", {})[user] = 1
+        if niveau == "legende" and nom not in (e.get("legendes") or []):
+            e["legendes"] = ((e.get("legendes") or []) + [nom])[-6:]
+    if d >= 1000:
+        e["gong"] = now; e["fx"] = {"type": "artifice", "t": now}; e["fxAuto"] = now; e["choree"] = now + 9000
+    elif d >= 500:
+        e["gong"] = now; e["fx"] = {"type": "confettis", "t": now}; e["fxAuto"] = now; e["choree"] = now + 9000
         e["mascotte"] = {"titre": f"MERCI {nom.upper()} !", "texte": f"{n} × {cad} : tu fais trembler la Nuit Cauri Charts !", "pose": "m4-appel", "duree": 8000, "t": now}; e["mascAuto"] = now
     elif d >= 100 and now - dernier_fx > 8000:
         e["fx"] = {"type": "cauris", "t": now}; e["fxAuto"] = now
@@ -659,6 +681,13 @@ MOIS_NOMS = {"janvier": 1, "january": 1, "janv": 1, "fevrier": 2, "février": 2,
              "august": 8, "septembre": 9, "september": 9, "sept": 9, "octobre": 10, "october": 10, "novembre": 11, "november": 11,
              "decembre": 12, "décembre": 12, "december": 12}
 _HITS = None
+# 16/11 : « comme les Michael Jackson, Justin Bieber… » : sans année précise, on prend le N°1 d'une superstar mondiale
+STARS = ("michael jackson", "justin bieber", "rihanna", "beyonc", "drake", "ed sheeran", "adele", "bruno mars", "taylor swift", "the weeknd",
+         "shakira", "eminem", "usher", "whitney houston", "mariah carey", "madonna", "britney spears", "katy perry", "lady gaga", "dua lipa",
+         "billie eilish", "ariana grande", "harry styles", "black eyed peas", "lmfao", "pharrell", "daft punk", "luis fonsi", "psy", "gotye",
+         "mark ronson", "olivia rodrigo", "post malone", "lil nas x", "justin timberlake", "prince", "stevie wonder", "lionel richie",
+         "bee gees", "abba", "queen", "the police", "phil collins", "george michael", "wham", "u2", "bon jovi", "celine dion", "jennifer lopez",
+         "50 cent", "akon", "black eyed", "sia", "miley cyrus", "selena gomez", "doja cat", "bad bunny", "wizkid", "tems", "burna boy")
 _NAISS_CACHE: dict = {}
 
 
@@ -675,8 +704,10 @@ def _naissance_commentaire(e: dict, user: str, nom: str, texte: str) -> bool:
         an_v = int(x.group(2))
     else:
         an_v = int(an.group(1)) if an else None
-    file = [x for x in (e.get("naissances") or []) if x["user"] != user]
+    # 16/11/2026 : « écrire la date doit être gratuit, mais le nom payant » : sans rose, le son passe à son tour sans nom ;
+    # avec une rose, « POUR [pseudo] » s'affiche et la demande passe en tête
     credits = e.setdefault("creditsSon", {})
+    file = [x for x in (e.get("naissances") or []) if x["user"] != user]
     rose = int(credits.get(user) or 0) > 0
     if rose:
         credits[user] = int(credits[user]) - 1
@@ -701,6 +732,9 @@ def naissance(mois: int, annee: int | None = None) -> dict:
     if cle in _NAISS_CACHE:
         return _NAISS_CACHE[cle]
     annees = [int(k[:4]) for k in _HITS if int(k[5:7]) == mois]
+    stars = [int(k[:4]) for k, v in _HITS.items() if int(k[5:7]) == mois and any(s in (v.get("monde") or {}).get("artiste", "").lower() for s in STARS)]
+    if stars and not annee:
+        annees = stars
     an_monde = annee if annee and f"{annee}-{mois:02d}" in _HITS else (random.choice(annees) if annees else None)
     h = _HITS.get(f"{an_monde}-{mois:02d}", {}) if an_monde else {}
     hf = h if "france" in h else {}
