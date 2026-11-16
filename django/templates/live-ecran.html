@@ -259,8 +259,56 @@ body.glitch{animation:glitch .2s steps(1) 14}@keyframes glitch{0%{transform:tran
 #aSuivre small{font-weight:900;font-size:26px;letter-spacing:4px;color:var(--or);flex:none}#aSuivre b{font-family:Anton,Impact;font-size:52px;line-height:1.05;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #ticker{transition:opacity .4s}
 .direct{display:inline-flex;align-items:center;gap:10px;background:#e5384a;font-weight:900;font-size:26px;letter-spacing:3px;padding:10px 18px;border-radius:999px}.direct i{width:14px;height:14px;border-radius:50%;background:#fff;animation:clig 1s infinite}@keyframes clig{50%{opacity:.25}}
+
+/* 16/11/2026 : LA COURSE DES CAURIS : notre jeu (aucune musique ni clip d'artiste) ; 4 pays par manche, le chat les pousse */
+#courseV{position:absolute;inset:0;z-index:18;display:none;color:#fff;font-family:Montserrat,Arial,sans-serif}
+body.course-on #courseV{display:block}
+body.course-on #hud,body.course-on #platineV,body.course-on #naissV,body.course-on #naissB,body.course-on #camera,body.course-on #roi,body.course-on #topfans,body.course-on #devineurs,body.course-on #objectif,body.course-on #aSuivre,body.course-on #murChat,body.course-on #ticker,body.course-on #bandeau,body.course-on #themeC,body.course-on #titreSon,body.course-on #base,body.course-on .scene{display:none!important}
+#courseV .voile{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,6,20,.9) 0%,rgba(8,6,20,.62) 28%,rgba(8,6,20,.62) 72%,rgba(8,6,20,.92) 100%)}
+#courseV .tete{position:absolute;top:70px;left:0;right:0;text-align:center}
+#courseV .marque{font:800 26px Montserrat;letter-spacing:8px;color:#8FD3FF}
+#courseV .titre{font:400 112px Anton,Impact;line-height:1;margin-top:8px;background:linear-gradient(180deg,#FFE29A,#F5C14B 55%,#c9902a);-webkit-background-clip:text;color:transparent;filter:drop-shadow(0 6px 24px rgba(245,193,75,.35))}
+#courseV .infos{display:flex;justify-content:center;gap:18px;margin-top:18px}
+#courseV .pill{font:900 30px Montserrat;padding:10px 26px;border-radius:40px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.25)}
+#courseV .pill.temps{background:#7B5CFF;border-color:#a894ff}
+#courseV .consigne{position:absolute;top:385px;left:40px;right:40px;text-align:center}
+#courseV .consigne b{display:block;font:900 40px Montserrat;letter-spacing:.5px;white-space:nowrap}
+#courseV .consigne span{display:inline-block;margin:14px 8px 0;font:700 27px Montserrat;color:#d9d3ff;background:rgba(123,92,255,.25);padding:8px 18px;border-radius:30px}
+#courseV .pistes{position:absolute;top:585px;left:40px;right:40px;display:flex;flex-direction:column;gap:20px}
+#courseV .couloir{position:relative;height:205px;border-radius:28px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.14);padding:18px 26px 0 26px;transition:box-shadow .4s,border-color .4s}
+#courseV .couloir.tete-course{border-color:#F5C14B;box-shadow:0 0 40px rgba(245,193,75,.35)}
+#courseV .couloir.turbo{animation:turboC .9s ease-out}
+@keyframes turboC{0%{box-shadow:0 0 0 rgba(255,120,60,0)}30%{box-shadow:0 0 70px rgba(255,120,60,.9)}100%{box-shadow:0 0 0 rgba(255,120,60,0)}}
+#courseV .ident{display:flex;align-items:center;gap:18px;height:62px}
+#courseV .drap{width:84px;height:56px;border-radius:9px;box-shadow:0 3px 10px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.25);background-size:100% 100%;flex:none}
+#courseV .nomP{font:900 40px Montserrat;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+#courseV .score{font:400 46px Anton;color:#F5C14B}
+#courseV .piste{position:relative;height:84px;margin-top:10px;border-radius:14px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.13) 0 26px,transparent 26px 52px) center/100% 4px no-repeat,rgba(0,0,0,.25)}
+#courseV .arrivee{position:absolute;right:0;top:0;bottom:0;width:28px;border-radius:0 14px 14px 0;background:conic-gradient(#fff 25%,#111 0 50%,#fff 0 75%,#111 0) 0 0/14px 14px}
+#courseV .cauri{position:absolute;top:2px;width:110px;height:80px;transition:left .45s cubic-bezier(.2,.9,.3,1.2);filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+#courseV .cauri svg{width:100%;height:100%}
+#courseV .trace{position:absolute;left:0;top:34px;height:16px;border-radius:8px;transition:width .45s;opacity:.55}
+#courseV .derniers{font:700 23px Montserrat;color:#cfc8ff;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#courseV .aide{position:absolute;right:44px;top:20px;font:800 22px Montserrat;color:#ff8fb0;opacity:0;transition:opacity .4s}
+#courseV .aide.on{opacity:1}
+#courseV .bas{position:absolute;left:40px;right:40px;bottom:50px;display:grid;grid-template-columns:1fr 1fr;gap:22px}
+#courseV .bloc{background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.14);border-radius:26px;padding:22px 26px;min-height:250px}
+#courseV .bloc h4{font:900 24px Montserrat;letter-spacing:3px;color:#8FD3FF;margin-bottom:14px}
+#courseV .ligne{display:flex;align-items:center;gap:12px;font:800 27px Montserrat;margin:9px 0;white-space:nowrap;overflow:hidden}
+#courseV .ligne .drap{width:44px;height:30px;border-radius:5px}
+#courseV .ligne em{font-style:normal;margin-left:auto;color:#F5C14B}
+#courseV .vide{font:600 24px Montserrat;color:#aaa3d6}
+#courseV .turboT{position:absolute;left:50%;top:1500px;transform:translate(-50%,0) scale(.6);opacity:0;white-space:nowrap;font:900 40px Montserrat;padding:16px 34px;border-radius:40px;background:linear-gradient(90deg,#ff7a3c,#ff3d7f);box-shadow:0 10px 40px rgba(255,90,80,.5);transition:opacity .3s,transform .3s}
+#courseV .turboT.on{opacity:1;transform:translate(-50%,0) scale(1)}
+#courseV .finV{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:330px!important;text-align:center;background:radial-gradient(ellipse at 50% 45%,rgba(60,40,140,.85),rgba(5,3,12,.95) 70%);padding:0 60px}
+#courseV.fin .finV{display:flex;animation:entre .6s ease-out}
+#courseV .finV .drap{width:300px;height:200px;border-radius:22px;margin-bottom:46px;animation:flotte 2.4s ease-in-out infinite}
+@keyframes flotte{0%,100%{transform:rotate(-3deg) translateY(0)}50%{transform:rotate(3deg) translateY(-14px)}}
+#courseV .finV .gagne{font:400 120px Anton;line-height:1.02;color:#F5C14B;text-shadow:0 0 50px rgba(245,193,75,.5)}
+#courseV .finV .sous{font:800 40px Montserrat;margin-top:26px}
+#courseV .finV .suite{font:700 30px Montserrat;color:#cfc8ff;margin-top:40px}
 </style></head><body>
-<div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="fondV"><video muted playsinline loop preload="auto"></video><video muted playsinline loop preload="auto"></video></div><canvas id="themeC" width="540" height="960"></canvas><div id="platineV"><div class="disque"><img id="platImg" src="/assets/live/logo.png" alt=""></div><div class="bras"></div><div class="titreP" id="platTitre"></div><div class="artP" id="platArt"></div><div class="barres"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="parP" id="platPar"></div></div><div id="megaV"><div class="rayons"></div><div class="niv" id="mgNiv"></div><div class="nom" id="mgNom"></div><div class="cad" id="mgCad"></div><div class="don" id="mgDon"></div></div><div id="dedicV"><div class="sur">DÉDICACE</div><div class="msg" id="ddMsg"></div><div class="de" id="ddDe"></div></div><div id="naissB"><div class="l1" id="nbL1"></div><div class="l2" id="nbL2"></div></div><div id="naissV"><div class="sur">LE SON DE TA NAISSANCE</div><div class="mois" id="nvMois"></div><div class="an" id="nvAn"></div><div class="filet"></div><div class="phrase" id="nvPhrase"></div><div class="choix" id="nvChoix"></div><div class="pour" id="nvPour"></div></div><div id="hud"><div class="naiss" id="hudNaiss">Écris ton mois de naissance : on te joue le tube mondial · avec une rose, ton nom à l'écran</div><div class="obj"><b><span id="objTxt">OBJECTIF CADEAUX</span><span id="objNb"></span></b><div class="jauge"><i id="objJauge"></i></div><div class="podium" id="podium"></div><div class="legendes" id="legendes"></div></div></div><div id="bienvenue"></div><div id="troupe"><div class="sol"></div><div class="spot" style="left:5%"></div><div class="spot b" style="left:45%"></div><div class="titre" id="troupeTitre">ON DANSE !</div><div id="danseurs"></div></div><div id="danseur"><img id="danseImg" src="/assets/live/m2-presente.png" alt=""></div><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
+<div id="base"><i></i><i></i><i></i><img src="/assets/live/logo.png" alt=""></div><video id="clip" playsinline preload="auto"></video><div id="yt"><div id="ytp"></div></div><div id="voileClip"></div><audio id="son" preload="auto"></audio><audio id="sonGong" src="/assets/live/sfx/gong.mp3" preload="auto"></audio><div id="fondV"><video muted playsinline loop preload="auto"></video><video muted playsinline loop preload="auto"></video></div><canvas id="themeC" width="540" height="960"></canvas><div id="platineV"><div class="disque"><img id="platImg" src="/assets/live/logo.png" alt=""></div><div class="bras"></div><div class="titreP" id="platTitre"></div><div class="artP" id="platArt"></div><div class="barres"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="parP" id="platPar"></div></div><div id="megaV"><div class="rayons"></div><div class="niv" id="mgNiv"></div><div class="nom" id="mgNom"></div><div class="cad" id="mgCad"></div><div class="don" id="mgDon"></div></div><div id="dedicV"><div class="sur">DÉDICACE</div><div class="msg" id="ddMsg"></div><div class="de" id="ddDe"></div></div><div id="naissB"><div class="l1" id="nbL1"></div><div class="l2" id="nbL2"></div></div><div id="naissV"><div class="sur">LE SON DE TA NAISSANCE</div><div class="mois" id="nvMois"></div><div class="an" id="nvAn"></div><div class="filet"></div><div class="phrase" id="nvPhrase"></div><div class="choix" id="nvChoix"></div><div class="pour" id="nvPour"></div></div><div id="courseV"></div><div id="hud"><div class="naiss" id="hudNaiss">Écris ton mois de naissance : on te joue le tube mondial · avec une rose, ton nom à l'écran</div><div class="obj"><b><span id="objTxt">OBJECTIF CADEAUX</span><span id="objNb"></span></b><div class="jauge"><i id="objJauge"></i></div><div class="podium" id="podium"></div><div class="legendes" id="legendes"></div></div></div><div id="bienvenue"></div><div id="troupe"><div class="sol"></div><div class="spot" style="left:5%"></div><div class="spot b" style="left:45%"></div><div class="titre" id="troupeTitre">ON DANSE !</div><div id="danseurs"></div></div><div id="danseur"><img id="danseImg" src="/assets/live/m2-presente.png" alt=""></div><div id="interlude"><img id="intImg" src="/assets/live/m2-presente.png" alt=""><div class="intBulle"><b id="intTitre"></b><span id="intTexte"></span></div></div>
 <audio id="sonPassage" src="/assets/live/sfx/balayage.mp3" preload="auto"></audio><div id="merci"></div><div id="topfans"></div><div id="roi"></div><div id="devineurs"></div><div id="objectif"></div><div id="repet">RÉPÉTITION · rien n'est à l'antenne</div><button id="activer">Cliquer ici pour activer le son</button>
 <div id="titreSon" style="opacity:0"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8FD3FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span></span></div>
 
@@ -835,15 +883,89 @@ function dessineTheme() {
 }
 function majTheme() {
   const n = E.naissance, mois = E.naissanceOn && n ? n.mois : (new Date().getMonth() + 1);
-  const on = E.theme !== false && ((E.naissanceOn && !!n) || (!!E.media && E.platine !== false)) && ["artiste", "camera"].includes(E.scene);
+  const on = E.theme !== false && (((E.naissanceOn && !!n) || (!!E.media && E.platine !== false)) && ["artiste", "camera"].includes(E.scene) || !!(E.course && E.course.on));
   $("themeC").classList.toggle("on", on); document.body.classList.toggle("theme-on", on);
   majFond(on && E.fonds !== false, mois);
   if (mois !== THEME.mois) theme(mois);
   if (!themeMinuteur) dessineTheme();
 }
+
+// ---------------------------------------------------------------- LA COURSE DES CAURIS (16/11/2026)
+const DRAP_CSS = {
+  ci: "linear-gradient(90deg,#F77F00 33.3%,#fff 33.3% 66.6%,#009E60 66.6%)", ng: "linear-gradient(90deg,#008751 33.3%,#fff 33.3% 66.6%,#008751 66.6%)",
+  tg: "linear-gradient(#D21034,#D21034) 0 0/40% 60% no-repeat,linear-gradient(#006A4E 20%,#FFCE00 20% 40%,#006A4E 40% 60%,#FFCE00 60% 80%,#006A4E 80%)",
+  gh: "linear-gradient(#CE1126 33.3%,#FCD116 33.3% 66.6%,#006B3F 66.6%)", bj: "linear-gradient(90deg,#008751 40%,transparent 40%),linear-gradient(#FCD116 50%,#E8112D 50%)",
+  sn: "linear-gradient(90deg,#00853F 33.3%,#FDEF42 33.3% 66.6%,#E31B23 66.6%)", ml: "linear-gradient(90deg,#14B53A 33.3%,#FCD116 33.3% 66.6%,#CE1126 66.6%)",
+  bf: "linear-gradient(#EF2B2D 50%,#009E49 50%)", gn: "linear-gradient(90deg,#CE1126 33.3%,#FCD116 33.3% 66.6%,#009460 66.6%)",
+  ne: "linear-gradient(#E05206 33.3%,#fff 33.3% 66.6%,#0DB02B 66.6%)", cm: "linear-gradient(90deg,#007A5E 33.3%,#CE1126 33.3% 66.6%,#FCD116 66.6%)",
+  fr: "linear-gradient(90deg,#0055A4 33.3%,#fff 33.3% 66.6%,#EF4135 66.6%)", be: "linear-gradient(90deg,#111 33.3%,#FAE042 33.3% 66.6%,#ED2939 66.6%)",
+  ca: "linear-gradient(90deg,#D52B1E 25%,#fff 25% 75%,#D52B1E 75%)", us: "linear-gradient(#3C3B6E,#3C3B6E) 0 0/40% 54% no-repeat,repeating-linear-gradient(#B22234 0 7.7%,#fff 7.7% 15.4%)",
+  cd: "linear-gradient(150deg,#007FFF 38%,#F7D618 38% 42%,#CE1021 42% 58%,#F7D618 58% 62%,#007FFF 62%)", ga: "linear-gradient(#009E60 33.3%,#FCD116 33.3% 66.6%,#3A75C4 66.6%)",
+  ma: "#C1272D", lr: "linear-gradient(#002868,#002868) 0 0/42% 45% no-repeat,repeating-linear-gradient(#BF0A30 0 9%,#fff 9% 18%)",
+  sl: "linear-gradient(#1EB53A 33.3%,#fff 33.3% 66.6%,#0072C6 66.6%)", gm: "linear-gradient(#CE1126 30%,#fff 30% 35%,#0C1C8C 35% 65%,#fff 65% 70%,#3A7728 70%)",
+  cv: "linear-gradient(#003893 55%,#fff 55% 62%,#CF2027 62% 70%,#fff 70% 77%,#003893 77%)", mr: "linear-gradient(#D01C1F 15%,#00A95C 15% 85%,#D01C1F 85%)",
+  gw: "linear-gradient(90deg,#CE1126 35%,transparent 35%),linear-gradient(#FCD116 50%,#009E49 50%)" };
+const COUL_PISTE = ["#F5C14B", "#8FD3FF", "#ff8fb0", "#9cf5b8"];
+const CAURI_SVG = (c) => `<svg viewBox="0 0 110 80"><defs><radialGradient id="cg${c}" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fffaf0"/><stop offset=".6" stop-color="#f1e4c8"/><stop offset="1" stop-color="#c7a874"/></radialGradient></defs>
+  <ellipse cx="55" cy="40" rx="50" ry="33" fill="url(#cg${c})" stroke="#9c7a45" stroke-width="3"/>
+  <path d="M14 41 C 35 33, 75 33, 96 41" stroke="#5a3d1c" stroke-width="5" fill="none" stroke-linecap="round"/>
+  ${Array.from({ length: 9 }, (_, i) => { const x = 22 + i * 8.2; return `<line x1="${x}" y1="${35.5 + Math.abs(4 - i) * .5}" x2="${x}" y2="${46 - Math.abs(4 - i) * .5}" stroke="#5a3d1c" stroke-width="2.4" stroke-linecap="round"/>`; }).join("")}
+  <ellipse cx="40" cy="22" rx="16" ry="5" fill="#fff" opacity=".55"/></svg>`;
+// les vrais drapeaux du site (/assets/img/flags) ; à défaut, le dessin CSS
+const drapC = (c) => `<i class="drap" style="background:url('/assets/img/flags/${c}.svg') center/cover no-repeat,${DRAP_CSS[c] || "#555"}"></i>`;
+let courseVue = { cle: "", pos: {}, turboT: 0, finT: 0, sonT: 0 };
+function mmss(ms) { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+function course() {
+  const c = E.course, V = $("courseV"), on = !!(c && c.on);
+  document.body.classList.toggle("course-on", on);
+  if (!on) { courseVue.cle = ""; return; }
+  const cle = c.manche + "|" + c.pays.join(",");
+  if (cle !== courseVue.cle) {   // nouvelle manche : on dessine les 4 couloirs
+    courseVue = { ...courseVue, cle, pos: {} };
+    V.innerHTML = `<div class="voile"></div><div class="tete"><div class="marque">CAURI CHARTS · LIVE</div><div class="titre">LA COURSE DES CAURIS</div>
+      <div class="infos"><span class="pill">MANCHE ${c.manche}</span><span class="pill temps" id="crTemps"></span></div></div>
+      <div class="consigne"><b>ÉCRIS TON PAYS DANS LE CHAT</b><span>🌹 une rose = TURBO pour ton pays</span><span>❤ les j'aime aident le dernier</span></div>
+      <div class="pistes">${c.pays.map((p, i) => `<div class="couloir" id="crc-${p}"><div class="ident">${drapC(p)}<div class="nomP">${esc((c.noms || {})[p] || p)}</div><div class="score" id="crs-${p}">0</div></div>
+        <div class="piste"><div class="trace" id="crt-${p}" style="background:${COUL_PISTE[i]}"></div><div class="arrivee"></div><div class="cauri" id="cra-${p}">${CAURI_SVG(p)}</div><div class="aide" id="crh-${p}">❤ coup de pouce</div></div>
+        <div class="derniers" id="crd-${p}"></div></div>`).join("")}</div>
+      <div class="turboT" id="crTurbo"></div>
+      <div class="bas"><div class="bloc"><h4>VICTOIRES DE LA SOIRÉE</h4><div id="crVict"></div></div><div class="bloc"><h4>MEILLEURS COUREURS</h4><div id="crTop"></div></div></div>
+      <div class="finV" id="crFin"></div>`;
+    joueSfx("montee");
+  }
+  const tete = Math.max(...c.pays.map((p) => +c.pos[p] || 0));
+  c.pays.forEach((p) => {
+    const v = Math.min(100, +c.pos[p] || 0), a = $("cra-" + p); if (!a) return;
+    const largeur = a.parentNode.clientWidth - 28 - 110;
+    a.style.left = (v / 100 * largeur) + "px"; $("crt-" + p).style.width = (v / 100 * largeur + 55) + "px";
+    $("crs-" + p).textContent = Math.floor(v) + " %";
+    $("crc-" + p).classList.toggle("tete-course", v > 0 && v === tete);
+    const d = (c.derniers || {})[p] || []; $("crd-" + p).textContent = d.length ? "poussé par " + d.join(" · ") : "écris « " + ((c.noms || {})[p] || p) + " » pour démarrer";
+    $("crh-" + p).classList.toggle("on", !!(c.aide && c.aide.code === p && Date.now() - c.aide.t < 4000));
+    if (v > (courseVue.pos[p] || 0) && Date.now() - courseVue.sonT > 1200) { courseVue.sonT = Date.now(); joueSfx("pop"); }
+    courseVue.pos[p] = v;
+  });
+  const tb = c.turbo;
+  if (tb && tb.t !== courseVue.turboT) { courseVue.turboT = tb.t; const el = $("crTurbo"); el.innerHTML = `🚀 TURBO ! ${esc(tb.nom)} propulse ${esc((c.noms || {})[tb.code] || tb.code)} +${tb.pas}`;
+    el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 3500); const cc = $("crc-" + tb.code); if (cc) { cc.classList.remove("turbo"); void cc.offsetWidth; cc.classList.add("turbo"); } joueSfx("paillettes"); }
+  const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  $("crVict").innerHTML = vic.length ? vic.map(([p, n]) => `<div class="ligne">${drapC(p)}<span>${esc(({ ...(c.noms || {}) })[p] || PAYS_NOM_C[p] || p)}</span><em>${n} 🏆</em></div>`).join("") : `<div class="vide">Première manche : à vous de jouer !</div>`;
+  const top = c.top || [];
+  $("crTop").innerHTML = top.length ? top.map((x, i) => `<div class="ligne">${drapC(x.pays)}<span>${i + 1}. ${esc(x.nom)}</span><em>${x.n}</em></div>`).join("") : `<div class="vide">Écris ton pays pour entrer ici.</div>`;
+  V.classList.toggle("fin", c.phase === "fin");
+  if (c.phase === "fin" && c.tFin !== courseVue.finT) { courseVue.finT = c.tFin; const g = c.gagnant;
+    $("crFin").innerHTML = g ? `${drapC(g)}<div class="gagne">${esc(((c.noms || {})[g] || g).toUpperCase())}<br>GAGNE LA MANCHE !</div><div class="sous">Bravo à tous les coureurs 👏</div><div class="suite" id="crSuite"></div>`
+      : `<div class="gagne">MANCHE<br>TERMINÉE</div><div class="sous">Personne n'a bougé… à vous la prochaine !</div><div class="suite" id="crSuite"></div>`;
+    if (g) { joueSfx("merci"); try { $("sonGong").currentTime = 0; $("sonGong").play().catch(() => {}); } catch (e) {} } }
+}
+const PAYS_NOM_C = { ci: "Côte d'Ivoire", ng: "Nigeria", tg: "Togo", gh: "Ghana", bj: "Bénin", sn: "Sénégal", ml: "Mali", bf: "Burkina Faso", gn: "Guinée", ne: "Niger",
+  cm: "Cameroun", fr: "France", us: "États-Unis", ca: "Canada", be: "Belgique", cd: "RD Congo", ga: "Gabon", ma: "Maroc" };
+setInterval(() => { const c = E.course; if (!c || !c.on) return; const t = $("crTemps"), s = $("crSuite");
+  if (t) t.textContent = c.phase === "course" ? "⏱ " + mmss(c.fin - Date.now()) : "MANCHE TERMINÉE";
+  if (s) s.textContent = "Prochaine manche dans " + Math.max(0, Math.ceil((c.tFin + 14000 - Date.now()) / 1000)) + " s"; }, 250);
 let derniereDanse = 0;
 function rendu() {
-  vuePlatine(); hud(); naiss(); mega(); majTheme();
+  vuePlatine(); hud(); naiss(); mega(); majTheme(); course();
   const dd = E.dedicace, ddOn = !!dd && Date.now() - dd.t < 12000; $("dedicV").classList.toggle("on", ddOn);
   if (dd) { $("ddMsg").textContent = "« " + dd.texte + " »"; $("ddDe").textContent = "— " + dd.nom; }
   if (E.choree && E.choree !== derniereChoree) { const neuf = derniereChoree !== 0 || Date.now() - E.choree < 8000; derniereChoree = E.choree; if (neuf) choree(11000, E.likes >= 1000 ? Math.floor(E.likes / 1000) * 1000 + " J'AIME !" : "MERCI !"); }

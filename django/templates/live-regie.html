@@ -128,7 +128,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
   <div class="pastille horsantenne" id="antenne" title="Démarrer ou arrêter le chrono du live"><i></i><span>HORS ANTENNE</span></div>
   <div class="pastille connecte" id="connexion"><i></i><span>Connexion…</span></div>
   <div class="esp"></div>
-  <button id="repetBtn" title="S'entraîner sur un écran de test : rien ne part à l'antenne">Mode répétition</button><button id="piloteBtn" title="Le programme tourne tout seul : un jeu, un son, un vote… toutes les 4 min 30">Pilote auto</button><button id="naissBtn" title="Le son de ta naissance : un mois, un hit du monde, de France ou d'Afrique de l'Ouest, en boucle ; le chat écrit son mois">Naissance</button><button id="platineBtn" title="Le son passe sans clip : pochette et vinyle (évite le lag et le « contenu reproduit »)">Platine</button>
+  <button id="repetBtn" title="S'entraîner sur un écran de test : rien ne part à l'antenne">Mode répétition</button><button id="piloteBtn" title="Le programme tourne tout seul : un jeu, un son, un vote… toutes les 4 min 30">Pilote auto</button><button id="naissBtn" title="Le son de ta naissance : un mois, un hit du monde, de France ou d'Afrique de l'Ouest, en boucle ; le chat écrit son mois">Naissance</button><button id="courseBtn" title="Notre jeu : 4 pays par manche, le chat écrit son pays pour faire avancer son cauri ; rose = turbo">Course des Cauris</button><button id="courseSuiv" title="Passer à la manche suivante (4 autres pays)" style="display:none">Manche suivante</button><button id="platineBtn" title="Le son passe sans clip : pochette et vinyle (évite le lag et le « contenu reproduit »)">Platine</button>
   <button id="copier" title="Le lien de l'écran à ajouter dans LIVE Studio">Lien de l'écran</button>
   <button id="aide">? Aide</button>
   <a href="" id="modeDj" class="petit" style="text-decoration:none">Mode DJ</a>
@@ -624,6 +624,7 @@ const CYCLE = ["dou", "musique", "blind", "versus", "musique", "photo", "top3", 
 let piloteK = 0, piloteT = null, verrouEcran = null;
 async function etapePilote() {
   if (!E.pilote || !aLaMain) { piloteT = null; return; }
+  if (E.course && E.course.on) { piloteT = setTimeout(etapePilote, 30000); return; }   // la course tourne toute seule
   if (await jeuEnCours()) { piloteT = setTimeout(etapePilote, 15000); return; }   // un jeu est en cours : on attend (90 s au plus)
   // 16/11 : ordre mélangé à chaque tour du cycle, jamais deux fois la même étape de suite
   if (!window.ordrePilote || !window.ordrePilote.length) { const o = [...CYCLE].sort(() => Math.random() - .5);
@@ -675,6 +676,7 @@ setInterval(() => { vuBoucle = Date.now(); }, 30000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { vuBoucle = 0; relanceBoucles(); } });
 async function etapeNaissance() {
   if (!E.naissanceOn || !aLaMain) { naissT = null; return; }
+  if (E.course && E.course.on) { naissT = setTimeout(etapeNaissance, 30000); return; }
   if (await jeuEnCours()) { naissT = setTimeout(etapeNaissance, 15000); return; }
   const f = E.naissances || [], x = f[0] || { mois: 1 + Math.floor(Math.random() * 12), annee: null, nom: "" };   // au hasard : une superstar
   try {
@@ -709,8 +711,15 @@ $("nsAjout").onclick = () => { const t = $("nsMois").value.toLowerCase().normali
 $("naissBtn").onclick = () => { const on = !E.naissanceOn; set({ naissanceOn: on, ...(on ? {} : { naissance: null }) }); clearTimeout(naissT);
   if (on) naissT = setTimeout(etapeNaissance, 800); };
 function majPilote() {
+  { const co = !!(E.course && E.course.on); $("courseBtn").classList.toggle("on", co); $("courseSuiv").style.display = co ? "" : "none";
+    $("courseBtn").textContent = co ? "Course : manche " + E.course.manche + " (" + (E.course.pays || []).join(" · ").toUpperCase() + ")" : "Course des Cauris"; }
   $("naissBtn").classList.toggle("on", !!E.naissanceOn); $("naissBtn").textContent = E.naissanceOn ? "Naissance : ON" : "Naissance"; $("piloteBtn").classList.toggle("on", !!E.pilote); $("piloteBtn").textContent = E.pilote ? "Pilote auto : ON" : "Pilote auto";
   $("platineBtn").classList.toggle("on", E.platine !== false); $("platineBtn").textContent = E.platine !== false ? "Platine : ON" : "Platine : OFF"; }
+// 16/11 : LA COURSE DES CAURIS : on coupe la musique et les autres programmes, le serveur enchaîne les manches tout seul
+$("courseBtn").onclick = () => { const on = !(E.course && E.course.on);
+  if (on) poste({ course: "demarre", set: { media: null, naissanceOn: false, naissance: null, pilote: false, jeu: null, scene: "camera", fiche: false, bandeau: "" } });
+  else poste({ course: "arrete" }); };
+$("courseSuiv").onclick = () => poste({ course: "suivante" });
 $("piloteBtn").onclick = async () => { const on = !E.pilote; set({ pilote: on }); clearTimeout(piloteT);
   if (on) { try { verrouEcran = await navigator.wakeLock.request("screen"); } catch (e) {} piloteT = setTimeout(etapePilote, 1500); }
   else if (verrouEcran) { verrouEcran.release().catch(() => {}); verrouEcran = null; } };
