@@ -258,19 +258,21 @@ def _duree(chemin: str) -> float:
     return float(m.group()) if m else 0.0
 
 
-def dit(texte: str, sortie: str) -> list[dict]:
-    """Un bloc dit par Guillou-Martial : mp3 accéléré + mots minutés (balises d'émotion retirées du minutage)."""
+def dit(texte: str, sortie: str, accel: float = None, stabilite: float = 0.5) -> list[dict]:
+    """Un bloc dit par Guillou-Martial : mp3 accéléré + mots minutés (balises d'émotion retirées du minutage).
+    17/11/2026 : accel/stabilite réglables (ouverture « thriller » : voix plus lente, plus posée, plus inquiétante)."""
+    accel = accel or ACCEL
     cle = env.get("ELEVENLABS_API_KEY", "")
     if not cle:
         raise RuntimeError("ELEVENLABS_API_KEY absente")
-    corps = {"text": texte, "model_id": MODELE_EL, "language_code": "fr", "voice_settings": {"stability": 0.5}}   # « naturel » : ton régulier
+    corps = {"text": texte, "model_id": MODELE_EL, "language_code": "fr", "voice_settings": {"stability": stabilite}}   # « naturel » : ton régulier
     req = urllib.request.Request(f"https://api.elevenlabs.io/v1/text-to-speech/{VOIX_EL}/with-timestamps?output_format=mp3_44100_128",
                                  data=json.dumps(corps).encode(), headers={"xi-api-key": cle, "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=300) as r:
         d = json.load(r)
     brut = sortie + ".brut.mp3"
     open(brut, "wb").write(base64.b64decode(d["audio_base64"]))
-    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-i", brut, "-af", f"atempo={ACCEL}", "-ar", "44100", "-ac", "2", "-b:a", "192k", sortie], check=True)
+    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-i", brut, "-af", f"atempo={accel}", "-ar", "44100", "-ac", "2", "-b:a", "192k", sortie], check=True)
     al = d.get("alignment") or d["normalized_alignment"]   # texte d'origine : les nombres restent un seul mot
     mots, cur, d0, f0, crochet = [], "", None, None, False
     for c, s, e in zip(al["characters"], al["character_start_times_seconds"], al["character_end_times_seconds"]):
@@ -281,14 +283,14 @@ def dit(texte: str, sortie: str) -> list[dict]:
             continue
         if c.isspace():
             if cur.strip():
-                mots.append({"m": cur, "d": d0 / ACCEL, "f": f0 / ACCEL})
+                mots.append({"m": cur, "d": d0 / accel, "f": f0 / accel})
             cur, d0 = "", None
             continue
         if d0 is None:
             d0 = s
         cur, f0 = cur + c, e
     if cur.strip():
-        mots.append({"m": cur, "d": d0 / ACCEL, "f": f0 / ACCEL})
+        mots.append({"m": cur, "d": d0 / accel, "f": f0 / accel})
     return [m for m in mots if any(ch.isalnum() for ch in m["m"])]
 
 

@@ -45,7 +45,87 @@ SEGMENT_MAX = 40.0
 SFX = {"titre": "raconte/sfx2/boom-titre.mp3", "unlock": "raconte/sfx2/unlock.mp3", "swell": "raconte/sfx2/swell.mp3",
        "suspense": "raconte/sfx2/mystere-basse.mp3", "bulle": "raconte/sfx2/bulle-pop.mp3", "verite": "raconte/sfx2/verite.mp3",
        "projet": "raconte/sfx2/whoosh-impact.mp3", "carte": "raconte/sfx2/whoosh.mp3", "fin": "raconte/sfx/reverse-impact.mp3",
-       "sparkle": "raconte/sfx2/sparkle.mp3"}
+       "sparkle": "raconte/sfx2/sparkle.mp3", "boom": "raconte/sfx2/impact-epique.mp3", "parasite": "raconte/sfx2/parasite-court.mp3",
+       "glitch": "raconte/sfx2/parasite-glitch.mp3", "battement": "raconte/sfx2/heartbeat.mp3", "sonnette": "raconte/sfx2/machine-sonnette.mp3",
+       "frappes": ["raconte/sfx2/machine-frappe1.mp3", "raconte/sfx2/machine-frappe2.mp3", "raconte/sfx2/machine-frappe3.mp3"]}
+
+# 17/11/2026 (Shatta Wale) : ouverture « thriller » : « une voix bien plus assise, presque sadique, des sons dramatiques et
+# graves, avant un gros boom, du bruit, puis CHAPITRE 1 qui s'écrit comme sur une machine des années 90, et là ça commence ».
+# Les temps de frappe sont les mêmes que dans TitreChapitreVue (style « machine ») de CauriRaconte.tsx.
+MACHINE = {"bruit": 1.3, "depart": 0.3, "car_num": 0.07, "entre": 0.35, "car_titre": 0.1, "tenue": 1.2}
+
+
+# 17/11/2026 : « dans les scènes où on voit les fesses, on floute ces endroits seuls » (TikTok et Meta brident les vidéos
+# « suggestives »). NudeNet (modèle libre, sur le PC) repère les zones, floutées image par image ; le reste du plan reste net.
+ZONES_FLOUTEES = {"BUTTOCKS_EXPOSED": 0.35, "BUTTOCKS_COVERED": 0.45, "FEMALE_BREAST_EXPOSED": 0.35, "FEMALE_GENITALIA_EXPOSED": 0.3,
+                  "FEMALE_GENITALIA_COVERED": 0.5, "MALE_GENITALIA_EXPOSED": 0.3, "ANUS_EXPOSED": 0.3}
+_DETECTEUR = []
+
+
+def floute_zones(chemin: str, pas: int = 3, tenue: int = 5) -> int:
+    """Floute dans la vidéo les zones sensibles détectées ; renvoie le nombre d'images retouchées (0 : fichier inchangé)."""
+    try:
+        import cv2
+        from nudenet import NudeDetector
+    except ImportError:
+        if not _DETECTEUR:
+            log_write("studio", "warning", "raconte : NudeNet absent, aucun floutage des zones sensibles (pip install nudenet)")
+            _DETECTEUR.append(None)
+        return 0
+    if not _DETECTEUR or _DETECTEUR[0] is None:
+        _DETECTEUR[:] = [NudeDetector()]
+    det = _DETECTEUR[0]
+    cap = cv2.VideoCapture(chemin)
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30
+    images, zones, actives = [], {}, []
+    i = 0
+    while True:
+        ok, im = cap.read()
+        if not ok:
+            break
+        images.append(im)
+        if i % pas == 0:
+            boites = []
+            for z in det.detect(im):
+                if z.get("score", 0) >= ZONES_FLOUTEES.get(z.get("class"), 9):
+                    boites.append(z["box"])
+            if boites:
+                for j in range(max(0, i - pas), i + tenue + 1):
+                    zones.setdefault(j, []).extend(boites)
+        i += 1
+    cap.release()
+    if not zones or not images:
+        return 0
+    h, w = images[0].shape[:2]
+    for j, im in enumerate(images):
+        for x, y, bw, bh in zones.get(j, []):
+            mx, my = int(bw * 0.2), int(bh * 0.2)
+            x0, y0, x1, y1 = max(0, x - mx), max(0, y - my), min(w, x + bw + mx), min(h, y + bh + my)
+            if x1 - x0 > 4 and y1 - y0 > 4:
+                k = max(31, (min(x1 - x0, y1 - y0) // 3) | 1)
+                im[y0:y1, x0:x1] = cv2.GaussianBlur(im[y0:y1, x0:x1], (k, k), 0)
+                actives.append(j)
+    tmp = chemin + ".flou.mp4"
+    pr = subprocess.Popen([_ffmpeg(), "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{w}x{h}", "-r", f"{fps}",
+                           "-i", "-", "-i", chemin, "-map", "0:v", "-map", "1:a?", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+                           "-pix_fmt", "yuv420p", "-c:a", "copy", tmp], stdin=subprocess.PIPE)
+    for im in images:
+        pr.stdin.write(im.tobytes())
+    pr.stdin.close()
+    if pr.wait() == 0 and os.path.isfile(tmp):
+        os.replace(tmp, chemin)
+        return len(set(actives))
+    return 0
+
+
+def _machine_temps(numero: str, titre: str, bruit: float) -> tuple[list[float], float]:
+    """(instants de frappe depuis le début du carton, durée du carton) ; espaces muets."""
+    t0 = bruit + MACHINE["depart"]
+    frappes = [t0 + i * MACHINE["car_num"] for i, c in enumerate(numero) if not c.isspace()]
+    t1 = t0 + len(numero) * MACHINE["car_num"] + MACHINE["entre"]
+    frappes += [t1 + i * MACHINE["car_titre"] for i, c in enumerate(titre) if not c.isspace()]
+    fin_frappe = t1 + len(titre) * MACHINE["car_titre"]
+    return frappes, fin_frappe + MACHINE["tenue"]
 INTERDITS = re.compile(r"\b(vrai ou faux|c'est faux|faux !|le savais-tu|la leçon|bienvenue|reste jusqu'au bout|immense|majeur|incroyable|"
                        r"véritable|sans précédent|en effet|il convient|n'aura de cesse)\b", re.I)
 
@@ -413,6 +493,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
     from core.services.social.raconte_v2 import _photo, dit
     from core.services.social.studio_raconte import POSES, _sous_titres
     recit, blocs = p["recit"], p["recit"]["phrases"]
+    thriller = p.get("ouverture") == "thriller"   # 17/11/2026 : épisodes sombres (chute, scandale)
     medias = {m["id"]: dict(m) for m in p.get("medias") or []}
     # 1) médias demandés + les plus vus (accroche), en parallèle, depuis le cache
     voulus = {i for b in blocs for i in (b.get("medias") or [])} | {b.get("musique") for b in blocs if b.get("musique")}
@@ -483,6 +564,20 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
     k_voix, k_secret, chap_courant = 0, 0, None
     for genre, x in evts:
         if genre == "titre":
+            if thriller:
+                bruit = MACHINE["bruit"] if not titres else 0.0   # boom + parasites seulement avant le chapitre 1
+                frappes, long_c = _machine_temps(x.get("numero") or "", x["titre"], bruit)
+                if bruit:
+                    sfx.append({"src": SFX["boom"], "d": round(t, 3), "vol": 0.85})
+                    sfx.append({"src": SFX["parasite"], "d": round(t + 0.12, 3), "vol": 0.32, "dur": bruit})
+                for j_, f_ in enumerate(frappes):
+                    sfx.append({"src": SFX["frappes"][j_ % 3], "d": round(t + f_, 3), "vol": 0.55, "dur": 0.3})
+                sfx.append({"src": SFX["sonnette"], "d": round(t + long_c - MACHINE["tenue"] + 0.1, 3), "vol": 0.4, "dur": 1.2})
+                titres.append({"d": round(t, 3), "f": round(t + long_c, 3), "numero": x.get("numero") or "", "titre": x["titre"],
+                               "annees": x.get("annees") or "", "style": "machine", "bruit": bruit, "_b": x})
+                pauses.append((t, t + long_c))
+                t += long_c + 0.15
+                continue
             titres.append({"d": round(t, 3), "f": round(t + PAUSE_CHAPITRE, 3), "numero": x.get("numero") or "", "titre": x["titre"],
                            "annees": x.get("annees") or "", "_b": x})
             # 15/11/2026 : « plus de riser à chaque début » : le titre de chapitre arrive en silence, avec son titre chanté
@@ -547,7 +642,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             bal = re.match(r"\s*(\[[a-z ]{3,20}\])\s*", v)
             textes.append(((bal.group(1) + " ") if bal else "") + (v[bal.end():] if bal else v))
         import hashlib   # prises gardées dans le cache, par texte : une relance ne repaie jamais ElevenLabs
-        cle_voix = hashlib.sha1(" ".join(textes).encode("utf-8")).hexdigest()[:16]
+        cle_voix = hashlib.sha1((" ".join(textes) + ("|thriller" if thriller and not titres else "")).encode("utf-8")).hexdigest()[:16]
         os.makedirs(os.path.join(CACHE, "voix"), exist_ok=True)
         brut, memo = os.path.join(CACHE, "voix", cle_voix + ".mp3"), os.path.join(CACHE, "voix", cle_voix + ".json")
         dits = None
@@ -558,7 +653,10 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         except (OSError, ValueError):
             pass
         if dits is None:
-            dits = dit(" ".join(textes), brut)
+            if thriller and not titres:   # accroche du mode thriller : plus lente (pas d'accélération), plus libre
+                dits = dit(" ".join(textes), brut, accel=0.97, stabilite=0.3)
+            else:
+                dits = dit(" ".join(textes), brut)
             json.dump({"texte": " ".join(textes), "mots": dits}, open(memo, "w", encoding="utf-8"), ensure_ascii=False)
         mp3 = os.path.join(dossier, f"v{k_voix:02d}n.mp3")
         subprocess.run([_ffmpeg(), "-v", "error", "-y", "-i", brut, "-af", "loudnorm=I=-15:TP=-1.5:LRA=9", "-ar", "44100", "-ac", "2",
@@ -705,6 +803,19 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         V3._fond_photo(photo, os.path.join(dossier, "photo-fond.jpg"))
         les_plans.append({"src": f"{prefixe}/photo.jpg", "fond": f"{prefixe}/photo-fond.jpg", "d": round(fin_d, 3), "f": duree, "image": True})
 
+    # 5 bis) zones sensibles floutées dans chaque plan vidéo (17/11/2026)
+    n_flous = 0
+    for pl in les_plans:
+        src = str(pl.get("src") or "")
+        if not pl.get("image") and src.endswith(".mp4") and src.startswith(prefixe + "/"):
+            chemin = os.path.join(dossier, src[len(prefixe) + 1:])
+            if os.path.isfile(chemin):
+                try:
+                    n_flous += 1 if floute_zones(chemin) else 0
+                except Exception as exc:  # noqa: BLE001
+                    log_write("studio", "warning", f"raconte : floutage impossible pour {src} ({str(exc)[:120]})")
+    log_write("studio", "info", f"raconte v4 : zones sensibles floutées dans {n_flous} plan(s)")
+
     # 6) musiques : instrumentales sous la voix (réglage par chapitre), titres de chapitre et projets chantés, suspense aux secrets
     musiques, rx, n_mus = [], [], [0]
     pool_musique = [i for i in sorted(prets, key=lambda i: -(prets[i].get("vues") or 0)) if prets[i]["type"] != "photo" and not prets[i].get("fichier")]
@@ -749,6 +860,10 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         chap = titres[n - 1]["_b"] if n > 0 else {}
         mid = chap.get("musique") if chap.get("musique") in prets else (stars_ok[0] if n == 0 else pool_musique[n % len(pool_musique)])
         mode = chap.get("musique_mode") or "instru"
+        if thriller and n == 0:
+            musiques.append({"src": SFX["suspense"], "d": 0.0, "f": round(b, 3), "depuis": 0, "vol": 0.55})
+            musiques.append({"src": SFX["battement"], "d": 0.0, "f": round(b, 3), "depuis": 0, "vol": 0.35})
+            continue
         cur_t = a
         for x, y in trous:
             if y <= cur_t or x >= b:
@@ -758,9 +873,9 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
         bed(mid, cur_t, b, mode)
     for x in titres:   # le titre de l'époque, chanté, sous le titre de chapitre
         mid = x["_b"].get("musique") if x["_b"].get("musique") in prets else None
-        src = extrait(mid, PAUSE_CHAPITRE + 0.5, False) if mid else None
+        src = extrait(mid, x["f"] - x["d"] + 0.5, False) if mid else None
         if src:
-            musiques.append({"src": src, "d": x["d"], "f": x["f"], "depuis": 0, "vol": 0.4})   # s'efface avant que la voix reparte
+            musiques.append({"src": src, "d": x["d"] + x.get("bruit", 0), "f": x["f"], "depuis": 0, "vol": 0.16 if thriller else 0.4})   # s'efface avant que la voix reparte
     for a, b in suspense:
         musiques.append({"src": SFX["suspense"], "d": round(a + 0.4, 3), "f": round(b, 3), "depuis": 0, "vol": 0.14})
     for j2, pr in enumerate(projets):
@@ -783,15 +898,15 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                     m["vol"] = FOND["chant"]
 
     # 7) mascotte : ouverture et fin (les autres apparitions portent les bulles)
-    mascottes.insert(0, {"src": POSES["presente"], "d": round(accroche_fin + PAUSE_CHAPITRE + 0.6, 3),
-                         "f": round(accroche_fin + PAUSE_CHAPITRE + 3.6, 3), "cote": "droite", "h": 820})
+    fin_t1 = titres[0]["f"] if titres else accroche_fin + PAUSE_CHAPITRE
+    mascottes.insert(0, {"src": POSES["presente"], "d": round(fin_t1 + 0.6, 3), "f": round(fin_t1 + 3.6, 3), "cote": "droite", "h": 820})
     mascottes.append({"src": POSES["appel"], "d": round(fin_d + 0.3, 3), "f": duree, "cote": "gauche", "h": 820})
     sfx.append({"src": SFX["fin"], "d": round(max(0, fin_d - 0.6), 3), "vol": 0.24})
     return {"voix": f"{prefixe}/voix.mp3", "musique": musiques[0]["src"] if musiques else f"{prefixe}/voix.mp3", "duree": duree, "mots": mots,
             "titre": recit["titre"], "plans": les_plans, "cartes": cartes, "mascottes": mascottes, "musiques": musiques, "fond": FOND["instru"],
             "projets": [{k2: x[k2] for k2 in ("d", "f", "cover", "titre", "etiquette", "invites", "chiffre", "morceau") if x.get(k2) is not None}
                         for x in projets],
-            "chapitres": [], "titresChapitre": [{k2: x[k2] for k2 in ("d", "f", "numero", "titre", "annees")} for x in titres],
+            "chapitres": [], "titresChapitre": [{k2: x[k2] for k2 in ("d", "f", "numero", "titre", "annees", "style", "bruit") if k2 in x} for x in titres],
             "secrets": [{k2: x[k2] for k2 in ("d", "k", "total")} for x in secrets], "bulles": bulles, "verites": verites,
             "extraits": [{"d": x["d"], "f": x["f"]} for x in extraits + chantes],   # sous-titres cachés pendant qu'il parle lui-même
             "sfx": sfx, "mythes": [], "contrats": contrats, "flashs": flashs, "sansBarre": True,
