@@ -57,12 +57,12 @@ MACHINE = {"bruit": 1.3, "depart": 0.3, "car_num": 0.07, "entre": 0.35, "car_tit
 
 # 17/11/2026 : « dans les scènes où on voit les fesses, on floute ces endroits seuls » (TikTok et Meta brident les vidéos
 # « suggestives »). NudeNet (modèle libre, sur le PC) repère les zones, floutées image par image ; le reste du plan reste net.
-ZONES_FLOUTEES = {"BUTTOCKS_EXPOSED": 0.35, "BUTTOCKS_COVERED": 0.45, "FEMALE_BREAST_EXPOSED": 0.35, "FEMALE_GENITALIA_EXPOSED": 0.3,
+ZONES_FLOUTEES = {"BUTTOCKS_EXPOSED": 0.25, "BUTTOCKS_COVERED": 0.3, "FEMALE_BREAST_EXPOSED": 0.35, "FEMALE_GENITALIA_EXPOSED": 0.3,
                   "FEMALE_GENITALIA_COVERED": 0.5, "MALE_GENITALIA_EXPOSED": 0.3, "ANUS_EXPOSED": 0.3}
 _DETECTEUR = []
 
 
-def floute_zones(chemin: str, pas: int = 3, tenue: int = 5) -> int:
+def floute_zones(chemin: str, pas: int = 5, tenue: int = 8) -> int:
     """Floute dans la vidéo les zones sensibles détectées ; renvoie le nombre d'images retouchées (0 : fichier inchangé)."""
     try:
         import cv2
@@ -85,10 +85,17 @@ def floute_zones(chemin: str, pas: int = 3, tenue: int = 5) -> int:
             break
         images.append(im)
         if i % pas == 0:
+            # le modèle travaille en 320 px : sur une image verticale (ou un clip 16:9 au milieu), les corps sont petits ->
+            # on analyse des carrés qui se chevauchent (haut, milieu, bas), boîtes ramenées dans l'image entière
+            hh, ww = im.shape[:2]
+            cote = min(hh, ww)
+            ys = sorted({0, max(0, (hh - cote) // 2), max(0, hh - cote)})
             boites = []
-            for z in det.detect(im):
-                if z.get("score", 0) >= ZONES_FLOUTEES.get(z.get("class"), 9):
-                    boites.append(z["box"])
+            for y0 in ys:
+                for z in det.detect(im[y0:y0 + cote, 0:cote]):
+                    if z.get("score", 0) >= ZONES_FLOUTEES.get(z.get("class"), 9):
+                        x, y, bw, bh = z["box"]
+                        boites.append([x, y + y0, bw, bh])
             if boites:
                 for j in range(max(0, i - pas), i + tenue + 1):
                     zones.setdefault(j, []).extend(boites)
