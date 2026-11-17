@@ -35,6 +35,8 @@ CACHE = os.path.join(REMOTION, "public", "raconte", "cache")
 PYTHON_STUDIO = "python"
 RX = r"C:\Program Files\Common Files\VST3\iZotope\RX 12 Music Rebalance.vst3"
 DUREE_PROJET = 9.0
+DUREE_CHANTE = 3.6   # s de refrain quand un titre est cité (16/11 : « pour la nostalgie et l'intrigue »)
+CHANTES_MAX = 8
 PAUSE = 0.18
 PAUSE_SECRET = 2.6
 PAUSE_CHAPITRE = 2.5
@@ -307,11 +309,13 @@ def _extrait_parle(x: dict, dossier: str, k: int) -> tuple[str, str, float] | No
     open(haut, "w", encoding="utf-8").write(("EXTRAIT · " + (x.get("source") or "")).upper())
     esc = lambda f: f.replace("\\", "/").replace(":", "\\:")
     lignes = ""   # la citation : une ligne par drawtext, chacune centrée
-    for j, ligne in enumerate([l for l in (x.get("citation") or "").split("\n") if l.strip()][:3]):
+    morceaux_txt = [l for l in (x.get("citation") or "").split("\n") if l.strip()][:4]
+    taille = min(78, int(2050 / max(10, max((len(l.strip()) for l in morceaux_txt), default=10))))   # les longues lignes rapetissent
+    for j, ligne in enumerate(morceaux_txt):
         fl = os.path.join(dossier, f"x{k}-l{j}.txt")
         open(fl, "w", encoding="utf-8").write(ligne.strip())
-        lignes += (f"drawtext=fontfile='{anton}':textfile='{esc(fl)}':fontsize=78:fontcolor=0xF5C14B:borderw=5:bordercolor=black@0.85:"
-                   f"x=(w-tw)/2:y={1380 + j * 100},")
+        lignes += (f"drawtext=fontfile='{anton}':textfile='{esc(fl)}':fontsize={taille}:fontcolor=0xF5C14B:borderw=5:bordercolor=black@0.85:"
+                   f"x=(w-tw)/2:y={1360 + j * int(taille * 1.28)},")
     vf = (f"split[a][b];[a]scale=-2:1920,crop=1080:1920,boxblur=28:2,eq=brightness=-0.22:saturation=1.2[f];[b]scale=1080:-2[v];"
           f"[f][v]overlay=0:(H-h)/2-80,"
           f"drawbox=x=0:y=300:w=iw:h=86:color=0x7B5CFF@0.92:t=fill,"
@@ -363,7 +367,9 @@ def _morceau(p: dict, prets: dict, medias: dict, titre: str) -> str | None:
     k = _cle(re.split(r"\s*\(|\s+feat|\s+ft\.?", titre or "", flags=re.I)[0])
     if not k:
         return None
-    candidats = [i for i, m in medias.items() if m["type"] != "photo" and _cle(re.split(r"\s*\(|\s+ft\.?|\s+feat", m["titre"], flags=re.I)[0]) == k]
+    candidats = [i for i, m in medias.items() if m["type"] != "photo" and not m.get("fichier") and (
+        _cle(re.split(r"\s*\(|\s+ft\.?|\s+feat", m["titre"], flags=re.I)[0]) == k
+        or (len(k) >= 4 and re.search(r"[\"«“”»]\s*" + re.escape(titre.split("(")[0].strip()) + r"\s*[\"»”“«]", m["titre"], re.I)))]
     candidats.sort(key=lambda i: (medias[i]["type"] != "clip", -(medias[i].get("vues") or 0)))
     for i in candidats:
         if i not in prets:
@@ -410,6 +416,21 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             V3._fond_photo(m["_chemin"], os.path.join(dossier, f"{i}-fond.jpg"))
 
     # 2) déroulé : voix, pauses de chapitre (titre plein écran), pauses de secret (jauge), projets
+    # 16/11/2026 : « joue souvent les musiques pour les titres, pour la nostalgie et l'intrigue » : après une phrase qui cite
+    # un titre entre « », on entend 3,6 s de son refrain chanté sur son clip (une fois par titre, 8 au plus, jamais un projet)
+    court = lambda t_: _cle(re.split(r"\s*\(|\s+feat|\s+ft\.?", t_ or "", flags=re.I)[0])
+    deja_chante = {court(b.get("titre")) for b in blocs if b.get("type") == "projet"} | {court(b.get("morceau")) for b in blocs if b.get("type") == "projet"}
+    n_chante = [0]
+
+    def titres_cites(b):
+        out = []
+        for t_ in re.findall(r"«\s*([^»]{2,40}?)\s*»", b.get("texte") or ""):
+            k_ = court(t_)
+            if k_ and k_ not in deja_chante and n_chante[0] < CHANTES_MAX and b.get("type", "voix") == "voix" and not b.get("secret"):
+                deja_chante.add(k_)
+                n_chante[0] += 1
+                out.append(t_)
+        return out[:1]
     evts, cur, vus = [], [], set()
     for b in blocs:
         if b.get("type") == "projet":
@@ -432,11 +453,15 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                 cur = []
                 evts.append(("jauge", s.get("n")))
             cur.append(b)
+            for titre_cite in titres_cites(b):
+                evts += [("voix", cur)] if cur else []
+                cur = []
+                evts.append(("chante", titre_cite))
     if cur:
         evts.append(("voix", cur))
     total_secrets = max(1, len(vus))
     t, mots, morceaux, sfx, bornes = 0.25, [], [], [], []
-    projets, titres, secrets, pauses, extraits = [], [], [], [], []
+    projets, titres, secrets, pauses, extraits, chantes = [], [], [], [], [], []
     k_voix, k_secret, chap_courant = 0, 0, None
     for genre, x in evts:
         if genre == "titre":
@@ -452,6 +477,34 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             pauses.append((t, t + PAUSE_SECRET))
             k_secret += 1
             t += PAUSE_SECRET + 0.1
+            continue
+        if genre == "chante":
+            mid = _morceau(p, prets, medias, x)
+            m = prets.get(mid) if mid else None
+            if m and m["type"] != "photo":
+                try:
+                    if "_duree" not in m:
+                        m["_duree"] = _duree(m["_chemin"])
+                    if "_cadre" not in m:
+                        m["_cadre"] = V3._cadre(m["_chemin"])
+                    try:
+                        r0, _ = RF.refrain(m["_chemin"], duree=DUREE_CHANTE)
+                    except Exception:  # noqa: BLE001
+                        r0 = m["_duree"] * 0.3
+                    nom = f"c{len(chantes):02d}"
+                    wav, mp3 = os.path.join(dossier, nom + ".wav"), os.path.join(dossier, nom + ".mp3")
+                    _extrait_wav(m["_chemin"], wav, r0, DUREE_CHANTE)
+                    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-i", wav, "-t", f"{DUREE_CHANTE:.2f}", "-af",
+                                    f"loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=in:d=0.25,afade=t=out:st={DUREE_CHANTE - 0.5:.2f}:d=0.5",
+                                    "-ar", "44100", "-ac", "2", "-b:a", "192k", mp3], check=True)
+                    V3._plan(m, dossier, nom + ".mp4", r0, DUREE_CHANTE, "plein" if m["type"] != "live" else "cadre")
+                    morceaux.append((t, mp3))   # le refrain, à la place de la voix off
+                    chantes.append({"src": f"{prefixe}/{nom}.mp4", "d": round(t, 3), "f": round(t + DUREE_CHANTE, 3),
+                                    "libelle": "EN ÉCOUTE · " + x.upper()[:34]})
+                    pauses.append((t, t + DUREE_CHANTE))
+                    t += DUREE_CHANTE + 0.2
+                except (subprocess.SubprocessError, OSError) as exc:
+                    log_write("studio", "warning", f"raconte v4 : refrain de « {x} » impossible ({str(exc)[:120]})")
             continue
         if genre == "extrait":
             r = _extrait_parle(x, dossier, len(extraits))
@@ -628,7 +681,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                 if c:
                     les_plans.append(c)
             cur_t, n = fin, n + 1
-    les_plans += extraits   # les extraits parlés (image et texte déjà montés)
+    les_plans += extraits + chantes   # les extraits parlés et les refrains (image déjà montée)
     photo = _photo(p.get("photo"), dossier, "photo.jpg") if p.get("photo") else None
     if photo:
         V3._fond_photo(photo, os.path.join(dossier, "photo-fond.jpg"))
@@ -722,6 +775,6 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                         for x in projets],
             "chapitres": [], "titresChapitre": [{k2: x[k2] for k2 in ("d", "f", "numero", "titre", "annees")} for x in titres],
             "secrets": [{k2: x[k2] for k2 in ("d", "k", "total")} for x in secrets], "bulles": bulles, "verites": verites,
-            "extraits": [{"d": x["d"], "f": x["f"]} for x in extraits],   # sous-titres cachés pendant qu'il parle lui-même
+            "extraits": [{"d": x["d"], "f": x["f"]} for x in extraits + chantes],   # sous-titres cachés pendant qu'il parle lui-même
             "sfx": sfx, "mythes": [], "contrats": contrats, "flashs": flashs, "sansBarre": True,
             "fin": {"d": round(fin_d, 3), "titre": recit["fin"]["titre"], "texte": recit["fin"]["texte"]}, "sources": recit.get("sources") or ""}

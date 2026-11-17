@@ -135,6 +135,11 @@ def telecharge(lien: str, dossier: str) -> tuple[str, dict]:
         elif re.search(r"login|cookies|rate-limit|Sign in|private", texte, re.I):
             texte = ("La plateforme refuse le téléchargement depuis le serveur (connexion exigée). Lance la fabrication "
                      "depuis le PC : python manage.py studio_job --id <numéro>. Détail : " + texte)
+        elif re.search(r"\[facebook\].*Cannot parse data", texte, re.I):
+            # 17/11/2026 : certains reels Facebook (réservés aux connectés, musique protégée…) ne se lisent pas, ni par yt-dlp
+            # ni par les acteurs Apify testés (memo23, scrapepilot) ; les autres reels du même jour passaient
+            texte = ("Facebook ne laisse pas télécharger cette vidéo (réservée aux personnes connectées ou protégée). "
+                     "Cherche la même vidéo sur YouTube, TikTok ou Instagram, ou un autre reel.")
         elif re.search(r"HTTP Error", texte):
             texte = "La plateforme n'a pas donné le fichier vidéo (3 essais). Relance dans quelques minutes. Détail : " + texte
         raise RuntimeError(texte[:400])
