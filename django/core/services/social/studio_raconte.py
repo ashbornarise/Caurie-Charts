@@ -267,6 +267,12 @@ def prepare(job_id: int, job: dict, p: dict, maj) -> dict:
     # v3 (15/11/2026) : documentaire 3 à 5 min — médiathèque de toutes les époques, mythes, contrats (v2 : 13/11)
     from core.services.social import raconte_v3, raconte_v4   # v4 (15/11) : ton humain, secrets en bulle, instrumentales
     donnees = raconte_v3.dossier(int(p["artiste_id"]), p.get("angle") or "")
+    # 17/11/2026 (Shatta Wale, « sa chute et sa démonstration de force ») : la recherche automatique ne suit pas l'angle ;
+    # la rédaction fournit ses faits vérifiés (2 médias chacun), qui font foi comme les autres données
+    if isinstance(p.get("faits_fournis"), list) and p["faits_fournis"]:
+        donnees["faits_verifies_par_la_redaction"] = [
+            {"fait": str(x.get("fait") or "")[:400], "sources": [str(s)[:60] for s in (x.get("sources") or [])][:4]}
+            for x in p["faits_fournis"][:30] if isinstance(x, dict) and str(x.get("fait") or "").strip()]
     recit = raconte_v4.ecrit(donnees)
     p["medias"] = donnees.get("_medias") or []
     vignette = None

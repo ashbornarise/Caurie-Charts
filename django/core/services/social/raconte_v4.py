@@ -170,6 +170,23 @@ def humanise(d: dict, donnees: dict) -> dict:
     return d
 
 
+def _consigne_angle(donnees: dict) -> str:
+    """17/11/2026 : « changer de thème, pas juste des thèmes positifs, intriguer de différentes manières » : quand un angle est
+    donné, le récit est construit autour de lui (une chute, un scandale, un retour…) au lieu de toute la carrière."""
+    angle = str(donnees.get("angle") or "").strip()
+    if not angle:
+        return ""
+    return ("\n\nANGLE IMPOSÉ PAR LA RÉDACTION (prioritaire sur la construction ci-dessus) : « " + angle + " ».\n"
+            "- Le récit raconte CET angle, pas toute la carrière : 1 chapitre court suffit pour dire qui il était au sommet, le reste "
+            "suit l'angle dans l'ordre des faits. Les chapitres peuvent être sombres (chute, prison, saisie, scandale) : c'est voulu, "
+            "pour intriguer autrement ; la fin peut retourner l'histoire si les faits le permettent.\n"
+            "- « faits_verifies_par_la_redaction » sont les faits centraux de l'angle : utilise-les tous, avec leurs chiffres exacts.\n"
+            "- Faits négatifs : ton factuel, jamais moqueur ni accusateur. Une accusation, une enquête ou une détention n'est PAS une "
+            "condamnation : dis « soupçonné », « lié à », « interrogé », « libéré sous caution » ; ne dis « condamné » que si les "
+            "données le disent, avec la peine exacte. Jamais d'insulte, jamais d'avis sur sa culpabilité.\n"
+            "- Le titre suit l'angle (haut « COMMENT » ou « POURQUOI » de préférence).")
+
+
 def ecrit(donnees: dict) -> dict:
     from core.services import ai
     from core.services.platforms import HttpClient
@@ -178,7 +195,8 @@ def ecrit(donnees: dict) -> dict:
     publiques = json.dumps({k: v for k, v in donnees.items() if not k.startswith("_")}, ensure_ascii=False, indent=1)
     os.environ["GEMINI_REFLEXION"] = "high"
     try:
-        d = ai.extract_json(client.ask(SYSTEME, "Données vérifiées (n'utilise rien d'autre) :\n" + publiques, 16000)["text"]) or {}
+        d = ai.extract_json(client.ask(SYSTEME + _consigne_angle(donnees), "Données vérifiées (n'utilise rien d'autre) :\n" + publiques,
+                                       16000)["text"]) or {}
         try:
             v = client.ask("Tu es vérificateur des faits d'un média musical. Tu compares un récit aux données, bloc par bloc.",
                            "Données (seule vérité) :\n" + publiques + "\n\nRécit :\n" + json.dumps(d, ensure_ascii=False)
