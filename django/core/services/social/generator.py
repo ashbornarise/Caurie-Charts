@@ -318,6 +318,11 @@ def purge_blob(keep_days: int = BLOB_KEEP_DAYS) -> str:
     for b in storage.blob_list("media/social/"):
         name = b["pathname"].rsplit("/", 1)[-1]
         age = now - datetime.fromisoformat(b["uploadedAt"].replace("Z", "+00:00"))
+        # 18/11/2026 : les épisodes « Cauri raconte » envoyés à la main dans Buffer (cauri-raconte-…) ne sont dans aucun post
+        # du site : le ménage les effaçait au bout d'un jour, avant leur date de sortie (Axel Merryl partie 1 jamais partie).
+        # On les garde 30 jours.
+        if name.startswith("cauri-raconte-") and age < timedelta(days=30):
+            continue
         if name not in recent and age > timedelta(days=1):
             old.append(b["url"])
             size += int(b.get("size") or 0)
