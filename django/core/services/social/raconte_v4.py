@@ -57,8 +57,12 @@ MACHINE = {"bruit": 1.3, "depart": 0.3, "car_num": 0.07, "entre": 0.35, "car_tit
 
 # 17/11/2026 : « dans les scènes où on voit les fesses, on floute ces endroits seuls » (TikTok et Meta brident les vidéos
 # « suggestives »). NudeNet (modèle libre, sur le PC) repère les zones, floutées image par image ; le reste du plan reste net.
-ZONES_FLOUTEES = {"BUTTOCKS_EXPOSED": 0.25, "BUTTOCKS_COVERED": 0.3, "FEMALE_BREAST_EXPOSED": 0.35, "FEMALE_GENITALIA_EXPOSED": 0.3,
-                  "FEMALE_GENITALIA_COVERED": 0.5, "MALE_GENITALIA_EXPOSED": 0.3, "ANUS_EXPOSED": 0.3}
+# 18/11 : « fesses couvertes » et « entrejambe couvert » retirés : ils floutaient des hommes en jean (bas-ventre de Shatta
+# Wale, danseur en rouge chez Axel) ; poitrine de femme ignorée quand seul un visage d'homme est vu (torse d'Axel sur sa pochette)
+# 18/11 (bis) : « poitrine de femme » retirée aussi : NudeNet a pris le visage et le torse d'Axel Merryl (vitiligo) pour une femme
+# seuil 0,65 : vraie danseuse en string 0,75-0,81 ; fausses alertes (main, casquette, torse d'Axel en gros plan) 0,42-0,55
+ZONES_FLOUTEES = {"BUTTOCKS_EXPOSED": 0.65, "FEMALE_GENITALIA_EXPOSED": 0.65, "ANUS_EXPOSED": 0.65, "MALE_GENITALIA_EXPOSED": 0.65}
+ZONES_FEMMES = {"FEMALE_BREAST_EXPOSED", "FEMALE_GENITALIA_EXPOSED"}
 _DETECTEUR = []
 
 
@@ -75,24 +79,28 @@ def floute_zones(chemin: str, pas: int = 5, tenue: int = 8) -> int:
     if not _DETECTEUR or _DETECTEUR[0] is None:
         _DETECTEUR[:] = [NudeDetector()]
     det = _DETECTEUR[0]
+    # 2 lectures (détection, puis flou) : rien n'est gardé en mémoire (une partie de 2 min 30 = 4 500 images de 6 Mo)
     cap = cv2.VideoCapture(chemin)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30
-    images, zones, actives = [], {}, []
-    i = 0
+    zones, i, w, h = {}, 0, 0, 0
     while True:
         ok, im = cap.read()
         if not ok:
             break
-        images.append(im)
         if i % pas == 0:
+            hh, ww = im.shape[:2]
+            h, w = hh, ww
             # le modèle travaille en 320 px : sur une image verticale (ou un clip 16:9 au milieu), les corps sont petits ->
             # on analyse des carrés qui se chevauchent (haut, milieu, bas), boîtes ramenées dans l'image entière
-            hh, ww = im.shape[:2]
             cote = min(hh, ww)
-            ys = sorted({0, max(0, (hh - cote) // 2), max(0, hh - cote)})
             boites = []
-            for y0 in ys:
-                for z in det.detect(im[y0:y0 + cote, 0:cote]):
+            for y0 in sorted({0, max(0, (hh - cote) // 2), max(0, hh - cote)}):
+                vus = det.detect(im[y0:y0 + cote, 0:cote])
+                classes = {z.get("class") for z in vus if z.get("score", 0) >= 0.4}
+                homme_seul = "FACE_MALE" in classes and "FACE_FEMALE" not in classes
+                for z in vus:
+                    if homme_seul and z.get("class") in ZONES_FEMMES:
+                        continue
                     if z.get("score", 0) >= ZONES_FLOUTEES.get(z.get("class"), 9):
                         x, y, bw, bh = z["box"]
                         boites.append([x, y + y0, bw, bh])
@@ -101,27 +109,32 @@ def floute_zones(chemin: str, pas: int = 5, tenue: int = 8) -> int:
                     zones.setdefault(j, []).extend(boites)
         i += 1
     cap.release()
-    if not zones or not images:
+    if not zones or not w:
         return 0
-    h, w = images[0].shape[:2]
-    for j, im in enumerate(images):
+    tmp = chemin + ".flou.mp4"
+    pr = subprocess.Popen([_ffmpeg(), "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{w}x{h}", "-r", f"{fps}",
+                           "-i", "-", "-i", chemin, "-map", "0:v", "-map", "1:a?", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+                           "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", tmp], stdin=subprocess.PIPE)
+    cap = cv2.VideoCapture(chemin)
+    actives, j = set(), 0
+    while True:
+        ok, im = cap.read()
+        if not ok:
+            break
         for x, y, bw, bh in zones.get(j, []):
             mx, my = int(bw * 0.2), int(bh * 0.2)
             x0, y0, x1, y1 = max(0, x - mx), max(0, y - my), min(w, x + bw + mx), min(h, y + bh + my)
             if x1 - x0 > 4 and y1 - y0 > 4:
                 k = max(31, (min(x1 - x0, y1 - y0) // 3) | 1)
                 im[y0:y1, x0:x1] = cv2.GaussianBlur(im[y0:y1, x0:x1], (k, k), 0)
-                actives.append(j)
-    tmp = chemin + ".flou.mp4"
-    pr = subprocess.Popen([_ffmpeg(), "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{w}x{h}", "-r", f"{fps}",
-                           "-i", "-", "-i", chemin, "-map", "0:v", "-map", "1:a?", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
-                           "-pix_fmt", "yuv420p", "-c:a", "copy", tmp], stdin=subprocess.PIPE)
-    for im in images:
+                actives.add(j)
         pr.stdin.write(im.tobytes())
+        j += 1
+    cap.release()
     pr.stdin.close()
     if pr.wait() == 0 and os.path.isfile(tmp):
         os.replace(tmp, chemin)
-        return len(set(actives))
+        return len(actives)
     return 0
 
 
