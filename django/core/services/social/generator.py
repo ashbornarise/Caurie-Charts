@@ -299,7 +299,8 @@ def delete_files(post: dict) -> None:
             os.unlink(f)
 
 
-BLOB_KEEP_DAYS = 7  # 7 jours après la date de publication (Buffer et les réseaux gardent leur copie) ; Blob gratuit : 1 Go
+BLOB_KEEP_DAYS = None  # 18/11/2026 : Vercel Pro + bibliothèque Cauri Charts : les médias des posts sont gardés pour toujours
+# (≈ 0,023 $ par Go et par mois) ; avant : 7 jours (Blob gratuit, 1 Go). Remettre un nombre de jours pour revenir au ménage.
 
 
 def purge_blob(keep_days: int = BLOB_KEEP_DAYS) -> str:
@@ -310,7 +311,8 @@ def purge_blob(keep_days: int = BLOB_KEEP_DAYS) -> str:
     if not storage.blob_token():
         return "Blob non configuré"
     recent = set()
-    for p in db.all("SELECT image_square, image_story, video, carousel FROM social_posts WHERE slot_date >= CURRENT_DATE - ?", [keep_days]):
+    filtre, args = ("WHERE slot_date >= CURRENT_DATE - ?", [keep_days]) if keep_days else ("", [])
+    for p in db.all(f"SELECT image_square, image_story, video, carousel FROM social_posts {filtre}", args):
         recent.update(os.path.basename(x) for x in [p["image_square"], p["image_story"], p["video"]] + _slide_files(p) if x)
     recent |= {f.rsplit(".", 1)[0] + "-tt.jpg" for f in recent}  # copies TikTok 1080 × 1920
     now = datetime.now(timezone.utc)
@@ -322,6 +324,8 @@ def purge_blob(keep_days: int = BLOB_KEEP_DAYS) -> str:
         # du site : le ménage les effaçait au bout d'un jour, avant leur date de sortie (Axel Merryl partie 1 jamais partie).
         # On les garde 30 jours.
         if name.startswith("cauri-raconte-") and age < timedelta(days=30):
+            continue
+        if not keep_days and name.startswith(("cauri-raconte-", "studio-")):   # archives : épisodes et vidéos du Studio
             continue
         if name not in recent and age > timedelta(days=1):
             old.append(b["url"])
