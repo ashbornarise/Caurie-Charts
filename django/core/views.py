@@ -560,6 +560,29 @@ def documents_liste(request):
     })
 
 
+_BIBLIO = {"t": 0.0, "els": None}
+
+
+def bibliotheque(request):
+    """La bibliothèque Cauri Charts (18/11/2026) : tous les contenus publiés, filtrables par catégorie, type, pays, artiste."""
+    import time
+    from core import bibliotheque as B
+    use_locale(request)
+    if _BIBLIO["els"] is None or time.time() - _BIBLIO["t"] > 600:
+        _BIBLIO["els"], _BIBLIO["t"] = B.elements(), time.time()
+    els = _BIBLIO["els"]
+    r = B.resume(els)
+    une = next((e for e in els if e["cat"] == "raconte"), els[0] if els else None)
+    return render(request, "bibliotheque", {
+        "els": els, "resume": r, "une": une,
+        "meta": {"title": "Bibliothèque · Tous nos contenus · " + brand(),
+                 "description": f"Tous les contenus de Cauri Charts au même endroit : {r['total']} publications, dont {r['videos']} vidéos, "
+                                "épisodes Cauri raconte, classements, portraits et actualités de la musique ouest-africaine.",
+                 "image": (une or {}).get("image") or None,
+                 "jsonld": [{"@type": "CollectionPage", "name": "Bibliothèque Cauri Charts", "url": url("bibliotheque")}]},
+    })
+
+
 def document_page(request, slug: str):
     """Un document : aperçu de chaque page, texte, téléchargement du PDF."""
     use_locale(request)

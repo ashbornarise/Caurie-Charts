@@ -1,0 +1,86 @@
+<link rel="stylesheet" href="{{ asset('css/documents.css') }}">
+<link rel="stylesheet" href="{{ asset('css/bibliotheque.css') }}">
+{% set r = resume %}
+<section class="dc-hero">
+    <div class="dc-w dc-hero-in">
+        <div>
+            <nav class="dc-fil"><a href="{{ path('/') }}">Cauri Charts</a> › {{ tr("Bibliothèque") }}</nav>
+            <span class="dc-chip">{{ tr("La bibliothèque Cauri Charts") }}</span>
+            <h1 class="dc-titre">{{ tr("Tout ce que nous") }} <em>{{ tr("publions") }}</em></h1>
+            <p class="dc-promesse">{{ tr("Épisodes Cauri raconte, classements, portraits, vidéos du Studio, actualités : chaque contenu sorti depuis le") }} {{ r.depuis }}, {{ tr("rangé au même endroit et classé par catégorie, type et artiste.") }}</p>
+            <div class="dc-btns">
+                <a class="dc-b pri" href="#bib">{{ tr("Parcourir la bibliothèque") }}</a>
+                <a class="dc-b sec" href="{{ path('documents') }}">{{ tr("Magazines et guides") }}</a>
+            </div>
+        </div>
+        {% if une %}
+        <button class="dc-couv bib-une" type="button" data-ouvre="{{ une.id }}">
+            <img src="{{ une.image }}" alt="{{ une.titre }}" width="1080" height="1350">
+            <span class="dc-tag">{{ tr("À la une") }} · {{ une.date_fr }}<b>{{ une.titre }}</b></span>
+        </button>
+        {% endif %}
+    </div>
+</section>
+
+<div class="dc-w">
+    <div class="dc-tuiles">
+        <div class="dc-t t1"><div><b>{{ r.total }}</b><span>{{ tr("contenus publiés") }}</span></div></div>
+        <div class="dc-t t2"><div><b>{{ r.videos }}</b><span>{{ tr("vidéos") }}</span></div></div>
+        <div class="dc-t t3"><div><b>{{ r.visuels }}</b><span>{{ tr("visuels et carrousels") }}</span></div></div>
+        <div class="dc-t t4"><div><b>{{ r.artistes }}</b><span>{{ tr("artistes à l’honneur") }}</span></div></div>
+    </div>
+
+    <section id="bib" class="bib">
+        <div class="bib-barre">
+            <div class="bib-chips" role="tablist" aria-label="{{ tr('Catégories') }}">
+                <button class="yt-chip on" data-cat="">{{ tr("Tout") }} <small>{{ r.total }}</small></button>
+                {% for c in r.categories %}<button class="yt-chip" data-cat="{{ c.code }}">{{ tr(c.nom) }} <small>{{ c.n }}</small></button>{% endfor %}
+            </div>
+            <div class="bib-outils">
+                <select id="bib-type" aria-label="{{ tr('Type de contenu') }}">
+                    <option value="">{{ tr("Tous les formats") }}</option>
+                    <option value="video">{{ tr("Vidéos") }}</option>
+                    <option value="carrousel">{{ tr("Carrousels") }}</option>
+                    <option value="visuel">{{ tr("Visuels") }}</option>
+                </select>
+                <input id="bib-q" type="search" placeholder="{{ tr('Un artiste, un titre…') }}" aria-label="{{ tr('Rechercher') }}">
+            </div>
+        </div>
+
+        <div class="bib-grille" id="bib-grille">
+            {% for e in els %}
+            <button class="bib-c" type="button" data-ouvre="{{ e.id }}" data-cat="{{ e.cat }}" data-type="{{ e.type }}"
+                    data-q="{{ (e.titre ~ ' ' ~ e.artiste ~ ' ' ~ e.pays_nom)|lower }}" {% if loop.index > 48 %}hidden{% endif %}>
+                <span class="bib-vig">
+                    {% if e.image %}<img src="{{ e.image }}" alt="" loading="lazy" decoding="async">{% endif %}
+                    {% if e.type == 'video' %}<span class="bib-lire" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+                    {% elif e.type == 'carrousel' %}<span class="bib-nb">{{ e.pages|length }} {{ tr("pages") }}</span>{% endif %}
+                </span>
+                <span class="bib-txt">
+                    <small class="bib-cat c-{{ e.cat }}">{{ tr(e.cat_nom if e.cat_nom else '') }}</small>
+                    <b>{{ e.titre }}</b>
+                    <small>{{ e.date_fr }}{% if e.artiste %} · {{ e.artiste }}{% endif %}{% if e.pays_nom %} · {{ e.pays_nom }}{% endif %}</small>
+                </span>
+            </button>
+            {% endfor %}
+        </div>
+        <p class="bib-vide" id="bib-vide" hidden>{{ tr("Aucun contenu ne correspond.") }}</p>
+        <div class="bib-plus"><button class="dc-b sec" id="bib-plus" type="button">{{ tr("Voir plus") }}</button></div>
+    </section>
+</div>
+
+<dialog class="bib-lecteur" id="bib-lecteur" aria-label="{{ tr('Contenu') }}">
+    <div class="bib-l-in">
+        <button class="bib-fermer" type="button" aria-label="{{ tr('Fermer') }}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        <div class="bib-media" id="bib-media"></div>
+        <div class="bib-info">
+            <small class="bib-cat" id="bib-l-cat"></small>
+            <h2 id="bib-l-titre"></h2>
+            <p class="bib-l-meta" id="bib-l-meta"></p>
+            <div class="bib-l-leg" id="bib-l-leg"></div>
+        </div>
+    </div>
+</dialog>
+
+<script type="application/json" id="bib-data">{{ els|tojson }}</script>
+<script src="{{ asset('js/bibliotheque.js') }}" defer></script>
