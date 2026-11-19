@@ -733,7 +733,20 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                 indices.append({**b["indice"], "d": round(a, 3), "f": round(z + 0.6, 3)})
                 sfx.append({"src": SFX["carte"], "d": round(a, 3), "vol": 0.22, "dur": 1.0})
             if isinstance(b.get("villes"), list) and b["villes"]:
-                villes.append({"liste": [str(v)[:24] for v in b["villes"][:8]], "d": round(a, 3), "f": round(z + 0.4, 3)})
+                # chaque ville apparaît quand la voix la prononce (premier mot qui commence comme elle), sinon à intervalles réguliers
+                liste = [str(v)[:24] for v in b["villes"][:8]]
+                norme = lambda w: re.sub(r"[^a-z]", "", __import__("unicodedata").normalize("NFKD", w.lower()).encode("ascii", "ignore").decode())
+                temps, deb = [], 0
+                for v in liste:
+                    cle_v = norme(v)[:4]
+                    k_m = next((k for k in range(deb, len(part)) if norme(part[k]["m"]).startswith(cle_v)), None) if cle_v else None
+                    if k_m is not None:
+                        temps.append(round(t + part[k_m]["d"] - a, 2))
+                        deb = k_m + 1
+                    else:
+                        temps.append(None)
+                # la carte reste pendant la phrase suivante : plan final sur toute la route
+                villes.append({"liste": liste, "d": round(a, 3), "f": round(z + 3.2, 3), **({"temps": temps} if any(x_ is not None for x_ in temps) else {})})
         t += d + PAUSE
         k_voix += 1
     fin_voix = t - PAUSE
