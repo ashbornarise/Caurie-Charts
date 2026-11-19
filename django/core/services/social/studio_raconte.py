@@ -637,6 +637,8 @@ def recit_valide(r: dict) -> dict | None:
             phrases[-1]["indice"] = {"titre": str(i["titre"])[:40], "sous": str(i.get("sous") or "")[:50],
                                      "tampon": str(i.get("tampon") or "INDICE")[:14].upper(), "n": str(i.get("n") or "")[:4],
                                      "media": str(i.get("media") or "")[:8], "instant": float(i.get("instant") or 0.35)}
+            if str(i.get("img") or "").startswith("raconte/enquete/"):   # capture d'une source, déjà prête
+                phrases[-1]["indice"]["img"] = str(i["img"])[:160]
         if isinstance(x.get("villes"), list) and x["villes"]:
             phrases[-1]["villes"] = [str(v)[:24] for v in x["villes"][:8]]
     if sum(1 for x in phrases if x["type"] == "voix") < 3:

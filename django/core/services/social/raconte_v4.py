@@ -486,8 +486,11 @@ def _morceau(p: dict, prets: dict, medias: dict, titre: str) -> str | None:
     k = _cle(re.split(r"\s*\(|\s+feat|\s+ft\.?", titre or "", flags=re.I)[0])
     if not k:
         return None
+    # 19/11 : « Didi B, Khaid - MALADE (Clip officiel) » doit répondre à « Malade » (sinon la recherche YouTube prenait
+    # le premier « Malade » venu, d'un autre artiste)
+    apres_tiret = lambda t_: _cle(re.split(r"\s*\(|\s+ft\.?|\s+feat", re.split(r"\s+[-–]\s+", t_)[-1], flags=re.I)[0])
     candidats = [i for i, m in medias.items() if m["type"] != "photo" and not m.get("fichier") and (
-        _cle(re.split(r"\s*\(|\s+ft\.?|\s+feat", m["titre"], flags=re.I)[0]) == k
+        _cle(re.split(r"\s*\(|\s+ft\.?|\s+feat", m["titre"], flags=re.I)[0]) == k or apres_tiret(m["titre"]) == k
         or (len(k) >= 4 and re.search(r"[\"«“”»]\s*" + re.escape(titre.split("(")[0].strip()) + r"\s*[\"»”“«]", m["titre"], re.I)))]
     candidats.sort(key=lambda i: (medias[i]["type"] != "clip", -(medias[i].get("vues") or 0)))
     for i in candidats:
@@ -540,6 +543,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
     # un titre entre « », on entend 3,6 s de son refrain chanté sur son clip (une fois par titre, 8 au plus, jamais un projet)
     court = lambda t_: _cle(re.split(r"\s*\(|\s+feat|\s+ft\.?", t_ or "", flags=re.I)[0])
     deja_chante = {court(b.get("titre")) for b in blocs if b.get("type") == "projet"} | {court(b.get("morceau")) for b in blocs if b.get("type") == "projet"}
+    deja_chante |= {court(b.get("titre")) for b in blocs if b.get("type") == "ecoute"}   # 19/11 : déjà sa pièce sonore de 13 s
     n_chante = [0]
 
     def titres_cites(b):
@@ -665,10 +669,17 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             chemin = os.path.join(PUBLIC, src.replace("/", os.sep))
             if os.path.isfile(chemin):
                 nom = f"e{len(chantes):02d}.mp4"
-                subprocess.run([_ffmpeg(), "-v", "error", "-y", "-ss", f"{float(x.get('debut') or 0.5):.2f}", "-t", f"{long_p:.2f}",
-                                "-i", chemin, "-an", "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
-                                "eq=saturation=0.75:contrast=1.08,fps=30,setsar=1", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
-                                "-pix_fmt", "yuv420p", os.path.join(dossier, nom)], check=True)
+                if chemin.lower().endswith((".jpg", ".jpeg", ".png")):   # illustration fixe : lent zoom avant (19/11)
+                    n_im = int(long_p * 30)
+                    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-loop", "1", "-i", chemin, "-t", f"{long_p:.2f}", "-vf",
+                                    "scale=2160:3840:force_original_aspect_ratio=increase,crop=2160:3840,"
+                                    f"zoompan=z='1+0.06*on/{n_im}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={n_im}:s=1080x1920:fps=30,setsar=1",
+                                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", os.path.join(dossier, nom)], check=True)
+                else:
+                    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-ss", f"{float(x.get('debut') or 0.5):.2f}", "-t", f"{long_p:.2f}",
+                                    "-i", chemin, "-an", "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+                                    "eq=saturation=0.75:contrast=1.08,fps=30,setsar=1", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+                                    "-pix_fmt", "yuv420p", os.path.join(dossier, nom)], check=True)
                 chantes.append({"src": f"{prefixe}/{nom}", "d": round(t, 3), "f": round(t + long_p, 3),
                                 "libelle": str(x.get("texte") or "")[:60]})
                 sfx.append({"src": SFX["swell"], "d": round(t, 3), "vol": 0.3, "dur": long_p})
@@ -975,7 +986,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
 
     # 6 bis) indices : une image fixe tirée du média cité (polaroïd sur le tableau d'enquête)
     for k_i, ind in enumerate(indices):
-        m = prets.get(ind.get("media"))
+        m = None if str(ind.get("img") or "").startswith("raconte/") else prets.get(ind.get("media"))   # capture de source fournie
         if m:
             try:
                 img = os.path.join(dossier, f"indice{k_i}.jpg")
