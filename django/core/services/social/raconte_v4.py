@@ -32,6 +32,7 @@ from core.services.social.raconte_v3 import _cle, _duree, _ffmpeg
 
 REMOTION = r"C:\Users\agbal\Studio-AV\remotion"
 CACHE = os.path.join(REMOTION, "public", "raconte", "cache")
+PUBLIC = os.path.join(REMOTION, "public")   # 19/11 : banque des plans d'enquête (raconte/enquete/…)
 PYTHON_STUDIO = "python"
 RX = r"C:\Program Files\Common Files\VST3\iZotope\RX 12 Music Rebalance.vst3"
 DUREE_PROJET = 9.0
@@ -564,6 +565,10 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             evts += [("voix", cur)] if cur else []
             cur = []
             evts.append(("titre", b))
+        elif b.get("type") in ("ecoute", "plan"):   # 19/11 (enquête SHOGUN) : morceau long à l'écran, plan d'enquête plein écran
+            evts += [("voix", cur)] if cur else []
+            cur = []
+            evts.append((b["type"], b))
         else:
             s = b.get("secret") or {}
             if s.get("temps") == "rumeur" and s.get("n") not in vus:
@@ -581,6 +586,7 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
     total_secrets = max(1, len(vus))
     t, mots, morceaux, sfx, bornes = 0.25, [], [], [], []
     projets, titres, secrets, pauses, extraits, chantes = [], [], [], [], [], []
+    indices, villes = [], []   # 19/11 : format enquête
     k_voix, k_secret, chap_courant = 0, 0, None
     for genre, x in evts:
         if genre == "titre":
@@ -611,33 +617,65 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             k_secret += 1
             t += PAUSE_SECRET + 0.1
             continue
-        if genre == "chante":
-            mid = _morceau(p, prets, medias, x)
-            m = prets.get(mid) if mid else None
+        if genre in ("chante", "ecoute"):
+            if genre == "chante":
+                titre_e, long_e, lib_e = x, DUREE_CHANTE, "EN ÉCOUTE · " + x.upper()[:34]
+                mid = _morceau(p, prets, medias, x)
+                m = prets.get(mid) if mid else None
+            else:
+                titre_e = str(x.get("titre") or "")
+                long_e = max(6.0, min(20.0, float(x.get("duree") or 13)))
+                lib_e = str(x.get("libelle") or ("EN ÉCOUTE · " + titre_e.upper()))[:60]
+                if x.get("fichier") and os.path.isfile(x["fichier"]):   # nos propres vidéos (paroles du Studio…)
+                    m = {"type": "clip", "_chemin": x["fichier"]}
+                else:
+                    mid = x.get("media") if x.get("media") in prets else _morceau(p, prets, medias, titre_e)
+                    m = prets.get(mid) if mid else None
             if m and m["type"] != "photo":
                 try:
                     if "_duree" not in m:
                         m["_duree"] = _duree(m["_chemin"])
                     if "_cadre" not in m:
                         m["_cadre"] = V3._cadre(m["_chemin"])
-                    try:
-                        r0, _ = RF.refrain(m["_chemin"], duree=DUREE_CHANTE)
-                    except Exception:  # noqa: BLE001
-                        r0 = m["_duree"] * 0.3
+                    if genre == "ecoute" and x.get("debut") is not None:
+                        r0 = float(x["debut"])
+                    else:
+                        try:
+                            r0, _ = RF.refrain(m["_chemin"], duree=long_e)
+                        except Exception:  # noqa: BLE001
+                            r0 = m["_duree"] * 0.3
+                    r0 = max(0.0, min(r0, m["_duree"] - long_e - 0.1))
                     nom = f"c{len(chantes):02d}"
                     wav, mp3 = os.path.join(dossier, nom + ".wav"), os.path.join(dossier, nom + ".mp3")
-                    _extrait_wav(m["_chemin"], wav, r0, DUREE_CHANTE)
-                    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-i", wav, "-t", f"{DUREE_CHANTE:.2f}", "-af",
-                                    f"loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=in:d=0.25,afade=t=out:st={DUREE_CHANTE - 0.5:.2f}:d=0.5",
+                    _extrait_wav(m["_chemin"], wav, r0, long_e)
+                    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-i", wav, "-t", f"{long_e:.2f}", "-af",
+                                    f"loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=in:d=0.25,afade=t=out:st={long_e - 0.6:.2f}:d=0.6",
                                     "-ar", "44100", "-ac", "2", "-b:a", "192k", mp3], check=True)
-                    V3._plan(m, dossier, nom + ".mp4", r0, DUREE_CHANTE, "plein" if m["type"] != "live" else "cadre")
-                    morceaux.append((t, mp3))   # le refrain, à la place de la voix off
-                    chantes.append({"src": f"{prefixe}/{nom}.mp4", "d": round(t, 3), "f": round(t + DUREE_CHANTE, 3),
-                                    "libelle": "EN ÉCOUTE · " + x.upper()[:34]})
-                    pauses.append((t, t + DUREE_CHANTE))
-                    t += DUREE_CHANTE + 0.2
-                except (subprocess.SubprocessError, OSError) as exc:
-                    log_write("studio", "warning", f"raconte v4 : refrain de « {x} » impossible ({str(exc)[:120]})")
+                    V3._plan(m, dossier, nom + ".mp4", r0, long_e, "plein" if m["type"] != "live" else "cadre")
+                    morceaux.append((t, mp3))   # le morceau, à la place de la voix off
+                    chantes.append({"src": f"{prefixe}/{nom}.mp4", "d": round(t, 3), "f": round(t + long_e, 3), "libelle": lib_e})
+                    pauses.append((t, t + long_e))
+                    t += long_e + 0.2
+                except (subprocess.SubprocessError, OSError, ValueError) as exc:
+                    log_write("studio", "warning", f"raconte v4 : écoute de « {titre_e} » impossible ({str(exc)[:120]})")
+            continue
+        if genre == "plan":   # plan d'enquête plein écran (banque libre de droits), étiquette « PIÈCE N°x », voix coupée
+            src = str(x.get("src") or "")
+            long_p = max(1.5, min(6.0, float(x.get("duree") or 3.0)))
+            chemin = os.path.join(PUBLIC, src.replace("/", os.sep))
+            if os.path.isfile(chemin):
+                nom = f"e{len(chantes):02d}.mp4"
+                subprocess.run([_ffmpeg(), "-v", "error", "-y", "-ss", f"{float(x.get('debut') or 0.5):.2f}", "-t", f"{long_p:.2f}",
+                                "-i", chemin, "-an", "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,"
+                                "eq=saturation=0.75:contrast=1.08,fps=30,setsar=1", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+                                "-pix_fmt", "yuv420p", os.path.join(dossier, nom)], check=True)
+                chantes.append({"src": f"{prefixe}/{nom}", "d": round(t, 3), "f": round(t + long_p, 3),
+                                "libelle": str(x.get("texte") or "")[:60]})
+                sfx.append({"src": SFX["swell"], "d": round(t, 3), "vol": 0.3, "dur": long_p})
+                pauses.append((t, t + long_p))
+                t += long_p + 0.15
+            else:
+                log_write("studio", "warning", f"raconte v4 : plan d'enquête introuvable ({src})")
             continue
         if genre == "extrait":
             r = _extrait_parle(x, dossier, len(extraits))
@@ -691,6 +729,11 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             a, z = t + (part[0]["d"] if part else 0), t + (part[-1]["f"] if part else d)
             mots += _sous_titres(b["texte"], part, t, z - a)
             bornes.append([a, z, b])
+            if isinstance(b.get("indice"), dict):
+                indices.append({**b["indice"], "d": round(a, 3), "f": round(z + 0.6, 3)})
+                sfx.append({"src": SFX["carte"], "d": round(a, 3), "vol": 0.22, "dur": 1.0})
+            if isinstance(b.get("villes"), list) and b["villes"]:
+                villes.append({"liste": [str(v)[:24] for v in b["villes"][:8]], "d": round(a, 3), "f": round(z + 0.4, 3)})
         t += d + PAUSE
         k_voix += 1
     fin_voix = t - PAUSE
@@ -917,6 +960,25 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
                 if m["src"].endswith(os.path.basename(mp3)):
                     m["vol"] = FOND["chant"]
 
+    # 6 bis) indices : une image fixe tirée du média cité (polaroïd sur le tableau d'enquête)
+    for k_i, ind in enumerate(indices):
+        m = prets.get(ind.get("media"))
+        if m:
+            try:
+                img = os.path.join(dossier, f"indice{k_i}.jpg")
+                if m["type"] == "photo":
+                    shutil.copyfile(m["_chemin"], img)
+                else:
+                    if "_duree" not in m:
+                        m["_duree"] = _duree(m["_chemin"])
+                    subprocess.run([_ffmpeg(), "-v", "error", "-y", "-ss", f"{m['_duree'] * float(ind.get('instant') or 0.35):.2f}",
+                                    "-i", m["_chemin"], "-frames:v", "1", "-vf", "scale=900:-2", "-q:v", "3", img], check=True)
+                ind["img"] = f"{prefixe}/indice{k_i}.jpg"
+            except (subprocess.SubprocessError, OSError) as exc:
+                log_write("studio", "warning", f"raconte v4 : image d'indice impossible ({str(exc)[:100]})")
+        ind.pop("media", None)
+        ind.pop("instant", None)
+
     # 7) mascotte : ouverture et fin (les autres apparitions portent les bulles)
     fin_t1 = titres[0]["f"] if titres else accroche_fin + PAUSE_CHAPITRE
     mascottes.insert(0, {"src": POSES["presente"], "d": round(fin_t1 + 0.6, 3), "f": round(fin_t1 + 3.6, 3), "cote": "droite", "h": 820})
@@ -930,4 +992,6 @@ def construit(job_id: int, p: dict, dossier: str, prefixe: str) -> dict:
             "secrets": [{k2: x[k2] for k2 in ("d", "k", "total")} for x in secrets], "bulles": bulles, "verites": verites,
             "extraits": [{"d": x["d"], "f": x["f"]} for x in extraits + chantes],   # sous-titres cachés pendant qu'il parle lui-même
             "sfx": sfx, "mythes": [], "contrats": contrats, "flashs": flashs, "sansBarre": True,
+            "indices": [{k2: x[k2] for k2 in ("d", "f", "img", "titre", "sous", "tampon", "n") if k2 in x} for x in indices],
+            "villes": villes,
             "fin": {"d": round(fin_d, 3), "titre": recit["fin"]["titre"], "texte": recit["fin"]["texte"]}, "sources": recit.get("sources") or ""}

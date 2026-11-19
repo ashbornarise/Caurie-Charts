@@ -588,6 +588,22 @@ def recit_valide(r: dict) -> dict | None:
                                 "duree": min(20.0, float(x["duree"])), "source": str(x.get("source") or "")[:120],
                                 "citation": str(x.get("citation") or "")[:160]})
             continue
+        if sorte == "ecoute":   # 19/11 (enquête SHOGUN) : un morceau 12-15 s à l'écran, voix coupée
+            if str(x.get("titre") or "").strip():
+                e = {"type": "ecoute", "titre": str(x["titre"]).strip()[:40], "duree": min(20.0, max(6.0, float(x.get("duree") or 13))),
+                     "libelle": str(x.get("libelle") or "")[:60]}
+                for k in ("media", "fichier"):
+                    if x.get(k):
+                        e[k] = str(x[k])[:200]
+                if x.get("debut") is not None:
+                    e["debut"] = float(x["debut"])
+                phrases.append(e)
+            continue
+        if sorte == "plan":   # plan d'enquête plein écran (banque libre de droits)
+            if str(x.get("src") or "").startswith("raconte/enquete/"):
+                phrases.append({"type": "plan", "src": str(x["src"])[:120], "duree": min(6.0, max(1.5, float(x.get("duree") or 3))),
+                                "texte": str(x.get("texte") or "")[:60], "debut": float(x.get("debut") or 0.5)})
+            continue
         if sorte == "chapitre":
             if str(x.get("titre") or "").strip():
                 phrases.append({"type": "chapitre", "numero": str(x.get("numero") or "")[:20], "titre": str(x["titre"]).strip()[:28],
@@ -615,6 +631,14 @@ def recit_valide(r: dict) -> dict | None:
             phrases[-1]["secret"] = {"n": x["secret"].get("n"), "temps": x["secret"]["temps"]}
         if str(x.get("bulle") or "").strip():
             phrases[-1]["bulle"] = str(x["bulle"]).strip().upper()[:90]
+        # 19/11 (enquête) : pièce à conviction (polaroïd) et carte des villes reliées par un fil rouge
+        if isinstance(x.get("indice"), dict) and str(x["indice"].get("titre") or "").strip():
+            i = x["indice"]
+            phrases[-1]["indice"] = {"titre": str(i["titre"])[:40], "sous": str(i.get("sous") or "")[:50],
+                                     "tampon": str(i.get("tampon") or "INDICE")[:14].upper(), "n": str(i.get("n") or "")[:4],
+                                     "media": str(i.get("media") or "")[:8], "instant": float(i.get("instant") or 0.35)}
+        if isinstance(x.get("villes"), list) and x["villes"]:
+            phrases[-1]["villes"] = [str(v)[:24] for v in x["villes"][:8]]
     if sum(1 for x in phrases if x["type"] == "voix") < 3:
         return None
     fin = r.get("fin") or {}
