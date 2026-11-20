@@ -49,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         partie: [principal, catalogue]   # deux tâches en parallèle (03/11/2026)
-    timeout-minutes: 180   # la nuit dure 75 à 111 min (03/11/2026) : marge avant la coupure
+    timeout-minutes: 330   # 20/11/2026 : la partie principale a été coupée à 180 min (relevé des vues 2 h 05) en plein calcul de la semaine ; GitHub autorise 360
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
