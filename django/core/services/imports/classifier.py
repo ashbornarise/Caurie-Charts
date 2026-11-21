@@ -311,7 +311,7 @@ def auto_confirm_by_observations(min_obs: int = 30, min_weeks: int = 2, min_rati
                COUNT(DISTINCT date_trunc('week', o.observed_on)) AS weeks
         FROM artists a
         JOIN tracks t ON t.artist_id = a.id
-        JOIN chart_observations o ON o.track_id = t.id
+        JOIN chart_observations o ON o.track_id = t.id AND o.source NOT IN ('spotify', 'turntable')
         JOIN countries c ON c.id = o.country_id AND c.is_active = 1
         WHERE a.status = 'pending'
         GROUP BY a.id, a.name, o.country_id, c.code
@@ -326,7 +326,10 @@ def auto_confirm_by_observations(min_obs: int = 30, min_weeks: int = 2, min_rati
             continue
         seen.add(aid)
         total_obs = int(db.value(
-            "SELECT COUNT(*) FROM chart_observations o JOIN tracks t ON t.id = o.track_id WHERE t.artist_id = ?", [aid]))
+            "SELECT COUNT(*) FROM chart_observations o JOIN tracks t ON t.id = o.track_id WHERE t.artist_id = ? "
+            "AND o.source NOT IN ('spotify', 'turntable')", [aid]))
+        # 21/11/2026 : le Top Spotify Nigeria (quotidien) et TurnTable sont des sources de mesure et de contrôle ; les stars
+        # étrangères qu'ils contiennent seraient devenues « nigérianes » au bout d'un mois (même bug que Niro en Mauritanie)
         ratio = int(row["obs"]) / max(1, total_obs)
         if ratio < min_ratio:
             skipped += 1

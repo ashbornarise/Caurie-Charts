@@ -87,6 +87,95 @@ class AppleMusicChartSource:
         return {"observed_on": day, "rows": rows}
 
 
+class SpotifyPaysChartSource:
+    """Top 200 Spotify QUOTIDIEN d'un pays, relevé sur kworb.net (21/11/2026, formule v7). Spotify ne publie de classement
+    que pour le Nigeria en Afrique de l'Ouest : c'est la seule mesure d'écoutes Spotify DANS un pays (les compteurs des
+    titres sont mondiaux). Date du classement = celle de la page (Kworb a 1 à 2 jours de retard sur Spotify)."""
+    PAYS = {"NG": "ng"}
+    URL = "https://kworb.net/spotify/country/{}_daily.html"
+    LIGNE = re.compile(r'<td class="np">(\d+)</td>\s*<td class="np">[^<]*</td>\s*<td class="text mp"><div>(.*?)</div></td>', re.S)
+
+    def __init__(self, http):
+        self.http = http
+
+    def key(self):
+        return "spotify"
+
+    def is_available(self):
+        return True
+
+    def fetch(self, code: str):
+        slug = self.PAYS.get(code.upper())
+        if slug is None:
+            return None
+        resp = self.http.request("GET", self.URL.format(slug), {"User-Agent": "Mozilla/5.0 (compatible; CauriCharts/1.0)"})
+        if resp["status"] != 200:
+            raise PlatformException(f"Spotify (kworb) : réponse inattendue (HTTP {resp['status']})")
+        return self.parse(resp["body"])
+
+    @classmethod
+    def parse(cls, text: str) -> dict:
+        m = re.search(r"(?:Daily|Weekly) Chart - [^<]*? - (\d{4})/(\d{2})/(\d{2})", text)
+        if not m:
+            raise PlatformException("Spotify (kworb) : date du classement introuvable")
+        rows = []
+        for pos, bloc in cls.LIGNE.findall(text):
+            artiste = re.search(r'<a href="\.\./artist/[^"]+">([^<]+)</a>', bloc)
+            titre = re.search(r'<a href="\.\./track/([A-Za-z0-9]{22})\.html">([^<]+)</a>', bloc)
+            if not artiste or not titre:
+                continue   # titre sans lien (rare) : on ne devine pas
+            invites = re.findall(r'<a href="\.\./artist/[^"]+">([^<]+)</a>', bloc.split("(w/", 1)[1]) if "(w/" in bloc else []
+            # « Peruzzi, Zlatan, Shoday » : l'importeur garde le premier comme artiste, les autres en invités
+            rows.append({"position": int(pos), "artist": ", ".join(html.unescape(a) for a in [artiste.group(1)] + invites),
+                         "title": html.unescape(titre.group(2)),
+                         "external_id": titre.group(1), "url": f"https://open.spotify.com/track/{titre.group(1)}"})
+        if len(rows) < 50:
+            raise PlatformException(f"Spotify (kworb) : seulement {len(rows)} lignes lues, page changée ?")
+        return {"observed_on": f"{m.group(1)}-{m.group(2)}-{m.group(3)}", "rows": rows}
+
+
+class TurnTableChartSource:
+    """« Official Nigeria Top 100 » de TurnTable Charts (hebdomadaire), relevé pour CONTRÔLE seulement (21/11/2026) :
+    poids 0 dans la formule, il sert à vérifier que notre Top Nigeria ne s'écarte pas du marché (alerte si un titre de
+    notre Top 3 est absent de leur Top 50). C'est un classement concurrent : jamais de points tirés de ses places."""
+    PAYS = {"NG": "https://turntablecharts.com/charts/top-100-songs"}
+
+    def __init__(self, http):
+        self.http = http
+
+    def key(self):
+        return "turntable"
+
+    def is_available(self):
+        return True
+
+    def fetch(self, code: str):
+        url = self.PAYS.get(code.upper())
+        if url is None:
+            return None
+        resp = self.http.request("GET", url, {"User-Agent": "Mozilla/5.0 (compatible; CauriCharts/1.0)"})
+        if resp["status"] != 200:
+            raise PlatformException(f"TurnTable : réponse inattendue (HTTP {resp['status']})")
+        return self.parse(resp["body"])
+
+    @staticmethod
+    def parse(text: str) -> dict:
+        m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', text, re.S)
+        if not m:
+            raise PlatformException("TurnTable : données de la page introuvables")
+        vus, rows = set(), []
+        for rk, titre, artiste in re.findall(r'"rank"\s*:\s*(\d+).{0,400}?"title"\s*:\s*"([^"]*)".{0,200}?"artiste"\s*:\s*"([^"]*)"',
+                                             m.group(1), re.S):
+            if int(rk) in vus:
+                continue
+            vus.add(int(rk))
+            dec = lambda s: json.loads(f'"{s}"')   # & → &
+            rows.append({"position": int(rk), "title": dec(titre), "artist": dec(artiste)})
+        if len(rows) < 50:
+            raise PlatformException(f"TurnTable : seulement {len(rows)} lignes lues, page changée ?")
+        return {"observed_on": _today(), "rows": rows}
+
+
 class DeezerChartSource:
     """« Top <pays> » du compte Deezer Charts : Côte d'Ivoire et Sénégal seulement."""
     PLAYLISTS = {"CI": 1362497945, "SN": 1362523075, "NG": 1362516565}

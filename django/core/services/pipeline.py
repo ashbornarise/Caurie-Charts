@@ -94,7 +94,9 @@ class DailyPipeline:
                 for r in db.all("SELECT code FROM countries WHERE is_active = 1 ORDER BY sort_order"):
                     res = service.compute_week(r["code"], week.start, None, None)
                     lines.append(f"{week.key} {r['code']} : {res['tracks_scored']} titres notés, {res['pending']} à vérifier")
-                return lines
+                # 21/11/2026 : notre Top comparé au marché (Spotify du pays, TurnTable) avant la publication du vendredi soir
+                from core.services import controle_externe
+                return lines + controle_externe.controle(week)
             self._step("7. Classement officiel de la semaine (brouillon à publier dans l'admin)", weekly)
 
         days = {int(k): v for k, v in (conf.get("ai.social.days") or {}).items()}
@@ -195,6 +197,13 @@ class DailyPipeline:
             r = auto_confirm_by_observations()
             return [f"{r['confirmed']} artistes auto-confirmés sur {r['candidates']} candidats ({r['skipped']} écartés)"]
         self._step("10c. Auto-confirmation artistes fréquents", auto_confirm, 60)
+
+        def pays_verifies():
+            # 21/11/2026 (audit des tops) : la vérification Google ne tournait plus depuis le 07/11 ; 2 lots de 40 par nuit,
+            # dans la moitié du budget Gemini du jour, en commençant par les pays déduits des seuls classements
+            from core.services import pays_google
+            return pays_google.verifier(lots=2)
+        self._step("10c. Pays des artistes vérifiés par Google", pays_verifies, 240)
 
         def classify():
             c = ArtistClassifier(HttpClient(20), ai.make()).run(250)   # 23/10/2026 : 36 à 60 nouveaux noms par jour

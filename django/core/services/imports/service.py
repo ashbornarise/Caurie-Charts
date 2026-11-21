@@ -7,7 +7,7 @@ from core.services.imports import chart_importer
 from core.services.imports.matching import YouTubeMatcher
 from core.services.imports.sources import (AppleMusicChartSource, AudiomackChartSource, BoomplayChartSource, DeezerChartSource,
                                            DeezerPopularitySource,
-                                           ShazamChartSource, YouTubeDiscoverySource, YouTubeTrendingSource, YouTubeViewsSource)
+                                           ShazamChartSource, SpotifyPaysChartSource, TurnTableChartSource, YouTubeDiscoverySource, YouTubeTrendingSource, YouTubeViewsSource)
 from core.services.platforms import (HttpClient, PlatformException, QuotaStore, YouTubeClient, YouTubeQuota, log_write)
 
 # Sources calculées à partir des artistes suivis : à lancer après la vérification des artistes et le relevé
@@ -26,6 +26,8 @@ class ImportService:
             "youtube_trending": YouTubeTrendingSource(self.http, key),
             "shazam": ShazamChartSource(self.http),
             "boomplay": BoomplayChartSource(),   # Top 100 hebdomadaire par pays, via Apify (06/11/2026)
+            "spotify": SpotifyPaysChartSource(self.http),   # Top 200 quotidien du Nigeria, écoutes DANS le pays (v7, 21/11/2026)
+            "turntable": TurnTableChartSource(self.http),   # contrôle seulement, poids 0 (21/11/2026)
             "youtube_discovery": YouTubeDiscoverySource(self.http, key),
             # Calculés à partir des artistes suivis : rendent visibles les pays sans classement de plateforme
             "deezer_popularity": DeezerPopularitySource(self.http),

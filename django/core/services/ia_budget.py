@@ -12,7 +12,7 @@ from core import db, env
 JOURS = 30
 DEFAUT_CREDIT = {"gemini": 5.0, "deepseek": 5.0}   # rechargés le 27/10/2026
 # $ par million de jetons (entrée, sortie) et $ par requête avec recherche Google
-PRIX = {"gemini": (0.30, 2.50), "deepseek": (0.28, 0.42)}
+PRIX = {"gemini": (0.30, 2.50), "deepseek": (1.32, 3.96)}   # DeepSeek V4 Pro au tarif des heures pleines (grille du 21/11/2026) : jamais sous-compté
 PRIX_RECHERCHE = 0.035
 
 
@@ -70,3 +70,57 @@ def gemini_usage(data: dict) -> None:
 
 def bilan() -> str:
     return " · ".join(f"{f} {depense(f):.2f} $ / {plafond(f):.2f} $ aujourd'hui" for f in PRIX)
+
+
+# ---------------------------------------------------------------- appels « à la main » (scripts de recherche)
+# 21/11/2026 : des scripts de recherche (sources de Fela, légendes, audit des tops, formule v7) appelaient Gemini en direct,
+# hors de ce compteur ; ils ont fait dépasser le plafond mensuel de 5 € fixé dans Google AI Studio. Décision du fondateur :
+# TOUT appel passe par ici (budget vérifié avant, dépense comptée après), y compris les essais lancés à la main.
+
+def gemini(prompt: str, recherche: bool = True, reflexion: str = "low", part: float = 1.0, timeout: int = 600) -> tuple[str, list]:
+    """Appel Gemini compté : (texte, sources [{titre, url}]). Refusé si le budget du jour est atteint."""
+    import json as _json
+    from core.services.platforms import HttpClient, PlatformException
+    if not peut("gemini", part):
+        raise PlatformException(f"Gemini : budget du jour atteint ({bilan()})")
+    corps = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
+             "generationConfig": {"thinkingConfig": {"thinkingLevel": reflexion}}}
+    if recherche:
+        corps["tools"] = [{"google_search": {}}]
+    modele = env.get("GEMINI_MODEL") or "gemini-3.8-flash"
+    r = HttpClient(timeout).request("POST", f"https://generativelanguage.googleapis.com/v1beta/models/{modele}:generateContent",
+                                    {"x-goog-api-key": env.get("GEMINI_API_KEY", ""), "Content-Type": "application/json"},
+                                    _json.dumps(corps, ensure_ascii=False).encode())
+    try:
+        d = _json.loads(r["body"])
+    except ValueError:
+        d = {}
+    c = (d.get("candidates") or [None])[0]
+    if r["status"] != 200 or not c:
+        raise PlatformException("Gemini : " + ((d.get("error") or {}).get("message") or f"HTTP {r['status']}"))
+    gemini_usage(d)
+    texte = "".join(p.get("text", "") for p in (c.get("content") or {}).get("parts") or [])
+    sources = [{"titre": (x.get("web") or {}).get("title"), "url": (x.get("web") or {}).get("uri")}
+               for x in (c.get("groundingMetadata") or {}).get("groundingChunks") or []]
+    return texte, sources
+
+
+def deepseek(prompt: str, modele: str = "deepseek-v4-pro", max_tokens: int = 32000, part: float = 1.0, timeout: int = 1800) -> str:
+    """Appel DeepSeek compté (même règle que gemini()). Refusé si le budget du jour est atteint."""
+    import json as _json
+    from core.services.platforms import HttpClient, PlatformException
+    if not peut("deepseek", part):
+        raise PlatformException(f"DeepSeek : budget du jour atteint ({bilan()})")
+    r = HttpClient(timeout).request("POST", "https://api.deepseek.com/chat/completions",
+                                    {"Authorization": "Bearer " + env.get("DEEPSEEK_API_KEY", ""), "Content-Type": "application/json"},
+                                    _json.dumps({"model": modele, "messages": [{"role": "user", "content": prompt}],
+                                                 "max_tokens": max_tokens}, ensure_ascii=False).encode())
+    try:
+        d = _json.loads(r["body"])
+    except ValueError:
+        d = {}
+    if r["status"] != 200 or not d.get("choices"):
+        raise PlatformException("DeepSeek : " + str((d.get("error") or {}).get("message") or f"HTTP {r['status']}"))
+    u = d.get("usage") or {}
+    compte("deepseek", u.get("prompt_tokens", 0), u.get("completion_tokens", 0))
+    return d["choices"][0]["message"].get("content") or ""

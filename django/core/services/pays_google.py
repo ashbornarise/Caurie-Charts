@@ -37,7 +37,10 @@ def a_verifier(limite: int) -> list:
                       WHERE a.status IN ('active', 'pending') AND a.pays_google_le IS NULL
                         AND EXISTS (SELECT 1 FROM tracks t JOIN chart_observations o ON o.track_id = t.id
                                     WHERE t.artist_id = a.id AND o.observed_on >= CURRENT_DATE - 30)
-                      ORDER BY a.status = 'pending' DESC, vus DESC, a.id LIMIT {int(limite)}""")   # 07/11/2026 : les artistes en attente d'abord (650 bloqués hors des classements, dont TRK.)
+                      ORDER BY (a.status = 'active' AND a.origin_source = 'chart_observations') DESC, a.status = 'pending' DESC, vus DESC, a.id
+                      LIMIT {int(limite)}""")
+    # 21/11/2026 (audit des tops) : d'abord les artistes ACTIFS dont le pays n'a été déduit que des classements : Niro
+    # (rappeur français), Valiant (Jamaïque) et la chaîne Sapien Medicine étaient classés en Mauritanie, Gambie, Guinée-Bissau   # 07/11/2026 : les artistes en attente d'abord (650 bloqués hors des classements, dont TRK.)
 
 
 def _demande(lot: list, http: HttpClient) -> dict:
@@ -90,6 +93,8 @@ def verifier(lots: int = 4, taille: int = TAILLE, appliquer: bool = True, http: 
             change = (nouveau_pays, nouveau_statut) != (a["pays"], a["status"])
             if appliquer:
                 db.run("UPDATE artists SET pays_google = ?, pays_google_le = NOW() WHERE id = ?", [pays, a["id"]])
+                if pays and re.fullmatch(r"[A-Z]{2}", pays) and certitude == "haute":   # 21/11/2026 : pays d'origine renseigné
+                    db.run("UPDATE artists SET origin_country = ? WHERE id = ? AND origin_country IS NULL", [pays, a["id"]])
                 if change:
                     db.run("UPDATE artists SET status = ?, submission_country_id = COALESCE(?, submission_country_id), "
                            "base_country = COALESCE(?, base_country) WHERE id = ?",
