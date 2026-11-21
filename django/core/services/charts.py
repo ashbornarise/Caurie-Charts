@@ -336,10 +336,26 @@ class ChartRanker:
 
     def prime(self, items: list, size: int, previous: dict | None = None, country_cap: int | None = None,
               ref: str | None = None) -> list:
-        ordered = self.apply_diversity(sorted(self.sans_anciens(self.eligible(items), ref), key=self.sort_key))
+        ordered = sorted(self.sans_anciens(self.eligible(items), ref), key=self.sort_key)
+        if not self.formula.get("v7"):   # v7 : la moyenne géométrique remplace la règle « Top 5 : 2 sources au moins »
+            ordered = self.apply_diversity(ordered)
         if country_cap:
             ordered = self.cap_per_country(ordered, size, country_cap)
-        return self._finalize(self.cap_artist(ordered, size)[:size], previous or {}, "track_id")
+        entries = self._finalize(self.cap_artist(ordered, size)[:size], previous or {}, "track_id")
+        return self.scores_ordonnes(entries) if self.formula.get("scores_ordonnes") else entries
+
+    @staticmethod
+    def scores_ordonnes(entries: list) -> list:
+        """v7 (21/11/2026) : le score affiché « décide du rang » (page publique). Un titre repoussé par la règle des sources
+        (ou par la limite par artiste / par pays) gardait son score plus haut que celui du N°1 (Bénin S47 : N°6 à 2 131 points,
+        N°1 à 727). Son score affiché est ramené à celui du titre placé juste au-dessus ; le vrai total reste dans le détail."""
+        plafond = None
+        for e in entries:
+            if plafond is not None and e["score"] > plafond:
+                e["details"] = {**(e["details"] if isinstance(e["details"], dict) else {}), "score_avant_plafond": e["score"]}
+                e["score"] = plafond
+            plafond = e["score"]
+        return entries
 
     def cap_artist(self, ordered: list, size: int) -> list:
         """Au plus `artist_cap` titres d'un même artiste dans le Top (formule v3, décision du fondateur du 06/11/2026 :

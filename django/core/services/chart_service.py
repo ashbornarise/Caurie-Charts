@@ -51,8 +51,9 @@ class ChartService:
         period = Period.week_of(week_start)
         formula = formula_effective_for(period.start)
         items = self._score_week(country, period, formula)
-        ranker = ChartRanker(formula)
         size = int(country["chart_size"])
+        items = self._v7_avant_classement(items, formula, size)
+        ranker = ChartRanker(formula)
         charts = conf.get("charts")
         cid = int(country["id"])
 
@@ -87,6 +88,30 @@ class ChartService:
         pending = sum(1 for i in items if i["review_status"] == "pending" and i["score"] > 0)
         return {"country": country["code"], "period": period.key, "tracks_scored": len(items), "pending": pending,
                 "entries": {k: len(v) for k, v in results.items()}}
+
+    @staticmethod
+    def _v7_avant_classement(items: list, formula: dict, size: int) -> list:
+        """Formule v7 (audit des tops S47, 21/11/2026) :
+        - dates_sortie : les titres candidats sans date reçoivent leur vraie date (iTunes), pour que la règle « plus d'un an »
+          s'applique (Calm Down, Magic in the Air, Forever (Remix) étaient classés faute de date) ;
+        - exclure_signales : un titre signalé (pic anormal, ratio YouTube, déclaration qui ne colle pas) attend sa
+          vérification HORS du classement ; validé le lendemain, il revient au recalcul."""
+        if formula.get("dates_sortie"):
+            from core.services import dates_sortie
+            candidats = [i for i in sorted(items, key=lambda x: -float(x["score"]))[: size * 3] if not i.get("release_date")]
+            for tid, d in dates_sortie.completer([i["track_id"] for i in candidats]).items():
+                for i in items:
+                    if i["track_id"] == tid:
+                        i["release_date"] = d
+        if formula.get("v7"):
+            # v7 : le pic et le ratio j'aime/vues sont jugés par le test statistique (étape 6), qui retire YouTube du score
+            # d'un clip suspect ; seuls les autres signalements (déclaration qui ne colle pas) attendent la revue
+            for i in items:
+                if i.get("review_status") == "pending" and not (set(i.get("flags") or []) - {"spike", "youtube_ratio"}):
+                    i["review_status"] = "ok"
+        if formula.get("exclure_signales"):
+            items = [i for i in items if (i.get("review_status") or "ok") != "pending"]
+        return items
 
     def _extras(self, items: list, ranker: ChartRanker, cid, period: Period, size: int, semaines_saison) -> dict:
         """Classements ajoutés le 09/11/2026 : Top Artistes de la saison (points cumulés depuis janvier) et Top par genre.
@@ -195,7 +220,11 @@ class ChartService:
                    [tid, cid, period.start, result["score"], result["sources_count"], _json(result["breakdown"]),
                     _json(result["flags"]), result["review_status"], formula["version"], now])
             items.append({**result, "track_id": tid, "artist_id": int(t["artist_id"]), "prev_score": th["prev"],
-                          "release_date": t["release_date"], "is_emerging": bool(t["is_emerging"])})
+                          "release_date": t["release_date"], "is_emerging": bool(t["is_emerging"]),
+                          "yt_likes": deltas.get(tid, {}).get("likes")})
+        if formula.get("v7"):
+            self._normalise_v7(items, formula, cid, period)
+            return items
         if formula.get("normalisation"):
             if (formula.get("normalisation") or {}).get("sans_clip"):
                 # v5 (07/11/2026, remarque du fondateur : un album qui marche sur les plateformes d'écoute sans clip était
@@ -216,6 +245,57 @@ class ChartService:
                         i["breakdown"] = {**(i.get("breakdown") or {}), "spotify": {"delta": ecoutes[i["track_id"]]}}
             self._normalise(items, formula, cid, period)
         return items
+
+    def _normalise_v7(self, items: list, formula: dict, cid: int, period: Period) -> None:
+        """Formule v7 (21/11/2026) : voir core/services/formule_v7.py et « La méthode Cauri Charts ». Le score brut reste
+        enregistré (alertes, Buzz) ; le score v7, sur 10 000 points dans le pays, sert à classer."""
+        from core.services import formule_v7 as F7
+        p = formula.get("v7") or {}
+        ids = {int(i["track_id"]) for i in items}
+        obs = [(int(r["track_id"]), r["source"], r["observed_on"], int(r["position"])) for r in db.all(
+            f"""SELECT o.track_id, o.source, o.observed_on, o.position FROM chart_observations o
+                WHERE o.country_id = ? AND o.observed_on BETWEEN ? AND ? AND o.track_id IS NOT NULL
+                  AND o.source IN ({', '.join(['?'] * len(p["sources"]))})""", [cid, period.start, period.end] + list(p["sources"]))]
+        x, infos = F7.parts_classements(obs, ids, F7.Zipf(p["alpha"], p["beta"]))
+        clips = {int(r["track_id"]) for r in db.all(
+            """SELECT DISTINCT tpi.track_id FROM track_platform_ids tpi JOIN tracks t ON t.id = tpi.track_id
+               JOIN artists a ON a.id = t.artist_id
+               WHERE a.submission_country_id = ? AND tpi.platform = 'youtube' AND tpi.is_official = 1""", [cid])} & ids
+        vues = {int(i["track_id"]): float(((i.get("breakdown") or {}).get("youtube") or {}).get("delta") or 0) for i in items}
+        likes = {int(i["track_id"]): i.get("yt_likes") for i in items if i.get("yt_likes") is not None}
+        histo: dict = {}
+        debut = (date.fromisoformat(period.start) - timedelta(days=7 * 8)).isoformat()
+        for r in db.all("""SELECT track_id, week_start, breakdown FROM weekly_scores WHERE country_id = ? AND week_start >= ?
+                           AND week_start < ? ORDER BY week_start DESC""", [cid, debut, period.start]):
+            b = json.loads(r["breakdown"] or "{}") or {}
+            v = ((b if isinstance(b, dict) else {}).get("youtube") or {}).get("delta")
+            if v:
+                # vues ramenées à 7 jours (la semaine de transition du 09/11/2026 n'avait que 4 jours)
+                pw = Period.week_of(str(r["week_start"])[:10])
+                jours = (date.fromisoformat(pw.end) - date.fromisoformat(pw.start)).days + 1
+                histo.setdefault(int(r["track_id"]), []).append(float(v) * 7 / max(1, jours))
+        suspects = F7.fraude(vues, likes, histo)
+        yt = F7.parts_youtube(vues, clips, float(p.get("gamma", 0.5)))
+        detail, pays = F7.scores(sorted(ids), x, infos, yt, set(suspects), p)
+        prev = {int(r["track_id"]): r["breakdown"] for r in db.all(
+            "SELECT track_id, breakdown FROM weekly_scores WHERE country_id = ? AND week_start = ?", [cid, Period.week_of(period.start).previous().start])}
+        for i in items:
+            tid = int(i["track_id"])
+            d = detail.get(tid) or {"score": 0.0, "poids": {}, "parts": {}}
+            ancien = json.loads(prev.get(tid) or "{}") if prev.get(tid) else {}
+            ancien = ancien if isinstance(ancien, dict) else {}
+            i["score_brut"], i["prev_brut"] = i["score"], i["prev_score"]
+            i["prev_score"] = float((ancien.get("_v4") or {}).get("score") or 0)
+            i["score"] = d["score"]
+            if tid in suspects:
+                i["flags"] = list(dict.fromkeys(list(i.get("flags") or []) + ["fraude_youtube"]))
+            i["breakdown"] = {**(i.get("breakdown") or {}), "_v4": {
+                "score": d["score"], "parts": d["parts"], "poids": d["poids"], "formule": 7, "fiabilite": pays["fiabilite"],
+                "geo": d.get("geo", 0.0),
+                **({"fraude_youtube_p": suspects[tid]} if tid in suspects else {})}}
+            db.run("UPDATE weekly_scores SET breakdown = ? WHERE track_id = ? AND week_start = ?",
+                   [_json(i["breakdown"]), tid, period.start])
+        self.dernier_v7 = {"pays": cid, "periode": period.key, **pays, "sources": infos, "suspects": len(suspects)}
 
     def _spotify_deltas(self, cid: int, period: Period) -> dict:
         """Écoutes Spotify gagnées pendant la semaine : dernier compteur de la semaine moins le dernier d'avant (toutes les
@@ -265,13 +345,26 @@ class ChartService:
         Une source sans aucune donnée pour le pays cette semaine n'est pas comptée (ses poids vont aux autres) ; un titre
         n'a zéro pour une source que si elle a bien été relevée et qu'il n'y figure pas. Le score brut reste enregistré
         (alertes, progressions du Buzz) ; le score normalisé sert à classer."""
-        poids = formula["normalisation"]
+        poids = dict(formula["normalisation"])
+        # v7 (décision du fondateur du 21/11/2026) : là où on a un vrai classement d'écoutes DU pays (Spotify Nigeria), les vues
+        # YouTube, mondiales, pèsent moins (Heaven Baby N°1 chez nous, 131e sur Spotify Nigeria, 44e chez TurnTable)
+        if poids.get("youtube_pays"):
+            code = db.value("SELECT code FROM countries WHERE id = ?", [cid])
+            if code in poids["youtube_pays"]:
+                poids["youtube"] = float(poids["youtube_pays"][code])
+                poids["streaming"] = 1 - poids["youtube"]
         valeurs = {i["track_id"]: self._valeurs(i.get("breakdown") or {}) for i in items}
         totaux: dict = {}
         for v in valeurs.values():
             for k, x in v.items():
                 totaux[k] = totaux.get(k, 0) + x
         relevees = {k for k, t in totaux.items() if t > 0}
+        # v7 (21/11/2026) : une source qui ne couvre qu'une poignée de titres du pays ne compte pas. Au Togo, 3 000 écoutes
+        # Spotify (3 titres relevés) valaient plus que 250 000 vues YouTube : « Sagbassè » N°1 avec 8 571 vues.
+        mini = int(poids.get("min_titres_source") or 0)
+        if mini:
+            nb = {k: sum(1 for v in valeurs.values() if v.get(k, 0) > 0) for k in relevees}
+            relevees = {k for k in relevees if k == "youtube" or nb[k] >= mini}
         ecoute = [k for k in self.STREAMING if k in relevees]
         w = {}
         if "youtube" in relevees:
@@ -496,12 +589,20 @@ class ChartService:
             [self.chart_types["prime"], week.key])]
         if not published:
             return None
+        formula = formula_effective_for(week.start)
+        # v7 : les titres signalés attendent leur vérification hors du classement (comme dans les pays)
+        signales = " AND ws.review_status <> 'pending'" if formula.get("exclure_signales") and not formula.get("v7") else ""
         rows = db.all(
             f"""SELECT ws.track_id, t.artist_id, COALESCE(t.release_date, (SELECT MIN(px.published_at) FROM track_platform_ids px WHERE px.track_id = t.id AND px.platform = 'youtube')) AS release_date, ws.score, ws.sources_count, ws.breakdown, a.base_country AS country,
-                   (SELECT p.score FROM weekly_scores p WHERE p.track_id = ws.track_id AND p.week_start = ?) AS prev_score
+                   ws.country_id, ws.review_status, ws.flags,
+                   (SELECT p.score FROM weekly_scores p WHERE p.track_id = ws.track_id AND p.week_start = ?) AS prev_score,
+                   (SELECT p.breakdown FROM weekly_scores p WHERE p.track_id = ws.track_id AND p.week_start = ?) AS prev_breakdown
                 FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id JOIN artists a ON a.id = t.artist_id
-                WHERE ws.week_start = ? AND ws.country_id IN ({', '.join(['?'] * len(published))}) AND ws.review_status <> 'excluded'""",
-            [week.previous().start, week.start] + published)
+                WHERE ws.week_start = ? AND ws.country_id IN ({', '.join(['?'] * len(published))}) AND ws.review_status <> 'excluded'
+                  AND a.status = 'active'{signales}""",
+            [week.previous().start, week.previous().start, week.start] + published)
+        if formula.get("v7"):
+            rows = self._regional_v7(rows, formula, published)
         items = [{"track_id": int(r["track_id"]), "artist_id": int(r["artist_id"]), "score": float(r["score"]),
                   "sources_count": int(r["sources_count"]), "prev_score": float(r["prev_score"] or 0), "release_date": r["release_date"],
                   "is_emerging": False, "flags": [], "review_status": "ok", "country": r["country"],
@@ -513,9 +614,12 @@ class ChartService:
                                     WHERE ws.week_start = ? AND ws.score > 0 GROUP BY ws.country_id
                                     HAVING COUNT(DISTINCT t.artist_id) >= 8) x""", [week.start]) or countries)
         complete = len(published) >= min(countries, eligibles)
-        formula = formula_effective_for(week.start)
-        entries = ChartRanker(formula).prime(items, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, "week", week.start),
-                                             conf.get("charts.prime-wa.country_cap"), ref=week.end)
+        if formula.get("regional_places"):
+            entries = ChartRanker(formula).summed_points(self._places_pays(week, published), int(conf.get("charts.prime-wa.size", 20)),
+                                                         self._history("prime-wa", None, "week", week.start), conf.get("charts.prime-wa.country_cap"))
+        else:
+            entries = ChartRanker(formula).prime(items, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, "week", week.start),
+                                                 conf.get("charts.prime-wa.country_cap"), ref=week.end)
         ranker = ChartRanker(formula)
         autres = {}
         if conf.get("charts.icon.region") and "icon" in self.chart_types:
@@ -531,6 +635,65 @@ class ChartService:
             self.compute_regional_aggregate(Period.month(week.month_key()), user_id)
             self.compute_regional_aggregate(Period.year(week.end[:4]), user_id)
         return {"period": week.key, "countries": len(published), "published": complete, "entries": len(entries)}
+
+    PLACES_PAYS = 10
+
+    @staticmethod
+    def _regional_v7(rows: list, formula: dict, published: list) -> list:
+        """Formule v7, étape 7 : score régional = P_c × score du titre dans son pays (10 000 points par pays), avec
+        P_c = √population × fiabilité du pays, normalisé sur les pays publiés (Banque mondiale, SP.POP.TOTL, 2025). Les titres
+        signalés autrement que par le pic ou le ratio YouTube (jugés par le test statistique) attendent leur revue."""
+        codes = {int(r["id"]): r["code"] for r in db.all("SELECT id, code FROM countries")}
+        pop = (formula.get("v7") or {}).get("population") or {}
+
+        def b(x):
+            v = json.loads(x or "{}") or {}
+            return (v.get("_v4") or {}) if isinstance(v, dict) else {}
+        fiab: dict = {}
+        for r in rows:
+            f = b(r["breakdown"]).get("fiabilite")
+            if f is not None:
+                fiab[int(r["country_id"])] = max(fiab.get(int(r["country_id"]), 0), float(f))
+        brut = {c: math.sqrt(float(pop.get(codes.get(c), 0))) * fiab.get(c, 0) for c in published}
+        tot = sum(brut.values())
+        if not tot:   # aucune fiabilité connue : la racine de la population seule
+            brut = {c: math.sqrt(float(pop.get(codes.get(c), 0))) for c in published}
+            tot = sum(brut.values()) or 1
+        P = {c: v / tot for c, v in brut.items()}
+        out = []
+        for r in rows:
+            flags = set(json.loads(r.get("flags") or "[]") or [])
+            if r.get("review_status") == "pending" and flags - {"spike", "youtube_ratio"}:
+                continue
+            c = int(r["country_id"])
+            # part brute des classements (moyenne géométrique, comparable d'un pays à l'autre) × poids du pays, sur 10 000 :
+            # le score « dans le pays » dépend de la taille du catalogue (Nigeria 8 800 titres, Togo quelques centaines)
+            out.append({**r, "score": 10000 * P.get(c, 0) * float(b(r["breakdown"]).get("geo") or 0),
+                        "prev_score": 10000 * P.get(c, 0) * float(b(r["prev_breakdown"]).get("geo") or 0)})
+        return out
+
+    def _places_pays(self, week: Period, published: list) -> dict:
+        """v7 (décision du fondateur du 21/11/2026, audit des tops) : le Top Afrique de l'Ouest additionne les places de chaque
+        titre dans les classements officiels PUBLIÉS des pays (N°1 = 10 points … N°10 = 1 point) au lieu des vues YouTube
+        brutes (mondiales, ≈ 99 % du score). Un titre classé dans plusieurs pays monte ; à égalité, celui qui est dans le
+        plus de pays, puis la meilleure place."""
+        n = self.PLACES_PAYS
+        rows = db.all(f"""SELECT e.track_id, e.position, t.artist_id, a.base_country AS country
+                           FROM chart_entries e JOIN chart_runs r ON r.id = e.chart_run_id JOIN tracks t ON t.id = e.track_id
+                           JOIN artists a ON a.id = t.artist_id
+                           WHERE r.chart_type_id = ? AND r.period_type = 'week' AND r.period_key = ? AND r.status = 'published'
+                             AND a.status = 'active' AND e.position <= ? AND r.country_id IN ({', '.join(['?'] * len(published))})""",
+                      [self.chart_types["prime"], week.key, n] + list(published))
+        totals: dict = {}
+        for r in rows:
+            t = totals.setdefault(int(r["track_id"]), {"score": 0.0, "artist_id": int(r["artist_id"]), "countries": 0,
+                                                      "country": r["country"], "best": 99})
+            t["score"] += n + 1 - int(r["position"])
+            t["countries"] += 1
+            t["best"] = min(t["best"], int(r["position"]))
+        for t in totals.values():   # départage : nombre de pays puis meilleure place (le score reste un nombre de points entier)
+            t["score"] += t["countries"] / 100 + (n + 1 - t["best"]) / 10000
+        return totals
 
     def compute_regional_aggregate(self, period: Period, user_id=None):
         type_id = self.chart_types["prime-wa"]
@@ -548,6 +711,18 @@ class ChartService:
         totals = {int(r["track_id"]): {"score": float(r["score"]), "artist_id": int(r["artist_id"]), "countries": int(r["countries"]),
                                        "country": r["country"]} for r in rows}
         formula = formula_effective_for(period.end)
+        if formula.get("regional_places"):
+            # v7 : le mois et l'année additionnent les places des Tops Afrique de l'Ouest de chaque semaine (N°1 = 20 points
+            # … N°20 = 1), la même mesure pour les semaines d'avant et d'après la v7 (les anciens scores étaient en vues)
+            taille = int(conf.get("charts.prime-wa.size", 20))
+            totals = {}
+            for r in db.all("""SELECT e.track_id, e.position, t.artist_id, a.base_country AS country FROM chart_entries e
+                               JOIN chart_runs r ON r.id = e.chart_run_id JOIN tracks t ON t.id = e.track_id JOIN artists a ON a.id = t.artist_id
+                               WHERE r.chart_type_id = ? AND r.country_id IS NULL AND r.period_type = 'week' AND r.status = 'published'
+                                 AND r.period_start BETWEEN ? AND ? AND a.status = 'active'""", [type_id, period.start, period.end]):
+                t = totals.setdefault(int(r["track_id"]), {"score": 0.0, "artist_id": int(r["artist_id"]), "countries": 0, "country": r["country"]})
+                t["score"] += max(0, taille + 1 - int(r["position"]))
+                t["countries"] += 1
         entries = ChartRanker(formula).summed_points(totals, int(conf.get("charts.prime-wa.size", 20)), self._history("prime-wa", None, period.type, period.start),
                                                      conf.get("charts.prime-wa.country_cap"))
         with db.atomic():

@@ -15,7 +15,7 @@ return [
     'pilot_country' => strtoupper(Env::get('PILOT_COUNTRY', 'TG')),
 
     // Version de la méthodologie publique (METHODOLOGIE.md), enregistrée avec chaque calcul
-    'methodology_version' => '1.1',
+    'methodology_version' => '1.7',   // formule v7, semaine 48 (21/11/2026)
 
     // Label rattaché au même groupe : ses artistes portent un badge
     'group_label' => [

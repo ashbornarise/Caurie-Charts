@@ -20,7 +20,7 @@ def _all() -> dict:
             # Chaîne Telegram publique (lien d'invitation) affichée en pied de page
             "telegram_url": env.get("TELEGRAM_URL", "https://t.me/+RTc85tqAsZFkNzM0"),
             "pilot_country": env.get("PILOT_COUNTRY", "TG").upper(),
-            "methodology_version": "1.1",
+            "methodology_version": "1.7",   # formule v7, semaine 48 (21/11/2026)
             "group_label": {"code": "novaluz", "name": "Nova Luz"},
             "security": {"login_max_attempts": 5, "login_window_minutes": 15, "session_lifetime": 7200,
                          "upload_max_bytes": 5 * 1024 * 1024},
