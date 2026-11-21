@@ -386,6 +386,59 @@ def bandes(source: str, debut: float, duree: float) -> str | None:
     return f"{w}:{h}:{x}:{y}"
 
 
+def cadrage_plein(source: str, debut: float, duree: float, rogne: str | None, ratio: float = 9 / 16) -> str | None:
+    """Cadrage « plein écran » (22/11/2026, « fais le refrain proprement en 9:16 sans bordures ») : au lieu de poser le
+    clip 16:9 dans une bande au milieu (fond flouté dessus et dessous), on découpe une fenêtre verticale dans l'image.
+    Le clip est coupé en plans (changement d'image brutal) ; dans chaque plan, la fenêtre se centre sur les visages
+    (détecteur YuNet, comme pour la banque de photos), fixe pendant tout le plan, sans tremblement. Plan sans visage :
+    centre de l'image. Renvoie l'expression ffmpeg de la position x (en fonction de t), ou None si impossible."""
+    import glob
+    import tempfile
+    try:
+        import cv2
+        import numpy as np
+        from core.services.social import visages
+        det, _rec = visages._outils()
+    except Exception:  # noqa: BLE001 — pas d'OpenCV : montage classique
+        return None
+    pas = 0.2                                   # 5 images par seconde
+    with tempfile.TemporaryDirectory(prefix="cadrage-") as d:
+        vf = (f"crop={rogne}," if rogne else "") + f"fps={1 / pas:g},scale=480:-2"
+        subprocess.run([ffmpeg(), "-v", "error", "-ss", f"{debut:.2f}", "-t", f"{duree:.2f}", "-i", source, "-vf", vf,
+                        os.path.join(d, "i%05d.jpg")], capture_output=True, timeout=600)
+        images = sorted(glob.glob(os.path.join(d, "i*.jpg")))
+        if len(images) < 2:
+            return None
+        centres, prec, coupes = [], None, [0]
+        for k, f in enumerate(images):
+            img = cv2.imread(f)
+            h, w = img.shape[:2]
+            petit = cv2.resize(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), (64, 36)).astype("float32")
+            if prec is not None and float(np.mean(np.abs(petit - prec))) > 28:   # changement de plan
+                coupes.append(k)
+            prec = petit
+            det.setInputSize((w, h))
+            _n, vs = det.detect(img)
+            if vs is not None and len(vs):
+                poids = [float(v[2] * v[3]) for v in vs]
+                cx = sum((v[0] + v[2] / 2) * p_ for v, p_ in zip(vs, poids)) / sum(poids)
+                centres.append(cx / w)
+            else:
+                centres.append(None)
+        coupes.append(len(images))
+    plans = []
+    for a, b in zip(coupes, coupes[1:]):
+        vus = sorted(c for c in centres[a:b] if c is not None)
+        plans.append((a * pas, vus[len(vus) // 2] if vus else 0.5))
+    # x = clamp(centre × largeur − fenêtre/2) ; expression par morceaux selon le temps du plan
+    def x(c):
+        return f"min(max({c:.4f}*iw-ih*{ratio:.6f}/2,0),iw-ih*{ratio:.6f})"
+    expr = x(plans[-1][1])
+    for k in range(len(plans) - 2, -1, -1):          # plan k jusqu'au début du plan k+1
+        expr = f"if(lt(t,{plans[k + 1][0]:.2f}),{x(plans[k][1])},{expr})"
+    return expr
+
+
 def _icone_carree(taille_px: int) -> Image.Image:
     """Icône carrée arrondie violet + monogramme CC blanc, à la taille demandée."""
     from core.services.social.couverture2026 import VIOLET, RES
@@ -540,12 +593,19 @@ def monte(source: str, sortie: str, fmt: str, debut: float, fin: float, calque_p
         total = max(total, t_sig + (_duree_fichier(str(signature)) or 5.7) + 0.1)
 
     # ── base : fond flouté + clip ──
-    filtre = ((f"[0:v]crop={rogne},split=2[a][b];" if rogne else "[0:v]split=2[a][b];")
+    x_plein = cadrage_plein(source, debut, duree, rogne, W / H) if hab.get("cadrage") == "plein" and W < H else None
+    if x_plein:   # plein cadre : fenêtre verticale qui suit les visages, plan par plan (22/11/2026)
+        filtre = ((f"[0:v]crop={rogne}," if rogne else "[0:v]") + f"crop=w='ih*{W / H:.6f}':h=ih:x='{x_plein}':y=0,"
+                  f"scale={W}:{H},setsar=1,fps=30[v0];")
+    else:
+        filtre = ""
+    filtre_classique = ((f"[0:v]crop={rogne},split=2[a][b];" if rogne else "[0:v]split=2[a][b];")
               + f"[a]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
               f"boxblur=28:6,eq=brightness=-0.35[fond];"
               + (f"[b]crop='min(iw,ih*1.9)':ih,scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];" if W < H * 1.2
                  else f"[b]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1[clip];")
               + f"[fond][clip]overlay=(W-w)/2:{y}+({h}-h)/2,fps=30[v0];")
+    filtre = filtre or filtre_classique
 
     # ── calque fixe (logo, crédit) ──
     filtre += "[v0][1:v]overlay=0:0[v1];"
@@ -786,6 +846,7 @@ def traite(job_id: int) -> dict:
             nom = f"studio-{job_id}-{os.urandom(3).hex()}"
             video = os.path.join(tmp, nom + ".mp4"); vignette = os.path.join(tmp, nom + ".jpg")
             hab = _habillage(p, job["lien"], source, debut, fin, tmp)
+            hab["cadrage"] = p.get("cadrage")   # « plein » : 9:16 sans bandes, cadré sur les visages (22/11/2026)
             couv = _couverture(p, hab, taille, tmp)
             if couv:
                 hab["couverture_png"] = couv

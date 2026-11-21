@@ -632,14 +632,23 @@ def _envoyer(request, ident):
         resultat = f"échec ({exc})"
     if tiktok_direct:
         resultat = ", ".join(x for x in (resultat, _tiktok_direct(post, c, pid)) if x)
+    # 22/11/2026 : la case Telegram ne faisait rien (Buffer ne publie pas sur Telegram) : la vidéo part dans la chaîne
+    if reseaux is None or "telegram" in reseaux:
+        from core.services import telegram
+        try:
+            resultat = ", ".join(x for x in (resultat, "telegram : " + telegram.send_post(post)) if x)
+        except Exception as exc:  # noqa: BLE001
+            resultat = ", ".join(x for x in (resultat, f"telegram : échec ({exc})") if x)
     # Dès qu'un réseau a reçu la vidéo, elle est « envoyée » (un nouvel envoi ferait un doublon) ; les refus sont signalés
     recus = [r["reason"].split("-")[2] for r in db.all("SELECT reason FROM audit_log WHERE reason LIKE ?", [f"post-{pid}-%"])
              if r["reason"].count("-") >= 2]
+    if db.value("SELECT 1 FROM audit_log WHERE action = 'telegram.post' AND reason = ? LIMIT 1", [f"post-{pid}"]):
+        recus.append("telegram")
     if not recus:
         db.run("DELETE FROM social_posts WHERE id = ?", [pid])   # rien n'est parti : on peut réessayer proprement
         return _json({"erreur": f"aucun réseau n'a accepté la vidéo : {resultat}"}, 502)
     db.update("studio_jobs", {"statut": "envoye", "post_id": pid}, "id = :id", {"id": j["id"]})
-    refus = [m.strip() for m in str(resultat).split(",") if ":" in m and "déjà" not in m]
+    refus = [m.strip() for m in str(resultat).split(",") if ":" in m and not any(k in m for k in ("déjà", "envoyé", "programmé"))]
     if deja_tiktok:
         refus.append("tiktok : cette vidéo est déjà partie sur TikTok (pas de doublon)")
     return _json({"ok": True, "post_id": pid, "recus": sorted(set(recus)), "refus": refus})

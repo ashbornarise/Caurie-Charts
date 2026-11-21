@@ -84,8 +84,10 @@ def test_blob_abandonne_apres_trois_essais_et_ne_reessaie_pas_un_refus(monkeypat
     assert len(calls) == 1  # un refus (jeton, droits) n'est pas une panne : pas de nouvel essai
 
 
-def buffer_http(limit=10, used=0):
-    """Faux Buffer : 3 comptes reliés, une file de `limit` places dont `used` prises ; chaque post créé est accepté."""
+def buffer_http(limit=10, used=0, par_reseau=None):
+    """Faux Buffer : 3 comptes reliés, une file de `limit` places PAR RÉSEAU dont `used` prises sur chacun (ou `par_reseau`
+    {service: prises}) ; chaque post créé est accepté."""
+    prises = par_reseau or {s: used for s in ("instagram", "facebook", "tiktok")}
     created = []
 
     def responder(method, url, headers, body):
@@ -99,7 +101,7 @@ def buffer_http(limit=10, used=0):
             data = {"channels": [{"id": s, "name": s, "service": s, "isDisconnected": False, "isLocked": False}
                                  for s in ("instagram", "facebook", "tiktok")]}
         elif "posts(" in query:
-            data = {"posts": {"edges": [{"node": {"id": str(i)}} for i in range(used)]}}
+            data = {"posts": {"edges": [{"node": {"id": f"{c}{i}", "channelId": c}} for c, n in prises.items() for i in range(n)]}}
         else:
             created.append(q["variables"]["input"])
             data = {"createPost": {"post": {"id": f"b{len(created)}", "dueAt": "2026-10-05T18:00:00.000Z"}}}
@@ -130,14 +132,14 @@ def test_buffer_programme_tout_quand_la_file_a_de_la_place(buffer_ready):
 
 
 def test_buffer_sacrifie_la_video_avant_le_carrousel(buffer_ready):
-    http = buffer_http(limit=10, used=6)  # 4 places : le carrousel (3) passe, pas la vidéo (2)
+    http = buffer_http(limit=10, used=9)  # 1 place par réseau : le carrousel passe, pas la vidéo
     result = buffer.schedule(POST, DUE, http=http)
     assert len(http.created) == 3 and not any(c["reel"] for c in http.created)
     assert "vidéo non programmée" in result and buffer.failed(result)  # signalé dans le rapport
 
 
 def test_buffer_ne_publie_jamais_un_carrousel_sur_un_seul_reseau(buffer_ready):
-    http = buffer_http(limit=10, used=9)  # 1 place : rien plutôt qu'Instagram seul
+    http = buffer_http(limit=10, par_reseau={"instagram": 10, "facebook": 9, "tiktok": 9})  # Instagram plein : rien plutôt que 2 réseaux sur 3
     result = buffer.schedule(POST, DUE, http=http)
     assert http.created == [] and result.startswith("file Buffer pleine") and buffer.failed(result)
 

@@ -416,6 +416,25 @@ def capacity(http: HttpClient | None = None) -> tuple[int, int] | None:
         return None  # inconnu : on tente quand même, Buffer refusera ce qui dépasse
 
 
+def places_par_reseau(http: HttpClient | None = None) -> dict | None:
+    """Places libres de la file Buffer PAR RÉSEAU {channel_id: places} : la limite (10 sur l'offre gratuite) s'applique à
+    chaque compte relié, pas au total (22/11/2026 : 27 posts programmés, 9 par réseau, et le Studio refusait tout envoi)."""
+    try:
+        libres: dict = {}
+        for org in call("query { account { organizations { id limits { scheduledPosts } } } }", None, http)["account"]["organizations"]:
+            limite = int(org["limits"]["scheduledPosts"])
+            found = call("query($o: OrganizationId!) { posts(first: 100, input: {organizationId: $o, filter: {status: [scheduled]}})"
+                         " { edges { node { id channelId } } } }", {"o": org["id"]}, http)["posts"]
+            pris: dict = {}
+            for e in found.get("edges") or []:
+                pris[e["node"]["channelId"]] = pris.get(e["node"]["channelId"], 0) + 1
+            for ch in channels(http):
+                libres[ch["id"]] = limite - pris.get(ch["id"], 0)
+        return libres
+    except (PlatformException, KeyError, TypeError, ValueError):
+        return None  # inconnu : on tente quand même, Buffer refusera ce qui dépasse
+
+
 def failed(result: str) -> bool:
     """Vrai si un envoi du compte rendu de schedule() n'a pas abouti (refus, limite, image manquante…)."""
     parts = [p.strip() for p in (result or "").split(",") if p.strip()]
@@ -450,14 +469,20 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
                 and not (r and ch["service"] not in NOTIFY_REELS and (not video_seule(post) or video_muette(post)))  # Facebook : reel d'Instagram repartagé
                 and (force or not db.value("SELECT 1 FROM audit_log WHERE action = 'buffer.post' AND reason = ? LIMIT 1",
                                            [f"post-{post['id']}-{ch['service']}{s}"]))]
-    room = capacity(http)
-    if room:
-        free = room[0] - room[1]
-        if len(todo(jobs)) > free and len(jobs) > 1:
+    libres = places_par_reseau(http)
+    if libres is not None:
+        def manque(js):   # réseaux où il manque des places : {service: (il faut, libres)}
+            besoin: dict = {}
+            for ch, *_r in todo(js):
+                besoin[ch["id"]] = besoin.get(ch["id"], 0) + 1
+            noms = {ch["id"]: ch["service"] for ch in chans}
+            return {noms[c]: (n, libres.get(c, 0)) for c, n in besoin.items() if n > libres.get(c, 0)}
+        if manque(jobs) and len(jobs) > 1:
             jobs = jobs[:1]
-            done.append(f"vidéo non programmée (file Buffer pleine : {room[1]}/{room[0]})")
-        if len(todo(jobs)) > free:
-            return f"file Buffer pleine : {room[1]}/{room[0]} posts programmés, il faut {len(todo(jobs))} places — rien programmé"
+            done.append("vidéo non programmée (file Buffer pleine)")
+        if manque(jobs):
+            detail = ", ".join(f"{s_} ({libres_} place(s) libre(s), il en faut {n})" for s_, (n, libres_) in manque(jobs).items())
+            return f"file Buffer pleine : {detail} — rien programmé (10 posts programmés au plus par réseau)"
     for ch in chans:
         if ch["service"] == "instagram" and not instagram_ok(post):
             done.append("instagram : vidéos et classements seulement")
