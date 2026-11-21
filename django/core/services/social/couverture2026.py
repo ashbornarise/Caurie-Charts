@@ -19,6 +19,49 @@ from core.services.social.pourtoi import FORMATS, RES
 
 BLANC, NUIT = (255, 255, 255), (8, 8, 18)
 VIOLET, CIEL, OR = (124, 58, 237), (56, 189, 248), (255, 205, 110)
+
+# Tops « édition Vice City » (décision du fondateur du 21/11/2026, sortie de GTA VI) : les TOPS seulement, du 21/11 au 31/12/2026.
+# Couleurs du coucher de soleil (rose, orange, violet nuit, turquoise) ; jamais le logo, la police ni les images de Rockstar.
+VICE_ROSE, VICE_ORANGE, VICE_TURQUOISE, VICE_NUIT = (255, 56, 150), (255, 150, 64), (40, 226, 214), (34, 8, 62)
+VICE_ENCRE = (42, 10, 69)
+VICE_MENTION = "ÉDITION VICE CITY"
+
+
+def _pastille_vice(d, x: int, y: int, u: float) -> int:
+    """Pastille turquoise de l'édition (avis d'Awa du 21/11 : capitales 22 px, interlettrage +12 %, hauteur 34 px)."""
+    f = police("Montserrat.ttf", int(22 * u), "ExtraBold")
+    esp = 22 * u * .12
+    larg = sum(d.textlength(ch, font=f) + esp for ch in VICE_MENTION) - esp
+    hp = int(34 * u)
+    d.rounded_rectangle((x, y, x + larg + 32 * u, y + hp), radius=hp // 2, fill=VICE_TURQUOISE)
+    xx = x + 16 * u
+    for ch in VICE_MENTION:
+        d.text((xx, y + 6 * u), ch, font=f, fill=VICE_ENCRE)
+        xx += d.textlength(ch, font=f) + esp
+    return hp
+
+
+def theme_tops(jour=None) -> str | None:
+    from datetime import date
+    j = jour or date.today()
+    return "vice" if date(2026, 11, 21) <= j <= date(2026, 12, 31) else None
+
+
+def _soleil_vice(c: Image.Image, cx: int, cy: int, r: int) -> None:
+    """Soleil couchant rayé (dégradé jaune → rose, bandes horizontales qui s'élargissent vers le bas), sans contour."""
+    disque = Image.new("RGB", (2 * r, 2 * r))
+    dd = ImageDraw.Draw(disque)
+    for y in range(2 * r):
+        t = y / (2 * r)
+        dd.line((0, y, 2 * r, y), fill=tuple(int(a + (b - a) * t) for a, b in zip((255, 214, 92), VICE_ROSE)))
+    masque = Image.new("L", (2 * r, 2 * r))
+    dm = ImageDraw.Draw(masque)
+    dm.ellipse((0, 0, 2 * r - 1, 2 * r - 1), fill=255)
+    for k in range(5):   # 5 bandes fines dans la moitié basse (Awa, 21/11)
+        y = int(r * (1.12 + k * .17))
+        e = max(2, int(r * (.03 + k * .008)))
+        dm.rectangle((0, y, 2 * r, y + e), fill=0)
+    c.paste(disque, (cx - r, cy - r), masque)
 _SESSION = None
 
 
@@ -365,7 +408,7 @@ def _place(c: Image.Image, sujet: Image.Image, hauteur: int, x_centre: float, om
 
 
 def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str | None = None,
-           surligne: list | None = None) -> Image.Image:
+           surligne: list | None = None, theme: str | None = None) -> Image.Image:
     """lignes : [(texte, niveau)] avec niveau ∈ petit, moyen, grand, or (grand en couleur d'accent). Ex. ChartFR :
     [("NOUVEAU RECORD :", "petit"), ("MELODRAMA", "or"), ("devient le titre resté", "petit"), ("LE PLUS LONGTEMPS", "moyen"),
      ("TOP 10", "grand"), ("de tous les temps", "petit")]
@@ -379,7 +422,7 @@ def lockup(photo, lignes: list, fmt: str = "feed", fond_ia=None, variante: str |
     # Avec une bonne photo, on NE touche PAS à l'arrière-plan : photo entière, texte en bas (20/10/2026). Le détourage
     # (projecteur, bas) ne sert plus que sur demande explicite (variante=...).
     if im is not None and variante in (None, "plein"):
-        return _lockup_plein(im, lignes, fmt, surligne)
+        return _lockup_plein(im, lignes, fmt, surligne, theme)
     sujet = detoure(im) if im is not None else None
     # « texte en bas » et « de côté » seulement avec un plan large (visage tout en haut) : sur un portrait serré,
     # le texte tomberait sur le visage
@@ -503,7 +546,7 @@ def _voile(c: Image.Image, y_texte0: int, y_texte1: int, en_haut: bool, plafond:
     c.paste(Image.new("RGB", (w, h), NUIT), (0, 0), v.resize((w, h)))
 
 
-def _lockup_plein(im: Image.Image, lignes: list, fmt: str, surligne: list | None = None) -> Image.Image:
+def _lockup_plein(im: Image.Image, lignes: list, fmt: str, surligne: list | None = None, theme: str | None = None) -> Image.Image:
     """Lockup sur la photo entière (charte 2026, avis d'Awa 20/10/2026) : étiquette pastille, « N°x » en très grand,
     titre en casse normale aligné à gauche, nom de l'artiste surligné d'un bloc ; texte en bas, ou en haut quand le
     visage est bas dans le cadre ; voile adapté au décor."""
@@ -515,7 +558,8 @@ def _lockup_plein(im: Image.Image, lignes: list, fmt: str, surligne: list | None
     cibles = {re.sub(r"\W", "", m.lower()) for s_ in (surligne or []) for m in s_.split()}
     etiquette = next((t for t, n in lignes if n == "petit"), "")
     corps = [(t, n) for t, n in lignes if not (n == "petit" and t == etiquette)]
-    styles = {"or": (int(190 * u), police("Montserrat.ttf", int(190 * u), "Black"), CIEL),
+    vice = theme == "vice"
+    styles = {"or": (int(190 * u), police("Montserrat.ttf", int(190 * u), "Black"), VICE_ORANGE if vice else CIEL),
               "grand": (int(120 * u), police("Montserrat.ttf", int(120 * u), "Black"), BLANC),
               "moyen": (int(62 * u), police("Montserrat.ttf", int(62 * u), "ExtraBold"), BLANC),
               "petit": (int(42 * u), police("Montserrat.ttf", int(42 * u), "SemiBold"), (232, 232, 242))}
@@ -529,6 +573,13 @@ def _lockup_plein(im: Image.Image, lignes: list, fmt: str, surligne: list | None
         plan.append((t, n, f, coul, bb[1], bb[3] - bb[1], int((18 if n == "or" else 14) * u)))
     fe = police("Montserrat.ttf", int(28 * u), "ExtraBold")
     h_eti = int(52 * u) + int(26 * u) if etiquette else 0
+    if vice:
+        h_eti += int(48 * u)   # pastille de l'édition sous l'étiquette
+        voile_v = Image.new("L", (1, h))
+        for yy in range(h):
+            voile_v.putpixel((0, yy), int(204 * max(0, (yy / h - .58) / .42)))   # 0 -> 80 % de y=58 % à y=100 %
+        c.paste(Image.new("RGB", (w, h), VICE_ENCRE), (0, 0), voile_v.resize((w, h)))
+        d = ImageDraw.Draw(c)
     total = h_eti + sum(ht + esp for *_x, ht, esp in plan)
     en_haut = centre is not None and centre > .55            # visage bas dans le cadre : le texte monte
     y0 = int((170 if fmt == "feed" else 300) * u) if en_haut else h - int((110 if fmt == "feed" else 330) * u) - total
@@ -537,16 +588,24 @@ def _lockup_plein(im: Image.Image, lignes: list, fmt: str, surligne: list | None
     y = y0
     if etiquette:
         tw = d.textlength(etiquette.upper(), font=fe)
-        d.rounded_rectangle((marge, y, marge + tw + 36 * u, y + 52 * u), radius=int(26 * u), fill=CIEL)
-        d.text((marge + 18 * u, y + 10 * u), etiquette.upper(), font=fe, fill=NUIT)
+        d.rounded_rectangle((marge, y, marge + tw + 36 * u, y + 52 * u), radius=int(26 * u), fill=VICE_ROSE if vice else CIEL)
+        d.text((marge + 18 * u, y + 10 * u), etiquette.upper(), font=fe, fill=BLANC if vice else NUIT)
+        if vice:
+            _pastille_vice(d, marge, y + int(66 * u), u)
         y += h_eti
     for t, n, f, coul, dy, ht, esp in plan:
         if n == "or":
             d.text((marge + 3 * u, y - dy + 5 * u), t, font=f, fill=(0, 0, 0))
             d.text((marge, y - dy), t, font=f, fill=coul)
         else:
-            _surligne_ligne(d, marge, y - dy, t, f, cibles, VIOLET, u, ht + dy)
+            _surligne_ligne(d, marge, y - dy, t, f, cibles, VICE_ROSE if vice else VIOLET, u, ht + dy)
         y += ht + esp
+    if vice:   # liseré coucher de soleil en bas de l'image (rose -> orange -> turquoise)
+        bande = int(8 * u)
+        for x in range(w):
+            t = x / w
+            a, b, k = (VICE_ROSE, VICE_ORANGE, t * 2) if t < .5 else (VICE_ORANGE, VICE_TURQUOISE, t * 2 - 1)
+            d.line((x, h - bande, x, h), fill=tuple(int(p + (q - p) * k) for p, q in zip(a, b)))
     _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u) if not en_haut else h - int(130 * u), int(80 * u))
     return c
 
@@ -774,48 +833,59 @@ def _chiffres_verre(etiquette, titre, lignes, photo, fmt, w, h, u) -> Image.Imag
     return c
 
 
-def classement(lignes: list, titre: str, sous_titre: str, fmt: str = "feed") -> Image.Image:
+def classement(lignes: list, titre: str, sous_titre: str, fmt: str = "feed", theme: str | None = None) -> Image.Image:
     """Liste du classement (style 2026) : dégradé violet profond, n°1 dans une pastille blanche, photos rondes.
     lignes : [{"position", "title", "artist_name", "image"}] (8 au plus en 4:5, 10 en 9:16)."""
     w, h = FORMATS.get(fmt, FORMATS["feed"])
     u = w / 1080
+    vice = theme == "vice"
     c = Image.new("RGB", (w, h)); d = ImageDraw.Draw(c)
+    haut, bas = ((150, 24, 120), VICE_NUIT) if vice else ((70, 22, 170), (10, 8, 30))
     for y in range(h):
-        t = y / h
-        d.line((0, y, w, y), fill=tuple(int(a + (b - a) * t) for a, b in zip((70, 22, 170), (10, 8, 30))))
+        t = (y / h) ** (0.7 if vice else 1)
+        d.line((0, y, w, y), fill=tuple(int(a + (b - a) * t) for a, b in zip(haut, bas)))
     m = int(60 * u)
-    y = int((70 if fmt == "feed" else 230) * u)
+    story = fmt != "feed"
+    y = int((70 if fmt == "feed" else 200) * u)
+    if vice:
+        _soleil_vice(c, int(900 * u), int(y + 70 * u), int(110 * u))
+        d = ImageDraw.Draw(c)
     d.text((m, y), titre, font=police("Jost.ttf", int(70 * u), "Black"), fill=BLANC)
     y += int(96 * u)
-    d.text((m + 2, y), sous_titre, font=police("Jost.ttf", int(30 * u), "Medium"), fill=(215, 205, 255))
-    y += int(80 * u)
+    d.text((m + 2, y), sous_titre, font=police("Jost.ttf", int(30 * u), "Medium"), fill=(255, 196, 226) if vice else (215, 205, 255))
+    if vice:
+        _pastille_vice(d, m, y + int(46 * u), u)
+    y += int((100 if vice else 80) * u)
+    # 21/11/2026 (Awa) : en story, 10 lignes resserrées pour que le bas reste au-dessus de l'interface (y <= 1400)
     for r in lignes[:8 if fmt == "feed" else 10]:
         premier = r["position"] == 1
-        hl = int((150 if premier else 104) * u)
+        hl = int(((130 if story else 150) if premier else (86 if story else 104)) * u)
         if premier:
             d.rounded_rectangle((m - 20 * u, y, w - m + 20 * u, y + hl), radius=hl // 2, fill=BLANC)
-        fpos = police("Jost.ttf", int((66 if premier else 52) * u), "Black")
+        fpos = police("Jost.ttf", int(((60 if story else 66) if premier else (46 if story else 52)) * u), "Black")
         d.text((m + (10 * u if premier else 0), y + hl / 2 - fpos.size * .62), str(r["position"]), font=fpos,
-               fill=VIOLET if premier else BLANC)
-        dd = int((110 if premier else 76) * u)
+               fill=(VICE_ROSE if vice else VIOLET) if premier else (VICE_TURQUOISE if vice else BLANC))
+        dd = int(((96 if story else 110) if premier else (66 if story else 76)) * u)
         im = _image(r.get("image"))
         if im is not None:
             ph = ImageOps.fit(im, (dd, dd), Image.LANCZOS, centering=(0.5, 0.3))
             masque = Image.new("L", (dd, dd)); ImageDraw.Draw(masque).ellipse((0, 0, dd - 1, dd - 1), fill=255)
             c.paste(ph, (int(m + 110 * u), int(y + (hl - dd) / 2)), masque)
         x = int(m + 110 * u + dd + 24 * u)
-        ft = police("Montserrat.ttf", int((42 if premier else 33) * u), "ExtraBold")
-        fa = police("Montserrat.ttf", int((28 if premier else 23) * u), "Medium")
+        ft = police("Montserrat.ttf", int(((38 if story else 42) if premier else (28 if story else 33)) * u), "ExtraBold")
+        fa = police("Montserrat.ttf", int(((25 if story else 28) if premier else (21 if story else 23)) * u), "Medium")
         titre_l = r["title"]
         while d.textlength(titre_l, font=ft) > w - x - m and len(titre_l) > 4:
             titre_l = titre_l.rstrip("…")[:-1].rstrip() + "…"
         d.text((x, y + hl * (.18 if premier else .14)), titre_l, font=ft, fill=NUIT if premier else BLANC)
         d.text((x, y + hl * (.58 if premier else .56)), r["artist_name"], font=fa,
-               fill=(90, 80, 120) if premier else (210, 200, 240))
-        y += hl + int((22 if premier else 8) * u)
-    _logo(c, int(46 * u), h - int((120 if fmt == "feed" else 260) * u), int(74 * u))
+               fill=(90, 80, 120) if premier else ((255, 190, 222) if vice else (210, 200, 240)))
+        if vice and not premier:   # filet entre les lignes (Awa : la moitié droite paraissait vide)
+            d.line((m, y + hl + 4 * u, w - m, y + hl + 4 * u), fill=tuple(int(a * .15 + b * .85) for a, b in zip(VICE_TURQUOISE, VICE_NUIT)), width=max(1, int(u)))
+        y += hl + int(((16 if story else 22) if premier else 8) * u)
+    _logo(c, int(46 * u), h - int((120 if fmt == "feed" else 497) * u), int(74 * u))
     fs = police("Jost.ttf", int(30 * u), "SemiBold")
-    d.text((w - m - d.textlength("cauricharts.com", font=fs), h - int((98 if fmt == "feed" else 238) * u)),
+    d.text((w - m - d.textlength("cauricharts.com", font=fs), h - int((98 if fmt == "feed" else 475) * u)),
            "cauricharts.com", font=fs, fill=BLANC)
     return c
 

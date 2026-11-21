@@ -57,8 +57,9 @@ def post(jour: date, due: datetime, essai: bool = False) -> dict | None:
         debut, fin = t["period_start"], t["period_end"]
         sous = f"Classement officiel Cauri Charts · {debut[8:10]}/{debut[5:7]} – {fin[8:10]}/{fin[5:7]}"
         for fmt, suffixe in (("feed", ""), ("story", "-916")):
-            PI.save_jpeg(C.lockup(photo, lignes, fmt), PI.DIR / f"{nom}-{k}a{suffixe}.jpg")
-            PI.save_jpeg(C.classement(t["rows"], f"Top {country_name(t['code'])}", sous, fmt), PI.DIR / f"{nom}-{k}b{suffixe}.jpg")
+            theme = C.theme_tops(jour)   # 21/11/2026 : « édition Vice City » jusqu'au 31/12
+            PI.save_jpeg(C.lockup(photo, lignes, fmt, theme=theme), PI.DIR / f"{nom}-{k}a{suffixe}.jpg")
+            PI.save_jpeg(C.classement(t["rows"], f"Top {country_name(t['code'])}", sous, fmt, theme), PI.DIR / f"{nom}-{k}b{suffixe}.jpg")
         fichiers += [{"file": f"{nom}-{k}a.jpg", "tiktok": f"{nom}-{k}a-916.jpg", "label": f"N°1 {country_name(t['code'])}"},
                      {"file": f"{nom}-{k}b.jpg", "tiktok": f"{nom}-{k}b-916.jpg", "label": f"Top {country_name(t['code'])}"}]
         lignes_legende.append(f"🥇 {country_name(t['code'])} : « {n1['title']} » de {n1['artist_name']} ({vues})")
