@@ -173,7 +173,10 @@ class TurnTableChartSource:
             rows.append({"position": int(rk), "title": dec(titre), "artist": dec(artiste)})
         if len(rows) < 50:
             raise PlatformException(f"TurnTable : seulement {len(rows)} lignes lues, page changée ?")
-        return {"observed_on": _today(), "rows": rows}
+        # Date du classement (« dateCreated », le jeudi qui clôt LEUR semaine) : TurnTable publie avec ~1 semaine de retard,
+        # le Top en ligne le 21/11 était celui de la semaine close le 12/11 ; on le date de sa vraie semaine
+        d = re.search(r'"dateCreated"\s*:\s*"(\d{4}-\d{2}-\d{2})', m.group(1))
+        return {"observed_on": d.group(1) if d else _today(), "rows": rows}
 
 
 class DeezerChartSource:

@@ -31,3 +31,10 @@ def test_spearman():
     assert spearman({1: 1}, {2: 1}) is None
     r = spearman({1: 1, 2: 2, 3: 3, 4: 4, 5: 5}, {1: 1, 2: 2, 3: 3, 9: 4, 8: 5})   # 2 titres de chaque côté absents de l'autre
     assert 0 < r < 1
+
+
+def test_turntable_date_de_sa_semaine():
+    data = {"props": {"pageProps": {"chartData": {"dateCreated": "2026-11-12T00:00:00",
+                                                  "chartItems": [{"rank": k, "title": f"T{k}", "artiste": "A"} for k in range(1, 61)]}}}}
+    page = f'<script id="__NEXT_DATA__" type="application/json">{json.dumps(data)}</script>'
+    assert TurnTableChartSource.parse(page)["observed_on"] == "2026-11-12"

@@ -15,16 +15,29 @@ REFERENCES = {"NG": ("spotify", "turntable")}
 
 
 def _places(source: str, cid: int, period: Period) -> dict:
-    """Meilleure place de chaque titre dans le classement de référence : pendant la semaine (Spotify, quotidien) ou au
-    dernier relevé jusqu'à 2 jours après (TurnTable, hebdomadaire)."""
-    jour = db.value("""SELECT MAX(observed_on) FROM chart_observations WHERE source = ? AND country_id = ?
-                       AND observed_on <= (CAST(? AS DATE) + 2)""", [source, cid, period.end])
-    if not jour:
-        return {}
-    debut = period.start if source == "spotify" else jour
+    """Meilleure place de chaque titre dans le classement de référence pendant la semaine (Spotify : top quotidien ;
+    TurnTable : son top hebdomadaire daté de sa semaine)."""
     return {int(r["track_id"]): int(r["p"]) for r in db.all(
         """SELECT track_id, MIN(position) AS p FROM chart_observations WHERE source = ? AND country_id = ?
-           AND observed_on BETWEEN ? AND ? AND track_id IS NOT NULL GROUP BY track_id""", [source, cid, debut, jour])}
+           AND observed_on BETWEEN ? AND ? AND track_id IS NOT NULL GROUP BY track_id""", [source, cid, period.start, period.end])}
+
+
+def _semaine_comparee(source: str, cid: int, week: Period) -> Period:
+    """TurnTable publie avec environ une semaine de retard : on compare son dernier top publié à NOTRE classement de la
+    même semaine (le vendredi, c'est en général la semaine d'avant)."""
+    if source != "turntable":
+        return week
+    jour = db.value("SELECT MAX(observed_on) FROM chart_observations WHERE source = ? AND country_id = ? AND observed_on <= ?",
+                    [source, cid, week.end])
+    return Period.week_of(str(jour)[:10]) if jour else week
+
+
+def _notre_top(cid: int, key: str) -> list:
+    return db.all("""SELECT e.position, e.track_id, t.title, a.name FROM chart_entries e
+                     JOIN chart_runs r ON r.id = e.chart_run_id JOIN chart_types ct ON ct.id = r.chart_type_id AND ct.code = 'prime'
+                     JOIN tracks t ON t.id = e.track_id JOIN artists a ON a.id = t.artist_id
+                     WHERE r.country_id = ? AND r.period_type = 'week' AND r.period_key = ?
+                     ORDER BY r.id DESC, e.position LIMIT 20""", [cid, key])
 
 
 def spearman(nous: dict, eux: dict, absent: int = 999) -> float | None:
@@ -63,22 +76,19 @@ def controle(week: Period) -> list:
         if not c:
             continue
         cid = int(c["id"])
-        notre = db.all("""SELECT e.position, e.track_id, t.title, a.name FROM chart_entries e
-                          JOIN chart_runs r ON r.id = e.chart_run_id JOIN chart_types ct ON ct.id = r.chart_type_id AND ct.code = 'prime'
-                          JOIN tracks t ON t.id = e.track_id JOIN artists a ON a.id = t.artist_id
-                          WHERE r.country_id = ? AND r.period_type = 'week' AND r.period_key = ?
-                          ORDER BY r.id DESC, e.position LIMIT 20""", [cid, week.key])
-        if not notre:
-            continue
-        nos_ids = {int(x["track_id"]) for x in notre}
         for source in sources:
-            places = _places(source, cid, week)
+            sem = _semaine_comparee(source, cid, week)
+            notre = _notre_top(cid, sem.key)
+            if not notre:
+                continue
+            nos_ids = {int(x["track_id"]) for x in notre}
+            places = _places(source, cid, sem)
             if not places:
-                lignes.append(f"⚠ {code} : aucun relevé {source} pour {week.key}, contrôle impossible")
+                lignes.append(f"⚠ {code} : aucun relevé {source} pour {sem.key}, contrôle impossible")
                 continue
             rho = spearman({int(x["track_id"]): int(x["position"]) for x in notre}, places)
             if rho is not None:   # suivi publié chaque semaine (bilans à 4, 8, 12, 26 semaines)
-                lignes.append(f"{code} {week.key} : accord avec {source} (Spearman) = {rho:.2f}")
+                lignes.append(f"{code} {sem.key} : accord avec {source} (Spearman) = {rho:.2f}")
             for x in notre[:3]:
                 p = places.get(int(x["track_id"]))
                 if p is None or p > 50:
