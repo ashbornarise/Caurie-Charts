@@ -128,7 +128,9 @@ def _image(photo) -> Image.Image | None:
         if isinstance(photo, Image.Image):
             return sans_bandes(photo.convert("RGB"))
         if str(photo).startswith("http"):
-            r = requests.get(str(photo), timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+            # Wikimedia refuse les navigateurs anonymes (429 « Mozilla/5.0 », 22/11/2026) : on se présente
+            ua = "CauriCharts/1.0 (https://cauricharts.com)" if "wikimedia.org" in str(photo) else "Mozilla/5.0"
+            r = requests.get(str(photo), timeout=30, headers={"User-Agent": ua})
             r.raise_for_status()
             return sans_bandes(Image.open(io.BytesIO(r.content)).convert("RGB"))
         return sans_bandes(Image.open(photo).convert("RGB"))
@@ -829,6 +831,93 @@ def _chiffres_verre(etiquette, titre, lignes, photo, fmt, w, h, u) -> Image.Imag
             e = e[:-2].rstrip() + "…"
         d.text((m, y), e, font=fd, fill=(60, 60, 85))
         y += int(40 * u) + int(22 * u)
+    _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
+    return c
+
+
+def revelation(photo, reponse: str, faits: list, question: str = "", source: str = "", fmt: str = "feed") -> Image.Image:
+    """2e et dernière image des « Le saviez-vous ? » (22/11/2026, « 2 images : l'accroche, puis l'explication ») : la photo
+    NETTE de l'artiste en plein cadre, une carte de verre blanche en bas avec « LA RÉPONSE », la réponse en grand,
+    les faits numérotés, la question au public en violet. Remplace les 3-4 diapos de texte sur fond sombre."""
+    w, h = FORMATS.get(fmt, FORMATS["feed"])
+    u = w / 1080
+    im = _image(photo)
+    c = cadrer(im.convert("RGB"), w, h)[0] if im is not None else _fond_projecteur(w, h, (170, 120, 255))
+    d = ImageDraw.Draw(c)
+    m = int(64 * u)
+    larg = w - 2 * m
+    fe = police("Montserrat.ttf", int(26 * u), "ExtraBold")
+    fn = police("Montserrat.ttf", int(40 * u), "Black")
+    ff = police("Montserrat.ttf", int(31 * u), "Medium")
+    fq = police("Montserrat.ttf", int(32 * u), "ExtraBold")
+    fs = police("Montserrat.ttf", int(21 * u), "Medium")
+
+    def coupe(t, f, l):
+        out, cour, mots = [], "", []
+        for mot in (t or "").split():   # « ? », « ! », « : » jamais seuls en début de ligne
+            if mots and mot in ("?", "!", ":", ";", "»"):
+                mots[-1] += " " + mot
+            else:
+                mots.append(mot)
+        for mot in mots:
+            essai = (cour + " " + mot).strip()
+            if d.textlength(essai, font=f) > l and cour:
+                out.append(cour); cour = mot
+            else:
+                cour = essai
+        return out + ([cour] if cour else [])
+
+    # la réponse : la plus grande taille qui tient en 2 lignes
+    t = int(64 * u)
+    while True:
+        fr = police("Montserrat.ttf", t, "Black")
+        rep = coupe(propre(reponse), fr, larg)
+        if len(rep) <= 2 or t <= 40 * u:
+            break
+        t -= int(4 * u) or 1
+    retrait = int(58 * u)
+    blocs = [coupe(propre(f), ff, larg - retrait)[:3] for f in faits[:3]]
+    qs = coupe(propre(question), fq, larg)[:2] if question else []
+    hauteur = (int(48 * u) + int(26 * u) + len(rep) * int(t * 1.12) + int(26 * u)
+               + sum(len(b) * int(40 * u) + int(20 * u) for b in blocs)
+               + (int(16 * u) + len(qs) * int(42 * u) if qs else 0) + (int(40 * u) if source else 0))
+    bx0, bx1 = m - int(24 * u), w - m + int(24 * u)
+    by1 = h - int((60 if fmt == "feed" else 300) * u)
+    by0 = by1 - hauteur - int(56 * u)
+    zone = c.crop((bx0, by0, bx1, by1)).filter(ImageFilter.GaussianBlur(int(26 * u)))
+    zone = Image.blend(zone, Image.new("RGB", zone.size, BLANC), .84)
+    masque = Image.new("L", zone.size, 0)
+    ImageDraw.Draw(masque).rounded_rectangle((0, 0, zone.width - 1, zone.height - 1), radius=int(36 * u), fill=255)
+    ombre = Image.new("RGBA", c.size, (0, 0, 0, 0))
+    ImageDraw.Draw(ombre).rounded_rectangle((bx0, by0 + int(12 * u), bx1, by1 + int(12 * u)), radius=int(36 * u), fill=(0, 0, 0, 90))
+    ombre = ombre.filter(ImageFilter.GaussianBlur(int(18 * u)))
+    c.paste(ombre, (0, 0), ombre)
+    c.paste(zone, (bx0, by0), masque)
+    haut_v = Image.new("L", (1, h))
+    for yy in range(h):
+        haut_v.putpixel((0, yy), int(110 * max(0, 1 - yy / h / .13)))
+    c.paste(Image.new("RGB", (w, h), NUIT), (0, 0), haut_v.resize((w, h)))
+    d = ImageDraw.Draw(c)
+    y = by0 + int(32 * u)
+    eti = "LA RÉPONSE"
+    tw = d.textlength(eti, font=fe)
+    d.rounded_rectangle((m, y, m + tw + 34 * u, y + 48 * u), radius=int(24 * u), fill=VIOLET)
+    d.text((m + 17 * u, y + 9 * u), eti, font=fe, fill=BLANC)
+    y += int(48 * u) + int(26 * u)
+    for l in rep:
+        d.text((m, y), l, font=fr, fill=NUIT); y += int(t * 1.12)
+    y += int(26 * u)
+    for k, b in enumerate(blocs):
+        d.text((m, y - int(4 * u)), f"{k + 1}", font=fn, fill=VIOLET)
+        for l in b:
+            d.text((m + retrait, y), l, font=ff, fill=(55, 55, 80)); y += int(40 * u)
+        y += int(20 * u)
+    if qs:
+        y += int(16 * u)
+        for l in qs:
+            d.text((m, y), l, font=fq, fill=VIOLET); y += int(42 * u)
+    if source:
+        d.text((m, y + int(14 * u)), source, font=fs, fill=(120, 120, 140))
     _logo(c, int(50 * u), int((50 if fmt == "feed" else 200) * u), int(84 * u))
     return c
 

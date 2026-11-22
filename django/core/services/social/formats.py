@@ -533,12 +533,41 @@ def _candidats_anecdote() -> list:
     return out
 
 
+def credit_commons(url: str) -> str:
+    """Auteur et licence d'une image de Wikimedia Commons (API imageinfo) : « Photo : X, CC BY-SA 4.0 (Wikimedia Commons) »."""
+    from urllib.parse import quote, unquote
+    import requests
+    m = re.search(r"(?:Special:FilePath/|/commons/(?:thumb/)?[0-9a-f]/[0-9a-f]{2}/)([^/?#]+)", str(url))
+    if not m:
+        return ""
+    try:
+        r = requests.get("https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&prop=imageinfo"
+                         "&iiprop=extmetadata&titles=" + quote("File:" + unquote(m.group(1))), timeout=20,
+                         headers={"User-Agent": "CauriCharts/1.0 (https://cauricharts.com)"})
+        meta = r.json()["query"]["pages"][0]["imageinfo"][0]["extmetadata"]
+        auteur = re.sub(r"<[^>]+>", "", (meta.get("Artist") or {}).get("value", "")).strip()
+        licence = (meta.get("LicenseShortName") or {}).get("value", "").strip()
+        return "Photo : " + ", ".join(x for x in (auteur[:60], licence) if x) + " (Wikimedia Commons)"
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def sans_billboard(t: str) -> str:
+    """Jamais « Billboard » en public (positionnement 2026) : « le classement américain »."""
+    t = re.sub(r"\bdu Billboard Hot 100\b", "du classement américain (Hot 100)", t or "")
+    t = re.sub(r"\bBillboard Hot 100\b", "classement américain (Hot 100)", t)
+    t = re.sub(r"\bBillboard 200\b", "classement américain des albums", t)
+    return re.sub(r"\bBillboard\b", "classement américain", t)
+
+
 def credit_photo(url: str) -> str:
     """Crédit de la photo : celui des médias libres ou des clips, sinon la provenance du portrait."""
     from core.services.social import medias
     c = medias.credits([url])
     if c or not url:
         return c
+    if "wikimedia.org" in str(url):   # 22/11/2026 : une photo de Commons n'est pas un « portrait officiel »
+        return credit_commons(url) or "Photo : Wikimedia Commons"
     return "Photo : Deezer (photo d'artiste)" if "dzcdn" in str(url) else "Photo : portrait officiel de l'artiste"
 
 
@@ -548,14 +577,17 @@ def _sans_emoji(s: str) -> str:
     return re.sub(r"[\U0001F000-\U0001FAFF☀-➿️]", "", s).replace("  ", " ").strip()
 
 
-def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
+def anecdote(jour: date, due: datetime, essais: int = 6, apercu: bool = False, exclus: tuple = ()) -> dict | None:
     """« Le saviez-vous ? » : l'IA choisit l'ANGLE (le premier à…, l'histoire derrière un tube, l'origine d'un nom…) à
     partir de la page Wikipédia de l'artiste ; chaque fait doit venir de ce texte, et chaque chiffre ou date du post
     (titre compris) doit y figurer mot pour mot (garde-fou chiffres_verifies). Couverture « Pour toi », 2 ou 3
-    diapositives de faits, une question finale ; source Wikipédia et crédit photo en légende."""
+    diapositives de faits, une question finale ; source Wikipédia et crédit photo en légende.
+    22/11/2026 (« le post Ruger sans légende a fait 2 225 vues grâce au titre ; 2 images seulement, plus attirantes :
+    l'accroche puis l'explication ») : la couverture, puis UNE image « La réponse » (photo nette, carte de verre).
+    apercu=True : rien n'est enregistré, renvoie le contenu (propositions au fondateur) ; exclus : artistes à sauter."""
     from core.services import ai
     from core.services.social import medias, pourtoi
-    cands = [n for n in _candidats_anecdote() if not _deja("format-anecdote", n, 8)]
+    cands = [n for n in _candidats_anecdote() if not _deja("format-anecdote", n, 8) and n not in exclus]
     if not cands:
         return None
     depart = jour.toordinal() % len(cands)   # un artiste différent chaque jour, dans l'ordre de notoriété
@@ -568,11 +600,14 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
         consigne = (
             f"Voici la page Wikipédia de l'artiste {nom}. Trouve l'ANECDOTE la plus étonnante qu'elle raconte, sous un de "
             f"ces angles (ou un angle du même genre) : {', '.join(ANGLES)}.\nRends un objet JSON :\n"
-            '{"angle": "l\'angle choisi", "titre": "6 à 9 mots en français : un titre CHOC qui arrête le défilement (révélation, '
-            'contraste, « personne ne savait », chiffre fort), percutant mais vrai (ex. « Le vrai nom '
-            'derrière WIZKID va vous surprendre »), sans chiffre absent du texte", "accent": "LE mot ou chiffre du titre à mettre '
+            '{"angle": "l\'angle choisi", "titre": "6 à 9 mots en français : une DÉCLARATION CHOC, affirmative, dramatique, qui '
+            'arrête le défilement (ex. « Aucun Ghanaien n\'avait fait ça avant lui », « Ce cache-œil cache une arme »). '
+            'JAMAIS une question, jamais « le saviez-vous », jamais « va vous surprendre ». Exagérée dans le ton mais VRAIE '
+            'mot pour mot d\'après le texte, sans chiffre absent du texte", "accent": "LE mot ou chiffre du titre à mettre '
             'en couleur, recopié tel quel", "faits": ["2 ou 3 faits en français, 25 mots max chacun, qui racontent '
             'l\'anecdote dans l\'ordre ; chaque fait est présent dans le texte, chiffres et dates recopiés EXACTEMENT, en chiffres"], '
+            '"reponse": "4 à 8 mots en français qui RÉPONDENT au mystère du titre (ex. « Un clin d\'œil aux fusils Ruger »), '
+            'sans chiffre absent du texte", '
             '"preuves": ["pour chaque fait, la phrase du texte qui le prouve, recopiée mot pour mot"], "question": "une question '
             'au public, courte, qui pousse à commenter, terminée par ⁉️"}\n'
             "N'ajoute RIEN qui ne soit pas dans le texte : pas de superlatif inventé, pas de « premier » si le texte ne le dit pas. "
@@ -583,7 +618,7 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
         except Exception as exc:  # noqa: BLE001
             log_write("social", "error", f"anecdote {nom} : {exc}")
             continue
-        titre = M.coupe(o.get("titre") or "", 70).rstrip("…")
+        titre = sans_billboard(M.coupe(o.get("titre") or "", 70)).rstrip("…")
         bruts, preuves = o.get("faits") or [], o.get("preuves") or []
         faits = []
         for i, f in enumerate(bruts):
@@ -592,9 +627,12 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
             # la phrase-preuve doit vraiment venir du texte (sinon le fait est sans doute inventé)
             if len(preuves) == len(bruts) and not preuve_trouvee(str(preuves[i]), texte):
                 continue
-            faits.append(M.coupe(f, 220))
+            faits.append(sans_billboard(M.coupe(f, 220)))
         faits = faits[:3]
-        if len(faits) < 2 or not (6 <= len(titre.split()) <= 9) or not chiffres_verifies(titre, texte):
+        reponse = sans_billboard(M.coupe(o.get("reponse") or "", 60)).rstrip("…")
+        if not reponse or not chiffres_verifies(reponse, texte):
+            reponse = faits[0] if faits else ""
+        if len(faits) < 2 or not (6 <= len(titre.split()) <= 9) or not chiffres_verifies(titre, texte) or titre.rstrip().endswith("?"):
             log_write("social", "info", f"anecdote {nom} : écartée (faits vérifiés : {len(faits)}, titre « {titre} »)")
             continue
         # Photo : scène sous licence libre, sinon portrait de notre base ou de Deezer (comme histoire())
@@ -604,26 +642,33 @@ def anecdote(jour: date, due: datetime, essais: int = 6) -> dict | None:
             continue
         if libres:
             medias.CREDITS[photo] = libres[0]["credit"]
-        question = M.coupe(o.get("question") or f"Vous le saviez sur {nom} ⁉️", 110)
+        question = sans_billboard(M.coupe(o.get("question") or f"Vous le saviez sur {nom} ⁉️", 110))
         illustration = None
         if not photo:
             from core.services.social.illustration import genere
             illustration = genere(f"anecdote musicale {titre}", "anecdote")
             photo = illustration
-        couverture = lambda fmt, t=titre, a=o.get("accent"): C26.actu(photo, "LE SAVIEZ-VOUS ?", t, [a] if a else [], "", fmt)  # noqa: E731
-        n = len(faits) + 2
-        pages = [(_fiche(nom, "", "", [], nom), "", None)]
-        for k, f in enumerate(faits):
-            pages.append((_fiche(nom, "", "", ["Wikipédia"], nom), f"{k + 2} / {n}",
-                          _diapo("LE SAVIEZ-VOUS ?", (VIOLET, BLEU, ROUGE)[k % 3], nom.upper() if k == 0 else f"ANECDOTE · {k + 1}", f, f"a{k}")))
-        pages.append((_fiche("", "", "", [], nom), "À vous",
-                       _diapo("CAURI CHARTS", NUIT, _sans_emoji(question), "Répondez en commentaire. Cauri Charts, la référence de la musique ouest-africaine.", "fin")))
+        couverture = lambda fmt, t=titre, a=o.get("accent"): C26.actu(photo, "HISTOIRE VRAIE", t, [a] if a else [], "", fmt)  # noqa: E731
+        # 2e photo pour la réponse (une autre scène libre si on en a une, sinon la même photo, recadrée nette)
+        photo2 = libres[1]["url"] if len(libres) > 1 else photo
+        if len(libres) > 1:
+            medias.CREDITS[photo2] = libres[1]["credit"]
+        explication = lambda fmt, r=reponse, fs=list(faits), q=_sans_emoji(question), ph=photo2: C26.revelation(  # noqa: E731
+            ph, r, fs, q, "Source : Wikipédia", fmt)
+        pages = [(_fiche(nom, "", "", [], nom), "", None),
+                 (_fiche(nom, "", "", ["Wikipédia"], nom), "", {"rendu": explication, "titre": reponse})]
         credit = credit_photo(photo)
-        legende = (f"💡 Le saviez-vous ? {titre}\n\n" + "\n".join(f"▪️ {f}" for f in faits)
+        if photo2 != photo and credit_photo(photo2):
+            credit = "\n".join(x for x in (credit, credit_photo(photo2)) if x)
+        if apercu:
+            return {"nom": nom, "titre": titre, "accent": o.get("accent"), "reponse": reponse, "faits": faits,
+                    "question": question, "photo": photo, "photo2": photo2, "couverture": couverture,
+                    "explication": explication, "source": w["url"], "credit": credit}
+        legende = (f"🔥 {titre}\n\n" + "\n".join(f"▪️ {f}" for f in faits)
                    + f"\n\n{question} Dites-le en commentaire ‼️\n\nSource : Wikipédia ({w['url']}), texte sous licence CC BY-SA"
                    + (f"\n{credit}" if credit else ""))
-        tags = "#CauriCharts #LeSaviezVous #" + "".join(ch for ch in nom if ch.isalnum()) + " #MusiqueAfricaine"
-        return _post("format-anecdote", jour, due, f"Le saviez-vous ? {titre}", pages, legende, tags, nom, couverture=couverture, illustration_ia=bool(illustration))
+        tags = "#CauriCharts #HistoireVraie #" + "".join(ch for ch in nom if ch.isalnum()) + " #MusiqueAfricaine"
+        return _post("format-anecdote", jour, due, titre, pages, legende, tags, nom, couverture=couverture, illustration_ia=bool(illustration))
     return None
 
 
