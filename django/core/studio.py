@@ -215,6 +215,9 @@ def manifest(request, chemin):
     return _reponse(HttpResponse(json.dumps({
         "name": "Cauri Studio", "short_name": "Cauri Studio", "start_url": base, "scope": base,
         "display": "standalone", "background_color": "#FFFFFF", "theme_color": "#FFFFFF", "lang": "fr",
+        # Studio v3 (23/11/2026) : « Partager → Cauri Studio » depuis Instagram, YouTube, TikTok… ouvre le Studio avec le lien
+        "share_target": {"action": base, "method": "GET", "params": {"title": "titre", "text": "texte", "url": "lien"}},
+        "id": base,
         # 10/11/2026 : nouvelle icône (symbole seul + pastille lecture), nouveaux noms : les téléphones gardaient l'ancienne en cache
         "icons": [{"src": "/assets/marque/studio-v2-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
                   {"src": "/assets/marque/studio-v2-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
@@ -225,7 +228,7 @@ def manifest(request, chemin):
 def service_worker(request, chemin):
     _verifie(chemin)
     hors = f"/studio/{chemin}/hors-ligne"
-    js = ("const C='cauri-studio-v1';self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C)"
+    js = ("const C='cauri-studio-v3';self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C)"
           f".then(c=>c.add('{hors}')))}});self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));"
           "self.addEventListener('fetch',e=>{if(e.request.mode==='navigate'){e.respondWith(fetch(e.request)"
           f".catch(()=>caches.match('{hors}')))}}}});"
@@ -445,8 +448,47 @@ def historique(request, chemin):
         return _json({"erreur": "connexion requise"}, 401)
     creer_tables()
     jobs = [_job_public(j) for j in db.all("SELECT * FROM studio_jobs ORDER BY id DESC LIMIT 60")]
-    # les photos ont leur onglet ; les mises en valeur apparaissent ici avec les vidéos (historique commun, 02/11/2026)
-    return _json({"jobs": [j for j in jobs if j["params"].get("type") != "photos"][:24]})
+    # les photos ont leur onglet ; les mises en valeur apparaissent ici avec les vidéos (historique commun, 02/11/2026).
+    # 23/11/2026 : un post photo prêt à choisir et publier (hors tri de profil) apparaît aussi, dans « À valider »
+    def garde(j):
+        p = j["params"]
+        return p.get("type") != "photos" or (j["statut"] == "pret" and not p.get("trie_le") and p.get("mode") != "profil")
+    return _json({"jobs": [j for j in jobs if garde(j)][:30]})
+
+
+def calendrier(request, chemin):
+    """Studio v3 (23/11/2026) : tout ce qui part, automatique ou fait dans le Studio, d'hier à J+7, avec l'heure,
+    l'image et l'état (programmé / parti, d'après le journal des envois)."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    from core import storage
+    base = storage.blob_public_url()
+    debut = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+    fin = (datetime.now(timezone.utc) + timedelta(days=8)).date().isoformat()
+    posts = db.all("SELECT id, slot_date, theme, title, status, image_square, image_story, video, facts FROM social_posts "
+                   "WHERE slot_date >= ? AND slot_date <= ? ORDER BY slot_date, id", [debut, fin])
+    partis = {}
+    for r in db.all("SELECT reason FROM audit_log WHERE action IN ('buffer.post', 'telegram.post') AND created_at >= ?", [debut]):
+        m = re.match(r"post-(\d+)(?:-([a-z]+))?", r["reason"] or "")
+        if m:
+            partis.setdefault(int(m.group(1)), set()).add(m.group(2) or "telegram")
+    FAMILLES = (("monde", "Cauri Monde"), ("format-officiel", "Classement officiel"), ("format-anecdote", "Histoire vraie"),
+                ("format-studio", "Studio"), ("format-histoire", "Il y a… ans"), ("format-citation", "Citation"), ("hebdo", "Cauri Hebdo"),
+                ("format-", "Format auto"), ("", "Post"))
+    out = []
+    for r in posts:
+        f = r["facts"] if isinstance(r["facts"], dict) else json.loads(r["facts"] or "{}")
+        theme = r["theme"] or ""
+        famille = next(n for k, n in FAMILLES if theme.startswith(k))
+        reseaux = sorted(partis.get(r["id"], set()))
+        out.append({"id": r["id"], "jour": str(r["slot_date"])[:10], "heure": str(f.get("due") or "")[11:16], "due": f.get("due") or "",
+                    "famille": famille, "studio": theme.startswith("format-studio"), "titre": r["title"] or "",
+                    "image": f"{base}/media/social/{r['image_square']}" if r.get("image_square") else "",
+                    "video": bool(r.get("video")), "etat": "parti" if reseaux else ("annule" if r["status"] in ("rejected", "cancelled") else "programme"),
+                    "reseaux": reseaux, "notifier": bool(f.get("notifier"))})
+    out.sort(key=lambda x: (x["jour"], x["heure"] or "99"))
+    return _json({"posts": out, "maintenant": datetime.now(timezone.utc).isoformat()})
 
 
 def annuler(request, chemin, ident):
