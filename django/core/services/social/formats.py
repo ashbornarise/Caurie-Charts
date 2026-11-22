@@ -577,6 +577,41 @@ def _sans_emoji(s: str) -> str:
     return re.sub(r"[\U0001F000-\U0001FAFF☀-➿️]", "", s).replace("  ", " ").strip()
 
 
+STYLES_HV = ("popular", "mosaique", "vogue", "fenetre")   # choisis par le fondateur le 22/11/2026
+
+
+def _visage_net(photo) -> bool:
+    """La photo montre-t-elle un vrai visage, assez grand (≥ 4 % de la largeur) ? Sans OpenCV : on laisse passer."""
+    im = C26._image(photo)
+    if im is None:
+        return False
+    v = C26._visages(im)
+    return True if v is None else bool(v) and v[0][2] >= .04
+
+
+def nom_court(nom: str) -> str | None:
+    """Le nom pour les lettres-fenêtre : le plus long mot du nom de 3 à 8 lettres (« Black Sherif » → SHERIF)."""
+    mots = [m for m in re.findall(r"[\wÀ-ÿ]+", nom or "") if 3 <= len(m) <= 8]
+    return max(mots, key=len).upper() if mots else None
+
+
+def style_couverture(jour: date, nom: str) -> str:
+    """Un style par jour, dans l'ordre ; « fenetre » sauté si le nom ne s'y prête pas."""
+    style = STYLES_HV[jour.toordinal() % len(STYLES_HV)]
+    return "vogue" if style == "fenetre" and not nom_court(nom) else style
+
+
+def contexte_artiste(nom: str) -> str:
+    """« Black Sherif · Ghana » (pays seulement s'il est confirmé dans notre base)."""
+    try:
+        code = db.value("""SELECT COALESCE(base_country, origin_country) FROM artists WHERE lower(name) = lower(?) AND status = 'active'
+                           ORDER BY youtube_subscribers DESC NULLS LAST LIMIT 1""", [nom])
+    except Exception:  # noqa: BLE001
+        code = None
+    pays = country_name(code) if code else ""
+    return f"{nom} · {pays}" if pays and pays != code else nom
+
+
 def anecdote(jour: date, due: datetime, essais: int = 6, apercu: bool = False, exclus: tuple = ()) -> dict | None:
     """« Le saviez-vous ? » : l'IA choisit l'ANGLE (le premier à…, l'histoire derrière un tube, l'origine d'un nom…) à
     partir de la page Wikipédia de l'artiste ; chaque fait doit venir de ce texte, et chaque chiffre ou date du post
@@ -607,7 +642,10 @@ def anecdote(jour: date, due: datetime, essais: int = 6, apercu: bool = False, e
             'en couleur, recopié tel quel", "faits": ["2 ou 3 faits en français, 25 mots max chacun, qui racontent '
             'l\'anecdote dans l\'ordre ; chaque fait est présent dans le texte, chiffres et dates recopiés EXACTEMENT, en chiffres"], '
             '"reponse": "4 à 8 mots en français qui RÉPONDENT au mystère du titre (ex. « Un clin d\'œil aux fusils Ruger »), '
-            'sans chiffre absent du texte", '
+            'sans chiffre absent du texte, SANS interprétation : seulement ce que le texte dit", '
+            '"preuve_reponse": "la phrase du texte qui prouve la réponse, recopiée mot pour mot", '
+            '"mot": "LE mot géant de la couverture, en MAJUSCULES, 8 lettres au plus, tiré du titre ou des faits '
+            '(ex. PREMIER, 8 ANS, PLATINE, RECORD), sans chiffre absent du texte", '
             '"preuves": ["pour chaque fait, la phrase du texte qui le prouve, recopiée mot pour mot"], "question": "une question '
             'au public, courte, qui pousse à commenter, terminée par ⁉️"}\n'
             "N'ajoute RIEN qui ne soit pas dans le texte : pas de superlatif inventé, pas de « premier » si le texte ne le dit pas. "
@@ -630,15 +668,21 @@ def anecdote(jour: date, due: datetime, essais: int = 6, apercu: bool = False, e
             faits.append(sans_billboard(M.coupe(f, 220)))
         faits = faits[:3]
         reponse = sans_billboard(M.coupe(o.get("reponse") or "", 60)).rstrip("…")
-        if not reponse or not chiffres_verifies(reponse, texte):
-            reponse = faits[0] if faits else ""
+        # 22/11/2026 : la réponse affichée en grand doit être prouvée par une phrase du texte (essai : « un hommage à son
+        # père » inventé à partir de « son père était professeur de théâtre ») ; sinon l'anecdote est écartée
+        if (not reponse or not chiffres_verifies(reponse, texte)
+                or not preuve_trouvee(str(o.get("preuve_reponse") or ""), texte)):
+            log_write("social", "info", f"anecdote {nom} : écartée (réponse sans preuve : « {reponse} »)")
+            continue
         if len(faits) < 2 or not (6 <= len(titre.split()) <= 9) or not chiffres_verifies(titre, texte) or titre.rstrip().endswith("?"):
             log_write("social", "info", f"anecdote {nom} : écartée (faits vérifiés : {len(faits)}, titre « {titre} »)")
             continue
-        # Photo : scène sous licence libre, sinon portrait de notre base ou de Deezer (comme histoire())
-        libres = [x for x in medias.scenes_libres(nom) if medias.lisible(x["url"])]
+        # Photo : scène sous licence libre, sinon portrait de notre base ou de Deezer (comme histoire()) ; 22/11/2026 :
+        # un VRAI visage est exigé (un portrait de la base était un logo-silhouette : la couverture magazine le montrait)
+        libres = [x for x in medias.scenes_libres(nom) if medias.lisible(x["url"]) and _visage_net(x["url"])]
         photo = libres[0]["url"] if libres else M._photo_portrait(nom)
-        if not photo:
+        if not photo or not _visage_net(photo):
+            log_write("social", "info", f"anecdote {nom} : écartée (pas de photo avec un visage net)")
             continue
         if libres:
             medias.CREDITS[photo] = libres[0]["credit"]
@@ -648,7 +692,20 @@ def anecdote(jour: date, due: datetime, essais: int = 6, apercu: bool = False, e
             from core.services.social.illustration import genere
             illustration = genere(f"anecdote musicale {titre}", "anecdote")
             photo = illustration
-        couverture = lambda fmt, t=titre, a=o.get("accent"): C26.actu(photo, "HISTOIRE VRAIE", t, [a] if a else [], "", fmt)  # noqa: E731
+        # Couverture magazine (22/11/2026, choix du fondateur : vogue, popular, mosaïque, fenêtre), un style par jour,
+        # couleurs tirées de la photo ; mot géant proposé par l'IA, vérifié (sinon le 1er mot fort du titre)
+        from core.services.social import couvertures_hv as HV
+        mot = re.sub(r"[^\wÀ-ÿ ]", "", sans_billboard(str(o.get("mot") or ""))).upper().strip()
+        if not mot or len(mot) > 8 or not chiffres_verifies(mot, texte):
+            mot = max((x for x in re.findall(r"[\wÀ-ÿ]+", titre) if len(x) <= 8), key=len, default=nom).upper()
+        style = style_couverture(jour, nom)
+        if style in ("vogue", "fenetre"):   # gros plan (visage ≥ 30 % de la largeur) : le texte ou les lettres couvriraient le visage
+            v_ = C26._visages(C26._image(photo))
+            if v_ and v_[0][2] >= .30:
+                style = "popular"
+        mot_style = nom_court(nom) if style == "fenetre" else mot
+        couverture = lambda fmt, t=titre, a=o.get("accent"), s_=style, m_=mot_style: HV.couverture(  # noqa: E731
+            s_, photo, t, a, m_, contexte_artiste(nom), fmt)
         # 2e photo pour la réponse (une autre scène libre si on en a une, sinon la même photo, recadrée nette)
         photo2 = libres[1]["url"] if len(libres) > 1 else photo
         if len(libres) > 1:
