@@ -125,7 +125,23 @@ def entries(run_id: int, limit: int | None = None) -> list[dict]:
            LEFT JOIN artists a ON a.id = COALESCE(e.artist_id, t.artist_id)
            LEFT JOIN countries ac ON ac.id = a.submission_country_id
            WHERE e.chart_run_id = ? ORDER BY e.position""" + (f" LIMIT {int(limit)}" if limit else ""), [run_id])
+    indices(rows)
     return _with_sources(run_id, rows) if rows else []
+
+
+def indices(rows: list[dict]) -> list[dict]:
+    """Indice affiché (22/11/2026, audit des tops par les IA) : 100 pour le N°1 du classement, les autres en proportion de
+    leur score. Les points bruts dépendent de la taille du catalogue du pays (N°1 du Togo à 89 points, du Nigeria à 7,6) :
+    affichés tels quels, ils faisaient croire à un titre togolais 12 fois plus fort. L'indice ne monte jamais au-dessus de
+    celui du titre placé avant (semaines v6 : un titre repoussé par la règle des sources gardait un score plus haut)."""
+    tete = next((float(r["score"]) for r in rows if r.get("score")), 0.0)
+    plafond = 100
+    for r in rows:
+        sc = float(r.get("score") or 0)
+        r["indice"] = min(plafond, max(1, round(100 * sc / tete))) if tete > 0 and sc > 0 else None
+        if r["indice"] is not None:
+            plafond = r["indice"]
+    return rows
 
 
 def _with_sources(run_id: int, rows: list[dict]) -> list[dict]:
