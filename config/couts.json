@@ -1,12 +1,16 @@
 [
-  {"nom":"Vercel Pro","montant":20,"devise":"USD","periodicite":"mensuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"abonnement"},
-  {"nom":"Gemini API prépayé · Google AI Studio · niveau 1","montant":5,"devise":"EUR","periodicite":"crédit prépayé","prochaine_echeance":null,"a_confirmer":true,"categorie":"crédit"},
-  {"nom":"Groq prépayé","montant":5,"devise":"EUR","periodicite":"crédit prépayé","prochaine_echeance":null,"a_confirmer":true,"categorie":"crédit"},
-  {"nom":"Google One AI Pro · abonnement du fondateur","montant":20,"devise":"USD","periodicite":"mensuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"abonnement fondateur"},
-  {"nom":"Claude · abonnement du fondateur","montant":null,"devise":null,"periodicite":"mensuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"abonnement fondateur"},
-  {"nom":"Domaine cauricharts.com chez LWS","montant":null,"devise":null,"periodicite":"annuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"domaine"},
-  {"nom":"Neon","montant":0,"devise":"EUR","periodicite":"offre gratuite","prochaine_echeance":null,"a_confirmer":false,"categorie":"service"},
+  {"nom":"Vercel Pro (site)","montant":24.00,"devise":"USD","periodicite":"mensuelle","prochaine_echeance":"2026-12-11","date_depense":"2026-11-12","a_confirmer":false,"categorie":"abonnement","source":"facture 6LLPUML9-0003"},
+  {"nom":"Neon · Launch Plan (base de données)","montant":22.48,"devise":"USD","periodicite":"mensuelle, selon la consommation","prochaine_echeance":"2026-12-01","date_depense":"2026-11-01","a_confirmer":false,"categorie":"abonnement","source":"facture MXPASD-00001"},
+  {"nom":"ElevenLabs Starter (voix off)","montant":7.20,"devise":"USD","periodicite":"mensuelle (1er mois en promotion : 1,20 $)","prochaine_echeance":"2026-12-12","date_depense":"2026-11-12","a_confirmer":false,"categorie":"abonnement","source":"reçu Stripe 2895-5496-5312"},
+  {"nom":"Google One AI Plus · abonnement du fondateur (Gemini, 2 To)","montant":10.39,"devise":"USD","periodicite":"mensuelle (AI Pro à 21,12 $ jusqu'au 15/12/2026)","prochaine_echeance":"2026-12-15","date_depense":"2026-11-15","a_confirmer":false,"categorie":"abonnement fondateur","source":"e-mails Google Play"},
+  {"nom":"Gemini API · recharges Google Cloud","montant":10.00,"devise":"EUR","periodicite":"recharges prépayées (5 € le 18/10, 5 € le 27/10, 10 € le 20/11)","prochaine_echeance":null,"date_depense":"2026-11-20","a_confirmer":false,"categorie":"crédit","source":"e-mails Google Payments"},
+  {"nom":"Telegram Premium (bot Cauri Charts)","montant":3.99,"devise":"EUR","periodicite":"mensuelle","prochaine_echeance":"2026-12-18","date_depense":"2026-10-18","a_confirmer":false,"categorie":"abonnement","source":"relevé Revolut"},
+  {"nom":"Domaine cauricharts.com chez LWS","montant":6.99,"devise":"EUR","periodicite":"à confirmer (mensuelle ou annuelle)","prochaine_echeance":null,"date_depense":"2026-10-01","a_confirmer":true,"categorie":"domaine","source":"facture FC-2816786"},
+  {"nom":"Groq prépayé","montant":5,"devise":"EUR","periodicite":"crédit prépayé","prochaine_echeance":null,"a_confirmer":true,"categorie":"crédit","source":"aucun reçu trouvé"},
+  {"nom":"DeepSeek API (solde épuisé, plus utilisé)","montant":5.30,"devise":"USD","periodicite":"crédit prépayé, achat unique","prochaine_echeance":null,"date_depense":"2026-10-21","a_confirmer":false,"categorie":"crédit","source":"reçu 8CU1451253398444L"},
+  {"nom":"Apify (écoutes Spotify)","montant":0,"devise":"USD","periodicite":"crédit gratuit mensuel, plafond 4,50 $","prochaine_echeance":null,"a_confirmer":false,"categorie":"service","source":"aucun paiement trouvé"},
+  {"nom":"Claude · abonnement du fondateur","montant":null,"devise":null,"periodicite":"mensuelle","prochaine_echeance":null,"a_confirmer":true,"categorie":"abonnement fondateur","source":"aucun reçu trouvé"},
   {"nom":"Buffer","montant":0,"devise":"EUR","periodicite":"offre gratuite","prochaine_echeance":null,"a_confirmer":false,"categorie":"service"},
   {"nom":"Crédits Google Cloud d'essai","montant":262,"devise":"EUR","periodicite":"crédit d'essai","prochaine_echeance":"2027-01-10","a_confirmer":false,"categorie":"crédit"},
-  {"nom":"Gemini 2.5 Flash Image · illustration","montant":0.039,"devise":"USD","periodicite":"par image","prochaine_echeance":null,"a_confirmer":true,"categorie":"coût variable"}
+  {"nom":"Gemini Flash Image · illustration","montant":0.039,"devise":"USD","periodicite":"par image","prochaine_echeance":null,"a_confirmer":true,"categorie":"coût variable"}
 ]

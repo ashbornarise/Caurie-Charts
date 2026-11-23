@@ -1,0 +1,92 @@
+{%- macro usd(v, d=0) -%}{{ ('{:,.' ~ d ~ 'f}').format(v or 0)|replace(',', ' ') }} ${%- endmacro -%}
+{%- macro montant(t) -%}{% if t.montant is none or t.montant == '' %}<span class="muted">à confirmer</span>{% else %}{{ ('{:,.2f}').format(t.montant|float)|replace(',', ' ') }} {{ t.devise or '' }}{% if (t.devise or '')|upper == 'EUR' %} <small class="muted">≈ {{ usd(t.usd, 2) }}</small>{% endif %}{% endif %}{%- endmacro -%}
+
+<div class="a-tete">
+  <span class="a-sur"><b>€</b>Pilotage</span>
+  <h1>L'économie de Cauri Charts</h1>
+  <p>Ce que coûte le média, ce qui est payé et justifié, ce qui arrive, et ce que rapportent les partenaires. Montants en dollars ; les euros sont convertis à {{ '%.2f'|format(taux) }} $ (≈).</p>
+  <p class="a-sans-impression" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+    {% if partenaire %}<a class="button button--small button--ghost" href="{{ path('admin/economie') }}">Vue complète</a>
+    {% else %}<a class="button button--small" href="{{ path('admin/economie') }}?vue=partenaire">Vue partenaire</a>{% endif %}
+    <button class="button button--small button--ghost" type="button" data-imprimer>Imprimer / PDF</button>
+  </p>
+</div>
+
+<div class="a-kpis">
+  <div class="a-kpi"><small>Coût mensuel des services</small><strong>{{ usd(recurrent) }}</strong><span class="a-note">abonnements récurrents du média</span></div>
+  <div class="a-kpi"><small>Dépensé en {{ mois_fr }}</small><strong>{{ usd(ce_mois) }}</strong><span class="a-note">paiements datés de ce mois</span></div>
+  <div class="a-kpi"><small>Recettes</small><strong>{{ usd(recettes_total) }}</strong>{% if recettes %}<span class="a-evol a-evol--hausse">{{ usd(recettes_mois) }} ce mois</span>{% else %}<span class="a-evol a-evol--neutre">aucune enregistrée</span>{% endif %}</div>
+  <div class="a-kpi"><small>Justificatifs</small><strong>{{ justificatifs }}<span style="font-size:22px;color:var(--a-faible)"> / {{ transactions|length }}</span></strong>
+    {% if a_confirmer %}<span class="a-evol a-evol--baisse">{{ a_confirmer }} à confirmer</span>{% else %}<span class="a-evol a-evol--hausse">tout est justifié</span>{% endif %}</div>
+</div>
+
+<div class="a-carte">
+  <h2>En 3 phrases</h2>
+  {% for p in phrases %}<p style="margin:0 0 8px">{{ p }}</p>{% endfor %}
+</div>
+
+<div class="a-grille2">
+  <div class="a-carte">
+    <h2>Où va l'argent</h2>
+    <p class="muted" style="margin-top:-4px">Par poste : abonnements mensuels et crédits du mois.</p>
+    {%- set maxp = (postes|map(attribute=1)|max) if postes else 1 -%}
+    <div class="a-barres">
+    {% for nom, v in postes %}<div class="a-barre"><span>{{ nom }}</span><span class="a-jauge"><i style="width:{{ [3, (100 * v / (maxp or 1))]|max }}%"></i></span><b>{{ usd(v, 2) }}</b></div>{% endfor %}
+    </div>
+  </div>
+  <div class="a-carte">
+    <h2>Payé à l'usage · 30 jours</h2>
+    <p class="muted" style="margin-top:-4px">Coût estimé de chaque appel (IA, Apify) : {{ usd(ia_total, 2) }} au total{% for f, v in ia_par %} · {{ f|capitalize }} {{ usd(v, 2) }}{% endfor %}.</p>
+    {%- set maxi = (ia_jours|map(attribute=1)|max) or 0.01 -%}
+    <div class="a-colonnes" style="gap:3px;height:150px">
+    {% for j, v in ia_jours %}<div title="{{ j }} : {{ '%.3f'|format(v) }} $"><span class="t"><i style="height:{{ [1.5, (100 * v / maxi)]|max }}%"></i></span>{% if loop.index % 5 == 0 or loop.last %}<small>{{ j[8:10] }}/{{ j[5:7] }}</small>{% else %}<small>&nbsp;</small>{% endif %}</div>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="a-carte">
+  <h2>Partenaires</h2>
+  {% if partenaires %}
+  <div class="table-scroll"><table class="data-table">
+    <thead><tr><th>Partenaire</th><th>Pays suivis</th><th>Contrat signé</th><th class="num">Éditions</th><th class="num">Envoyées</th><th>Dernier envoi</th><th>État</th></tr></thead>
+    <tbody>{% for p in partenaires %}<tr><td><strong>{{ p.nom }}</strong></td><td>{{ p.pays or 'tous' }}</td><td>{{ p.contrat_signe or '—' }}</td>
+      <td class="num">{{ p.editions }}</td><td class="num">{{ p.envoyees }}</td><td>{{ (p.dernier|string)[:16] if p.dernier else '—' }}</td>
+      <td><span class="status status--{{ 'published' if p.actif else 'draft' }}">{{ 'actif' if p.actif else 'en pause' }}</span></td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="empty">Aucun partenaire enregistré.</p>{% endif %}
+  {% if recettes %}
+  <h3 style="margin-top:18px">Recettes</h3>
+  <div class="table-scroll"><table class="data-table"><thead><tr><th>Date</th><th>Origine</th><th class="num">Montant</th><th>Justificatif</th></tr></thead>
+    <tbody>{% for r in recettes %}<tr><td>{{ r.date }}</td><td>{{ r.nom }}</td><td class="num">{{ r.montant }} {{ r.devise }}</td><td>{{ r.source or '—' }}</td></tr>{% endfor %}</tbody></table></div>
+  {% endif %}
+</div>
+
+{% if not partenaire %}
+<div class="a-carte">
+  <h2>Échéances à venir</h2>
+  <div class="table-scroll"><table class="data-table">
+    <thead><tr><th>Service</th><th>Échéance</th><th>Rythme</th><th class="num">Montant</th></tr></thead>
+    <tbody>{% for t in echeances %}<tr><td><strong>{{ t.nom }}</strong></td><td>{{ t.echeance_fr }}</td><td class="muted">{{ t.periodicite or '' }}</td><td class="num">{{ montant(t) }}</td></tr>{% else %}<tr><td colspan="4" class="muted">Aucune échéance connue.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+
+<div class="a-carte">
+  <h2>Toutes les transactions</h2>
+  <p class="muted" style="margin-top:-4px">Chaque dépense et son justificatif (facture, reçu, relevé). Source : config/couts.json.</p>
+  <div class="table-scroll"><table class="data-table">
+    <thead><tr><th>Date</th><th>Dépense</th><th>Poste</th><th class="num">Montant</th><th>Justificatif</th></tr></thead>
+    <tbody>{% for t in transactions %}<tr><td style="white-space:nowrap">{{ t.date_fr or '—' }}</td><td><strong>{{ t.nom }}</strong>{% if t.periodicite %}<br><small class="muted">{{ t.periodicite }}</small>{% endif %}</td>
+      <td><span class="a-pastille">{{ t.categorie or 'autre' }}</span></td><td class="num">{{ montant(t) }}</td>
+      <td>{% if t.justifie %}<span class="status status--published">{{ t.source }}</span>{% else %}<span class="status status--pending">{{ t.source or 'à trouver' }}</span>{% endif %}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endif %}
+
+<div class="a-carte">
+  <h2>Rapports</h2>
+  <p class="muted" style="margin-top:-4px">Les rapports hebdomadaires (archivés à chaque envoi) et les documents publics.</p>
+  <ul style="margin:0;padding-left:18px;line-height:1.9">
+    {% for r in rapports %}<li><a href="{{ r.url }}" target="_blank" rel="noopener">Rapport hebdomadaire · {{ r.titre }}</a></li>{% else %}<li class="muted">Les rapports hebdomadaires apparaîtront ici dès le prochain envoi.</li>{% endfor %}
+    <li><a href="{{ path('documents') }}" target="_blank" rel="noopener">Documents publics : magazine, méthodologie</a></li>
+  </ul>
+</div>

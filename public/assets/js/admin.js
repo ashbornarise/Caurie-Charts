@@ -27,3 +27,6 @@ document.querySelectorAll('[data-copy]').forEach(function (btn) {
     regle();
     if (large.addEventListener) large.addEventListener('change', regle);
 })();
+
+// page Économie (23/11/2026) : impression / PDF
+document.querySelectorAll('[data-imprimer]').forEach(function (b) { b.addEventListener('click', function () { window.print(); }); });

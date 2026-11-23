@@ -9,7 +9,7 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 300,
-      "includeFiles": "{django/**,public/assets/**,resources/fonts/**}",
+      "includeFiles": "{django/**,public/assets/**,resources/fonts/**,config/couts.json,config/recettes.json}",
       "excludeFiles": "{django/.venv/**,django/.pg/**,django/staticfiles/**,**/__pycache__/**}"
     }
   },

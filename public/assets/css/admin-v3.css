@@ -1,0 +1,124 @@
+/* Admin v3 (23/11/2026) — les « clés » du rapport hebdomadaire validé par le fondateur : blanc dominant, bleu ciel et
+   violet en verre, Anton pour les titres et les chiffres clés, Montserrat pour les surtitres, DM Sans pour le texte.
+   Modèle proposé par l'agent design ; chargé après admin.css, il ne fait que réhabiller. */
+@font-face { font-family: "Anton"; src: url("../fonts/anton.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("../fonts/montserrat.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "DM Sans"; src: url("../fonts/dmsans.woff2") format("woff2"); font-weight: 100 1000; font-display: swap; }
+
+body.admin {
+  --a-encre: #12121F; --a-doux: #4A4A63; --a-faible: #7A7A92; --a-trait: #E6E8F2;
+  --a-ciel: #38BDF8; --a-ciel-pale: #EAF7FF; --a-violet: #7C3AED; --a-violet-clair: #A78BFA; --a-violet-pale: #F3EEFF;
+  --a-ok-bg: #DCFCE7; --a-ok: #166534; --a-ko-bg: #FEE2E2; --a-ko: #991B1B; --a-warn-bg: #FEF3C7; --a-warn: #92400E;
+  --a-verre: linear-gradient(160deg, rgba(255,255,255,.94), rgba(246,248,255,.8));
+  --a-bord: 1px solid rgba(124,58,237,.14); --a-r: 22px; --a-r-sm: 12px;
+  --a-ombre: 0 6px 22px rgba(56,38,140,.08); --a-jauge: linear-gradient(90deg, #38BDF8, #7C3AED);
+  font-family: "DM Sans", system-ui, sans-serif; font-size: 15px; line-height: 1.55; color: var(--a-encre);
+  background: #fff;
+}
+/* halos discrets */
+body.admin::before, body.admin::after { content: ""; position: fixed; z-index: -1; width: 520px; height: 520px; border-radius: 50%; filter: blur(80px); opacity: .22; pointer-events: none; }
+body.admin::before { top: -160px; right: -120px; background: #C4B5FD; }
+body.admin::after { bottom: -200px; left: 120px; background: #BAE6FD; }
+
+/* titres */
+.admin h1 { font: 400 34px/1.05 "Anton", Impact, sans-serif; text-transform: uppercase; letter-spacing: .5px; color: var(--a-encre); margin: 4px 0 8px; }
+.admin h2 { font: 400 22px/1.15 "Anton", Impact, sans-serif; text-transform: uppercase; letter-spacing: .4px; color: var(--a-encre); }
+.admin h3 { font: 800 13px/1.3 "Montserrat", sans-serif; text-transform: uppercase; letter-spacing: 1.2px; color: var(--a-doux); }
+.admin .eyebrow, .admin .kicker, .adm-jour, .adm-surtitre { font: 700 11px "Montserrat", sans-serif; letter-spacing: 2px; text-transform: uppercase; color: var(--a-violet); }
+
+/* menu latéral */
+.adm-menu { background: var(--a-verre); border-right: 1px solid var(--a-trait); }
+@media (min-width: 980px) { .adm-menu { width: 248px; } }
+.adm-marque span { font: 700 15px "Montserrat", sans-serif; }
+.adm-marque small { font: 700 10px "Montserrat", sans-serif; letter-spacing: 1.6px; color: var(--a-violet); }
+.adm-groupe { font: 700 10.5px "Montserrat", sans-serif; letter-spacing: 1.5px; color: var(--a-faible); }
+.adm-lien { min-height: 38px; padding: 0 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--a-doux); position: relative; }
+.adm-lien:hover { background: var(--a-ciel-pale); color: var(--a-encre); }
+.adm-lien--actif, .adm-lien[aria-current="page"] { background: var(--a-violet-pale); color: var(--a-violet); font-weight: 700; }
+.adm-lien--actif::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: var(--a-jauge); }
+.adm-lien .ico { stroke-width: 1.75; }
+
+/* zone principale et aide */
+.admin-main { max-width: 1280px; padding: 28px 32px 72px; }
+.adm-aide { background: var(--a-verre); border: var(--a-bord); border-radius: 16px; box-shadow: none; color: var(--a-doux); font-size: 14px; max-width: 100%; }
+.adm-aide strong { color: var(--a-violet); }
+
+/* cartes : verre */
+.card, .box, .adm-carte, .adm-tache, .post-card { background: var(--a-verre); border: var(--a-bord); border-radius: var(--a-r); box-shadow: var(--a-ombre); }
+.box--accent { background: linear-gradient(160deg, var(--a-violet-pale), rgba(234,247,255,.85)); }
+.card__value, .adm-tache__chiffre { font: 400 40px/1 "Anton", Impact, sans-serif !important; letter-spacing: .3px; color: var(--a-encre); }
+.card__label, .adm-tache__titre { font: 800 13px "Montserrat", sans-serif; text-transform: uppercase; letter-spacing: 1px; }
+.card--alert { background: linear-gradient(160deg, #FFF5F5, rgba(255,255,255,.9)); border-color: rgba(153,27,27,.18); }
+
+/* tableaux : sobres et nets */
+.data-table { font-size: 13.5px; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; }
+.data-table th { font: 700 11px "Montserrat", sans-serif; text-transform: uppercase; letter-spacing: 1px; color: var(--a-faible); background: #FAFBFF; border-bottom: 1px solid var(--a-trait); }
+.data-table td { border-bottom: 1px solid var(--a-trait); }
+.data-table tbody tr:hover { background: var(--a-ciel-pale); }
+.num, .data-table td.num { font-variant-numeric: tabular-nums; }
+
+/* boutons */
+.admin .button { min-height: 40px; border-radius: var(--a-r-sm); font: 600 14px "DM Sans", sans-serif; background: var(--a-jauge); color: #fff; border: 0; box-shadow: 0 4px 14px rgba(124,58,237,.22); }
+.admin .button:hover { filter: brightness(1.06); }
+.admin .button--ghost { background: #fff; color: var(--a-violet); border: var(--a-bord); box-shadow: none; }
+.admin .button--danger { background: var(--a-ko-bg); color: var(--a-ko); box-shadow: none; }
+.admin .button--small { min-height: 32px; padding: 4px 12px; font-size: 13px; }
+.admin .button:focus-visible, .admin a:focus-visible { outline: 2px solid var(--a-ciel); outline-offset: 2px; }
+
+/* champs */
+.admin-form input, .admin-form select, .admin-form textarea, .decision textarea, .decision input, .field input, .field select, .field textarea {
+  min-height: 42px; border: 1px solid var(--a-trait); border-radius: var(--a-r-sm); font: 15px "DM Sans", sans-serif; background: #fff; }
+.admin-form input:focus, .admin-form select:focus, .admin-form textarea:focus, .field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--a-violet); box-shadow: 0 0 0 3px rgba(124,58,237,.12); outline: 0; }
+.field__hint { color: var(--a-faible); }
+
+/* badges d'état */
+.status { font: 600 11.5px "DM Sans", sans-serif; padding: 3px 10px; border-radius: 999px; }
+.status--published, .status--validated, .status--ok { background: var(--a-ok-bg); color: var(--a-ok); }
+.status--pending { background: var(--a-warn-bg); color: var(--a-warn); }
+.status--rejected, .status--excluded { background: var(--a-ko-bg); color: var(--a-ko); }
+.status--draft { background: var(--a-violet-pale); color: var(--a-violet); }
+
+/* messages flash */
+.flash { border-radius: 14px; border-left: 4px solid var(--a-violet); background: var(--a-verre); box-shadow: var(--a-ombre); }
+.flash--success { border-left-color: var(--a-ok); } .flash--error { border-left-color: var(--a-ko); }
+
+/* filtres en pastilles */
+.toolbar a, .tabs a, .filtres a { border-radius: 999px; }
+
+/* éléments réutilisables : en-tête de page, KPI, jauge, pastilles d'évolution (page Économie et suivantes) */
+.a-tete { margin: 0 0 22px; }
+.a-tete .a-sur { display: inline-flex; align-items: center; gap: 8px; font: 700 11px "Montserrat", sans-serif; letter-spacing: 2px; text-transform: uppercase; color: var(--a-violet); }
+.a-tete .a-sur b { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--a-violet); color: #fff; font-size: 11px; letter-spacing: 0; }
+.a-tete p { max-width: 640px; color: var(--a-doux); margin: 6px 0 0; }
+.a-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 0 0 20px; }
+.a-kpi { background: var(--a-verre); border: var(--a-bord); border-radius: var(--a-r); box-shadow: var(--a-ombre); padding: 18px 20px; }
+.a-kpi small { display: block; font: 700 11px "Montserrat", sans-serif; letter-spacing: 1.2px; text-transform: uppercase; color: var(--a-faible); }
+.a-kpi strong { display: block; font: 400 40px/1.05 "Anton", Impact, sans-serif; margin: 8px 0 6px; color: var(--a-encre); }
+.a-kpi .a-note { font-size: 13px; color: var(--a-doux); }
+.a-evol { display: inline-block; font: 600 12px "DM Sans", sans-serif; padding: 2px 8px; border-radius: 999px; }
+.a-evol--hausse { background: var(--a-ok-bg); color: var(--a-ok); } .a-evol--baisse { background: var(--a-ko-bg); color: var(--a-ko); }
+.a-evol--neutre { background: var(--a-violet-pale); color: var(--a-violet); }
+.a-jauge { height: 6px; border-radius: 999px; background: var(--a-trait); overflow: hidden; } .a-jauge i { display: block; height: 100%; border-radius: 999px; background: var(--a-jauge); }
+.a-carte { background: var(--a-verre); border: var(--a-bord); border-radius: var(--a-r); box-shadow: var(--a-ombre); padding: 20px 22px; margin: 0 0 20px; }
+.a-carte > h2:first-child { margin-top: 0; }
+.a-grille2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.a-colonnes { display: flex; align-items: flex-end; gap: 10px; height: 190px; margin-top: 8px; }
+.a-colonnes div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
+.a-colonnes span.t { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.a-colonnes span.t i { display: block; width: 100%; border-radius: 8px 8px 3px 3px; background: linear-gradient(180deg, var(--a-violet-clair), var(--a-ciel)); }
+.a-colonnes b { font: 700 12px "Montserrat", sans-serif; color: var(--a-doux); } .a-colonnes small { font: 600 12px "Montserrat", sans-serif; color: var(--a-faible); }
+.a-barres { display: grid; gap: 10px; } .a-barre { display: grid; grid-template-columns: minmax(0, 200px) 1fr 90px; gap: 12px; align-items: center; font-size: 14px; }
+.a-barre .a-jauge { height: 10px; } .a-barre b { text-align: right; font-variant-numeric: tabular-nums; }
+.a-pastille { display: inline-block; font: 600 11.5px "DM Sans", sans-serif; padding: 3px 10px; border-radius: 999px; background: var(--a-violet-pale); color: var(--a-violet); }
+
+/* téléphone */
+@media (max-width: 767px) {
+  .admin-main { padding: 18px 16px 64px; }
+  .admin h1 { font-size: 26px; }
+  .a-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .a-kpi strong { font-size: 30px; }
+  .a-grille2 { grid-template-columns: minmax(0, 1fr); }
+  .a-barre { grid-template-columns: minmax(0, 1fr) 70px; } .a-barre .a-jauge { grid-column: 1 / -1; grid-row: 2; }
+  .admin .button { min-height: 44px; }
+}
+@media print { body.admin::before, body.admin::after, .adm-menu, .adm-aide, .a-sans-impression { display: none !important; } .admin-main { max-width: none; padding: 0; } }

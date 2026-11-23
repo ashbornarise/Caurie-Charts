@@ -21,6 +21,13 @@ class Command(BaseCommand):
             html, _ = rapport.rendre(data, texte)
             cible_pdf = Path(r"C:\Users\agbal\OneDrive\Documents\Cauri Charts - Posts\Essais agents\rapport-hebdo-essai.pdf") if options["essai"] else Path(__import__("tempfile").gettempdir()) / "rapport-hebdo.pdf"
             rapport_pdf.generer(data, texte, cible_pdf)
+            if not options["essai"]:   # archive pour la page Économie (23/11/2026) ; nom imprévisible : le Blob est public
+                try:
+                    import secrets
+                    from core import storage
+                    storage.blob_put(f"rapports/hebdo/rapport-{data['semaine']['debut']}-{secrets.token_hex(8)}.pdf", cible_pdf.read_bytes(), "application/pdf")
+                except Exception as exc:  # noqa: BLE001
+                    out(f"archive du rapport impossible : {exc}")
             if options["essai"]:
                 out(f"Rapport PDF d'essai écrit : {cible_pdf}")
                 return
