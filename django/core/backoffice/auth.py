@@ -101,6 +101,10 @@ def client_ip(request) -> str:
 
 
 def is_locked_out(email: str, ip: str) -> bool:
+    # 23/11/2026, demande du fondateur : son e-mail n'est jamais bloqué (liste privée LOGIN_SANS_LIMITE, séparée par des virgules)
+    from core import env as _env
+    if (email or "").strip().lower() in {x.strip().lower() for x in (_env.get("LOGIN_SANS_LIMITE", "") or "").split(",") if x.strip()}:
+        return False
     mx = int(conf.get("app.security.login_max_attempts", 5))
     since = (datetime.now(timezone.utc) - timedelta(minutes=int(conf.get("app.security.login_window_minutes", 15)))).strftime("%Y-%m-%d %H:%M:%S")
     failures = int(db.value("SELECT COUNT(*) FROM login_attempts WHERE success = 0 AND attempted_at >= ? AND (ip = ? OR email = ?)",
