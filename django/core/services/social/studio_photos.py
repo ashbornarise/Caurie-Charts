@@ -15,7 +15,7 @@ import sys
 import tempfile
 
 import requests
-from PIL import Image
+from PIL import Image, ImageOps
 
 from core import db, storage
 
@@ -367,6 +367,14 @@ def publie(job_id: int, job: dict, p: dict, maj) -> dict:
     nom = f"studio-photos-{job_id}-{os.urandom(2).hex()}"
     fichiers = []
     for k, u in enumerate(urls):
+        if p.get("brut"):   # « photo telle quelle » (23/11/2026) : l'image d'origine, sans texte, logo ni recadrage
+            r = requests.get(u, timeout=30); r.raise_for_status()
+            with Image.open(io.BytesIO(r.content)) as im:
+                im = ImageOps.exif_transpose(im).convert("RGB")
+                for suf in ("", "-916"):
+                    im.save(PI.DIR / f"{nom}-{k}{suf}.jpg", "JPEG", quality=95)
+            fichiers.append({"file": f"{nom}-{k}.jpg", "tiktok": f"{nom}-{k}-916.jpg", "label": p.get("accroche") or "Photos"})
+            continue
         for fmt, suf in (("feed", ""), ("story", "-916")):
             im = (C.actu(u, (p.get("etiquette") or "PHOTOS").upper()[:28], p.get("accroche") or "", [p.get("artiste_nom") or ""],
                          f"Photo : {p.get('credit')}" if p.get("credit") else "", fmt) if k == 0

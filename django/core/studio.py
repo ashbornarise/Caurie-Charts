@@ -1008,7 +1008,7 @@ def photos_publier(request, chemin, ident):
         reseaux = reseaux_choisis(c)
     except ValueError as exc:
         return _json({"erreur": str(exc)}, 400)
-    p.update({"publier_indices": indices, "notifier": bool(c.get("notifier")), "reseaux": reseaux,
+    p.update({"publier_indices": indices, "notifier": bool(c.get("notifier")), "reseaux": reseaux, "brut": bool(c.get("brut")),
               **{k: str(c.get(k) or "").strip()[:900] for k in ("etiquette", "accroche", "legende_fr", "legende_en")}})
     for k in ("artiste_nom", "credit"):   # écran Annonce (27/10/2026) : artiste et crédit saisis avec les textes
         if c.get(k):

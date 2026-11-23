@@ -521,7 +521,8 @@ h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
           <button class="bascule" id="tri-entiere" role="switch" aria-checked="false" style="margin-bottom:14px"><i></i><span><b>La personne est entière sur ces photos</b>Elles serviront au détourage (classements, records).</span></button>
           <button class="btn large" id="tri-valider">Garder la sélection</button>
           <div id="tri-publier" hidden style="margin-top:16px">
-            <h2>Publier aussi ?</h2><p class="msg" style="margin:-4px 0 12px">La 1re photo porte le titre ; les autres suivent en carrousel.</p>
+            <h2>Publier aussi ?</h2>
+            <button class="bascule" id="tp-brut" role="switch" aria-checked="true" style="margin-bottom:14px"><i></i><span><b>Photo telle quelle</b>Aucun texte, aucun logo sur l'image : la photo d'origine. Désactive pour la couverture Cauri avec le titre.</span></button>
             <label class="champ">Étiquette<input id="tp-etiquette"></label><label class="champ">Accroche<input id="tp-accroche" maxlength="90"></label>
             <label class="champ">Légende<textarea id="tp-fr"></textarea></label><input id="tp-en" type="hidden">
             <button class="btn large" id="tp-publier">Publier</button>
@@ -1434,7 +1435,7 @@ function quiTri() {
   if (tri.artiste) $('#tri-changer').onclick = () => { tri.artiste = null; quiTri(); $('#tri-cherche').focus(); };
 }
 chercheArtiste('#tri-cherche', '#tri-resultats', a => { tri.artiste = a; quiTri(); });
-bascule($('#tri-entiere'));
+bascule($('#tri-entiere')); bascule($('#tp-brut'));
 $('#tri-valider').onclick = async () => {
   if (!tri.artiste) return msg('#tri-msg', 'Choisis d\'abord l\'artiste.', false);
   if (!tri.choix.size) return msg('#tri-msg', 'Touche au moins une photo.', false);
@@ -1451,7 +1452,7 @@ $('#tri-valider').onclick = async () => {
 $('#tp-publier').onclick = async () => {
   const c = await demandeReseaux('Publier le carrousel', [{id: 'auto', titre: 'Publier maintenant', sous: 'Carrousel Cauri, dans 2 minutes.', icone: 'envoi'}, {id: 'notif', titre: 'J\'ajoute ma musique', sous: 'Notification Instagram et TikTok.', icone: 'musique'}]);
   if (!c) return;
-  try { await post('/photos/' + tri.job + '/publier', {indices: tri.indices, notifier: c.choix === 'notif', reseaux: c.reseaux, etiquette: $('#tp-etiquette').value, accroche: $('#tp-accroche').value, legende_fr: $('#tp-fr').value, legende_en: $('#tp-en').value});
+  try { await post('/photos/' + tri.job + '/publier', {indices: tri.indices, brut: actif($('#tp-brut')), notifier: c.choix === 'notif', reseaux: c.reseaux, etiquette: $('#tp-etiquette').value, accroche: $('#tp-accroche').value, legende_fr: $('#tp-fr').value, legende_en: $('#tp-en').value});
     msg('#tri-msg', 'Carrousel en fabrication (1 à 3 minutes), puis envoyé.', true); $('#tri-publier').hidden = true; } catch (e) { msg('#tri-msg', e.message, false); }
 };
 async function dossiers() {
