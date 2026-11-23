@@ -768,6 +768,18 @@ def traite(job_id: int) -> dict:
             except TacheAnnulee:
                 return {"statut": "annule"}
             raise
+    if p.get("type") == "montage":   # montage façon CapCut (23/11/2026) : photos et vidéos bout à bout + une chanson
+        from core.services.social import studio_edit
+        try:
+            return studio_edit.traite(job_id, job, p, _maj)
+        except TacheAnnulee:
+            return {"statut": "annule"}
+        except Exception as exc:  # noqa: BLE001
+            try:
+                _maj(job_id, statut="erreur", erreur=str(exc)[:500])
+            except TacheAnnulee:
+                return {"statut": "annule"}
+            raise
     if p.get("type") == "photos":   # section Photos : récupérer les images d'un post pour la banque de l'artiste
         from core.services.social import studio_photos
         try:

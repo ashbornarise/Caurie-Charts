@@ -341,7 +341,9 @@ def _lance(job_id: int) -> str | None:
     j = db.one("SELECT lien, params FROM studio_jobs WHERE id = ?", [job_id])
     hote = (urlparse((j or {}).get("lien") or "").hostname or "").lower()
     paroles = re.search(r'"type": "(paroles|raconte)"', str((j or {}).get("params") or ""))   # iZotope RX, Remotion : sur le PC
-    if hote.endswith("youtube.com") or hote.endswith("youtu.be") or paroles:
+    # montage (23/11/2026) : un lien YouTube parmi les éléments ou la chanson -> sur le PC aussi
+    yt_montage = '"type": "montage"' in str((j or {}).get("params") or "") and re.search(r"youtu\.?be", str((j or {}).get("params") or ""))
+    if hote.endswith("youtube.com") or hote.endswith("youtu.be") or paroles or yt_montage:
         from core import storage
         db.update("studio_jobs", {"statut": "attente_pc"}, "id = :id", {"id": job_id})
         storage.blob_put(f"relais/studio/job-{job_id}.json", json.dumps({"job": job_id}).encode(), "application/json")
@@ -1466,3 +1468,112 @@ def vedette_recents(request, chemin):
                             "artiste": j["params"].get("artiste_nom") or "", "artiste_id": j["params"].get("artiste_id"),
                             "textes": j["params"].get("textes") or {}, "apercus": j["params"].get("apercus") or [],
                             "choix": j["params"].get("choix")} for j in jobs]})
+
+
+# ---------------------------------------------------------------- montage et collage (23/11/2026, façon CapCut)
+
+def montage_nouveau(request, chemin):
+    """{elements: [{genre: photo|fichier|lien, url|nom+ext+parts|lien, duree, debut, fin}], son, son_debut, format,
+    transition, mouvement, garder_son} : la tâche attend ensuite les morceaux des fichiers du téléphone, puis « lancer »."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_edit
+    c = _corps(request)
+    elements = []
+    for el in (c.get("elements") or [])[:30]:
+        g = el.get("genre")
+        e = {"genre": g}
+        if g == "photo" and str(el.get("url") or "").startswith("https://"):
+            e["url"] = el["url"]
+        elif g == "lien" and urlparse(str(el.get("lien") or "")).hostname:
+            e["lien"] = str(el["lien"]).strip()[:1000]
+        elif g == "fichier" and re.fullmatch(r"[a-z0-9-]{1,40}", str(el.get("nom") or "")):
+            e.update({"nom": el["nom"], "ext": re.sub(r"[^a-z0-9]", "", str(el.get("ext") or "bin").lower())[:4], "parts": max(1, min(60, int(el.get("parts") or 1)))})
+        else:
+            continue
+        for k in ("duree", "debut", "fin"):
+            try:
+                if el.get(k) not in (None, ""):
+                    e[k] = max(0.0, float(el[k]))
+            except (TypeError, ValueError):
+                pass
+        elements.append(e)
+    if not elements:
+        return _json({"erreur": "ajoute au moins une photo ou une vidéo"}, 400)
+    son = c.get("son") or None
+    if son:
+        if son.get("genre") == "lien" and urlparse(str(son.get("lien") or "")).hostname:
+            son = {"genre": "lien", "lien": str(son["lien"]).strip()[:1000]}
+        elif son.get("genre") == "fichier" and re.fullmatch(r"[a-z0-9-]{1,40}", str(son.get("nom") or "")):
+            son = {"genre": "fichier", "nom": son["nom"], "ext": re.sub(r"[^a-z0-9]", "", str(son.get("ext") or "mp3").lower())[:4],
+                   "parts": max(1, min(60, int(son.get("parts") or 1)))}
+        else:
+            son = None
+    params = {"type": "montage", "elements": elements, "son": son, "son_debut": c.get("son_debut") if c.get("son_debut") not in ("", None) else "auto",
+              "format": c.get("format") if c.get("format") in studio_edit.FORMATS_M else "story",
+              "transition": "coupe" if c.get("transition") == "coupe" else "fondu", "mouvement": bool(c.get("mouvement", True)),
+              "garder_son": bool(c.get("garder_son", True)), "artiste": str(c.get("artiste") or "").strip()[:120],
+              "accroche": str(c.get("titre") or "Montage").strip()[:160], "credit": str(c.get("credit") or "").strip()[:160]}
+    creer_tables()
+    return _json({"id": studio_edit.nouveau(params, u["id"])})
+
+
+def montage_morceau(request, chemin, ident):
+    """Un morceau (≤ 4 Mo) d'un fichier du téléphone : ?nom=…&k=…"""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_edit
+    nom = request.GET.get("nom", "")
+    if not re.fullmatch(r"[a-z0-9-]{1,40}", nom) or len(request.body) > 4_300_000:
+        return _json({"erreur": "morceau refusé"}, 400)
+    k = int(request.GET.get("k", "0"))
+    studio_edit.importe_morceau(int(ident), nom, k, request.body)
+    return _json({"ok": True, "url": studio_edit._url(int(ident), nom, k)})
+
+
+def montage_lancer(request, chemin, ident):
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    j = db.one("SELECT * FROM studio_jobs WHERE id = ?", [int(ident)])
+    if not j:
+        raise Http404
+    db.update("studio_jobs", {"statut": "attente", "erreur": None}, "id = :id", {"id": j["id"]})
+    erreur = _lance(j["id"])
+    if erreur:
+        db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": j["id"]})
+    return _json({"ok": not erreur, "erreur": erreur})
+
+
+def collage(request, chemin):
+    """{urls: [2 à 6 photos], gabarit: grille|cote|mosaique, format} : une seule image, aussitôt prête à publier telle quelle."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    import io as _io
+    from core import storage
+    from core.services.social import studio_edit
+    c = _corps(request)
+    urls = [x for x in (c.get("urls") or []) if str(x).startswith("https://")][:6]
+    try:
+        im = studio_edit.collage(urls, c.get("gabarit") if c.get("gabarit") in studio_edit.GABARITS else "grille",
+                                 c.get("format") if c.get("format") in studio_edit.FORMATS_M else "feed", int(c.get("marge") or 0))
+    except Exception as exc:  # noqa: BLE001
+        return _json({"erreur": f"collage impossible : {exc}"}, 400)
+    creer_tables()
+    params = {"type": "photos", "collage": True, "brut": True, "photos": [], "artiste_nom": str(c.get("artiste_nom") or "")[:120],
+              "artiste_id": c.get("artiste_id"), "credit": str(c.get("credit") or "")[:160], "accroche": ""}
+    jid = db.insert("studio_jobs", {"lien": "collage", "params": json.dumps(params), "auteur": u["id"], "statut": "montage"})
+    b = _io.BytesIO(); im.save(b, "JPEG", quality=94)
+    nom = f"studio-{jid}-01.jpg"
+    storage.store_media("artists/candidats", nom, b.getvalue(), "image/jpeg")
+    v = _io.BytesIO(); petit = im.copy(); petit.thumbnail((540, 720)); petit.save(v, "JPEG", quality=85)
+    storage.store_media("social", f"studio-{jid}-vignette.jpg", v.getvalue(), "image/jpeg")
+    params["photos"] = [nom]
+    db.update("studio_jobs", {"params": json.dumps(params, ensure_ascii=False), "statut": "pret", "vignette": f"studio-{jid}-vignette.jpg"},
+              "id = :id", {"id": jid})
+    return _json({"id": jid})

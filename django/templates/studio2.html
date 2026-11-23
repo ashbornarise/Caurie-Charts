@@ -478,6 +478,62 @@ h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
       <div class="pied"><button class="btn second" id="ve-prec" hidden>Retour</button><button class="btn large" id="ve-suiv">Suivant</button></div>
     </section>
 
+    <!-- OUTIL : MONTAGE façon CapCut (23/11/2026) -->
+    <section class="vue" id="v-montage">
+      <button class="retour" data-nav="creer"><svg class="i"><use href="#i-gauche"/></svg>Créer</button>
+      <h1>Montage</h1>
+      <p class="sous">Tes photos et tes vidéos bout à bout, une chanson, sans texte. Range-les dans l'ordre, règle les durées, puis « Fabriquer ».</p>
+      <div class="carte">
+        <h2>1. Images et vidéos</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <label class="btn second" style="cursor:pointer"><svg class="i"><use href="#i-photo"/></svg>Du téléphone<input id="mo-fichiers" type="file" accept="image/*,video/*" multiple hidden></label>
+          <button class="btn second" id="mo-banque-btn" type="button"><svg class="i"><use href="#i-dossier"/></svg>De la banque</button>
+          <button class="btn second" id="mo-lien-btn" type="button"><svg class="i"><use href="#i-lien"/></svg>Un lien</button>
+        </div>
+        <div id="mo-banque" hidden><label class="champ">Artiste<input id="mo-cherche" placeholder="Chercher un artiste…" autocomplete="off"></label><div class="resultats" id="mo-resultats"></div><div class="galerie" id="mo-galerie"></div></div>
+        <div id="mo-lien-bloc" hidden><label class="champ">Lien d'une vidéo<div class="ligne-champ"><input id="mo-lien" type="url" inputmode="url" placeholder="YouTube, TikTok, Instagram…"><button class="btn" id="mo-lien-ajout" type="button">Ajouter</button></div></label></div>
+        <div id="mo-liste"><div class="vide" style="padding:18px">Rien pour l'instant : ajoute des photos ou des vidéos.</div></div>
+      </div>
+      <div class="carte">
+        <h2>2. La musique</h2>
+        <div class="puces" id="mo-son"><button class="puce on" data-s="videos">Le son des vidéos</button><button class="puce" data-s="lien">Un lien</button><button class="puce" data-s="fichier">Un fichier</button><button class="puce" data-s="aucun">Aucun son</button></div>
+        <label class="champ" id="mo-son-lien-c" hidden>Lien de la chanson (clip officiel YouTube…)<input id="mo-son-lien" type="url" inputmode="url"></label>
+        <label class="champ" id="mo-son-fichier-c" hidden>Fichier son ou vidéo<input id="mo-son-fichier" type="file" accept="audio/*,video/*"></label>
+        <div id="mo-depart" hidden><div class="champ" style="margin-bottom:6px">Où commence la chanson ?</div>
+          <div class="puces" id="mo-depart-p"><button class="puce on" data-d="auto">Au refrain (auto)</button><button class="puce" data-d="choix">Je choisis</button></div>
+          <label class="champ" id="mo-depart-c" hidden>Début en secondes (ex. 1:05 = 65)<input id="mo-depart-s" type="number" min="0" step="0.5" inputmode="decimal"></label></div>
+      </div>
+      <div class="carte">
+        <h2>3. Réglages</h2>
+        <div class="champ" style="margin-bottom:6px">Format</div>
+        <div class="puces" id="mo-format"><button class="puce on" data-f="story">9:16 (TikTok, Reels)</button><button class="puce" data-f="feed">4:5</button><button class="puce" data-f="carre">1:1</button></div>
+        <div class="champ" style="margin-bottom:6px">Entre deux plans</div>
+        <div class="puces" id="mo-transition"><button class="puce on" data-t="fondu">Fondu</button><button class="puce" data-t="coupe">Coupe franche</button></div>
+        <button class="bascule" id="mo-mouvement" role="switch" aria-checked="true"><i></i><span><b>Zoom doux sur les photos</b>Les photos bougent lentement, comme dans CapCut.</span></button>
+      </div>
+      <p class="msg" id="mo-msg"></p>
+      <div class="pied"><button class="btn large" id="mo-fabriquer">Fabriquer la vidéo</button></div>
+    </section>
+
+    <!-- OUTIL : COLLAGE (23/11/2026) : plusieurs photos en une seule image -->
+    <section class="vue" id="v-collage">
+      <button class="retour" data-nav="creer"><svg class="i"><use href="#i-gauche"/></svg>Créer</button>
+      <h1>Collage</h1>
+      <p class="sous">2 à 6 photos réunies en une seule image, sans texte. Touche les photos dans l'ordre voulu.</p>
+      <div class="carte">
+        <label class="champ">Artiste<input id="co2-cherche" placeholder="Chercher un artiste…" autocomplete="off"></label><div class="resultats" id="co2-resultats"></div>
+        <div class="galerie" id="co2-galerie"></div>
+        <label class="btn second" style="cursor:pointer;margin-bottom:12px"><svg class="i"><use href="#i-photo"/></svg>Ajouter du téléphone<input id="co2-fichiers" type="file" accept="image/*" multiple hidden></label>
+        <div class="champ" style="margin-bottom:6px">Disposition</div>
+        <div class="puces" id="co2-gabarit"><button class="puce on" data-g="grille">Grille</button><button class="puce" data-g="cote">Côte à côte</button><button class="puce" data-g="mosaique">Une grande + petites</button></div>
+        <div class="champ" style="margin-bottom:6px">Format</div>
+        <div class="puces" id="co2-format"><button class="puce on" data-f="feed">4:5</button><button class="puce" data-f="story">9:16</button><button class="puce" data-f="carre">1:1</button></div>
+        <button class="bascule" id="co2-marge" role="switch" aria-checked="false"><i></i><span><b>Fin liseré blanc entre les photos</b></span></button>
+      </div>
+      <p class="msg" id="co2-msg"></p>
+      <div class="pied"><button class="btn large" id="co2-creer">Créer l'image</button></div>
+    </section>
+
     <!-- PROJET (toutes les créations) -->
     <section class="vue" id="v-projet">
       <button class="retour" data-nav="accueil"><svg class="i"><use href="#i-gauche"/></svg>Retour</button>
@@ -661,7 +717,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register(BASE + '/sw.j
 
 // ---------------- navigation
 let vue = 'accueil';
-const NAV = {liste: 'accueil', suggestions: 'accueil', rappels: 'accueil', accueil: 'accueil', creer: 'creer', clip: 'creer', paroles: 'creer', raconte: 'creer', annonce: 'creer', vedette: 'creer', projet: 'valider', banque: 'banque', reglages: 'reglages', calendrier: 'calendrier'};
+const NAV = {liste: 'accueil', suggestions: 'accueil', rappels: 'accueil', accueil: 'accueil', creer: 'creer', clip: 'creer', paroles: 'creer', raconte: 'creer', annonce: 'creer', vedette: 'creer', montage: 'creer', collage: 'creer', projet: 'valider', banque: 'banque', reglages: 'reglages', calendrier: 'calendrier'};
 const navDe = nom => nom === 'liste' ? (filtre === 'À faire' ? 'valider' : 'historique') : NAV[nom];
 // 10/11/2026 : le geste « retour » du téléphone revient à l'écran précédent du Studio ; sur l'accueil, il faut le refaire
 // pour quitter (« Refais le geste pour quitter »)
@@ -697,6 +753,8 @@ function nomProjet(j) {
   const p = j.params || {};
   if (p.type === 'paroles') return [`${p.titre || 'Vidéo paroles'}${p.artistes ? ' · ' + p.artistes : ''}`, 'Vidéo paroles'];
   if (p.type === 'raconte') return [`${p.artiste || 'Artiste'}${p.recit && p.recit.titre ? ' · ' + [p.recit.titre.haut, p.recit.titre.bas].join(' ').toLowerCase() : ''}`, 'Cauri raconte'];
+  if (p.type === 'montage') return [`Montage · ${(p.elements || []).length} plan(s)${p.duree_finale ? ' · ' + p.duree_finale + ' s' : ''}`, 'Montage'];
+  if (p.type === 'photos' && p.collage) return [`Collage${p.artiste_nom ? ' · ' + p.artiste_nom : ''}`, 'Collage'];
   if (p.type === 'photos') return [p.accroche || `${p.artiste_nom || 'Photos'} · ${(p.photos || []).length} photo(s)`, 'Post photo'];
   if (p.type === 'vedette') return [`${p.artiste_nom || 'Artiste'}${p.textes && p.textes.titre ? ' · ' + p.textes.titre : ''}`, 'Mise en valeur'];
   return [p.accroche || (j.lien || '').replace(/^https?:\/\/(www\.)?/, '').slice(0, 48) || 'Vidéo', 'Vidéo de clip'];
@@ -829,10 +887,12 @@ const OUTILS = [
   {id: 'paroles', nom: 'Vidéo paroles', l: 'P', fond: '#FFEDD5', encre: '#9A3412', d: 'Un son et une photo : les mots s\'allument au rythme de la voix.'},
   {id: 'annonce', nom: 'Annonce', l: 'A', fond: '#E0F4FE', encre: '#075985', d: 'Une actu chaude en carrousel, avec la couverture Cauri.'},
   {id: 'vedette', nom: 'Mettre en valeur', l: 'M', fond: '#DCFCE7', encre: '#166534', d: 'Les plus belles photos d\'un artiste, sur nos modèles de visuels.'},
+  {id: 'montage', nom: 'Montage', l: 'M', fond: '#E0E7FF', encre: '#3730A3', d: 'Photos et vidéos bout à bout, avec une chanson. Comme CapCut.'},
+  {id: 'collage', nom: 'Collage', l: 'C', fond: '#FCE7F3', encre: '#9D174D', d: 'Plusieurs photos en une seule image.'},
   {id: 'photo', nom: 'Photo + titre', l: 'T', fond: '#FEF3C7', encre: '#92400E', d: 'Un post, une photo, un titre fort : le format qui fait le plus de vues.'},
   {id: 'live', nom: 'Live TikTok', l: 'L', fond: '#FEE2E2', encre: '#991B1B', d: 'La régie du live : classement, clips, commentaires.'}];
 // Studio v3 (23/11/2026) : outils rangés par ce qu'on publie
-const GROUPES = [['Vidéo', ['clip', 'paroles', 'raconte']], ['Image', ['photo', 'annonce', 'vedette']], ['En direct', ['live']]];
+const GROUPES = [['Vidéo', ['montage', 'clip', 'paroles', 'raconte']], ['Image', ['photo', 'collage', 'annonce', 'vedette']], ['En direct', ['live']]];
 const BRIQUES = ['Un titre du classement', 'Son du clip', 'Paroles', 'Photo de la banque', 'Couleurs du pays', 'Accroche IA', 'Version muette', 'Publier après validation'];
 let briques = ['Son du clip', 'Paroles', 'Photo de la banque', 'Publier après validation'];
 async function creer() {
@@ -858,6 +918,8 @@ $('#co-enregistrer').onclick = async () => {
 };
 function ouvreOutil(id, reglages) {
   if (id === 'live') { location.href = BASE + '/live'; return; }
+  if (id === 'montage') { montre('montage'); dessineMontage(); return; }
+  if (id === 'collage') { montre('collage'); return; }
   if (id === 'photo') { montre('banque'); ongletBanque('ajouter'); msg('#ba-msg', 'Colle le lien du post (ou prends des photos du téléphone), choisis l\'artiste, puis « Trier ces photos ». Ensuite : garder la photo et la publier avec un titre fort.', true); return; }
   if (id === 'clip') { clip.etape = 1; montre('clip'); assistant('clip', clip); }
   if (id === 'paroles') { par.etape = 1; if (reglages.artistes) $('#par-artistes').value = reglages.artistes; montre('paroles'); assistant('par', par); }
@@ -1423,6 +1485,10 @@ async function ouvreTri(id, artiste) {
   tri = {job: id, p, photos: j.photos || [], choix: new Set(p.preselection || (j.photos && j.photos.length === 1 ? [0] : [])), artiste: artiste || (p.artiste_id ? {id: p.artiste_id, nom: p.artiste_nom} : null), profil: p.mode === 'profil'};
   $('#tri-liste').hidden = true; $('#tri-grille').hidden = false; $('#tri-publier').hidden = true; $('#tri-valider').hidden = false; msg('#tri-msg', '');
   quiTri();
+  if (p.collage) {   // collage : une image déjà faite, on passe tout de suite à la publication (telle quelle)
+    tri.indices = [0]; $('#tri-valider').hidden = true; $('#tri-publier').hidden = false; $('#tri-entiere').hidden = true; $('#tri-qui').hidden = true; $('#tri-cherche-bloc').hidden = true;
+    $('#tp-brut').setAttribute('aria-checked', 'true'); $('#tp-etiquette').value = ''; $('#tp-accroche').value = p.accroche || ''; $('#tp-fr').value = p.legende_fr || ''; }
+  else $('#tri-entiere').hidden = false;
   const rf = p.refus || {};
   $('#tri-info').textContent = (p.reconnues || []).length ? 'Cochées d\'avance : celles où il est reconnu.' + (rf.pas_lui ? ` ${rf.pas_lui} écartée(s), ce n'est pas lui.` : '') : 'Touche les photos à garder.';
   const dessine = () => { $('#tri-photos').innerHTML = tri.photos.map((u, i) => `<button data-tp="${i}" class="${tri.choix.has(i) ? 'on' : ''}" style="background-image:url('${esc(u)}')">${(p.reconnues || [])[i] === 'lui' ? '<span class="tag">C\'est lui</span>' : ''}</button>`).join('');
@@ -1484,6 +1550,107 @@ $('#rg-notif').onchange = async e => {
     msg('#rg-notif-msg', REGLAGES.notif ? 'Activé : tes vidéos partiront en notification.' : 'Désactivé : publication directe par défaut.', true);
   } catch (err) { e.target.checked = !e.target.checked; msg('#rg-notif-msg', err.message, false); } };
 $('#rg-sortie').onclick = async () => { await post('/deconnexion'); location.href = BASE; };
+
+// ---------------- MONTAGE façon CapCut (23/11/2026)
+const mo = {elements: []};   // {genre: photo|fichier|lien, url, fichier, lien, video, duree, debut, fin, apercu}
+const nomFichier = () => 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const extDe = f => ((f.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 4)) || (f.type.startsWith('video') ? 'mp4' : 'jpg');
+async function envoieEnMorceaux(job, nom, blob, progres) {
+  const T = 3.5 * 1024 * 1024, n = Math.max(1, Math.ceil(blob.size / T));
+  for (let k = 0; k < n; k++) { await envoie(`/montage/${job}/morceau?nom=${nom}&k=${k}`, blob.slice(k * T, (k + 1) * T)); if (progres) progres(k + 1, n); }
+  return n;
+}
+function dessineMontage() {
+  const l = mo.elements;
+  if (!l.length) { $('#mo-liste').innerHTML = '<div class="vide" style="padding:18px">Rien pour l\'instant : ajoute des photos ou des vidéos.</div>'; return; }
+  const total = l.reduce((s, e) => s + (e.video ? Math.max(0.5, (+e.fin || (+e.debut || 0) + 8) - (+e.debut || 0)) : (+e.duree || 2.5)), 0);
+  $('#mo-liste').innerHTML = `<p class="msg" style="margin:0 0 8px">${l.length} plan(s) · environ ${Math.round(total)} s</p>` + l.map((e, i) => `
+    <div class="ph-r"><div class="tete"><span style="width:44px;height:56px;border-radius:8px;flex-shrink:0;background:#1b1b2b center/cover no-repeat;${e.apercu ? `background-image:url('${esc(e.apercu)}')` : ''};display:grid;place-items:center;color:#fff">${e.video && !e.apercu ? '<svg class="i"><use href="#i-video"/></svg>' : ''}</span>
+      <b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i + 1}. ${esc(e.nom || (e.video ? 'Vidéo' : 'Photo'))}</b>
+      <button data-mh="${i}" aria-label="Monter">↑</button><button data-mb="${i}" aria-label="Descendre">↓</button><button data-mx="${i}" aria-label="Retirer">×</button></div>
+      ${e.video ? `<div class="deux"><label class="champ" style="margin:0">Début (s)<input data-md="${i}" inputmode="decimal" value="${esc(e.debut ?? 0)}"></label><label class="champ" style="margin:0">Fin (s)<input data-mf="${i}" inputmode="decimal" placeholder="début + 8" value="${esc(e.fin ?? '')}"></label></div>`
+        : `<label class="champ" style="margin:0">Durée (s)<input data-mu="${i}" inputmode="decimal" value="${esc(e.duree ?? 2.5)}"></label>`}</div>`).join('');
+  const bouge = (i, d) => { const j = i + d; if (j < 0 || j >= l.length) return; [l[i], l[j]] = [l[j], l[i]]; dessineMontage(); };
+  $$('[data-mh]').forEach(b => b.onclick = () => { vibre(); bouge(+b.dataset.mh, -1); });
+  $$('[data-mb]').forEach(b => b.onclick = () => { vibre(); bouge(+b.dataset.mb, 1); });
+  $$('[data-mx]').forEach(b => b.onclick = () => { vibre(); l.splice(+b.dataset.mx, 1); dessineMontage(); });
+  $$('[data-md]').forEach(x => x.onchange = () => { l[+x.dataset.md].debut = x.value; dessineMontage(); });
+  $$('[data-mf]').forEach(x => x.onchange = () => { l[+x.dataset.mf].fin = x.value; dessineMontage(); });
+  $$('[data-mu]').forEach(x => x.onchange = () => { l[+x.dataset.mu].duree = x.value; dessineMontage(); });
+}
+$('#mo-fichiers').onchange = () => { for (const f of $('#mo-fichiers').files) { const v = f.type.startsWith('video');
+  mo.elements.push({genre: 'fichier', fichier: f, video: v, nom: f.name, apercu: v ? '' : URL.createObjectURL(f), duree: 2.5, debut: 0}); }
+  $('#mo-fichiers').value = ''; dessineMontage(); };
+$('#mo-banque-btn').onclick = () => { vibre(); $('#mo-banque').hidden = !$('#mo-banque').hidden; $('#mo-lien-bloc').hidden = true; if (!$('#mo-banque').hidden) $('#mo-cherche').focus(); };
+$('#mo-lien-btn').onclick = () => { vibre(); $('#mo-lien-bloc').hidden = !$('#mo-lien-bloc').hidden; $('#mo-banque').hidden = true; if (!$('#mo-lien-bloc').hidden) $('#mo-lien').focus(); };
+$('#mo-lien-ajout').onclick = () => { const v = $('#mo-lien').value.trim(); if (!/^https?:\/\//.test(v)) return msg('#mo-msg', 'Colle un lien valide.', false);
+  mo.elements.push({genre: 'lien', lien: v, video: true, nom: v.replace(/^https?:\/\/(www\.)?/, '').slice(0, 40), debut: 0}); $('#mo-lien').value = ''; msg('#mo-msg', ''); dessineMontage(); };
+chercheArtiste('#mo-cherche', '#mo-resultats', async a => {
+  const ph = (await get('/banque/' + a.id)).photos || [];
+  $('#mo-galerie').innerHTML = ph.length ? ph.map((p, i) => `<button data-mp="${i}" style="background-image:url('${esc(p.url)}')"></button>`).join('') : '<p class="msg">Pas encore de photo pour cet artiste.</p>';
+  $$('#mo-galerie [data-mp]').forEach(b => b.onclick = () => { vibre(); const p = ph[+b.dataset.mp];
+    mo.elements.push({genre: 'photo', url: p.url, apercu: p.url, nom: a.nom, duree: 2.5}); b.classList.add('on'); dessineMontage(); toast('Ajoutée au montage'); });
+});
+puces('#mo-son', true, b => { const s = b.dataset.s; $('#mo-son-lien-c').hidden = s !== 'lien'; $('#mo-son-fichier-c').hidden = s !== 'fichier'; $('#mo-depart').hidden = !['lien', 'fichier'].includes(s); });
+puces('#mo-depart-p', true, b => { $('#mo-depart-c').hidden = b.dataset.d !== 'choix'; });
+puces('#mo-format', true); puces('#mo-transition', true); bascule($('#mo-mouvement'));
+$('#mo-fabriquer').onclick = async () => {
+  const b = $('#mo-fabriquer');
+  if (!mo.elements.length) return msg('#mo-msg', 'Ajoute au moins une photo ou une vidéo.', false);
+  const son = choisie('#mo-son').s;
+  if (son === 'lien' && !/^https?:\/\//.test($('#mo-son-lien').value.trim())) return msg('#mo-msg', 'Colle le lien de la chanson.', false);
+  if (son === 'fichier' && !$('#mo-son-fichier').files[0]) return msg('#mo-msg', 'Choisis le fichier de la chanson.', false);
+  b.disabled = true;
+  try {
+    const plan = [];   // fichiers du téléphone : photos réduites, vidéos telles quelles ; on calcule les morceaux avant de créer la tâche
+    for (const e of mo.elements) {
+      if (e.genre === 'fichier') { const blob = e.video ? e.fichier : await reduit(e.fichier); e.blob = blob; e.cle = nomFichier(); e.ext = e.video ? extDe(e.fichier) : 'jpg';
+        e.parts = Math.max(1, Math.ceil(blob.size / (3.5 * 1024 * 1024))); }
+      plan.push(e.genre === 'photo' ? {genre: 'photo', url: e.url, duree: e.duree} : e.genre === 'lien' ? {genre: 'lien', lien: e.lien, debut: e.debut, fin: e.fin}
+        : {genre: 'fichier', nom: e.cle, ext: e.ext, parts: e.parts, duree: e.duree, debut: e.debut, fin: e.fin});
+    }
+    let sonP = null, fs = null;
+    if (son === 'lien') sonP = {genre: 'lien', lien: $('#mo-son-lien').value.trim()};
+    if (son === 'fichier') { fs = $('#mo-son-fichier').files[0]; sonP = {genre: 'fichier', nom: nomFichier(), ext: extDe(fs), parts: Math.max(1, Math.ceil(fs.size / (3.5 * 1024 * 1024)))}; }
+    const dep = choisie('#mo-depart-p').d === 'choix' ? $('#mo-depart-s').value : 'auto';
+    const j = await post('/montage/nouveau', {elements: plan, son: sonP, son_debut: dep, format: choisie('#mo-format').f, transition: choisie('#mo-transition').t,
+      mouvement: actif($('#mo-mouvement')), garder_son: son !== 'aucun', titre: 'Montage'});
+    const aEnvoyer = mo.elements.filter(e => e.genre === 'fichier');
+    for (let i = 0; i < aEnvoyer.length; i++) { const e = aEnvoyer[i];
+      await envoieEnMorceaux(j.id, e.cle, e.blob, (k, n) => msg('#mo-msg', `Envoi ${i + 1}/${aEnvoyer.length}${n > 1 ? ` (${k}/${n})` : ''}…`)); }
+    if (fs) await envoieEnMorceaux(j.id, sonP.nom, fs, (k, n) => msg('#mo-msg', `Envoi de la chanson ${k}/${n}…`));
+    const r = await post('/montage/' + j.id + '/lancer');
+    if (r.erreur) throw new Error(r.erreur);
+    mo.elements = []; dessineMontage(); msg('#mo-msg', ''); ouvreProjet(j.id);
+  } catch (e) { msg('#mo-msg', e.message, false); } finally { b.disabled = false; }
+};
+
+// ---------------- COLLAGE (23/11/2026)
+const co2 = {choix: [], artiste: null};
+function dessineCollage() {
+  $$('#co2-galerie [data-cp]').forEach(b => { const i = co2.choix.indexOf(b.dataset.url); b.classList.toggle('on', i >= 0);
+    b.innerHTML = i >= 0 ? `<span class="ordre">${i + 1}</span>` : ''; });
+  $('#co2-creer').textContent = co2.choix.length >= 2 ? `Créer l'image (${co2.choix.length} photos)` : 'Créer l\'image';
+}
+function ajouteGalerieCollage(urls) {
+  $('#co2-galerie').insertAdjacentHTML('beforeend', urls.map(u => `<button data-cp data-url="${esc(u)}" style="background-image:url('${esc(u)}')"></button>`).join(''));
+  $$('#co2-galerie [data-cp]').forEach(b => b.onclick = () => { vibre(); const u = b.dataset.url, i = co2.choix.indexOf(u);
+    if (i >= 0) co2.choix.splice(i, 1); else if (co2.choix.length < 6) co2.choix.push(u); else toast('6 photos au plus'); dessineCollage(); });
+  dessineCollage();
+}
+chercheArtiste('#co2-cherche', '#co2-resultats', async a => { co2.artiste = a; const ph = (await get('/banque/' + a.id)).photos || [];
+  $('#co2-galerie').innerHTML = ''; ajouteGalerieCollage(ph.map(p => p.url)); if (!ph.length) msg('#co2-msg', 'Pas encore de photo de cet artiste dans la banque.', false); });
+$('#co2-fichiers').onchange = async () => { const urls = [];
+  for (const f of $('#co2-fichiers').files) { try { msg('#co2-msg', 'Envoi des photos…'); const nom = nomFichier(); const r = await envoie(`/montage/0/morceau?nom=${nom}&k=0`, await reduit(f)); if (r.url) urls.push(r.url); } catch (e) { msg('#co2-msg', e.message, false); } }
+  $('#co2-fichiers').value = ''; msg('#co2-msg', ''); ajouteGalerieCollage(urls); urls.forEach(u => { if (co2.choix.length < 6) co2.choix.push(u); }); dessineCollage(); };
+puces('#co2-gabarit', true); puces('#co2-format', true); bascule($('#co2-marge'));
+$('#co2-creer').onclick = async () => {
+  if (co2.choix.length < 2) return msg('#co2-msg', 'Touche au moins 2 photos.', false);
+  const b = $('#co2-creer'); b.disabled = true; msg('#co2-msg', 'Création de l\'image…');
+  try { const r = await post('/collage', {urls: co2.choix, gabarit: choisie('#co2-gabarit').g, format: choisie('#co2-format').f, marge: actif($('#co2-marge')) ? 6 : 0,
+      artiste_id: co2.artiste && co2.artiste.id, artiste_nom: co2.artiste && co2.artiste.nom});
+    co2.choix = []; msg('#co2-msg', ''); ouvreProjet(r.id); } catch (e) { msg('#co2-msg', e.message, false); } finally { b.disabled = false; }
+};
 
 // ---------------- geste retour
 let dernierRetour = 0;
