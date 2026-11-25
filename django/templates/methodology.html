@@ -65,7 +65,8 @@
 
             <section id="sources">
                 <h2>{{ tr("Les sources") }}</h2>
-                <p>{{ tr("Six plateformes sont relevées automatiquement. Toutes ne jouent pas le même rôle : certaines comptent dans le score, d’autres servent au contrôle et à la découverte des titres.") }}</p>
+                {%- set v7 = formula.v7 is defined and formula.v7 -%}
+                <p>{% if v7 %}{{ tr("Six plateformes sont relevées automatiquement. Depuis la formule v7, toutes celles qui publient un classement du pays comptent dans le score : la place d’un titre dans ce classement est convertie en part d’écoute.") }}{% else %}{{ tr("Six plateformes sont relevées automatiquement. Toutes ne jouent pas le même rôle : certaines comptent dans le score, d’autres servent au contrôle et à la découverte des titres.") }}{% endif %}</p>
                 <div class="methode__tableau">
                     <table class="data-table">
                         <thead><tr><th scope="col">{{ tr("Source") }}</th><th scope="col">{{ tr("Ce que nous relevons") }}</th><th scope="col">{{ tr("Fréquence") }}</th><th scope="col">{{ tr("Rôle") }}</th></tr></thead>
@@ -74,9 +75,9 @@
                                 ('youtube', 'YouTube', tr("Vues et « j’aime » de chaque clip officiel des artistes suivis"), tr("Chaque jour"), tr("Dans le score"), true),
                                 ('apple-music', 'Apple Music', tr("Top 100 « Les plus écoutés » de chaque pays"), tr("Chaque jour"), tr("Dans le score"), true),
                                 ('boomplay', 'Boomplay', tr("Top 100 officiel de 11 pays"), tr("Chaque semaine"), tr("Dans le score"), true),
-                                ('deezer', 'Deezer', tr("Top 100 de 3 pays, popularité des titres et nouvelles sorties"), tr("Chaque jour"), tr("Contrôle et découverte"), false),
-                                ('shazam', 'Shazam', tr("Top 200 des 7 derniers jours dans 4 pays"), tr("Chaque jour"), tr("Contrôle et découverte"), false),
-                                ('spotify', 'Spotify', tr("Écoutes de chaque titre (compteur mondial) et auditeurs des artistes"), tr("Chaque jour"), tr("Dans le score") if sp_score else tr("Relevé, dans le score à partir du 13 novembre"), sp_score)] %}
+                                ('deezer', 'Deezer', tr("Top 100 de 3 pays, popularité des titres et nouvelles sorties"), tr("Chaque jour"), tr("Dans le score (place dans le Top du pays)") if v7 else tr("Contrôle et découverte"), v7),
+                                ('shazam', 'Shazam', tr("Top 200 des 7 derniers jours dans 4 pays"), tr("Chaque jour"), tr("Dans le score (place dans le Top du pays)") if v7 else tr("Contrôle et découverte"), v7),
+                                ('spotify', 'Spotify', tr("Classement Spotify du pays quand il existe, écoutes de chaque titre et auditeurs des artistes") if v7 else tr("Écoutes de chaque titre (compteur mondial) et auditeurs des artistes"), tr("Chaque jour"), tr("Dans le score, poids double (classement du pays)") if v7 else (tr("Dans le score") if sp_score else tr("Relevé, dans le score à partir du 13 novembre")), v7 or sp_score)] %}
                             <tr>
                                 <td><span class="methode__source"><img src="{{ asset('img/plateformes/' ~ cle ~ '.png') }}" alt="" width="28" height="28" loading="lazy"> <strong>{{ nom }}</strong></span></td>
                                 <td>{{ quoi }}</td><td>{{ quand }}</td>
@@ -87,7 +88,8 @@
                         </tbody>
                     </table>
                 </div>
-                <p>{{ tr("Spotify ne publie pas d’écoutes par pays pour l’Afrique de l’Ouest : nous relevons chaque jour le compteur mondial de chaque titre de nos artistes (albums, singles, featurings), comme pour les vues YouTube, et la différence d’une semaine à l’autre donne les écoutes de la semaine. Audiomack est prévu dans la formule mais n’est pas encore relevé.") }}</p>
+                {% if v7 %}<p>{{ tr("Là où Spotify publie un classement du pays (comme au Nigeria), c’est la seule mesure d’écoutes faite à l’intérieur du pays : elle compte double. Les vues YouTube, elles, sont mondiales. Audiomack n’est pas encore relevé.") }}</p>
+                {% else %}<p>{{ tr("Spotify ne publie pas d’écoutes par pays pour l’Afrique de l’Ouest : nous relevons chaque jour le compteur mondial de chaque titre de nos artistes (albums, singles, featurings), comme pour les vues YouTube, et la différence d’une semaine à l’autre donne les écoutes de la semaine. Audiomack est prévu dans la formule mais n’est pas encore relevé.") }}</p>{% endif %}
             </section>
 
             <section id="traitement">
@@ -97,13 +99,29 @@
                     <li>{{ tr("Un titre n’est relié qu’au clip officiel de l’artiste, sur sa chaîne. Les chaînes automatiques « Topic », les reprises et les vidéos de fans sont écartées.") }}</li>
                     <li>{{ tr("Les doublons sont fusionnés chaque semaine. Les remix, les versions live et acoustiques restent des titres à part.") }}</li>
                     <li>{{ tr("Toutes les sorties des artistes suivis (albums, EP, singles) entrent en base dès leur parution, et leur catalogue complet est relu chaque mois.") }}</li>
+                    <li>{{ tr("Quand la date de sortie d’un titre manque, elle est cherchée sur iTunes avant le calcul, pour que la règle des titres de plus d’un an s’applique à tous.") }}</li>
                     <li>{{ tr("Le pays de chaque artiste est vérifié par une recherche Google contrôlée ; seule une certitude « haute » est retenue. Le classement d’un pays ne contient que des artistes de ce pays, et un artiste en attente de vérification n’entre dans aucun classement.") }}</li>
                 </ul>
             </section>
 
             <section id="score">
                 <h2>{{ tr("Le calcul du score") }}</h2>
-                {% if formula.normalisation %}
+                {% if v7 %}
+                <p>{{ tr("Depuis la semaine 48 (formule v7, méthode 1.7), chaque titre est mesuré par sa part d’écoute estimée sur chaque source, puis ces parts sont combinées par une moyenne géométrique pondérée. Le résultat est un indice de 10 000 points que les titres du pays se partagent chaque semaine.") }}</p>
+                <div class="methode__formule">
+                    <p class="methode__egal">{{ tr("Score = moyenne géométrique pondérée des parts (YouTube, Apple Music, Boomplay, Deezer, Shazam, Spotify)") }}</p>
+                    <p class="methode__note">{{ tr("Score du titre = e^(Σ poids × ln part), puis ramené à 10 000 points dans le pays. Avec une moyenne géométrique, un titre doit être fort sur plusieurs sources pour être en haut : un seul chiffre énorme ne suffit pas.") }}</p>
+                </div>
+                <ol class="apropos__liste">
+                    <li><strong>{{ tr("Des places aux parts d’écoute.") }}</strong> {{ tr("Une place dans le Top d’une plateforme du pays est convertie en part d’écoute par la loi de Zipf-Mandelbrot, mesurée sur le classement Spotify du Nigeria : part(r) = (r + 2,25)^−0,5, divisée par la somme du classement. Le N°1 pèse bien plus que le N°50, sans écraser le reste.") }}</li>
+                    <li><strong>{{ tr("Absent, jamais zéro.") }}</strong> {{ tr("Un jour où le titre n’est pas dans un Top relevé, il reçoit la part de la place juste après la dernière (N+1). La part de la semaine est la moyenne des jours relevés.") }}</li>
+                    <li><strong>{{ tr("YouTube compressé.") }}</strong> {{ tr("Les vues gagnées dans la semaine par le clip officiel passent à la racine carrée, puis sont divisées par la somme des 100 premiers clips du pays. Un titre sans clip officiel n’a pas zéro : pour lui, YouTube ne compte pas.") }}</li>
+                    <li><strong>{{ tr("Le poids de YouTube dépend du pays.") }}</strong> {{ tr("Poids de YouTube = 50 % ÷ (1 + 0,8 × L), où L mesure la couverture des plateformes d’écoute du pays. Les vues YouTube sont mondiales : plus un pays a de vrais classements d’écoute, moins elles pèsent (environ 10 % au Nigeria, 29 % au Togo).") }}</li>
+                    <li><strong>{{ tr("La couverture de chaque source.") }}</strong> {{ tr("Couverture q = n ÷ (n + 5), où n est le nombre de nos titres présents dans ce Top. Une source qui ne voit que deux ou trois titres pèse peu. Le classement Spotify du pays compte double.") }}</li>
+                    <li><strong>{{ tr("Sur 10 000 points, affiché sur 100.") }}</strong> {{ tr("Les scores du pays font 10 000 points. Sur chaque classement, le score est affiché en indice Cauri de 0 à 100 : le N°1 vaut 100, les autres en proportion de leur score.") }}</li>
+                </ol>
+                <p class="fineprint">{{ tr("Paramètres de la v7 : α = 0,5 et β = 2,25 (Zipf-Mandelbrot, ajustement R² = 0,996), racine carrée pour YouTube, κ = 5, poids double pour Spotify, π max = 50 %, λ = 0,8. Essai sur la semaine 47 (13 pays) : l’accord avec le classement nigérian TurnTable passe de 0,21 à 0,55.") }}</p>
+                {% elif formula.normalisation %}
                 {%- set yt = (formula.normalisation.youtube * 100)|int -%}
                 {%- set st = (formula.normalisation.streaming * 100)|int -%}
                 <p>{{ tr("Chaque source compte pour la part que le titre y occupe dans la semaine et dans le pays, et non pour ses chiffres bruts. Ainsi, aucune source ne peut dominer mécaniquement les autres.") }}</p>
@@ -142,10 +160,10 @@
                 <h2>{{ tr("Les règles de classement") }}</h2>
                 <div class="apropos__cartes">
                     {% if formula.artist_cap %}<div class="apropos__carte"><h3>{{ tr("Trois titres au plus par artiste") }}</h3><p>{{ tr("Dans chaque Top de titres, un artiste a au plus :n titres. Les suivants descendent juste après le Top.", n=formula.artist_cap) }}</p></div>{% endif %}
-                    <div class="apropos__carte"><h3>{{ tr("Deux sources pour le Top 5") }}</h3><p>{{ tr("Le Top :top est réservé aux titres qui comptent sur au moins :n sources du score. S’il n’y en a pas assez, les places restantes reviennent aux meilleurs titres à une source.", top=formula.diversity.top, n=formula.diversity.min_sources) }}</p></div>
+                    {% if not v7 %}<div class="apropos__carte"><h3>{{ tr("Deux sources pour le Top 5") }}</h3><p>{{ tr("Le Top :top est réservé aux titres qui comptent sur au moins :n sources du score. S’il n’y en a pas assez, les places restantes reviennent aux meilleurs titres à une source.", top=formula.diversity.top, n=formula.diversity.min_sources) }}</p></div>{% endif %}
                     <div class="apropos__carte"><h3>{{ tr("Les titres anciens") }}</h3><p>{{ tr("Un titre sorti il y a plus d’un an quitte les Tops, sauf vrai regain : un score au moins 1,5 fois supérieur à celui de la semaine précédente.") }}</p></div>
                     <div class="apropos__carte"><h3>{{ tr("Le départage") }}</h3><p>{{ tr("À égalité : le score, puis le nombre de sources, puis la progression, puis le score de la semaine précédente.") }}</p></div>
-                    <div class="apropos__carte"><h3>{{ tr("Toute la région") }}</h3><p>{{ tr("Dans le Top :size de l’Afrique de l’Ouest, un pays a au plus :cap titres.", size=config('charts.prime-wa.size'), cap=config('charts.prime-wa.country_cap')) }}</p></div>
+                    <div class="apropos__carte"><h3>{{ tr("Toute la région") }}</h3><p>{% if v7 %}{{ tr("Le Top Afrique de l’Ouest reprend le score de chaque titre dans son pays, multiplié par la racine carrée de la population du pays et par sa fiabilité : un grand pays compte plus sans écraser les petits, un pays peu mesuré compte moins. Seuls les artistes actifs y entrent.") }} {% endif %}{{ tr("Dans le Top :size de l’Afrique de l’Ouest, un pays a au plus :cap titres.", size=config('charts.prime-wa.size'), cap=config('charts.prime-wa.country_cap')) }}</p></div>
                     <div class="apropos__carte"><h3>{{ tr("Huit artistes au moins") }}</h3><p>{{ tr("Un pays n’a de classement officiel qu’à partir de huit artistes suivis : jamais de remplissage.") }}</p></div>
                 </div>
             </section>
@@ -183,6 +201,7 @@
                         </tbody>
                     </table>
                 </div>
+                {% if v7 %}<p>{{ tr("Depuis la v7, les pics de vues et le rapport « j’aime » / vues sont jugés par un test statistique : le pic par un écart robuste (médiane des semaines précédentes), l’engagement par une loi bêta ajustée sur les clips de la semaine, les deux combinés par la méthode de Fisher, avec un seuil de 1 % corrigé du nombre de clips testés (Bonferroni). Un clip suspect est retiré du score du titre jusqu’à la vérification ; le titre reste mesuré sur ses plateformes d’écoute.") }}</p>{% endif %}
                 <h3 class="methode__h3">{{ t('methodology.exclusions_title') }}</h3>
                 {% if exclusions %}
                 <div class="methode__tableau">
@@ -214,6 +233,7 @@
                     </table>
                 </div>
                 <p>{{ tr("70 et plus : fiabilité élevée ; de 45 à 69 : moyenne ; en dessous : faible. Un pays qui ne repose que sur des sources calculées reste « indicatif ».") }}</p>
+                {% if v7 %}<p>{{ tr("La formule v7 calcule aussi un coefficient de fiabilité du pays à partir de la couverture de ses sources : F = Σ poids × couverture ÷ (1 + Σ poids × couverture). Il sert à pondérer le pays dans le Top Afrique de l’Ouest.") }}</p>{% endif %}
             </section>
 
             <section id="limites">
@@ -222,7 +242,7 @@
                     <li>{{ tr("La radio et la télévision, qui comptent beaucoup en Afrique de l’Ouest.") }}</li>
                     <li>{{ tr("Les ventes physiques et les concerts.") }}</li>
                     <li>{{ tr("TikTok et Audiomack, pas encore relevés.") }}</li>
-                    <li>{{ tr("Les écoutes Spotify par pays, que Spotify ne publie pas pour la région : nous comptons le compteur mondial de chaque titre.") }}</li>
+                    <li>{% if v7 %}{{ tr("Les écoutes Spotify dans les pays où Spotify ne publie pas de classement : là, nous n’avons pas de mesure d’écoutes faite dans le pays.") }}{% else %}{{ tr("Les écoutes Spotify par pays, que Spotify ne publie pas pour la région : nous comptons le compteur mondial de chaque titre.") }}{% endif %}</li>
                     <li>{{ tr("Les vues des reprises, des lyrics non officiels et des extraits sur les réseaux sociaux.") }}</li>
                     <li>{{ tr("Toutes les plateformes ne couvrent pas tous les pays : Apple Music n’a pas de classement au Togo, Shazam couvre 4 pays et Deezer 3. L’indice de fiabilité en tient compte.") }}</li>
                 </ul>
