@@ -745,7 +745,15 @@ function prepareDuo() {
   poste({ course: "prepare", artistes: ids, set: { media: null, naissanceOn: false, naissance: null, pilote: false, jeu: null, scene: "camera", fiche: false, bandeau: "" } });
 }
 $("courseBtn").onclick = () => (E.course && E.course.on) ? poste({ course: "arrete" }) : prepareDuo();
-$("courseChange").onclick = prepareDuo;   // nouveau duo pendant le live : la grille change tout de suite (en attente du départ)
+// 27/11/2026 (« quand j'appuie sur changer de duo, c'est le décor qui change au lieu des artistes ») : le bouton passe au
+// duo SUIVANT de la liste (rivalités), l'affiche dans la liste et prépare la grille tout de suite
+$("courseChange").onclick = () => {
+  const sel = $("courseQui"), duos = [...sel.options].filter((o) => o.value.includes("|"));
+  if (!duos.length) return prepareDuo();
+  const i = duos.findIndex((o) => o.value === sel.value), suivant = duos[(i + 1) % duos.length];
+  sel.value = suivant.value; $("courseLibre").style.display = "none";
+  notif("Nouveau duo : " + suivant.textContent); prepareDuo();
+};
 $("courseLance").onclick = () => poste({ course: "lance" });
 $("courseSuiv").onclick = () => poste({ course: "suivante" });
 // 27/11/2026 : CAURI RUSH : on coupe la musique et les autres programmes ; la régie enchaîne les duels (suivant, revanche)
