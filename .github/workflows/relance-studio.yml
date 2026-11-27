@@ -1,20 +1,38 @@
-# Relance ponctuelle des tâches Studio 459 et 460, en échec le 26/11/2026 (Buffer en limite de requêtes), à la demande
-# du fondateur : vendredi 27/11/2026 à 9 h UTC. À supprimer après passage (la date ne revient que l'an prochain).
-name: Relance Studio 459 et 460
+# Suppression ponctuelle des tâches Studio 459 et 460 (en échec le 26/11/2026, Buffer en limite de requêtes), à la
+# demande du fondateur le 27/11/2026 : ni relance ni publication. Le post lié n'est supprimé que s'il n'est parti nulle part.
+name: Supprimer les tâches Studio 459 et 460
 on:
-  schedule:
-    - cron: "0 9 27 11 *"
   workflow_dispatch:
 jobs:
-  relance:
+  supprime:
     runs-on: ubuntu-latest
-    permissions:
-      actions: write
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      APP_ENV: production
     steps:
-      - env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements.txt
+      - working-directory: django
         run: |
-          if [ "$(date -u +%Y)" != "2026" ]; then echo "Relance de 2026 seulement."; exit 0; fi
-          gh workflow run studio.yml -R "$GITHUB_REPOSITORY" -f job_id=459
-          sleep 300
-          gh workflow run studio.yml -R "$GITHUB_REPOSITORY" -f job_id=460
+          python manage.py shell -c '
+          from core import db
+          for jid in (459, 460):
+              j = db.one("SELECT id, statut, post_id, cree_le, erreur FROM studio_jobs WHERE id = ?", [jid])
+              print("avant :", j)
+              if not j:
+                  continue
+              pid = j["post_id"]
+              if pid:
+                  parti = db.value("SELECT count(*) FROM audit_log WHERE action = ? AND reason LIKE ?", ["buffer.post", f"post-{pid}-%"])
+                  if parti:
+                      print(f"  post {pid} déjà parti sur {parti} réseau(x) : gardé")
+                  else:
+                      db.run("DELETE FROM social_posts WHERE id = ?", [pid])
+                      print(f"  post {pid} supprimé")
+              db.run("DELETE FROM studio_jobs WHERE id = ?", [jid])
+              print("  tâche supprimée :", db.one("SELECT id FROM studio_jobs WHERE id = ?", [jid]) is None)
+          '
