@@ -1347,38 +1347,38 @@ function sonsArtistes(c) {
   Object.keys(c.artistes || {}).forEach((code) => { const b = (D.biblio || {})[code.slice(1)]; if (b && (b.sons || []).length) out[code] = b.sons; });
   return out;
 }
+// 27/11/2026 (retour du fondateur) : un titre de CET artiste, puis un titre de L'AUTRE, et ainsi de suite (chaque extrait
+// joue en entier, ~90 s) ; on entend les moteurs sous la musique.
 function musiqueCourse() {
   const c = E.course; if (!c) return;
   const sons = sonsArtistes(c), codes = Object.keys(sons);
-  const tete = codes.length ? [...codes].sort((a, b) => (CR.aff[b] || 0) - (CR.aff[a] || 0))[0] : null;
-  let src, titre = "";
-  if (tete) {
-    const l = sons[tete], k = (CR.mIdx = ((CR.mIdx || 0) + 1)) % l.length;
-    src = l[k].url; titre = (c.noms || {})[tete] + " · " + (l[k].titre || "");
-    CR.mArt = tete;
+  let src, titre = "", art = null;
+  if (codes.length) {
+    const i = (CR.mTour = (CR.mTour == null ? 0 : CR.mTour + 1));
+    art = codes[i % codes.length];
+    const l = sons[art], k = Math.floor(i / codes.length) % l.length;   // chaque artiste fait tourner ses propres titres
+    src = l[k].url; titre = (c.noms || {})[art] + " · " + (l[k].titre || "");
   } else {
     const l = [1, 2, 3, 4, 5, 6, 7].filter((n) => n !== CR.mDer); CR.mDer = l[Math.floor(Math.random() * l.length)];
-    src = SON_C + "m" + CR.mDer + ".mp3"; CR.mArt = null;
+    src = SON_C + "m" + CR.mDer + ".mp3";
   }
-  const ancienne = CR.musique, a = new Audio(src); a.volume = 0; a.loop = true; a.play().catch(() => {});
-  // fondu croisé de 1,5 s : la nouvelle monte, l'ancienne descend
-  const t0 = Date.now(), cible = tete ? .55 : .32;
-  const f = setInterval(() => { const k = Math.min(1, (Date.now() - t0) / 1500); a.volume = cible * k; if (ancienne) ancienne.volume = Math.max(0, (ancienne.volMax || .32) * (1 - k));
+  const ancienne = CR.musique, a = new Audio(src); a.volume = 0; a.play().catch(() => {});
+  a.onended = () => { if (CR.musique === a && E.course && E.course.on) musiqueCourse(); };   // titre fini : au tour de l'autre
+  const t0 = Date.now(), cible = codes.length ? .42 : .28;   // fondu croisé de 1,5 s
+  const f = setInterval(() => { const k = Math.min(1, (Date.now() - t0) / 1500); a.volume = cible * k; if (ancienne) ancienne.volume = Math.max(0, (ancienne.volMax || .3) * (1 - k));
     if (k >= 1) { clearInterval(f); if (ancienne) ancienne.pause(); } }, 60);
-  a.volMax = cible; CR.musique = a; CR.mDepuis = Date.now();
+  a.volMax = cible; CR.musique = a; CR.mArt = art; CR.mCle = Object.keys(c.artistes || {}).join(",");
   if (titre) evtCourse("🎵 " + esc(titre), "boost");
 }
-setInterval(() => {   // change la musique : quand la tête change (artistes) ou au bout d'un moment
+setInterval(() => {   // nouveau duo d'artistes : on repart tout de suite sur leurs titres
   const c = E.course; if (APERCU || !c || !c.on || !CR.musique) return;
-  const age = Date.now() - (CR.mDepuis || 0), codes = Object.keys(sonsArtistes(c));
-  const tete = codes.length ? [...codes].sort((a, b) => (CR.aff[b] || 0) - (CR.aff[a] || 0))[0] : null;
-  if ((tete && tete !== CR.mArt && age > 12000) || age > (codes.length ? 30000 : 45000)) musiqueCourse();
+  if (Object.keys(c.artistes || {}).join(",") !== CR.mCle) { CR.mTour = null; musiqueCourse(); }
 }, 1000);
 function ambianceCourse(roule) {
   if (APERCU) return;
   if (roule === false && !E.course?.on) { [CR.musique, CR.moteur].forEach((a) => a && a.pause()); CR.musique = CR.moteur = null; return; }
   if (!CR.musique) musiqueCourse();
-  if (!CR.moteur) { CR.moteur = new Audio(SON_C + "moteur.mp3"); CR.moteur.loop = true; CR.moteur.volume = .1; }
+  if (!CR.moteur) { CR.moteur = new Audio(SON_C + "moteur.mp3"); CR.moteur.loop = true; CR.moteur.volume = .3; }   // 27/11 : on les entend à nouveau
   if (roule && CR.moteur.paused) CR.moteur.play().catch(() => {}); if (!roule && !CR.moteur.paused) CR.moteur.pause();
 }
 function finDePhase(c, ph, classement, tete) {
