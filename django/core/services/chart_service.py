@@ -484,6 +484,39 @@ class ChartService:
                AND status = 'published' AND period_start BETWEEN ? AND ? ORDER BY period_start""",
             [self.chart_types["prime"], cid, start, end])]
 
+    def _cumulative_items_publies(self, cid: int, weeks: list, last_week: str | None) -> list:
+        """27/11/2026 (correction demandée par le fondateur) : le mois et l'année se calculent à partir des classements de
+        la semaine PUBLIÉS, et non plus de la somme des points bruts de weekly_scores. Ces points changeaient d'unité à
+        chaque formule (v2 à v7 en novembre), comptaient les titres « en attente » de l'anti-fraude (DJOROBITE, pic de
+        1,3 million, N°1 du mois sans avoir été publié) et des titres que les règles de la semaine écartent.
+        Chaque semaine, un titre classé reçoit son indice Cauri (N°1 = 100, les autres en proportion de leur score),
+        pondéré par la durée de la semaine (la semaine de transition de 4 jours compte pour 4/7) ; non classé = 0."""
+        if not weeks:
+            return []
+        runs = db.all(f"""SELECT id, period_start, period_end FROM chart_runs WHERE chart_type_id = ? AND country_id = ?
+                          AND period_type = 'week' AND status = 'published' AND period_start IN ({', '.join(['?'] * len(weeks))})""",
+                      [self.chart_types["prime"], cid] + list(weeks))
+        totals: dict = {}
+        for r in runs:
+            rows = db.all("""SELECT e.track_id, e.score, e.sources_count, t.artist_id, t.release_date FROM chart_entries e
+                             JOIN tracks t ON t.id = e.track_id WHERE e.chart_run_id = ? AND e.track_id IS NOT NULL""", [r["id"]])
+            top = max((float(x["score"] or 0) for x in rows), default=0.0)
+            if top <= 0:
+                continue
+            jours = (_d(str(r["period_end"])[:10]) - _d(str(r["period_start"])[:10])).days + 1
+            poids = min(1.0, jours / 7)
+            derniere = last_week is not None and str(r["period_start"])[:10] == str(last_week)[:10]
+            for x in rows:
+                indice = 100.0 * max(0.0, float(x["score"] or 0)) / top * poids
+                t = totals.setdefault(int(x["track_id"]), {"score": 0.0, "last": 0.0, "sources": 0, "artist_id": int(x["artist_id"]),
+                                                           "release_date": x["release_date"]})
+                t["score"] += indice
+                t["last"] += indice if derniere else 0.0
+                t["sources"] = max(t["sources"], int(x["sources_count"] or 0))
+        return [{"track_id": tid, "artist_id": t["artist_id"], "score": php_round(t["score"], 2), "sources_count": t["sources"],
+                 "prev_score": php_round(t["score"] - t["last"], 2), "release_date": t["release_date"], "is_emerging": False,
+                 "flags": [], "review_status": "ok", "breakdown": []} for tid, t in totals.items()]
+
     def _cumulative_items(self, cid: int, weeks: list, last_week: str) -> list:
         if not weeks:
             return []
@@ -538,11 +571,10 @@ class ChartService:
         if period.type == "month" and provisional:
             return None
         last_week = weeks[-1]
-        items = self._cumulative_items(cid, weeks, last_week)
+        items = self._cumulative_items_publies(cid, weeks, last_week)   # 27/11/2026 : depuis les semaines publiées
         prev = period.previous()
-        prev_totals = {int(r["track_id"]): float(r["s"]) for r in db.all(
-            """SELECT track_id, SUM(score) AS s FROM weekly_scores WHERE country_id = ? AND week_start BETWEEN ? AND ?
-               AND review_status <> 'excluded' GROUP BY track_id""", [cid, prev.start, prev.end])}
+        prev_totals = {i["track_id"]: float(i["score"]) for i in
+                       self._cumulative_items_publies(cid, self._published_weeks(cid, prev.start, prev.end), None)}
         for item in items:
             item["prev_score"] = prev_totals.get(item["track_id"], 0.0)
         formula = formula_effective_for(last_week)
