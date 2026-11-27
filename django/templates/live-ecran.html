@@ -1370,12 +1370,14 @@ function musiqueCourse() {
   const t0 = Date.now(), cible = codes.length ? .42 : .28;   // fondu croisé de 1,5 s
   const f = setInterval(() => { const k = Math.min(1, (Date.now() - t0) / 1500); a.volume = cible * k; if (ancienne) ancienne.volume = Math.max(0, (ancienne.volMax || .3) * (1 - k));
     if (k >= 1) { clearInterval(f); if (ancienne) ancienne.pause(); } }, 60);
-  a.volMax = cible; CR.musique = a; CR.mArt = art; CR.mCle = Object.keys(c.artistes || {}).join(",");
+  a.volMax = cible; CR.musique = a; CR.mArt = art; CR.mCle = Object.keys(c.artistes || {}).join(","); CR.mDepuis = Date.now();
   if (titre) evtCourse("🎵 " + esc(titre), "boost");
 }
 setInterval(() => {   // nouveau duo d'artistes : on repart tout de suite sur leurs titres
   const c = E.course; if (APERCU || !c || !c.on || !CR.musique) return;
-  if (Object.keys(c.artistes || {}).join(",") !== CR.mCle) { CR.mTour = null; musiqueCourse(); }
+  if (Object.keys(c.artistes || {}).join(",") !== CR.mCle) { CR.mTour = null; musiqueCourse(); return; }
+  // 27/11/2026 (« pour un seul son la course a fini pour Shatta sans qu'on écoute Stonebwoy ») : 25 s par artiste, à tour de rôle
+  if (CR.mArt && Date.now() - (CR.mDepuis || 0) > 25000) musiqueCourse();
 }, 1000);
 function ambianceCourse(roule) {
   if (APERCU) return;
