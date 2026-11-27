@@ -1202,19 +1202,29 @@ function boucleCourse() {
 function dessineCourse() {
   const c = E.course;
   const g = CR.g, now = Date.now(), dt = Math.min(.1, (now - (CR.derT || now)) / 1000); CR.derT = now;
-  c.pays.forEach((p) => { const cible = posCible(c, p); CR.aff[p] = CR.aff[p] == null ? cible : CR.aff[p] + (cible - CR.aff[p]) * Math.min(1, dt * 5); });
+  // 27/11/2026 (« des dépassements plus fluides et réalistes, que les deux bougent en même temps ») : chaque voiture glisse
+  // vers sa position (accélération douce au lieu de sauts à chaque paquet de j'aime), et la CAMÉRA suit le milieu des voitures
+  // avec un léger retard : la voiture de devant monte, celle de derrière descend, on voit les deux bouger.
+  CR.vit = CR.vit || {};
+  c.pays.forEach((p) => { const cible = posCible(c, p), avant = CR.aff[p];
+    CR.aff[p] = avant == null ? cible : avant + (cible - avant) * Math.min(1, dt * 1.8);
+    const v = avant == null ? 0 : (CR.aff[p] - avant) / Math.max(dt, .001); CR.vit[p] = (CR.vit[p] || 0) + (v - (CR.vit[p] || 0)) * Math.min(1, dt * 3); });
   const tete = Math.max(...c.pays.map((p) => CR.aff[p]));
-  const scroll = tete / 100 * DISTANCE;   // la caméra suit la voiture de tête
-  const X0 = (CR.W - CR.route) / 2, YT = 820, K = 30;   // la tête à 820 px ; 1 % de retard = 30 px plus bas
-  const envs = envsManche(c), yPh = (v) => YT - 118 - (v - tete) / 100 * DISTANCE;   // la ligne de fin de phase, à l'avant des voitures
+  const dernier = Math.min(...c.pays.map((p) => CR.aff[p])), milieu = c.pays.reduce((s, p) => s + CR.aff[p], 0) / c.pays.length;
+  CR.cam = CR.cam == null || Math.abs(CR.cam - milieu) > 20 ? milieu : CR.cam + (milieu - CR.cam) * Math.min(1, dt * 1.4);
+  const cam = CR.cam;
+  const scroll = cam / 100 * DISTANCE;   // la route défile au rythme de la caméra (milieu des voitures)
+  // écart en pixels : 30 px par % de piste, réduit si l'écart est grand pour garder les deux voitures à l'écran
+  const X0 = (CR.W - CR.route) / 2, YT = 860, K = Math.min(30, 430 / Math.max(.5, (tete - dernier) / 2 + .5));
+  const envs = envsManche(c), yPh = (v) => YT - 118 - (v - cam) / 100 * DISTANCE;   // la ligne de fin de phase, à l'avant des voitures
   for (let k = 0; k < 3; k++) {   // la phase k couvre la route entre k/3 et (k+1)/3 : chacune a son décor
     const bas = k === 0 ? CR.H : Math.min(CR.H, yPh(k * 100 / 3)), haut = k === 2 ? 0 : Math.max(0, yPh((k + 1) * 100 / 3));
     if (bas <= 0 || haut >= CR.H || bas <= haut) continue;
     g.save(); g.beginPath(); g.rect(0, haut, CR.W, bas - haut); g.clip(); dessineMonde(scroll, envs[k]); g.restore();
   }
   [1, 2].forEach((k) => { const y = yPh(k * 100 / 3) - 64; if (y > -90 && y < CR.H) arche(y, "PHASE " + (k + 1) + " · " + ENVS[envs[k]].nom); });
-  const yEcran = (v) => Math.min(1440, YT + (tete - v) * K);
-  const yMonde = (v, cale) => YT + cale - (v - tete) / 100 * DISTANCE;   // un point fixe de la route (v = % de piste)
+  const yEcran = (v) => Math.max(330, Math.min(1440, YT + (cam - v) * K));
+  const yMonde = (v, cale) => YT + cale - (v - cam) / 100 * DISTANCE;   // un point fixe de la route (v = % de piste)
   const yD = yMonde(0, 150);
   if (yD > -60 && yD < CR.H + 300) { ligneTravers(yD, "depart"); c.pays.forEach((p, l) => { const dw = Math.min(CR.piste - 40, 230), dh = Math.round(dw * .66), dxD = X0 + l * CR.piste + (CR.piste - dw) / 2;
     dessineDrapeau(g, p, dxD, yD + 64, dw, dh); g.strokeStyle = "rgba(255,255,255,.7)"; g.lineWidth = 3; g.strokeRect(dxD, yD + 64, dw, dh); }); }
@@ -1228,6 +1238,9 @@ function dessineCourse() {
   CR.tete = classement[0];
   c.pays.forEach((p, l) => {
     const v = CR.aff[p], cx = X0 + l * CR.piste + CR.piste / 2; let y = yEcran(v), ang = 0, dx = 0;
+    // vie de la voiture : vibrations de la route, et légère inclinaison quand elle accélère plus vite que l'autre
+    if (c.phase === "course" && !c.attente) { dx += Math.sin(now / 170 + l * 2.1) * 2.5; y += Math.sin(now / 120 + l * 1.3) * 1.8;
+      ang += Math.max(-.07, Math.min(.07, ((CR.vit[p] || 0) - (c.vitesse || .5)) * .03)) * (l % 2 ? -1 : 1); }
     const ch = CR.chocs[p]; if (ch && now - ch.t < 1400) { const k = (now - ch.t) / 1400; ang = Math.sin(k * 28) * .32 * (1 - k); dx = Math.sin(k * 20) * 26 * (1 - k); }
     const at = CR.chocs["de" + p]; if (at && now - at.t < 500) { const k = (now - at.t) / 500; dx += Math.sin(k * Math.PI) * at.sens * 60; }
     // traînée de vitesse, et flammes si boost
@@ -1295,7 +1308,7 @@ function course() {
     let q0 = 1; try { q0 = +localStorage.getItem("cauri-course-q") || 1; } catch (e) {}
     reglerQualite(q0); }
   const cle = c.manche + "|" + c.pays.join(",");
-  if (cle !== CR.cle) { CR.cle = cle; CR.nPistes = Math.max(2, Math.min(4, c.pays.length)); CR.piste = CR.route / CR.nPistes; CR.sprites = {}; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; CR.phaseVue = 0; CR.tete = null; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
+  if (cle !== CR.cle) { CR.cle = cle; CR.nPistes = Math.max(2, Math.min(4, c.pays.length)); CR.piste = CR.route / CR.nPistes; CR.sprites = {}; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.cam = null; CR.vit = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; CR.phaseVue = 0; CR.tete = null; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
   const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
   $("crVict").innerHTML = vic.map(([p, n]) => `<span><i style="background:${fondDrap(p)}"></i>${n} 🏆</span>`).join("");
   const basC = V.querySelector(".bas b");
