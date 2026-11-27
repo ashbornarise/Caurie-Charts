@@ -59,6 +59,24 @@ def test_pas_de_manche_suivante_automatique(jeu):
     assert e["course"]["manche"] == 2 and e["course"]["attente"] and e["course"]["pays"] == ["a8", "a5"]   # revanche, en attente
 
 
+def test_paki_en_majuscules_et_les_likes_poussent_fort(jeu, monkeypatch):
+    """Live du 27/11/2026 : « PAKI » n'inscrivait personne (nom enregistré sans espaces) et les j'aime ne faisaient pas
+    dépasser son équipe."""
+    monkeypatch.setattr(L, "donnees", lambda: {"artistes": [{"id": 472, "nom": "Paki Chenzu", "cle": "pakichenzu", "photo": ""},
+                                                            {"id": 473, "nom": "Joachin Migos", "cle": "joachinmigos", "photo": ""}]})
+    e = {}
+    L.course_action(e, "prepare", None, [472, 473])
+    assert L.course_commentaire(e, "clement", "Clément", "PAKI", L._norm("PAKI"))
+    assert e["course"]["joueurs"] == {"clement": "a472"}
+    L.course_action(e, "lance")
+    jeu["ms"] += (L.COURSE_DEPART + 1) * 1000
+    L.course_likes(e, 60, {"clement": 60, "inconnu": 30})
+    b = e["course"]["bonus"]
+    assert b["a472"] >= 4.0                      # 60 j'aime d'un inscrit = +4 % (plafond du paquet)
+    assert e["course"]["joueurs"]["inconnu"] == "a473"   # celui qui like sans écrire rejoint l'équipe qui a le moins de fans
+    assert b["a473"] == pytest.approx(30 / L.COURSE_LIKES_ARTISTES)
+
+
 def test_mode_pays_toujours_possible(jeu):
     e = {}
     L.course_action(e, "prepare", ["tg", "bj"], None)
