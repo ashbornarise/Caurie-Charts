@@ -20,6 +20,7 @@ from django.http import Http404, HttpResponse
 from django.middleware.csrf import get_token
 
 from core import db
+from core import live_rush
 from core import studio as S
 
 CLE_ETAT, CLE_BIBLIO, CLE_DONNEES = "live-etat", "live-biblio", "live-donnees"
@@ -148,6 +149,8 @@ def _public(e: dict) -> dict:
     j = p.get("jeu")
     if isinstance(j, dict) and ("paris" in j or "votants" in j):   # les listes de joueurs restent sur le serveur
         p["jeu"] = {**{k: v for k, v in j.items() if k not in ("paris", "votants")}, "nParis": len(j.get("paris") or j.get("votants") or {})}
+    if isinstance(p.get("rush"), dict):   # Cauri Rush : positions calculées à l'heure du serveur, sans la liste des joueurs
+        p["rush"] = live_rush.public(p["rush"])
     p["nChatteurs"] = len(e.get("chatteurs") or [])
     # 16/11/2026 : la version en ligne : l'écran (source « Link » de LIVE Studio) se recharge tout seul après une mise en ligne
     import os as _os
@@ -320,6 +323,8 @@ def _commentaire(e: dict, user: str, texte: str, nom: str | None = None) -> None
     if not user.startswith("régie"):
         e["chat"] = (e.get("chat") or [])[-119:] + [int(time.time())]   # rythme du chat (conseils de l'agent)
         e["chatteurs"] = [c for c in (e.get("chatteurs") or []) if c[0] != user][-299:] + [[user, nom]]   # pour le tirage au sort
+    if live_rush.commentaire(e, user, nom, texte):   # Cauri Rush (27/11/2026) : « 1 », « 2 », « 3 », un nom, un drapeau
+        return
     if course_commentaire(e, user, nom, texte, t):
         return
     if _jeu_commentaire(e, user, nom, t):
@@ -392,6 +397,7 @@ def _maj_etat(request):
                     e["maitre"] = {"id": ident, "vu": time.time()}
                     _jeu_trop_long(e)
                     course_tick(e)
+                    live_rush.tick(e)
                 else:
                     e["_pas"] = True
         maitre = e.get("maitre") or {}
@@ -422,7 +428,11 @@ def _maj_etat(request):
             if m.get("jeuAction"):
                 _jeu_action(e, str(m["jeuAction"]))
             if m.get("course"):
+                if m["course"] == "demarre":   # un seul jeu à la fois
+                    e["rush"] = {**(e.get("rush") or {}), "on": False}
                 course_action(e, str(m["course"]), m.get("pays"))
+            if m.get("rush"):   # Cauri Rush (27/11/2026) : demarre (type), suivante, revanche, arrete
+                live_rush.action(e, str(m["rush"]), str(m.get("type") or ""), donnees(), PAYS_NOMS)
     return S._json({**_public(e), "aLaMain": not refus}, 409 if refus else 200)
 
 
@@ -855,6 +865,7 @@ def _paquet(e: dict, m: dict) -> None:
     for g in (m.get("cadeaux") or [])[:100]:
         _cadeau(e, g)
         course_cadeau(e, str(g.get("user") or "?")[:30], str(g.get("nom") or g.get("user") or "?")[:40], int(g.get("diamants") or 1))
+        live_rush.cadeau(e, str(g.get("user") or "?")[:30], str(g.get("nom") or g.get("user") or "?")[:40], int(g.get("diamants") or 1))
     for u in (m.get("arrivees") or [])[:50]:   # « bienvenue » à l'écran (les 4 derniers arrivés)
         nom_a = str(u)[:24]
         if nom_a and nom_a not in [x["nom"] for x in e.get("arrivees") or []]:
@@ -867,6 +878,8 @@ def _paquet(e: dict, m: dict) -> None:
     _paliers_likes(e)
     course_likes(e, int(m.get("likes") or 0), m.get("likesPar") if isinstance(m.get("likesPar"), dict) else None)
     course_tick(e)
+    live_rush.likes(e, m.get("likesPar") if isinstance(m.get("likesPar"), dict) else None, int(m.get("likes") or 0))
+    live_rush.tick(e)
     if m.get("spectateurs") is not None:
         e["spectateurs"] = int(m["spectateurs"]); e["pic"] = max(int(e.get("pic") or 0), e["spectateurs"])
 

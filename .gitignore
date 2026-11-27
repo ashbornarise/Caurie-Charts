@@ -36,3 +36,6 @@ __pycache__/
 .pytest_cache/
 
 .vercel
+
+# connecteur TikTok (outils/connecteur-tiktok)
+node_modules/

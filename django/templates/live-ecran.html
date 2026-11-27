@@ -266,6 +266,43 @@ body.course-on #courseV{display:block}
 body.course-on #hud,body.course-on #platineV,body.course-on #naissV,body.course-on #naissB,body.course-on #camera,body.course-on #roi,body.course-on #topfans,body.course-on #devineurs,body.course-on #objectif,body.course-on #aSuivre,body.course-on #murChat,body.course-on #ticker,body.course-on #bandeau,body.course-on #themeC,body.course-on #titreSon,body.course-on #base,body.course-on .scene{display:none!important}
 body.course-on #fondV,body.course-on #merci,body.course-on #interlude,body.course-on #troupe,body.course-on #danseur,body.course-on #megaV,body.course-on #dedicV{display:none!important}
 #crC{position:absolute;inset:0;width:1080px;height:1920px}
+/* 27/11/2026 : CAURI RUSH (2 ou 3 couloirs, on tape pour pousser son équipe) : léger, sans canvas */
+#rushV{position:absolute;inset:0;z-index:18;display:none;color:#fff;font-family:Montserrat,Arial,sans-serif;background:radial-gradient(ellipse at 50% 30%,#3a1d72 0%,#1a0d33 55%,#0b0616 100%);overflow:hidden}
+body.rush-on #rushV{display:block}
+body.rush-on #hud,body.rush-on #platineV,body.rush-on #naissV,body.rush-on #naissB,body.rush-on #camera,body.rush-on #roi,body.rush-on #topfans,body.rush-on #devineurs,body.rush-on #objectif,body.rush-on #aSuivre,body.rush-on #murChat,body.rush-on #ticker,body.rush-on #bandeau,body.rush-on #themeC,body.rush-on #titreSon,body.rush-on #base,body.rush-on .scene{display:none!important}
+body.rush-on #fondV,body.rush-on #merci,body.rush-on #interlude,body.rush-on #troupe,body.rush-on #danseur,body.rush-on #megaV,body.rush-on #dedicV,body.rush-on #courseV{display:none!important}
+#rushV .rh{position:absolute;top:50px;left:0;right:0;text-align:center}
+#rushV .rh b{display:block;font:400 104px Anton,Impact;letter-spacing:3px;line-height:1;background:linear-gradient(180deg,#FFE29A,#F5C14B 60%,#c9902a);-webkit-background-clip:text;background-clip:text;color:transparent}
+#rushV .rh span{display:block;font:800 34px Montserrat;margin-top:10px;color:#e8e0ff}
+#rushV .rh i{display:inline-block;font:800 28px Montserrat;font-style:normal;margin-top:14px;background:rgba(255,255,255,.12);padding:6px 22px;border-radius:30px}
+#rushV .couloirs{position:absolute;top:330px;bottom:430px;left:50px;right:50px;display:flex;gap:40px;justify-content:center}
+#rushV .cl{flex:1;max-width:300px;position:relative;border-radius:40px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 3px rgba(255,255,255,.12)}
+#rushV .cl .arr{position:absolute;top:0;left:0;right:0;height:26px;border-radius:40px 40px 0 0;background:repeating-linear-gradient(90deg,#fff 0 26px,#111 26px 52px);opacity:.85}
+#rushV .cl .rempl{position:absolute;left:0;right:0;bottom:0;border-radius:40px;transition:height .25s linear;box-shadow:0 0 40px rgba(255,255,255,.15)}
+#rushV .cl .av{position:absolute;left:50%;width:170px;height:170px;margin-left:-85px;border-radius:50%;background:#2a1a4a center/cover no-repeat;border:8px solid #fff;box-shadow:0 10px 40px rgba(0,0,0,.5);transition:bottom .25s linear;display:grid;place-items:center;font:400 110px Anton}
+#rushV .cl .pct{position:absolute;left:0;right:0;text-align:center;font:900 44px Montserrat;text-shadow:0 3px 12px rgba(0,0,0,.6);transition:bottom .25s linear}
+#rushV .cl.tete .av{border-color:#F5C14B;box-shadow:0 0 0 6px rgba(245,193,75,.35),0 10px 40px rgba(0,0,0,.5)}
+#rushV .noms{position:absolute;bottom:300px;left:50px;right:50px;display:flex;gap:40px;justify-content:center}
+#rushV .nm{flex:1;max-width:300px;text-align:center}
+#rushV .nm .n{display:inline-grid;place-items:center;width:84px;height:84px;border-radius:50%;font:400 62px Anton;color:#0b0616;margin-bottom:8px}
+#rushV .nm b{display:block;font:900 36px Montserrat;line-height:1.1}
+#rushV .nm small{display:block;font:700 24px Montserrat;color:#cfc6ef;margin-top:4px}
+#rushV .rb{position:absolute;left:0;right:0;bottom:0;padding:34px 30px 56px;text-align:center;background:linear-gradient(0deg,rgba(8,4,18,.95) 50%,rgba(8,4,18,0))}
+#rushV .rb b{display:block;font:400 78px Anton,Impact;letter-spacing:1px}
+#rushV .rb span{display:block;font:800 32px Montserrat;color:#e8e0ff;margin-top:8px}
+#rushV .rb.sprint{background:linear-gradient(0deg,#c1121f 40%,rgba(193,18,31,0));animation:pulseR .6s ease-in-out infinite alternate}
+@keyframes pulseR{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+#rushV .cd{position:absolute;top:760px;left:0;right:0;text-align:center;font:400 300px Anton;color:#F5C14B;text-shadow:0 10px 60px rgba(0,0,0,.7);display:none}
+#rushV .evt{position:absolute;left:50%;top:1040px;transform:translate(-50%,0) scale(.7);opacity:0;white-space:nowrap;font:900 42px Montserrat;padding:16px 34px;border-radius:40px;background:linear-gradient(90deg,#ff3d7f,#ff7a3c);transition:all .25s;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#rushV .evt.on{opacity:1;transform:translate(-50%,0) scale(1)}
+#rushV .evt.bascule{background:linear-gradient(90deg,#F5C14B,#ff9f1c);color:#1a0d33}
+#rushV .tops{position:absolute;top:250px;right:40px;text-align:right;font:800 24px Montserrat;color:#e8e0ff}
+#rushV .fin{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:rgba(11,6,22,.82)}
+#rushV.vict .fin{display:flex;animation:entre .5s ease-out}
+#rushV .fin .av{width:340px;height:340px;border-radius:50%;background:#2a1a4a center/cover no-repeat;border:12px solid #F5C14B;display:grid;place-items:center;font:400 220px Anton;box-shadow:0 20px 80px rgba(245,193,75,.35)}
+#rushV .fin .g{font:400 120px Anton;line-height:1;margin-top:40px;color:#F5C14B}
+#rushV .fin .g2{font:900 52px Montserrat;letter-spacing:6px;margin-top:12px}
+#rushV .fin .s{font:700 32px Montserrat;margin-top:30px;background:rgba(255,255,255,.1);padding:10px 26px;border-radius:30px}
 #courseV .vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,0) 45%,rgba(0,0,0,.45) 100%)}
 #courseV .haut{position:absolute;top:0;left:0;right:0;padding:44px 40px 70px;text-align:center;background:linear-gradient(180deg,rgba(8,6,18,.85),rgba(8,6,18,0))}
 #courseV .t1{font:400 64px Anton,Impact;letter-spacing:2px;background:linear-gradient(180deg,#FFE29A,#F5C14B 60%,#c9902a);-webkit-background-clip:text;color:transparent}
@@ -1256,8 +1293,66 @@ function evtCourse(html, type) { const el = $("crEvt"); el.innerHTML = html; el.
 setInterval(() => { const c = E.course, s = $("crSuite"); if (c && c.on && c.phase === "fin" && s) s.textContent = "Prochaine manche dans " + Math.max(0, Math.ceil((c.tFin + 14000 - Date.now() - CR.off) / 1000)) + " s"; }, 250);
 
 let derniereDanse = 0;
+// ---------------------------------------------------------------- CAURI RUSH (27/11/2026) : 2 ou 3 couloirs, on tape pour pousser
+const RU = { cle: "", recu: 0, off: 0, gagnantVu: "", boostT: 0, basculeT: 0, musique: null };
+function visuelEquipe(q, grand) {
+  if (q.image) return { style: `background-image:url('${esc(q.image)}')`, html: "" };
+  if (q.drapeau) return { style: `background-image:url('/assets/img/flags/${esc(q.drapeau)}.svg');background-size:cover`, html: "" };
+  return { style: `background:${q.couleur}`, html: `<span style="color:#0b0616">${esc(q.id)}</span>` };
+}
+function rush() {
+  const r = E.rush, V = $("rushV") || (() => { const d = document.createElement("div"); d.id = "rushV"; $("courseV").after(d); return d; })();
+  const on = !!(r && r.on);
+  document.body.classList.toggle("rush-on", on);
+  if (!on) { RU.cle = ""; if (RU.musique) { RU.musique.pause(); RU.musique = null; } return; }
+  RU.recu = Date.now(); RU.off = Date.now() - (r.srv || Date.now());
+  const cle = r.cle + "|" + r.manche;
+  if (cle !== RU.cle) {   // nouvelle manche : on construit l'écran
+    RU.cle = cle; RU.gagnantVu = "";
+    V.innerHTML = `<div class="rh"><b>CAURI RUSH</b><span>${esc(r.titre)}</span><i id="ruInfo"></i></div><div class="tops" id="ruTops"></div>
+      <div class="couloirs">${r.equipes.map((q) => { const v = visuelEquipe(q); return `<div class="cl" id="ruC${q.id}"><div class="arr"></div><div class="rempl" style="background:linear-gradient(0deg,${q.couleur},${q.couleur}88)"></div><div class="pct"></div><div class="av" style="${v.style}">${v.html}</div></div>`; }).join("")}</div>
+      <div class="noms">${r.equipes.map((q) => `<div class="nm"><span class="n" style="background:${q.couleur}">${esc(q.id)}</span><b>${esc(q.nom)}</b><small id="ruF${q.id}">${esc(q.sous || "")}</small></div>`).join("")}</div>
+      <div class="rb" id="ruBas"><b>TAPE ❤ POUR POUSSER</b><span>Écris ${r.equipes.map((q) => q.id).join(", ").replace(/, (\d)$/, " ou $1")} pour choisir ton équipe</span></div>
+      <div class="cd" id="ruCd"></div><div class="evt" id="ruEvt"></div><div class="fin" id="ruFin"></div>`;
+    if (!APERCU && !RU.musique) { RU.musique = new Audio(SON_C + "m" + (1 + Math.floor(Math.random() * 7)) + ".mp3"); RU.musique.loop = true; RU.musique.volume = .25; RU.musique.play().catch(() => {}); }
+    if (!APERCU) sonC("decompte", .8);
+  }
+  const b = r.boost; if (b && b.t !== RU.boostT) { RU.boostT = b.t; const q = r.equipes.find((x) => x.id === b.eq); if (Date.now() - RU.off - b.t < 5000) { evtRush(`🌹 ${esc(b.nom)} pousse ${esc(q ? q.nom : b.eq)} +${b.pas} %`, ""); sonC("boost", .8); } }
+  const ba = r.bascule; if (ba && ba.t !== RU.basculeT) { RU.basculeT = ba.t; const q = r.equipes.find((x) => x.id === ba.eq); if (Date.now() - RU.off - ba.t < 5000) { evtRush(`BASCULE ! ${esc(q ? q.nom : "")} passe devant`, "bascule"); sonC("foule-cri", .7); } }
+  $("ruTops").innerHTML = (r.top || []).map((x, i) => `${["🥇", "🥈", "🥉"][i]} ${esc(x.nom)}`).join("<br>");
+  r.equipes.forEach((q) => { const f = $("ruF" + q.id); if (f) f.textContent = (q.sous ? q.sous + " · " : "") + (r.nFans?.[q.id] || 0) + " supporters"; });
+  const fin = r.phase === "fin" || r.phase === "attente";
+  V.classList.toggle("vict", fin);
+  if (fin && RU.gagnantVu !== cle) {
+    RU.gagnantVu = cle; const g = r.equipes.find((x) => x.id === r.gagnant) || r.equipes[0], v = visuelEquipe(g);
+    $("ruFin").innerHTML = `<div class="av" style="${v.style}">${v.html}</div><div class="g">${esc(g.nom)}</div><div class="g2">GAGNE LA MANCHE !</div>${r.meilleur ? `<div class="s">Meilleur supporter : ${esc(r.meilleur)}</div>` : ""}<div class="s" id="ruSuite">Prochain duel dans un instant…</div>`;
+    if (!APERCU) { sonC("victoire", .9); sonC("fanfare", .6); }
+    if (RU.musique) { RU.musique.pause(); RU.musique = null; }
+  }
+  majRush();
+}
+function evtRush(html, type) { const el = $("ruEvt"); if (!el) return; el.innerHTML = html; el.className = "evt on " + type; clearTimeout(evtRush.t); evtRush.t = setTimeout(() => (el.className = "evt " + type), 2800); }
+// positions extrapolées entre deux états (10 fois par seconde) : tout le monde avance doucement, le public fait la différence
+function majRush() {
+  const r = E.rush; if (!r || !r.on || !$("ruCd")) return;
+  const nowSrv = Date.now() - RU.off, ecoule = (Date.now() - RU.recu) / 1000, avant = r.t - nowSrv;
+  const cd = $("ruCd"); if (r.phase === "course" && avant > -800) { cd.style.display = "block"; cd.textContent = avant > 0 ? Math.ceil(avant / 1000) : "PARTEZ !"; } else cd.style.display = "none";
+  const reste = r.phase === "course" ? Math.max(0, Math.ceil((r.t + r.duree * 1000 - nowSrv) / 1000)) : 0;
+  const sprint = r.phase === "course" && avant < 0 && reste <= r.sprint;
+  $("ruInfo").textContent = `Manche ${r.manche}` + (r.phase === "course" && avant < 0 ? ` · ${Math.floor(reste / 60)}:${String(reste % 60).padStart(2, "0")}` : "");
+  const bas = $("ruBas"); bas.classList.toggle("sprint", sprint); bas.querySelector("b").textContent = sprint ? "SPRINT FINAL · J'AIME ×2" : "TAPE ❤ POUR POUSSER";
+  const pos = {}; r.equipes.forEach((q) => { pos[q.id] = Math.min(100, (r.pos?.[q.id] || 0) + (r.phase === "course" && avant < 0 ? ecoule * (r.vitesse || 0) : 0)); });
+  const tete = Object.keys(pos).sort((a, b) => pos[b] - pos[a])[0];
+  r.equipes.forEach((q) => { const c = $("ruC" + q.id); if (!c) return; const p = pos[q.id], h = c.clientHeight || 1100, y = Math.max(0, Math.min(h - 170, (h - 170) * p / 100));
+    c.querySelector(".rempl").style.height = (y + 85) + "px"; c.querySelector(".av").style.bottom = y + "px"; c.querySelector(".pct").style.bottom = (y + 180) + "px";
+    c.querySelector(".pct").textContent = Math.round(p) + " %"; c.classList.toggle("tete", q.id === tete && p > 1); });
+  const s = $("ruSuite"); if (s && r.phase === "fin") s.textContent = "Prochain duel dans " + Math.max(0, Math.ceil((r.tFin + 14000 - nowSrv) / 1000)) + " s";
+  if (s && r.phase === "attente") s.textContent = "Prochain duel dans un instant…";
+}
+setInterval(majRush, 100);
+
 function rendu() {
-  vuePlatine(); hud(); naiss(); mega(); majTheme(); course();
+  vuePlatine(); hud(); naiss(); mega(); majTheme(); course(); rush();
   const dd = E.dedicace, ddOn = !!dd && Date.now() - dd.t < 12000; $("dedicV").classList.toggle("on", ddOn);
   if (dd) { $("ddMsg").textContent = "« " + dd.texte + " »"; $("ddDe").textContent = "— " + dd.nom; }
   if (E.choree && E.choree !== derniereChoree) { const neuf = derniereChoree !== 0 || Date.now() - E.choree < 8000; derniereChoree = E.choree; if (neuf) choree(11000, E.likes >= 1000 ? Math.floor(E.likes / 1000) * 1000 + " J'AIME !" : "MERCI !"); }
@@ -1312,7 +1407,7 @@ const fx = { parts: [], t: 0 };
 const COLS = ["#F5C14B", "#7B5CFF", "#8FD3FF", "#ff4d5e", "#2ee59d", "#ffffff"], imgDrap = {};
 const drap = (c) => { if (!imgDrap[c]) { const i = new Image(); i.src = `/assets/img/flags/${c}.svg`; imgDrap[c] = i; } return imgDrap[c]; };
 function particules(type) {
-  if (E.course && E.course.on) return;   // 17/11 : « les confettis font ramer le PC » : rien par-dessus la course
+  if ((E.course && E.course.on) || (E.rush && E.rush.on)) return;   // 17/11 : « les confettis font ramer le PC » : rien par-dessus la course (ni Cauri Rush)
   const R = Math.random, add = (o) => fx.parts.push({ type, r: R() * 6.28, vr: (R() - .5) * .3, c: COLS[fx.parts.length % COLS.length], vie: 0, ...o });
   if (type === "confettis") for (let i = 0; i < 110; i++) add({ x: 540 + (R() - .5) * 200, y: 1100, vx: (R() - .5) * 34, vy: -18 - R() * 26, s: 10 + R() * 12 });
   else if (type === "cauris" || type === "coeurs") for (let i = 0; i < (type === "coeurs" ? 34 : 26); i++) add({ x: R() * 1080, y: -60 - R() * 380, vx: (R() - .5) * 3, vy: 14 + R() * 12, s: type === "cauris" ? 38 + R() * 26 : 30 + R() * 30 });

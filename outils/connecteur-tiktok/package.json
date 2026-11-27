@@ -1,0 +1,13 @@
+{
+  "name": "cauri-connecteur-tiktok",
+  "private": true,
+  "type": "module",
+  "description": "Connecteur TikTok LIVE -> régie Cauri Charts (commentaires, j'aime, cadeaux, arrivées, abonnements)",
+  "scripts": {
+    "start": "node connecteur.mjs",
+    "test-live": "node connecteur.mjs --test"
+  },
+  "dependencies": {
+    "tiktok-live-connector": "2.5.0"
+  }
+}
