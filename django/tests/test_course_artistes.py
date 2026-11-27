@@ -70,11 +70,12 @@ def test_paki_en_majuscules_et_les_likes_poussent_fort(jeu, monkeypatch):
     assert e["course"]["joueurs"] == {"clement": "a472"}
     L.course_action(e, "lance")
     jeu["ms"] += (L.COURSE_DEPART + 1) * 1000
-    L.course_likes(e, 60, {"clement": 60, "inconnu": 30})
+    L.course_likes(e, 90, {"clement": 60, "inconnu": 30})
     b = e["course"]["bonus"]
-    assert b["a472"] >= 4.0                      # 60 j'aime d'un inscrit = +4 % (plafond du paquet)
-    assert e["course"]["joueurs"]["inconnu"] == "a473"   # celui qui like sans écrire rejoint l'équipe qui a le moins de fans
-    assert b["a473"] == pytest.approx(30 / L.COURSE_LIKES_ARTISTES)
+    # règles de l'ancienne course, gardées à la demande du fondateur : 40 j'aime d'un inscrit = +1 % (au plus 1 % par
+    # paquet) pour SON équipe ; les j'aime des autres aident la voiture en dernière place
+    assert b["a472"] == pytest.approx(1.0)
+    assert e["course"]["aide"]["code"] == "a473" and b["a473"] == pytest.approx(30 / 80)
 
 
 def test_mode_pays_toujours_possible(jeu):

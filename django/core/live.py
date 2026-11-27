@@ -1033,7 +1033,7 @@ def course_demarre(e: dict, pays=None, artistes: dict | None = None) -> None:
         noms = {p: PAYS_NOMS.get(p, p) for p in pays}
     e["course"] = {"on": True, "k": k, "manche": int(c.get("manche") or 0) + 1, "pays": pays, "noms": noms,
                    "artistes": artistes or None, "attente": True,
-                   "t": now + COURSE_ATTENTE, "vitesse": COURSE_VITESSE_ARTISTES if artistes else COURSE_VITESSE, "bonus": {p: 0.0 for p in pays},
+                   "t": now + COURSE_ATTENTE, "vitesse": COURSE_VITESSE, "bonus": {p: 0.0 for p in pays},
                    "derniers": {p: [] for p in pays}, "phase": "course", "gagnant": None, "boost": None, "choc": None, "aide": None,
                    "victoires": c.get("victoires") or {}, "coureurs": c.get("coureurs") or {}, "joueurs": {}, "vu": {}}
 
@@ -1115,8 +1115,6 @@ def course_cadeau(e: dict, user: str, nom: str, diamants: int, cadeau: str = "")
 
 
 COURSE_LIKES = 40       # j'aime d'un joueur inscrit = +1 % pour SON pays (au plus +1 % par joueur et par paquet de 2 s)
-COURSE_LIKES_ARTISTES = 15   # course d'artistes (27/11/2026) : les j'aime comptent bien plus, c'est le public qui fait la course
-COURSE_VITESSE_ARTISTES = 0.25   # % de piste par seconde sans public (400 s) : sans j'aime, rien ne bouge vraiment
 
 
 def course_likes(e: dict, n: int, par: dict | None = None) -> None:
@@ -1126,25 +1124,13 @@ def course_likes(e: dict, n: int, par: dict | None = None) -> None:
     if not c.get("on") or c.get("phase") != "course" or n <= 0 or _maintenant() < int(c.get("t") or 0):
         return
     reste = n
-    artistes = bool(c.get("artistes"))
     if par:
         fans = {**(e.get("courseFan") or {}), **(c.get("joueurs") or {})}
         gains: dict = {}
         for u, k in list(par.items())[:500]:
             code, k = fans.get(str(u)[:30]), max(0, int(k or 0))
-            if artistes and k and code not in c["pays"]:
-                # 27/11/2026 (« quand je like ma team dépasse pas ») : course d'artistes, celui qui like sans avoir écrit
-                # rejoint l'équipe qui a le moins de supporters (au lieu d'aider au hasard la voiture en dernière place)
-                nb = {p: 0 for p in c["pays"]}
-                for v in (c.get("joueurs") or {}).values():
-                    if v in nb:
-                        nb[v] += 1
-                code = min(c["pays"], key=lambda p: nb[p])
-                c.setdefault("joueurs", {})[str(u)[:30]] = code
-                e.setdefault("courseFan", {})[str(u)[:30]] = code
             if code in c["pays"] and k:
-                # artistes : 15 j'aime = +1 % (au plus 4 % par paquet de 2 s) ; pays : 40 j'aime = +1 % (au plus 1 %)
-                gains[code] = gains.get(code, 0.0) + (min(4.0, k / COURSE_LIKES_ARTISTES) if artistes else min(1.0, k / COURSE_LIKES))
+                gains[code] = gains.get(code, 0.0) + min(1.0, k / COURSE_LIKES)
                 reste -= k
         for code, pas in gains.items():
             if c.get("phase") == "course":
