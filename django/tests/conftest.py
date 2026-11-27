@@ -9,6 +9,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "cauri.settings")
 os.environ.setdefault("HASHTAGS_IA", "0")
 os.environ.setdefault("VOIX_IA", "0")   # pas d'appel à l'IA pour les accroches   # pas d'appel à l'IA pour les hashtags pendant les tests
+# 27/11/2026 : le .env charge SECRETS_FILE (vraie base Neon, Blob, Buffer, Meta…) et des tests ont écrit en production.
+# Les variables d'environnement priment sur le .env : les tests ne voient qu'une base locale et aucune clé de publication.
+os.environ["DATABASE_URL"] = os.environ.get("TESTS_DATABASE_URL", "postgresql://postgres@127.0.0.1:5433/cauricharts")
+os.environ.setdefault("PGCONNECT_TIMEOUT", "2")   # pas de base locale : on le sait en 2 s au lieu d'attendre (suite de 15 min sinon)
+for _cle in ("BLOB_READ_WRITE_TOKEN", "GH_DISPATCH_TOKEN", "BUFFER_API_KEY", "META_ACCESS_TOKEN", "TELEGRAM_BOT_TOKEN",
+             "SMTP_PASSWORD", "CRON_SECRET", "TIKTOK_CLIENT_SECRET"):
+    os.environ[_cle] = ""
 
 import django  # noqa: E402
 
@@ -37,7 +44,17 @@ def youtube_responder(method, url, headers=None, body=None):
 BASE_REQUISE = ("test_pages_publiques.py", "test_redaction.py", "test_newsletter.py", "test_guet.py")
 
 
+def _base_de_production() -> bool:
+    """27/11/2026 : le .env charge SECRETS_FILE, donc le DATABASE_URL de la vraie base Neon ; des tests y ont écrit
+    (avis du comité de rédaction). Les tests ne touchent jamais une base hébergée (Neon) : seulement une base locale."""
+    from django.conf import settings
+    hote = str(settings.DATABASES.get("default", {}).get("HOST") or "")
+    return "neon.tech" in hote or ("." in hote and hote not in ("127.0.0.1", "localhost"))
+
+
 def _base_disponible() -> bool:
+    if _base_de_production():
+        return False
     try:
         from django.db import connection
         connection.ensure_connection()

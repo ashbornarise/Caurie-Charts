@@ -454,6 +454,8 @@ def historique(request, chemin):
     # 23/11/2026 : un post photo prêt à choisir et publier (hors tri de profil) apparaît aussi, dans « À valider »
     def garde(j):
         p = j["params"]
+        if p.get("type") == "medias":   # récupérations de médias : elles ont leur onglet « Médias » (27/11/2026)
+            return False
         return p.get("type") != "photos" or (j["statut"] == "pret" and not p.get("trie_le") and p.get("mode") != "profil")
     return _json({"jobs": [j for j in jobs if garde(j)][:30]})
 
@@ -1216,6 +1218,147 @@ def banque_retirer(request, chemin, ident):
     db.run("DELETE FROM artist_photos WHERE id = ?", [int(ident)])
     return _json({"ok": True})
 
+
+# ---------------------------------------------------------------- « Médias » (27/11/2026) : le pont des médias
+
+def medias(request, chemin):
+    """GET : les dossiers (Mes créations, dossiers créés, artistes). GET ?d=<clé> : les médias d'un dossier."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_medias
+    cle = request.GET.get("d", "")
+    if cle:
+        return _json(studio_medias.contenu(cle))
+    return _json({"dossiers": studio_medias.liste_dossiers()})
+
+
+def medias_dossier(request, chemin):
+    """POST {nom} : un nouveau dossier."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_medias
+    nom = str(_corps(request).get("nom") or "").strip()
+    if not nom:
+        return _json({"erreur": "donne un nom au dossier"}, 400)
+    return _json({"cle": f"d{studio_medias.nouveau_dossier(nom)}"})
+
+
+def medias_recuperer(request, chemin):
+    """POST {liens: [..], dossier: <clé>} : le Studio récupère les photos et vidéos de chaque lien (une tâche par lien)."""
+    _verifie(chemin)
+    u = _utilisateur(request)
+    if not u or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_medias
+    c = _corps(request)
+    liens = [x.strip() for x in re.split(r"[\s,]+", str(c.get("liens") or "")) if x.strip()]
+    liens = [x for x in dict.fromkeys(liens) if urlparse(x).scheme in ("http", "https") and urlparse(x).hostname][:10]
+    if not liens:
+        return _json({"erreur": "colle au moins un lien"}, 400)
+    creer_tables()
+    studio_medias.creer_tables()
+    place = studio_medias.rangement(str(c.get("dossier") or ""))
+    ids, erreurs = [], []
+    for lien in liens:
+        params = {"type": "medias", "accroche": "Récupérer des médias", **place}
+        job_id = db.insert("studio_jobs", {"lien": lien[:1000], "params": json.dumps(params, ensure_ascii=False), "auteur": u["id"]})
+        erreur = _lance(job_id)
+        if erreur:
+            db.update("studio_jobs", {"statut": "erreur", "erreur": erreur}, "id = :id", {"id": job_id})
+            erreurs.append(erreur)
+        ids.append(job_id)
+    return _json({"ids": ids, "erreur": erreurs[0] if erreurs else None})
+
+
+def medias_en_cours(request, chemin):
+    """Les récupérations pas encore rangées (pour afficher « en route » et les erreurs)."""
+    _verifie(chemin)
+    if not _utilisateur(request):
+        return _json({"erreur": "connexion requise"}, 401)
+    lignes = db.all("""SELECT id, lien, statut, erreur, params FROM studio_jobs WHERE params LIKE '%"type": "medias"%'
+                       AND statut NOT IN ('range', 'annule') AND cree_le > NOW() - INTERVAL '1 day' ORDER BY id DESC LIMIT 20""")
+    out = []
+    for r in lignes:
+        p = json.loads(r["params"] or "{}")
+        cle = f"d{p['dossier_id']}" if p.get("dossier_id") else f"a{p['artiste_id']}" if p.get("artiste_id") else ""
+        out.append({"id": r["id"], "lien": r["lien"], "statut": r["statut"], "erreur": r["erreur"] or "", "dossier": cle})
+    return _json({"taches": out})
+
+
+def medias_envoi(request, chemin):
+    """POST {nom, ext, taille, parts, dossier} : prépare l'envoi d'un fichier du téléphone ; renvoie son numéro."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_medias as M
+    c = _corps(request)
+    try:
+        taille, parts = int(c.get("taille") or 0), int(c.get("parts") or 1)
+    except (TypeError, ValueError):
+        return _json({"erreur": "taille invalide"}, 400)
+    if taille <= 0:
+        return _json({"erreur": "fichier vide"}, 400)
+    if taille > M.TAILLE_MAX or not 1 <= parts <= M.PARTS_MAX:
+        return _json({"erreur": f"fichier de {M.TAILLE_MAX // 1024 // 1024} Mo au plus"}, 400)
+    if M.ext_propre(c.get("ext")) == "bin":
+        return _json({"erreur": "type de fichier non pris en charge (photo, vidéo ou son)"}, 400)
+    return _json({"id": M.envoi_nouveau(str(c.get("nom") or "Fichier"), c.get("ext"), parts, taille, str(c.get("dossier") or ""))})
+
+
+def medias_morceau(request, chemin, ident):
+    """POST ?k=<n> : un morceau (≤ 4 Mo) du fichier."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_medias as M
+    m = db.one("SELECT statut, parts FROM studio_medias WHERE id = ?", [int(ident)])
+    try:
+        k = int(request.GET.get("k", "-1"))
+    except ValueError:
+        k = -1
+    if not m or m["statut"] != "envoi" or not 0 <= k < int(m["parts"] or 1) or len(request.body) > 4_300_000:
+        return _json({"erreur": "morceau refusé"}, 400)
+    M.envoi_morceau(int(ident), k, request.body)
+    return _json({"ok": True})
+
+
+def medias_fin(request, chemin, ident):
+    """POST : tous les morceaux sont arrivés -> un seul fichier, rangé dans son dossier."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    from core.services.social import studio_medias as M
+    statut = db.value("SELECT statut FROM studio_medias WHERE id = ?", [int(ident)])
+    if statut == "pret":   # 2e appel (réseau qui réessaie, double envoi) : le média est déjà prêt, on ne le casse pas
+        return _json({"ok": True, "deja": True})
+    if statut != "envoi":
+        return _json({"erreur": "envoi introuvable"}, 400)
+    try:
+        return _json({"media": M.envoi_fin(int(ident))})
+    except Exception as exc:  # noqa: BLE001
+        db.run("UPDATE studio_medias SET statut = 'erreur' WHERE id = ? AND statut = 'envoi'", [int(ident)])
+        return _json({"erreur": f"le fichier n'a pas pu être assemblé ({type(exc).__name__})"}, 500)
+
+
+def medias_retirer(request, chemin, ident):
+    """POST : retire un média de son dossier (le fichier reste dans le Blob, jamais effacé en silence)."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    db.update("studio_medias", {"statut": "annule"}, "id = :id", {"id": int(ident)})
+    return _json({"ok": True})
+
+
+def medias_tache_fermer(request, chemin, ident):
+    """POST : ferme une récupération ratée (elle quitte « En route »)."""
+    _verifie(chemin)
+    if not _utilisateur(request) or request.method != "POST":
+        return _json({"erreur": "connexion requise"}, 401)
+    db.run("""UPDATE studio_jobs SET statut = 'annule' WHERE id = ? AND statut = 'erreur'
+              AND params LIKE '%"type": "medias"%'""", [int(ident)])
+    return _json({"ok": True})
 
 
 # ---------------------------------------------------------------- idées du jour (souvenirs et records)
