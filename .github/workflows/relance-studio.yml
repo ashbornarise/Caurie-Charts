@@ -1,0 +1,20 @@
+# Relance ponctuelle des tâches Studio 459 et 460, en échec le 26/11/2026 (Buffer en limite de requêtes), à la demande
+# du fondateur : vendredi 27/11/2026 à 9 h UTC. À supprimer après passage (la date ne revient que l'an prochain).
+name: Relance Studio 459 et 460
+on:
+  schedule:
+    - cron: "0 9 27 11 *"
+  workflow_dispatch:
+jobs:
+  relance:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(date -u +%Y)" != "2026" ]; then echo "Relance de 2026 seulement."; exit 0; fi
+          gh workflow run studio.yml -R "$GITHUB_REPOSITORY" -f job_id=459
+          sleep 300
+          gh workflow run studio.yml -R "$GITHUB_REPOSITORY" -f job_id=460
