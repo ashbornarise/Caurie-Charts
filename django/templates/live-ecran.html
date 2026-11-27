@@ -1343,7 +1343,10 @@ function annonceSuivante() {
   const c = E.course; if (!c || !c.on || c.phase !== "course" || Date.now() - (CR.derAnn || 0) < 9000 || (c.t - Date.now() - CR.off) > 0) return;
   const tete = Math.max(...c.pays.map((p) => CR.aff[p] || 0));
   if (tete > 85 && !CR.dernLigne) { CR.dernLigne = c.manche; annonce("DERNIÈRE LIGNE DROITE !", "TOUT LE MONDE DANS LE CHAT"); return; }
-  let i; do { i = Math.floor(Math.random() * ANNONCES.length); } while (i === CR.annI && ANNONCES.length > 1); CR.annI = i; annonce(...ANNONCES[i]);
+  let i; do { i = Math.floor(Math.random() * ANNONCES.length); } while (i === CR.annI && ANNONCES.length > 1); CR.annI = i;
+  // course d'artistes : « ton artiste » au lieu de « ton pays » (27/11/2026)
+  const art = (s) => c.artistes ? s.replace(/TON PAYS/g, "TON ARTISTE").replace(/ÉCRIS TON PAYS/g, "ÉCRIS TON ARTISTE") : s;
+  annonce(art(ANNONCES[i][0]), art(ANNONCES[i][1]));
 }
 // ---- sons de la course (Mixkit, libres) : musique d'ambiance qui tourne, moteurs, foule, klaxon, choc, fanfare
 const SON_C = "/assets/live/course/sons/";
