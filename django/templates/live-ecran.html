@@ -1117,12 +1117,12 @@ function dessineMonde(scroll, envNom) {
   if (envNom === "neige") { const ng = g.createLinearGradient(X0, 0, X0 + 70, 0); ng.addColorStop(0, "rgba(255,255,255,.7)"); ng.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = ng; g.fillRect(X0, 0, 70, CR.H);
     const nd = g.createLinearGradient(X1, 0, X1 - 70, 0); nd.addColorStop(0, "rgba(255,255,255,.7)"); nd.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = nd; g.fillRect(X1 - 70, 0, 70, CR.H); }
   const og = g.createLinearGradient(X0 - bord - lat - 24, 0, X0 - bord - lat, 0); og.addColorStop(0, "rgba(0,0,0,0)"); og.addColorStop(1, "rgba(0,0,0,.22)"); g.fillStyle = og; g.fillRect(X0 - bord - lat - 24, 0, 24, CR.H);
-  for (let l = 0; l < 4; l++) { const cx = X0 + CR.piste * l + CR.piste / 2; g.fillStyle = "rgba(0,0,0,.10)"; g.fillRect(cx - 44, 0, 18, CR.H); g.fillRect(cx + 26, 0, 18, CR.H); }
+  for (let l = 0; l < (CR.nPistes || 4); l++) { const cx = X0 + CR.piste * l + CR.piste / 2; g.fillStyle = "rgba(0,0,0,.10)"; g.fillRect(cx - 44, 0, 18, CR.H); g.fillRect(cx + 26, 0, 18, CR.H); }
   const blocs = 46, d = scroll % (blocs * 2), coulV = envNom === "ville" ? ["#F5C14B", "#222"] : envNom === "neige" ? ["#2f6fd6", "#f2f2f2"] : ["#d7262e", "#f2f2f2"];
   for (let y = -blocs * 2 + d; y < CR.H; y += blocs) { const k = Math.round((y - d) / blocs) & 1; g.fillStyle = k ? coulV[0] : coulV[1]; g.fillRect(X0 - bord, y, bord, blocs); g.fillRect(X1, y, bord, blocs); }
   g.fillStyle = "rgba(240,240,235,.85)"; g.fillRect(X0 + 6, 0, 6, CR.H); g.fillRect(X1 - 12, 0, 6, CR.H);
   const tir = 70, pas = 150, dd = scroll % pas;
-  for (let l = 1; l < 4; l++) { const x = X0 + CR.piste * l - 3; for (let y = -pas + dd; y < CR.H; y += pas) g.fillRect(x, y, 6, tir); }
+  for (let l = 1; l < (CR.nPistes || 4); l++) { const x = X0 + CR.piste * l - 3; for (let y = -pas + dd; y < CR.H; y += pas) g.fillRect(x, y, 6, tir); }
   // décor de l'environnement : toutes les 240 px de route, de chaque côté (toujours le même à cette distance)
   const seg = 240, premier = Math.floor(-scroll / seg) - 2, lampes = [];
   for (let i = premier; i < premier + Math.ceil(CR.H / seg) + 4; i++) {
@@ -1182,7 +1182,8 @@ function boucleCourse() {
   const yEcran = (v) => Math.min(1440, YT + (tete - v) * K);
   const yMonde = (v, cale) => YT + cale - (v - tete) / 100 * DISTANCE;   // un point fixe de la route (v = % de piste)
   const yD = yMonde(0, 150);
-  if (yD > -60 && yD < CR.H + 300) { ligneTravers(yD, "depart"); c.pays.forEach((p, l) => { dessineDrapeau(g, p, X0 + l * CR.piste + 25, yD + 64, 100, 66); g.strokeStyle = "rgba(255,255,255,.7)"; g.lineWidth = 3; g.strokeRect(X0 + l * CR.piste + 25, yD + 64, 100, 66); }); }
+  if (yD > -60 && yD < CR.H + 300) { ligneTravers(yD, "depart"); c.pays.forEach((p, l) => { const dw = Math.min(CR.piste - 40, 230), dh = Math.round(dw * .66), dxD = X0 + l * CR.piste + (CR.piste - dw) / 2;
+    dessineDrapeau(g, p, dxD, yD + 64, dw, dh); g.strokeStyle = "rgba(255,255,255,.7)"; g.lineWidth = 3; g.strokeRect(dxD, yD + 64, dw, dh); }); }
   const yA = yMonde(100, -118); if (yA > -80 && yA < CR.H) ligneTravers(yA - 48, "arrivee");
   // voitures
   const classement = [...c.pays].sort((a, b) => CR.aff[b] - CR.aff[a]);
@@ -1202,12 +1203,24 @@ function boucleCourse() {
     g.fillRect(cx + dx - 40, y + 100, 80, enBoost ? 260 : 120); g.restore();
     if (enBoost) { for (let f = 0; f < 2; f++) { const fx = cx + dx + (f ? 22 : -22), fl = 40 + Math.random() * 40, fg = g.createLinearGradient(0, y + 104, 0, y + 104 + fl);
       fg.addColorStop(0, "#fff7c0"); fg.addColorStop(.3, "#ffb300"); fg.addColorStop(1, "rgba(255,60,0,0)"); g.fillStyle = fg; g.beginPath(); g.moveTo(fx - 9, y + 104); g.lineTo(fx + 9, y + 104); g.lineTo(fx, y + 104 + fl); g.fill(); } }
-    g.save(); g.translate(cx + dx, y); g.rotate(ang); g.drawImage(spriteVoiture(p), -65, -115); g.restore();
-    // étiquette : rang + drapeau + nom, à côté de la voiture
-    const rang = classement.indexOf(p) + 1, ex = cx + dx - 62, ey = y - 168;
-    g.fillStyle = "rgba(10,8,22,.78)"; g.beginPath(); g.roundRect(ex, ey, 124, 40, 20); g.fill();
-    g.fillStyle = rang === 1 ? "#F5C14B" : "#fff"; g.font = "900 22px Montserrat,Arial"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(rang + (rang === 1 ? "er" : "e"), ex + 12, ey + 21);
-    dessineDrapeau(g, p, ex + 58, ey + 10, 30, 20); g.fillStyle = "#fff"; g.font = "800 16px Montserrat,Arial"; g.fillText(CODE3[p] || p, ex + 92, ey + 21);
+    // 27/11/2026 : 2 ou 3 voitures -> pistes larges, voitures et étiquettes plus grandes (le duel Paki / Joachin se lit de loin)
+    const kV = (CR.nPistes || 4) <= 2 ? 1.35 : (CR.nPistes || 4) === 3 ? 1.15 : 1;
+    g.save(); g.translate(cx + dx, y); g.rotate(ang); g.scale(kV, kV); g.drawImage(spriteVoiture(p), -65, -115); g.restore();
+    // étiquette : rang + drapeau (ou photo de l'artiste) + nom, au-dessus de la voiture
+    const rang = classement.indexOf(p) + 1;
+    if (kV > 1) {
+      const lw = Math.min(CR.piste - 16, 290), lh = 76, ex = cx + dx - lw / 2, ey = y - 115 * kV - lh - 14;
+      g.fillStyle = "rgba(10,8,22,.82)"; g.beginPath(); g.roundRect(ex, ey, lw, lh, 38); g.fill();
+      g.fillStyle = rang === 1 ? "#F5C14B" : "#fff"; g.font = "900 30px Montserrat,Arial"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(rang + (rang === 1 ? "er" : "e"), ex + 14, ey + lh / 2 + 1);
+      g.save(); g.beginPath(); g.arc(ex + 100, ey + lh / 2, 30, 0, 6.283); g.clip(); dessineDrapeau(g, p, ex + 70, ey + lh / 2 - 30, 60, 60); g.restore();
+      g.strokeStyle = (COUL_PAYS[p] || ["#fff"])[0]; g.lineWidth = 4; g.beginPath(); g.arc(ex + 100, ey + lh / 2, 30, 0, 6.283); g.stroke();
+      g.fillStyle = "#fff"; g.font = "900 28px Montserrat,Arial"; g.fillText(CODE3[p] || p, ex + 140, ey + lh / 2 + 1);
+    } else {
+      const ex = cx + dx - 62, ey = y - 168;
+      g.fillStyle = "rgba(10,8,22,.78)"; g.beginPath(); g.roundRect(ex, ey, 124, 40, 20); g.fill();
+      g.fillStyle = rang === 1 ? "#F5C14B" : "#fff"; g.font = "900 22px Montserrat,Arial"; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(rang + (rang === 1 ? "er" : "e"), ex + 12, ey + 21);
+      dessineDrapeau(g, p, ex + 58, ey + 10, 30, 20); g.fillStyle = "#fff"; g.font = "800 16px Montserrat,Arial"; g.fillText(CODE3[p] || p, ex + 92, ey + 21);
+    }
     if (ch && now - ch.t < 1400) { g.fillStyle = "#ff5a3c"; g.font = "900 30px Montserrat,Arial"; g.textAlign = "center"; g.fillText("BOUSCULÉ !", cx, y + 150); }
   });
   // « +Nom » : chaque joueur voit qu'il pousse bien SA voiture
@@ -1246,7 +1259,7 @@ function course() {
         <polygon points="50,2 61.8,35 97,36 69,57.5 79.5,92 50,71.5 20.5,92 31,57.5 3,36 38.2,35" fill="url(#eg)" stroke="#fff3b0" stroke-width="1.2" stroke-linejoin="round"/></svg><div class="txt" id="crAnnTxt"></div></div>`;
     CR.g = $("crC").getContext("2d", { alpha: false }); CR.g.scale(.5, .5); }
   const cle = c.manche + "|" + c.pays.join(",");
-  if (cle !== CR.cle) { CR.cle = cle; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; CR.phaseVue = 0; CR.tete = null; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
+  if (cle !== CR.cle) { CR.cle = cle; CR.nPistes = Math.max(2, Math.min(4, c.pays.length)); CR.piste = CR.route / CR.nPistes; CR.sprites = {}; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; CR.phaseVue = 0; CR.tete = null; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
   const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
   $("crVict").innerHTML = vic.map(([p, n]) => `<span><i style="background:${fondDrap(p)}"></i>${n} 🏆</span>`).join("");
   const basC = V.querySelector(".bas b");
