@@ -1163,10 +1163,31 @@ function posCible(c, p) {
   const now = Date.now() + CR.off, roule = Math.max(0, (now - c.t) / 1000) * (c.vitesse || .5);
   return Math.max(0, Math.min(100, roule + (+(c.bonus || {})[p] || 0)));
 }
+// 27/11/2026 (« c'est très flou et lent, ça rame ») : le canvas était en demi-résolution (540 x 960, flou une fois
+// agrandi) et redessiné par une minuterie de 42 ms (à-coups). Maintenant : animation calée sur l'écran (30 images/s,
+// ce que diffuse LIVE Studio) et qualité ADAPTATIVE : pleine résolution si le PC suit, un peu moins s'il peine.
+function reglerQualite(q) {
+  CR.q = Math.max(.55, Math.min(1, Math.round(q * 100) / 100));
+  const cv = $("crC"); if (!cv) return;
+  cv.width = Math.round(1080 * CR.q); cv.height = Math.round(1920 * CR.q);
+  CR.g.setTransform(CR.q, 0, 0, CR.q, 0, 0); CR.mpat = {}; ["masphalte", "mherbe", "mlaterite", "msable", "mneige", "mtrottoir", "mmer"].forEach((k) => delete CR[k]);
+  try { localStorage.setItem("cauri-course-q", CR.q); } catch (e) {}
+}
 function boucleCourse() {
-  const c = E.course; CR.anim = null;
-  if (!c || !c.on) return;
-  CR.anim = setTimeout(boucleCourse, 42);   // 24 images/s (17/11 : « ça rame de ouf » sur le portable du live)
+  const c = E.course;
+  if (!c || !c.on) { CR.anim = null; return; }
+  CR.anim = requestAnimationFrame(boucleCourse);
+  const t = performance.now();
+  if (t - (CR.dernF || 0) < 31) return;   // 30 images par seconde
+  CR.dernF = t;
+  dessineCourse();
+  const d = performance.now() - t;
+  CR.moy = CR.moy == null ? d : CR.moy * .9 + d * .1;
+  if (CR.moy > 22 && CR.q > .55 && t - (CR.qT || 0) > 3000) { CR.qT = t; reglerQualite(CR.q - .15); }          // le PC peine
+  else if (CR.moy < 8 && CR.q < 1 && t - (CR.qT || 0) > 10000) { CR.qT = t; reglerQualite(CR.q + .15); }      // il a de la marge
+}
+function dessineCourse() {
+  const c = E.course;
   const g = CR.g, now = Date.now(), dt = Math.min(.1, (now - (CR.derT || now)) / 1000); CR.derT = now;
   c.pays.forEach((p) => { const cible = posCible(c, p); CR.aff[p] = CR.aff[p] == null ? cible : CR.aff[p] + (cible - CR.aff[p]) * Math.min(1, dt * 5); });
   const tete = Math.max(...c.pays.map((p) => CR.aff[p]));
@@ -1251,13 +1272,15 @@ function course() {
   // étiquette courte au-dessus de la voiture (« PAKI », « JOACHIN ») : les noms entiers se chevauchaient à 2 voitures
   Object.entries(c.artistes || {}).forEach(([p, x]) => { COUL_PAYS[p] = x.couleurs; const mots = (x.nom || p).split(/\s+/);
     CODE3[p] = ((mots[0].length >= 3 ? mots[0] : mots.slice(0, 2).join(" ")) || p).toUpperCase().slice(0, 8); });
-  if (!CR.g) { V.innerHTML = `<canvas id="crC" width="540" height="960"></canvas><div class="vignette"></div>
+  if (!CR.g) { V.innerHTML = `<canvas id="crC" width="1080" height="1920"></canvas><div class="vignette"></div>
       <div class="haut"><div class="t1">LA COURSE DES CAURIS</div><div class="t2" id="crManche"></div></div>
       <div class="vict" id="crVict"></div><div id="crDecompte"></div><div class="evt" id="crEvt"></div>
       <div class="bas"><b>ÉCRIS TON PAYS POUR ACCÉLÉRER</b><span class="l">❤ like = boost ton pays</span><span>💬 appelle tes potes</span></div><div class="finV" id="crFin"></div><div id="crPhase"></div>
       <div id="crAnnonce"><div class="halo"></div><svg viewBox="0 0 100 100"><defs><radialGradient id="eg" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#fffbe0"/><stop offset=".55" stop-color="#ffd84a"/><stop offset="1" stop-color="#f29a12"/></radialGradient></defs>
         <polygon points="50,2 61.8,35 97,36 69,57.5 79.5,92 50,71.5 20.5,92 31,57.5 3,36 38.2,35" fill="url(#eg)" stroke="#fff3b0" stroke-width="1.2" stroke-linejoin="round"/></svg><div class="txt" id="crAnnTxt"></div></div>`;
-    CR.g = $("crC").getContext("2d", { alpha: false }); CR.g.scale(.5, .5); }
+    CR.g = $("crC").getContext("2d", { alpha: false });
+    let q0 = 1; try { q0 = +localStorage.getItem("cauri-course-q") || 1; } catch (e) {}
+    reglerQualite(q0); }
   const cle = c.manche + "|" + c.pays.join(",");
   if (cle !== CR.cle) { CR.cle = cle; CR.nPistes = Math.max(2, Math.min(4, c.pays.length)); CR.piste = CR.route / CR.nPistes; CR.sprites = {}; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; CR.phaseVue = 0; CR.tete = null; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
   const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
@@ -1303,12 +1326,45 @@ function sonC(nom, vol = .8, duree = 0) {
     if (duree) setTimeout(() => { const f = setInterval(() => { if (a.volume <= .07) { a.pause(); clearInterval(f); } else a.volume = Math.max(0, a.volume - .07); }, 60); }, duree);
     return a; } catch (e) {}
 }
+// 27/11/2026 (demande du fondateur : « mettre des musiques des artistes en fond, ou changer de son souvent ») :
+// course d'ARTISTES -> les extraits de la bibliothèque du live (titres de l'artiste EN TÊTE ; on change dès que la tête
+// change, au plus tôt 12 s après, et au plus tard toutes les 30 s) ; course de pays -> une musique libre qui change toutes les 45 s.
+function sonsArtistes(c) {
+  const out = {};
+  Object.keys(c.artistes || {}).forEach((code) => { const b = (D.biblio || {})[code.slice(1)]; if (b && (b.sons || []).length) out[code] = b.sons; });
+  return out;
+}
+function musiqueCourse() {
+  const c = E.course; if (!c) return;
+  const sons = sonsArtistes(c), codes = Object.keys(sons);
+  const tete = codes.length ? [...codes].sort((a, b) => (CR.aff[b] || 0) - (CR.aff[a] || 0))[0] : null;
+  let src, titre = "";
+  if (tete) {
+    const l = sons[tete], k = (CR.mIdx = ((CR.mIdx || 0) + 1)) % l.length;
+    src = l[k].url; titre = (c.noms || {})[tete] + " · " + (l[k].titre || "");
+    CR.mArt = tete;
+  } else {
+    const l = [1, 2, 3, 4, 5, 6, 7].filter((n) => n !== CR.mDer); CR.mDer = l[Math.floor(Math.random() * l.length)];
+    src = SON_C + "m" + CR.mDer + ".mp3"; CR.mArt = null;
+  }
+  const ancienne = CR.musique, a = new Audio(src); a.volume = 0; a.loop = true; a.play().catch(() => {});
+  // fondu croisé de 1,5 s : la nouvelle monte, l'ancienne descend
+  const t0 = Date.now(), cible = tete ? .55 : .32;
+  const f = setInterval(() => { const k = Math.min(1, (Date.now() - t0) / 1500); a.volume = cible * k; if (ancienne) ancienne.volume = Math.max(0, (ancienne.volMax || .32) * (1 - k));
+    if (k >= 1) { clearInterval(f); if (ancienne) ancienne.pause(); } }, 60);
+  a.volMax = cible; CR.musique = a; CR.mDepuis = Date.now();
+  if (titre) evtCourse("🎵 " + esc(titre), "boost");
+}
+setInterval(() => {   // change la musique : quand la tête change (artistes) ou au bout d'un moment
+  const c = E.course; if (APERCU || !c || !c.on || !CR.musique) return;
+  const age = Date.now() - (CR.mDepuis || 0), codes = Object.keys(sonsArtistes(c));
+  const tete = codes.length ? [...codes].sort((a, b) => (CR.aff[b] || 0) - (CR.aff[a] || 0))[0] : null;
+  if ((tete && tete !== CR.mArt && age > 12000) || age > (codes.length ? 30000 : 45000)) musiqueCourse();
+}, 1000);
 function ambianceCourse(roule) {
   if (APERCU) return;
   if (roule === false && !E.course?.on) { [CR.musique, CR.moteur].forEach((a) => a && a.pause()); CR.musique = CR.moteur = null; return; }
-  if (!CR.musique) { const suivante = () => { const l = [1, 2, 3, 4, 5, 6, 7].filter((n) => n !== CR.mDer); CR.mDer = l[Math.floor(Math.random() * l.length)];
-      const a = new Audio(SON_C + "m" + CR.mDer + ".mp3"); a.volume = .32; a.onended = () => { if (CR.musique === a) { CR.musique = null; ambianceCourse(true); } }; a.play().catch(() => {}); return a; };
-    CR.musique = suivante(); }
+  if (!CR.musique) musiqueCourse();
   if (!CR.moteur) { CR.moteur = new Audio(SON_C + "moteur.mp3"); CR.moteur.loop = true; CR.moteur.volume = .1; }
   if (roule && CR.moteur.paused) CR.moteur.play().catch(() => {}); if (!roule && !CR.moteur.paused) CR.moteur.pause();
 }
