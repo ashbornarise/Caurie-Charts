@@ -430,7 +430,7 @@ def _maj_etat(request):
             if m.get("course"):
                 if m["course"] == "demarre":   # un seul jeu à la fois
                     e["rush"] = {**(e.get("rush") or {}), "on": False}
-                course_action(e, str(m["course"]), m.get("pays"))
+                course_action(e, str(m["course"]), m.get("pays"), m.get("artistes"))
             if m.get("rush"):   # Cauri Rush (27/11/2026) : demarre (type), suivante, revanche, arrete
                 live_rush.action(e, str(m["rush"]), str(m.get("type") or ""), donnees(), PAYS_NOMS)
     return S._json({**_public(e), "aLaMain": not refus}, 409 if refus else 200)
@@ -942,6 +942,18 @@ def _pays_course(texte: str, t: str, codes: list):
     return None
 
 
+def _artiste_course(c: dict, t: str):
+    """Voiture d'artiste choisie dans un commentaire : son numéro (« 1 », « 2 »…) ou son nom (« didi », « himra »)."""
+    arts = c.get("artistes") or {}
+    for code, x in arts.items():
+        if t == x.get("num") or t.startswith(str(x.get("num")) + " "):
+            return code
+    for code, x in sorted(arts.items(), key=lambda kv: -max((len(k) for k in kv[1].get("cles") or [""]), default=0)):
+        if any(k and (k == t or k in t) for k in x.get("cles") or []):
+            return code
+    return None
+
+
 def _maintenant() -> int:
     return int(time.time() * 1000)
 
@@ -954,24 +966,68 @@ def course_pos(c: dict, p: str, now: int | None = None) -> float:
     return max(0.0, min(COURSE_ARRIVEE, roule + float((c.get("bonus") or {}).get(p) or 0)))
 
 
-def course_action(e: dict, a: str, pays=None) -> None:
-    if a == "demarre":
+# 27/11/2026 (demande du fondateur) : des voitures ARTISTES (nom, couleur, photo) pour jouer les rivalités (Didi B /
+# Himra…), et la course ne part plus toute seule : « prépare » affiche la grille (le public choisit son pilote en
+# écrivant son nom ou son numéro), « lance » donne le départ, et rien ne repart seul après une victoire.
+COURSE_ATTENTE = 10 * 24 * 3600 * 1000   # départ « dans 10 jours » tant que la régie n'a pas lancé : personne n'avance
+COULEURS_ARTISTES = [["#8B52FF", "#FFFFFF", "#4B1FA8"], ["#F5C14B", "#1A1A1A", "#B8860B"], ["#E63946", "#FFFFFF", "#8D1B24"],
+                     ["#2EC4B6", "#FFFFFF", "#167A71"]]
+RIVALITES = [("Paki Chenzu", "Joachin Migos"), ("Didi B", "Himra"), ("Wizkid", "Burna Boy"), ("Black Sherif", "Sarkodie"),
+             ("Toofan", "Santrinos Raphaël"), ("Didi B", "Himra", "Suspect 95")]
+
+
+def _artistes_course(ids: list) -> dict:
+    """{code: {nom, photo, couleurs, cles}} pour les artistes choisis (code « a<id> »)."""
+    if not ids:
+        return {}
+    par_id = {a["id"]: a for a in donnees()["artistes"]}
+    out = {}
+    for i, ident in enumerate(ids[:4]):
+        try:
+            a = par_id.get(int(ident))
+        except (TypeError, ValueError):
+            a = None
+        if a:
+            mots = [m for m in a["cle"].split() if len(m) >= 4]
+            out[f"a{a['id']}"] = {"nom": a["nom"], "photo": a.get("photo") or "", "couleurs": COULEURS_ARTISTES[i],
+                                  "cles": list(dict.fromkeys([a["cle"]] + mots)), "num": str(i + 1)}
+    return out
+
+
+def course_action(e: dict, a: str, pays=None, artistes=None) -> None:
+    c = e.get("course") or {}
+    if a in ("demarre", "prepare"):
+        e["rush"] = {**(e.get("rush") or {}), "on": False}   # un seul jeu à la fois
+        arts = _artistes_course(artistes or [])
         choisis = [p for p in (pays or []) if p in PAYS_NOMS][:4]
-        e["course"] = None
-        course_demarre(e, pays=choisis if len(choisis) >= 2 else None)
-    elif a == "suivante" and e.get("course"):
-        course_demarre(e)
+        e["course"] = {"victoires": c.get("victoires") or {}, "manche": int(c.get("manche") or 0), "k": c.get("k", -1)} if c else None
+        if len(arts) >= 2:
+            course_demarre(e, artistes=arts)
+        else:
+            course_demarre(e, pays=choisis if len(choisis) >= 2 else None)
+    elif a == "lance" and c.get("on") and c.get("attente"):
+        c["t"], c["attente"] = _maintenant() + COURSE_DEPART * 1000, False
+    elif a == "suivante" and c.get("on"):
+        # mêmes artistes (revanche) ; en mode pays : le groupe suivant. Toujours en attente du départ.
+        course_demarre(e, artistes=c.get("artistes") or None)
     elif a == "arrete":
-        e["course"] = {**(e.get("course") or {}), "on": False}
+        e["course"] = {**c, "on": False}
 
 
-def course_demarre(e: dict, pays=None) -> None:
+def course_demarre(e: dict, pays=None, artistes: dict | None = None) -> None:
     c = e.get("course") or {}
     now = _maintenant()
-    k = int(c.get("k", -1)) + (0 if pays else 1)
-    pays = pays or COURSE_GROUPES[k % len(COURSE_GROUPES)]
-    e["course"] = {"on": True, "k": k, "manche": int(c.get("manche") or 0) + 1, "pays": pays, "noms": {p: PAYS_NOMS.get(p, p) for p in pays},
-                   "t": now + COURSE_DEPART * 1000, "vitesse": COURSE_VITESSE, "bonus": {p: 0.0 for p in pays},
+    if artistes:
+        k = int(c.get("k", -1))
+        pays = list(artistes)
+        noms = {p: x["nom"] for p, x in artistes.items()}
+    else:
+        k = int(c.get("k", -1)) + (0 if pays else 1)
+        pays = pays or COURSE_GROUPES[k % len(COURSE_GROUPES)]
+        noms = {p: PAYS_NOMS.get(p, p) for p in pays}
+    e["course"] = {"on": True, "k": k, "manche": int(c.get("manche") or 0) + 1, "pays": pays, "noms": noms,
+                   "artistes": artistes or None, "attente": True,
+                   "t": now + COURSE_ATTENTE, "vitesse": COURSE_VITESSE, "bonus": {p: 0.0 for p in pays},
                    "derniers": {p: [] for p in pays}, "phase": "course", "gagnant": None, "boost": None, "choc": None, "aide": None,
                    "victoires": c.get("victoires") or {}, "coureurs": c.get("coureurs") or {}, "joueurs": {}, "vu": {}}
 
@@ -1003,7 +1059,7 @@ def course_commentaire(e: dict, user: str, nom: str, texte: str, t: str) -> bool
         return False
     if _insulte(texte, True) or _insulte(nom):
         return True   # ni compté, ni affiché
-    code = _pays_course(texte, t, c.get("pays") or [])
+    code = _artiste_course(c, t) if c.get("artistes") else _pays_course(texte, t, c.get("pays") or [])
     if not code:
         return False
     now = _maintenant()
@@ -1098,5 +1154,4 @@ def course_tick(e: dict) -> None:
     if c["phase"] == "course":   # la première voiture à franchir la ligne (à vitesse égale : le plus gros bonus)
         now = _maintenant()
         _course_fin(e, max(c["pays"], key=lambda p: (course_pos(c, p, now), float(c["bonus"].get(p) or 0))))
-    else:
-        course_demarre(e)
+    # 27/11/2026 : plus de manche suivante automatique : l'écran de victoire reste, la régie prépare puis lance

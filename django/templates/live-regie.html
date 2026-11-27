@@ -128,7 +128,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--doux);font-size:12px;
   <div class="pastille horsantenne" id="antenne" title="Démarrer ou arrêter le chrono du live"><i></i><span>HORS ANTENNE</span></div>
   <div class="pastille connecte" id="connexion"><i></i><span>Connexion…</span></div>
   <div class="esp"></div>
-  <button id="repetBtn" title="S'entraîner sur un écran de test : rien ne part à l'antenne">Mode répétition</button><button id="piloteBtn" title="Le programme tourne tout seul : un jeu, un son, un vote… toutes les 4 min 30">Pilote auto</button><button id="naissBtn" title="Le son de ta naissance : un mois, un hit du monde, de France ou d'Afrique de l'Ouest, en boucle ; le chat écrit son mois">Naissance</button><button id="courseBtn" title="Notre jeu : 4 pays par manche, le chat écrit son pays pour faire avancer son cauri ; rose = turbo">Course des Cauris</button><button id="courseSuiv" title="Passer à la manche suivante (4 autres pays)" style="display:none">Manche suivante</button><select id="rushType" title="Cauri Rush : le genre de duel" style="padding:8px;border-radius:10px"><option value="classement">Rush : duels du classement</option><option value="pays">Rush : pays contre pays</option><option value="sujets">Rush : sujets</option></select><button id="rushBtn" title="CAURI RUSH : 2 ou 3 équipes ; le chat écrit 1, 2 ou 3 pour choisir, les j'aime poussent son équipe ; sprint final ×2 les 20 dernières secondes">Cauri Rush</button><button id="rushSuiv" title="Un autre duel (jamais deux fois le même)" style="display:none">Duel suivant</button><button id="rushRev" title="Les mêmes équipes, une nouvelle manche" style="display:none">Revanche</button><button id="platineBtn" title="Le son passe sans clip : pochette et vinyle (évite le lag et le « contenu reproduit »)">Platine</button>
+  <button id="repetBtn" title="S'entraîner sur un écran de test : rien ne part à l'antenne">Mode répétition</button><button id="piloteBtn" title="Le programme tourne tout seul : un jeu, un son, un vote… toutes les 4 min 30">Pilote auto</button><button id="naissBtn" title="Le son de ta naissance : un mois, un hit du monde, de France ou d'Afrique de l'Ouest, en boucle ; le chat écrit son mois">Naissance</button><select id="courseQui" title="Qui court ? Une rivalité d'artistes, les pays, ou tes propres artistes" style="padding:8px;border-radius:10px"></select><input id="courseLibre" placeholder="Artistes : Didi B / Himra" title="Tes artistes, séparés par /  (2 à 4)" style="display:none;padding:8px;border-radius:10px;width:200px"><button id="courseBtn" title="Prépare la course : la grille s'affiche, le public choisit son pilote (nom ou numéro). Elle ne part que quand tu lances.">Préparer la course</button><button id="courseLance" class="v" title="Donne le départ : 3, 2, 1, partez !" style="display:none">▶ LANCER LE DÉPART</button><button id="courseSuiv" title="Mêmes pilotes, nouvelle manche (en attente du départ)" style="display:none">Revanche</button><select id="rushType" title="Cauri Rush : le genre de duel" style="padding:8px;border-radius:10px"><option value="classement">Rush : duels du classement</option><option value="pays">Rush : pays contre pays</option><option value="sujets">Rush : sujets</option></select><button id="rushBtn" title="CAURI RUSH : 2 ou 3 équipes ; le chat écrit 1, 2 ou 3 pour choisir, les j'aime poussent son équipe ; sprint final ×2 les 20 dernières secondes">Cauri Rush</button><button id="rushSuiv" title="Un autre duel (jamais deux fois le même)" style="display:none">Duel suivant</button><button id="rushRev" title="Les mêmes équipes, une nouvelle manche" style="display:none">Revanche</button><button id="platineBtn" title="Le son passe sans clip : pochette et vinyle (évite le lag et le « contenu reproduit »)">Platine</button>
   <button id="copier" title="Le lien de l'écran à ajouter dans LIVE Studio">Lien de l'écran</button>
   <button id="aide">? Aide</button>
   <a href="" id="modeDj" class="petit" style="text-decoration:none">Mode DJ</a>
@@ -507,7 +507,9 @@ function calques() {
   calques.actions = c.map((k) => k.x);
 }
 $("calques").onclick = (e) => { const b = e.target.closest("[data-x]"); if (b) calques.actions[+b.dataset.x](); };
-$("toutCouper").onclick = () => set({ media: null, fiche: false, flou: false, bandeau: "", minuteur: 0, fx: null, scene: "camera", jeu: null });
+// 27/11/2026 : « le bouton couper tout ne fonctionne pas sur le mode course » : il arrête aussi la course, Cauri Rush,
+// le pilote auto et la naissance (avant, seule la scène changeait et la course continuait derrière)
+$("toutCouper").onclick = () => poste({ course: "arrete", rush: "arrete", set: { media: null, fiche: false, flou: false, bandeau: "", minuteur: 0, fx: null, scene: "camera", jeu: null, pilote: false, naissanceOn: false, naissance: null } });
 
 // ===================================================== musique & clips : classement, puis hors classement (Deezer, YouTube)
 function construitPistes() {
@@ -711,8 +713,12 @@ $("nsAjout").onclick = () => { const t = $("nsMois").value.toLowerCase().normali
 $("naissBtn").onclick = () => { const on = !E.naissanceOn; set({ naissanceOn: on, ...(on ? {} : { naissance: null }) }); clearTimeout(naissT);
   if (on) naissT = setTimeout(etapeNaissance, 800); };
 function majPilote() {
-  { const co = !!(E.course && E.course.on); $("courseBtn").classList.toggle("on", co); $("courseSuiv").style.display = co ? "" : "none";
-    $("courseBtn").textContent = co ? "Course : manche " + E.course.manche + " (" + (E.course.pays || []).join(" · ").toUpperCase() + ")" : "Course des Cauris"; }
+  { const C = E.course, co = !!(C && C.on), qui = co ? (C.pays || []).map((p) => (C.noms || {})[p] || p).join(" / ") : "";
+    $("courseBtn").classList.toggle("on", co);
+    $("courseBtn").textContent = co ? `■ Arrêter la course (manche ${C.manche} : ${qui})` : "Préparer la course";
+    $("courseLance").style.display = co && C.attente && C.phase === "course" ? "" : "none";
+    $("courseSuiv").style.display = co && C.phase === "fin" ? "" : "none";
+    $("courseQui").disabled = co; $("courseLibre").disabled = co; }
   { const R = E.rush, ro = !!(R && R.on); $("rushBtn").classList.toggle("on", ro); $("rushSuiv").style.display = ro ? "" : "none"; $("rushRev").style.display = ro ? "" : "none";
     const ph = ro ? ({ course: "en cours", fin: "victoire", attente: "en attente de toi" }[R.phase] || "") : "";
     $("rushBtn").textContent = ro ? `Rush ${R.manche} : ${(R.equipes || []).map((q) => q.nom).join(" / ")} · ${ph}` : "Cauri Rush";
@@ -720,9 +726,26 @@ function majPilote() {
   $("naissBtn").classList.toggle("on", !!E.naissanceOn); $("naissBtn").textContent = E.naissanceOn ? "Naissance : ON" : "Naissance"; $("piloteBtn").classList.toggle("on", !!E.pilote); $("piloteBtn").textContent = E.pilote ? "Pilote auto : ON" : "Pilote auto";
   $("platineBtn").classList.toggle("on", E.platine !== false); $("platineBtn").textContent = E.platine !== false ? "Platine : ON" : "Platine : OFF"; }
 // 16/11 : LA COURSE DES CAURIS : on coupe la musique et les autres programmes, le serveur enchaîne les manches tout seul
-$("courseBtn").onclick = () => { const on = !(E.course && E.course.on);
-  if (on) poste({ course: "demarre", set: { media: null, naissanceOn: false, naissance: null, pilote: false, jeu: null, scene: "camera", fiche: false, bandeau: "" } });
-  else poste({ course: "arrete" }); };
+// 27/11/2026 : voitures ARTISTES (rivalités) ou pays ; « Préparer » affiche la grille, « Lancer » donne le départ
+const RIVALITES = [["Paki Chenzu", "Joachin Migos"], ["Didi B", "Himra"], ["Wizkid", "Burna Boy"], ["Black Sherif", "Sarkodie"], ["Santrinos Raphaël", "Sethlo"],
+  ["Didi B", "Himra", "Suspect 95"], ["Angélique Kidjo", "First King"], ["Shatta Wale", "Stonebwoy"]];
+const normA = (s) => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+const trouveArtiste = (nom) => { const n = normA(nom); const L = (D && D.artistes) || []; return L.find((a) => normA(a.nom) === n) || L.find((a) => normA(a.nom).includes(n) && n.length >= 3); };
+function remplitCourseQui() {
+  const sel = $("courseQui"); if (!sel || sel.dataset.ok || !D) return; sel.dataset.ok = 1;
+  const opts = RIVALITES.filter((r) => r.every(trouveArtiste)).map((r) => `<option value="${esc(r.join("|"))}">${esc(r.join(" contre "))}</option>`);
+  sel.innerHTML = opts.join("") + `<option value="libre">Mes artistes (je tape les noms)…</option><option value="pays">Les pays (4 par manche)</option>`;
+  sel.onchange = () => { $("courseLibre").style.display = sel.value === "libre" ? "" : "none"; };
+}
+setInterval(remplitCourseQui, 1000);
+$("courseBtn").onclick = () => {
+  if (E.course && E.course.on) return poste({ course: "arrete" });
+  const v = $("courseQui").value, noms = v === "libre" ? $("courseLibre").value.split("/") : v === "pays" ? [] : v.split("|");
+  const ids = noms.map(trouveArtiste).filter(Boolean).map((a) => a.id);
+  if (v !== "pays" && ids.length < 2) return notif("Choisis au moins 2 artistes suivis (ex. : Didi B / Himra)");
+  poste({ course: "prepare", artistes: ids, set: { media: null, naissanceOn: false, naissance: null, pilote: false, jeu: null, scene: "camera", fiche: false, bandeau: "" } });
+};
+$("courseLance").onclick = () => poste({ course: "lance" });
 $("courseSuiv").onclick = () => poste({ course: "suivante" });
 // 27/11/2026 : CAURI RUSH : on coupe la musique et les autres programmes ; la régie enchaîne les duels (suivant, revanche)
 $("rushBtn").onclick = () => { const on = !(E.rush && E.rush.on);

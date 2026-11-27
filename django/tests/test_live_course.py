@@ -7,7 +7,8 @@ from core import live
 def _etat(depart_passe=True):
     e = {k: (v.copy() if isinstance(v, (dict, list)) else v) for k, v in live.ETAT_DEFAUT.items()}
     live.course_action(e, "demarre")
-    if depart_passe:   # on saute le compte à rebours
+    if depart_passe:   # la régie a lancé (27/11/2026) et on saute le compte à rebours
+        live.course_action(e, "lance")
         e["course"]["t"] = int(time.time() * 1000)
     return e
 
@@ -95,7 +96,10 @@ def test_arrivee_a_vitesse_egale_puis_manche_suivante():
     assert e["course"]["gagnant"] == "cm"
     e["course"]["tFin"] = int(time.time() * 1000) - (live.COURSE_PAUSE + 1) * 1000
     live.course_tick(e)
-    assert e["course"]["manche"] == 2 and e["course"]["pays"] == live.COURSE_GROUPES[1] and e["course"]["victoires"] == {"cm": 1}
+    assert e["course"]["manche"] == 1 and e["course"]["phase"] == "fin"   # 27/11/2026 : plus de manche automatique
+    live.course_action(e, "suivante")   # la régie prépare la manche suivante, qui attend le départ
+    c = e["course"]
+    assert c["manche"] == 2 and c["pays"] == live.COURSE_GROUPES[1] and c["victoires"] == {"cm": 1} and c["attente"]
 
 
 def test_etat_public_ne_montre_pas_les_joueurs():

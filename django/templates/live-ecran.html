@@ -977,7 +977,7 @@ function spriteVoiture(code) {
   vitre(70, 104, 30, 36); vitre(160, 180, 34, 30);
   g.fillStyle = c1; g.beginPath(); g.roundRect(X - 34, 104, 68, 56, 10); g.fill(); g.save(); g.beginPath(); g.roundRect(X - 34, 104, 68, 56, 10); g.clip();
   g.fillStyle = c3; g.fillRect(X - 17, 100, 34, 64); g.fillStyle = c2; g.fillRect(X - 12, 100, 24, 64); g.restore();
-  g.fillStyle = "rgba(255,255,255,.92)"; g.beginPath(); g.arc(X, 132, 17, 0, 6.283); g.fill(); g.fillStyle = "#111"; g.font = "900 15px Montserrat,Arial"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(CODE3[code] || code.toUpperCase(), X, 133);
+  g.fillStyle = "rgba(255,255,255,.92)"; g.beginPath(); g.arc(X, 132, 17, 0, 6.283); g.fill(); g.fillStyle = "#111"; g.font = "900 15px Montserrat,Arial"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText((artisteC(code) || {}).num || CODE3[code] || code.toUpperCase(), X, 133);
   g.fillStyle = "#fff8d0"; g.shadowColor = "#fff3a0"; g.shadowBlur = 10; [[X - 24, 26], [X + 24, 26]].forEach(([x, y]) => { g.beginPath(); g.ellipse(x, y, 8, 4, 0, 0, 6.283); g.fill(); });
   g.shadowBlur = 0; g.fillStyle = "#c4001c"; [[X - 30, 206], [X + 30, 206]].forEach(([x, y]) => { g.beginPath(); g.roundRect(x - 9, y - 3, 18, 6, 2); g.fill(); });
   g.fillStyle = "#151515"; g.beginPath(); g.roundRect(X - 46, 214, 92, 10, 3); g.fill(); g.fillStyle = c1; g.fillRect(X - 44, 216, 88, 5);
@@ -1020,9 +1020,16 @@ function spritePanneau() {
   g.fillStyle = "#F5C14B"; g.fillRect(0, 0, 50, 6); g.fillRect(0, 282, 50, 6);
   return (CR.sprites.pan = cv);
 }
+// 27/11/2026 : voitures ARTISTES : leur photo remplace le drapeau (recadrée, jamais déformée)
+const artisteC = (code) => ((E.course || {}).artistes || {})[code];
+const fondDrap = (p) => { const a = artisteC(p); return a && a.photo ? `url('${esc(a.photo)}') center/cover` : `url('/assets/img/flags/${p}.svg') center/cover,${bandesDrap(p)}`; };
 function dessineDrapeau(g, code, x, y, w, h) {
-  const im = CR.img["f" + code] || chargeImg("f" + code, "/assets/img/flags/" + code + ".svg");
-  if (im.complete && im.naturalWidth) { g.drawImage(im, x, y, w, h); return; }
+  const art = artisteC(code);
+  const im = CR.img["f" + code] || chargeImg("f" + code, art && art.photo ? art.photo : "/assets/img/flags/" + code + ".svg");
+  if (im.complete && im.naturalWidth) {
+    if (art) { const r = w / h, iw = im.naturalWidth, ih = im.naturalHeight, sw = Math.min(iw, ih * r), sh = sw / r;
+      g.drawImage(im, (iw - sw) / 2, Math.max(0, (ih - sh) * .3), sw, sh, x, y, w, h); return; }
+    g.drawImage(im, x, y, w, h); return; }
   const c = COUL_PAYS[code] || ["#888", "#ccc", "#555"];
   c.forEach((k, i) => { g.fillStyle = k; DRAP_HORIZ.has(code) ? g.fillRect(x, y + i * h / 3, w, h / 3 + 1) : g.fillRect(x + i * w / 3, y, w / 3 + 1, h); });
 }
@@ -1216,7 +1223,8 @@ function boucleCourse() {
   // compte à rebours
   const reste = (c.t - (now + CR.off)) / 1000;
   const cd = $("crDecompte");
-  if (c.phase === "course" && reste > -1) { const n = Math.ceil(reste); cd.style.display = "flex"; cd.textContent = reste > 0 ? n : "PARTEZ !"; cd.className = reste > 0 ? "n" + n : "go";
+  if (c.attente && c.phase === "course") { cd.style.display = "flex"; cd.textContent = "PRÊTS ?"; cd.className = "go"; }   // la régie n'a pas encore lancé
+  else if (c.phase === "course" && reste > -1) { const n = Math.ceil(reste); cd.style.display = "flex"; cd.textContent = reste > 0 ? n : "PARTEZ !"; cd.className = reste > 0 ? "n" + n : "go";
     if (reste > 0 && CR.departVu !== "son") { CR.departVu = "son"; sonC("decompte", .9); } }
   else cd.style.display = "none";
 }
@@ -1226,6 +1234,8 @@ function course() {
   if (!on) { CR.cle = ""; ambianceCourse(false); return; }
   ambianceCourse(c.phase === "course");
   if (c.srv) CR.off = c.srv - Date.now();
+  // voitures ARTISTES (27/11/2026) : leurs couleurs et leur nom court entrent dans les tables de la course
+  Object.entries(c.artistes || {}).forEach(([p, x]) => { COUL_PAYS[p] = x.couleurs; CODE3[p] = (x.nom || p).toUpperCase().slice(0, 12); });
   if (!CR.g) { V.innerHTML = `<canvas id="crC" width="540" height="960"></canvas><div class="vignette"></div>
       <div class="haut"><div class="t1">LA COURSE DES CAURIS</div><div class="t2" id="crManche"></div></div>
       <div class="vict" id="crVict"></div><div id="crDecompte"></div><div class="evt" id="crEvt"></div>
@@ -1236,12 +1246,17 @@ function course() {
   const cle = c.manche + "|" + c.pays.join(",");
   if (cle !== CR.cle) { CR.cle = cle; CR.corps = choisitCorps(c.pays); CR.aff = {}; CR.vusNoms = {}; CR.noms = []; if (CR.dernLigne !== c.manche) CR.dernLigne = 0; CR.chocs = {}; CR.boosts = {}; CR.departVu = 0; CR.phaseVue = 0; CR.tete = null; $("crManche").textContent = "MANCHE " + c.manche + " · " + c.pays.map((p) => (c.noms || {})[p] || p).join(" · "); }
   const vic = Object.entries(c.victoires || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
-  $("crVict").innerHTML = vic.map(([p, n]) => `<span><i style="background:url('/assets/img/flags/${p}.svg') center/cover,${bandesDrap(p)}"></i>${n} 🏆</span>`).join("");
+  $("crVict").innerHTML = vic.map(([p, n]) => `<span><i style="background:${fondDrap(p)}"></i>${n} 🏆</span>`).join("");
+  const basC = V.querySelector(".bas b");
+  if (basC) basC.textContent = c.artistes ? "ÉCRIS LE NOM DE TON ARTISTE" : "ÉCRIS TON PAYS POUR ACCÉLÉRER";
+  const basL = V.querySelector(".bas span.l");
+  if (basL) basL.textContent = c.artistes ? "❤ like = boost ton artiste · ou écris " + Object.values(c.artistes).map((x) => x.num).join(", ") : "❤ like = boost ton pays";
   // nouveaux noms qui poussent (les 2 derniers de chaque pays) → « +Nom » au-dessus de la voiture
   const vus = CR.vusNoms || (CR.vusNoms = {});
   c.pays.forEach((p) => { const d = (c.derniers || {})[p] || [], cleN = d.join("|"); if (vus[p] !== undefined && vus[p] !== cleN && d[0]) (CR.noms = CR.noms || []).push({ p, nom: d[0], t: Date.now(), dx: (Math.random() - .5) * 60 }); vus[p] = cleN; });
   if (!CR.annonceT) annonceSuivante();
-  if (c.manche !== CR.mancheAnn) { CR.mancheAnn = c.manche; annonce(c.manche === 1 ? "1<sup style='font-size:.5em'>RE</sup> MANCHE" : "MANCHE " + c.manche, "C'EST PARTI !"); }
+  if (c.manche !== CR.mancheAnn) { CR.mancheAnn = c.manche; annonce(c.manche === 1 ? "1<sup style='font-size:.5em'>RE</sup> MANCHE" : "MANCHE " + c.manche, c.attente ? (c.artistes ? "CHOISIS TON ARTISTE" : "CHOISIS TON PAYS") : "C'EST PARTI !"); }
+  if (!c.attente && CR.lanceVu !== c.manche && c.phase === "course") { CR.lanceVu = c.manche; if (CR.mancheAnn === c.manche && CR.departVu !== "son") annonce("C'EST PARTI !", "TAPE POUR POUSSER"); }
   const b = c.boost; if (b && b.t !== CR.boostT) { CR.boostT = b.t; CR.boosts[b.code] = Date.now(); evtCourse(`🌹 ${esc(b.nom)} : BOOST ${esc(CODE3[b.code] || b.code)}`, "boost"); sonC("boost", .8); sonC("klaxon", .6); }
   const ch = c.choc; if (ch && ch.t !== CR.chocT) { CR.chocT = ch.t; const lA = c.pays.indexOf(ch.de), lB = c.pays.indexOf(ch.vers);
     CR.chocs[ch.vers] = { t: Date.now() }; CR.chocs["de" + ch.de] = { t: Date.now(), sens: Math.sign(lB - lA) || 1 };
@@ -1250,7 +1265,7 @@ function course() {
     evtCourse(`💥 ${esc(ch.nom)} bouscule ${esc((c.noms || {})[ch.vers] || ch.vers)} !`, "choc"); sonC("choc", .95); }
   V.classList.toggle("fin", c.phase === "fin");
   if (c.phase === "fin" && c.tFin !== CR.finT) { CR.finT = c.tFin; const gg = c.gagnant;
-    $("crFin").innerHTML = gg ? `<i class="dr" style="background:url('/assets/img/flags/${gg}.svg') center/cover,${bandesDrap(gg)}"></i><div class="g">${esc(((c.noms || {})[gg] || gg).toUpperCase())}</div><div class="g2">GAGNE LA MANCHE</div>${c.meilleur ? `<div class="s">Meilleur pilote : ${esc(c.meilleur)}</div>` : ""}<div class="s" id="crSuite"></div>` : "";
+    $("crFin").innerHTML = gg ? `<i class="dr" style="background:${fondDrap(gg)}"></i><div class="g">${esc(((c.noms || {})[gg] || gg).toUpperCase())}</div><div class="g2">GAGNE LA MANCHE</div>${c.meilleur ? `<div class="s">Meilleur pilote : ${esc(c.meilleur)}</div>` : ""}<div class="s" id="crSuite"></div>` : "";
     if (gg) { sonC("fanfare", .85); sonC("victoire", .7, 7000); } }
   if (!CR.anim) boucleCourse();
 }
@@ -1285,12 +1300,12 @@ function ambianceCourse(roule) {
 function finDePhase(c, ph, classement, tete) {
   const el = $("crPhase"), envs = envsManche(c), v = c.vitesse || .5;
   el.innerHTML = `<div class="ph1">FIN DE LA PHASE ${ph}</div><div class="ph2">${esc(ENVS[envs[ph]].va)}</div>` + classement.map((p, i) =>
-    `<div class="lg ${i ? "" : "p1"}"><b>${i + 1}</b><i style="background:url('/assets/img/flags/${p}.svg') center/cover,${bandesDrap(p)}"></i><span>${esc((c.noms || {})[p] || p)}</span><em>${i ? "+" + ((tete - CR.aff[p]) / v).toFixed(1).replace(".", ",") + " s" : "EN TÊTE"}</em></div>`).join("");
+    `<div class="lg ${i ? "" : "p1"}"><b>${i + 1}</b><i style="background:${fondDrap(p)}"></i><span>${esc((c.noms || {})[p] || p)}</span><em>${i ? "+" + ((tete - CR.aff[p]) / v).toFixed(1).replace(".", ",") + " s" : "EN TÊTE"}</em></div>`).join("");
   el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); clearTimeout(finDePhase.t); finDePhase.t = setTimeout(() => el.classList.remove("on"), 5500);
   sonC("foule-cri", .7, 4500); sonC("passage", .6);
 }
 function evtCourse(html, type) { const el = $("crEvt"); el.innerHTML = html; el.className = "evt on " + type; clearTimeout(evtCourse.t); evtCourse.t = setTimeout(() => (el.className = "evt"), 3200); }
-setInterval(() => { const c = E.course, s = $("crSuite"); if (c && c.on && c.phase === "fin" && s) s.textContent = "Prochaine manche dans " + Math.max(0, Math.ceil((c.tFin + 14000 - Date.now() - CR.off) / 1000)) + " s"; }, 250);
+setInterval(() => { const c = E.course, s = $("crSuite"); if (c && c.on && c.phase === "fin" && s) s.textContent = "Prochaine manche dans un instant…"; }, 250);   // 27/11/2026 : plus de manche automatique
 
 let derniereDanse = 0;
 // ---------------------------------------------------------------- CAURI RUSH (27/11/2026) : 2 ou 3 couloirs, on tape pour pousser
