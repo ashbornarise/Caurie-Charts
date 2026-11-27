@@ -461,7 +461,19 @@ def schedule(post: dict, due_at: datetime | None = None, force: bool = False, ht
         # La vidéo le lendemain à midi : le soir reste au carrousel du jour et au magazine du dimanche
         jobs.append(("-reel", True, due_at + timedelta(hours=18) if due_at else None))
     permis = reseaux(post)
-    chans = [ch for ch in channels(http) if ch["service"] in MAX_IMAGES and (permis is None or ch["service"] in permis)]
+    try:
+        relies = channels(http)
+    except PlatformException as exc:
+        # 27/11/2026 : Buffer en limite de requêtes (« Too many requests ») bloquait tout le Studio, alors qu'Instagram
+        # et Facebook partent en direct par l'API Meta. Sans Buffer : Meta seul, TikTok attend que Buffer réponde.
+        from core.services import meta
+        if not meta.actif():
+            raise
+        relies = [{"id": "meta-instagram", "service": "instagram", "name": "Instagram (Meta direct)"},
+                  {"id": "meta-facebook", "service": "facebook", "name": "Facebook (Meta direct)"}]
+        if permis is None or "tiktok" in permis:
+            done.append(f"tiktok : non envoyé, {exc}")
+    chans = [ch for ch in relies if ch["service"] in MAX_IMAGES and (permis is None or ch["service"] in permis)]
 
     def todo(js):
         return [(ch, s, r, w) for ch in chans for s, r, w in js
