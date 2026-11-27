@@ -1036,8 +1036,21 @@ function dessineDrapeau(g, code, x, y, w, h) {
 
 // ---- le monde : textures qui défilent, bas-côtés, décor déterministe (le même à chaque passage)
 function motif(nom) { const i = CR.img[nom]; if (!i || !i.complete || !i.naturalWidth) return null; return CR["m" + nom] || (CR["m" + nom] = CR.g.createPattern(i, "repeat")); }
-function bande(nom, x, w, decal, secours) { const g = CR.g, m = motif(nom); g.save(); g.beginPath(); g.rect(x, 0, w, CR.H); g.clip();
-  if (m) { g.translate(0, decal % 512); g.fillStyle = m; g.fillRect(x, -512, w, CR.H + 1024); } else { g.fillStyle = secours; g.fillRect(x, 0, w, CR.H); } g.restore(); }
+// 27/11/2026 : la texture remplie motif par motif à CHAQUE image coûtait ~60 ms avec la carte graphique (127 ms l'image,
+// « ça rame ») : la bande est maintenant dessinée UNE fois dans un canvas à part, puis seulement glissée (drawImage).
+CR.bandes = {};
+function bande(nom, x, w, decal, secours) {
+  const g = CR.g, i = CR.img[nom];
+  if (!i || !i.complete || !i.naturalWidth) { g.fillStyle = secours; g.fillRect(x, 0, w, CR.H); return; }
+  const cle = nom + "|" + Math.round(x) + "|" + Math.round(w);
+  let s = CR.bandes[cle];
+  if (!s) {
+    s = document.createElement("canvas"); s.width = Math.max(1, Math.round(w)); s.height = CR.H + 512;
+    const sg = s.getContext("2d"); sg.translate(-x, 0); sg.fillStyle = sg.createPattern(i, "repeat"); sg.fillRect(x, 0, w, CR.H + 512);
+    CR.bandes[cle] = s;
+  }
+  g.drawImage(s, x, (((decal % 512) + 512) % 512) - 512);
+}
 // ---- environnements (17/11) : chaque manche traverse 3 décors, un par phase (savane, désert, neige, ville la nuit, plage)
 const ENVS = {
   savane: { nom: "SAVANE", va: "Direction la savane !", cote: "herbe", bord: "laterite", secCote: "#56702f", secBord: "#8f4a2c" },
