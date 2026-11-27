@@ -58,28 +58,40 @@ async function envoie() {
 }
 setInterval(envoie, 2000);
 
-// ---------------- connexion au live (et reconnexion tant que le connecteur tourne)
+// ---------------- les événements, d'où qu'ils viennent (TikTok en direct ou TikFinity) : mêmes règles
+// Un événement peut avoir le pseudo dans d.user (tiktok-live-connector 2.x) ou à plat (TikFinity : uniqueId, nickname…).
+const qui = d => d.user || d;
+let premierCadeau = true;
+const EV = {
+  chat: d => p.liste.push({ user: pseudo(qui(d)), nom: nom(qui(d)), texte: String(d.content ?? d.comment ?? '').slice(0, 200) }),
+  like: d => { const n = Number(d.count ?? d.likeCount) || 0; if (!n) return; p.likes += n; const u = pseudo(qui(d)); p.likesPar[u] = (p.likesPar[u] || 0) + n; },
+  gift: d => {
+    if (ESSAI && premierCadeau) { premierCadeau = false; log('1er cadeau (champs) :', Object.keys(d).join(','), JSON.stringify({ giftDetails: d.giftDetails && { giftType: d.giftDetails.giftType, giftName: d.giftDetails.giftName, diamondCount: d.giftDetails.diamondCount }, giftType: d.giftType, diamondCount: d.diamondCount, repeatCount: d.repeatCount, comboCount: d.comboCount, repeatEnd: d.repeatEnd })); }
+    const det = d.giftDetails || d.gift || {};
+    const type = det.giftType ?? det.type ?? d.giftType;
+    if (type === 1 && !d.repeatEnd) return;   // série en cours : on compte une seule fois, à la fin de la série
+    const n = Math.max(1, Number(d.repeatCount ?? d.comboCount) || 1);
+    const unite = Number(det.diamondCount ?? det.diamond_count ?? d.diamondCount ?? 1) || 1;
+    p.cadeaux.push({ user: pseudo(qui(d)), nom: nom(qui(d)), n, diamants: unite * n,
+      cadeau: String(det.giftName || det.name || d.giftName || 'cadeau').slice(0, 30) });
+  },
+  member: d => p.arrivees.push(nom(qui(d))),
+  follow: d => p.abonnes.push(nom(qui(d))),
+  roomUser: d => { const v = d.total ?? d.viewerCount; if (v != null) p.spectateurs = Number(v); },
+};
+
+// ---------------- source 1 : TikTok en direct (tiktok-live-connector), avec reconnexion tant que le connecteur tourne
 let conn = null, attente = 15;
 async function connecte() {
   // enableExtendedGiftInfo : NON (27/11/2026, la liste des cadeaux exige un abonnement Business chez Euler Stream et
   // bloquait toute la connexion) ; la valeur d'un cadeau vient de giftDetails.diamondCount
   conn = new TikTokLiveConnection(COMPTE, { processInitialData: false, enableExtendedGiftInfo: false, ...(conf.SIGN_API_KEY ? { signApiKey: conf.SIGN_API_KEY } : {}) });
-  conn.on(WebcastEvent.CHAT, d => p.liste.push({ user: pseudo(d.user), nom: nom(d.user), texte: String(d.content ?? d.comment ?? '').slice(0, 200) }));
-  conn.on(WebcastEvent.LIKE, d => { const n = Number(d.count ?? d.likeCount) || 0; if (!n) return; p.likes += n; const u = pseudo(d.user); p.likesPar[u] = (p.likesPar[u] || 0) + n; });
-  let premierCadeau = true;
-  conn.on(WebcastEvent.GIFT, d => {
-    if (ESSAI && premierCadeau) { premierCadeau = false; log('1er cadeau (champs) :', Object.keys(d).join(','), JSON.stringify({ giftDetails: d.giftDetails && { giftType: d.giftDetails.giftType, giftName: d.giftDetails.giftName, diamondCount: d.giftDetails.diamondCount }, repeatCount: d.repeatCount, comboCount: d.comboCount, repeatEnd: d.repeatEnd })); }
-    const det = d.giftDetails || d.gift || {};
-    const type = det.giftType ?? det.type;
-    if (type === 1 && !d.repeatEnd) return;   // série en cours : on compte une seule fois, à la fin de la série
-    const n = Math.max(1, Number(d.repeatCount ?? d.comboCount) || 1);
-    const unite = Number(det.diamondCount ?? det.diamond_count ?? 1) || 1;
-    p.cadeaux.push({ user: pseudo(d.user), nom: nom(d.user), n, diamants: unite * n,
-      cadeau: String(det.giftName || det.name || 'cadeau').slice(0, 30) });
-  });
-  conn.on(WebcastEvent.MEMBER, d => p.arrivees.push(nom(d.user)));
-  conn.on(WebcastEvent.FOLLOW, d => p.abonnes.push(nom(d.user)));
-  conn.on(WebcastEvent.ROOM_USER, d => { const v = d.total ?? d.viewerCount; if (v != null) p.spectateurs = Number(v); });
+  conn.on(WebcastEvent.CHAT, EV.chat);
+  conn.on(WebcastEvent.LIKE, EV.like);
+  conn.on(WebcastEvent.GIFT, EV.gift);
+  conn.on(WebcastEvent.MEMBER, EV.member);
+  conn.on(WebcastEvent.FOLLOW, EV.follow);
+  conn.on(WebcastEvent.ROOM_USER, EV.roomUser);
   conn.on(WebcastEvent.STREAM_END, () => { log('le live est terminé'); relance(); });
   conn.on(ControlEvent.DISCONNECTED, () => { log('déconnecté'); relance(); });
   conn.on(ControlEvent.ERROR, ({ info }) => log('erreur :', info || ''));
@@ -99,5 +111,23 @@ function relance() {
   minuteur = setTimeout(() => { minuteur = null; connecte(); }, attente * 1000);
   attente = Math.min(60, attente + 15);
 }
-log(`connecteur Cauri Charts : @${COMPTE} -> régie${MODE ? ' (MODE TEST)' : ''}`);
-connecte();
+
+// ---------------- source 2 : TikFinity (application Windows) qui est déjà branchée sur le live.
+// TikFinity diffuse les événements du live sur ce PC (ws://localhost:21213/) : on les lit et on les envoie à la régie.
+const TIKFINITY = process.argv.includes('--tikfinity') || conf.SOURCE === 'tikfinity';
+const TF_URL = conf.TIKFINITY_URL || 'ws://localhost:21213/';
+function tikfinity() {
+  const ws = new WebSocket(TF_URL);
+  ws.onopen = () => log(`branché sur TikFinity (${TF_URL})${MODE ? ' — MODE TEST' : ''}`);
+  ws.onmessage = m => {
+    let x; try { x = JSON.parse(m.data); } catch (e) { return; }
+    const nomEv = String(x.event || x.type || ''), d = x.data || x;
+    const f = EV[nomEv] || EV[{ viewerCount: 'roomUser' }[nomEv]];
+    if (f) { try { f(d); } catch (e) { log('événement TikFinity illisible :', nomEv); } }
+  };
+  ws.onclose = () => { log('TikFinity fermé ou pas encore lancé — nouvel essai dans 10 s'); setTimeout(tikfinity, 10000); };
+  ws.onerror = () => {};
+}
+
+log(`connecteur Cauri Charts : @${COMPTE} -> régie${MODE ? ' (MODE TEST)' : ''}${TIKFINITY ? ' — source : TikFinity' : ' — source : TikTok en direct'}`);
+if (TIKFINITY) tikfinity(); else connecte();
