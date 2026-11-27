@@ -39,3 +39,9 @@ __pycache__/
 
 # connecteur TikTok (outils/connecteur-tiktok)
 node_modules/
+
+# magazine : fichiers de travail
+outils/magazine/cache/
+outils/magazine/gen2.py
+outils/magazine/magazine.html
+outils/magazine/m*.png

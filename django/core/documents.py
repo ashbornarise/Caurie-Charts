@@ -2,81 +2,8 @@
 de recherche, les données structurées schema.org et le téléchargement. Fichiers dans public/documents (servis tels quels)."""
 from core.helpers import url
 
+# Les magazines sont fabriqués par outils/magazine/fabriquer.py : une fiche par numéro dans core/data/magazines.
 DOCUMENTS = [
-    {
-        "slug": "cauri-charts-magazine-n46",
-        "categorie": "Magazines",
-        "fichier": "cauri-charts-magazine-n46",
-        "date": "2026-11-14",
-        "pages": 36,
-        "titre": "Cauri Charts Magazine N°46",
-        "sous_titre": "Tous les classements officiels de la semaine du 9 au 12 novembre 2026",
-        "description": "Le premier Cauri Charts Magazine, avec Ayra Starr et ZAYN en couverture : le Top 20 Afrique de l'Ouest (N°1 : Heaven Baby d'Ayra Starr feat. ZAYN), les classements complets de 13 pays avec les N°1, les entrées et les mouvements, et les six classements par genre, plus trois pages pour comprendre comment les points sont comptés.",
-        "format": "PDF · A3 paysage · 36 pages",
-        "legendes": ['Couverture : Ayra Starr et ZAYN, Heaven Baby', 'Les N°1 de la semaine', "Ouverture : Afrique de l'Ouest (Ayra Starr)", "Top 20 Afrique de l'Ouest", 'Ouverture : Togo', 'Top Togo', 'Ouverture : Nigeria', 'Top Nigeria', "Ouverture : Côte d'Ivoire", "Top Côte d'Ivoire", 'Ouverture : Ghana', 'Top Ghana', 'Ouverture : Sénégal', 'Top Sénégal', 'Ouverture : Bénin', 'Top Bénin', 'Ouverture : Burkina Faso', 'Top Burkina Faso', 'Ouverture : Mali', 'Top Mali', 'Ouverture : Guinée', 'Top Guinée', 'Ouverture : Sierra Leone', 'Top Sierra Leone', 'Ouverture : Cap-Vert', 'Top Cap-Vert', 'Ouverture : Guinée-Bissau', 'Top Guinée-Bissau', 'Ouverture : Mauritanie', 'Top Mauritanie', 'Ouverture : par genre', 'Classements par genre', 'Comment on compte les points : un gâteau de 10 000 points', 'La part de chaque titre et la valeur de chaque place', 'Pourquoi le N°1 : Migbo (Remix) contre DESTIN', 'Comment on calcule et prochain numéro'],
-        "sections": [
-            [
-                "Top 20 Afrique de l'Ouest (les 10 premiers)",
-                "1. Heaven Baby (feat. ZAYN) (Ayra Starr), 2. Go Hard or Go Home (Chief Priest), 3. SLICK (Victony), 4. Rush (Ayra Starr), 5. Oh No (Rema), 6. Great Change (Nsesaeɛ Kɛseɛ) (Piesie Esther), 7. Djelykaba Bintou Feat. Viviane Chidid - (Djelykaba Bintou), 8. Dugi-dugi (AMADEUS), 9. Namm nama la (AMADEUS), 10. Raay (Momo Dieng)"
-            ],
-            [
-                "Top Togo",
-                "1. Migbo (Remix) (sethlo), 2. DESTIN (Joachin Migos), 3. Tout ira mieux (Faut pas m'appeler) (Paki Chenzu), 4. BELIEVE (Paki Chenzu), 5. M'gbabidjio (Santrinos Raphaël)"
-            ],
-            [
-                "Top Nigeria",
-                "1. Heaven Baby (feat. ZAYN) (Ayra Starr), 2. Gratitude (Asake), 3. BABA ft. Zlatan (HOTKEED), 4. Forgiveness (Asake), 5. Oh No (Rema)"
-            ],
-            [
-                "Top Côte d'Ivoire",
-                "1. TAPER CREER (feat. Gazo) (Himra), 2. ADIOS (Didi B), 3. C'EST PAS DE MA FAUTE (Himra), 4. PARTY (Didi B), 5. PLUS DE LOVE (Himra)"
-            ],
-            [
-                "Top Ghana",
-                "1. Faith (Kweku Smoke), 2. Bombele (Kweku Smoke), 3. Bra (Kweku Smoke), 4. Gen Z (Fameye), 5. Sorry I'm Different (Miracle LRE)"
-            ],
-            [
-                "Top Sénégal",
-                "1. Dugi-dugi (AMADEUS), 2. Namm nama la (AMADEUS), 3. Raay (Momo Dieng), 4. Nous 2 (feat. Wally B. Seck) (Viviane Chidid), 5. Naataango (AMADEUS)"
-            ],
-            [
-                "Top Bénin",
-                "1. Dans La Poussiere (Axel Merryl), 2. Chérie agonkè (First King), 3. Fité (VANO BABY), 4. Je suis béni (First King), 5. Bandit (VANO BABY)"
-            ],
-            [
-                "Top Burkina Faso",
-                "1. Velar (Babi Tape), 2. Vis ton Viim (AMZY), 3. Ya maam (AMZY), 4. Weedo (Floby), 5. Ouaga zeune (Floby)"
-            ],
-            [
-                "Top Mali",
-                "1. Dali (Seydou Chée), 2. IBN (Malakey), 3. I Ban Ban (Momo Choco), 4. Président (Yacou B OG), 5. Business classe (Seydou Chée)"
-            ],
-            [
-                "Top Guinée",
-                "1. Fidjou (SAIFOND), 2. IYE (SAIFOND), 3. LABADHO (SAIFOND), 4. Fulah Me Yes (Wandjan dimedi), 5. Djelykaba Bintou Feat. Viviane Chidid - (Djelykaba Bintou)"
-            ],
-            [
-                "Top Sierra Leone",
-                "1. Scatter (Bakitenno), 2. Crush (feat. JZyNO) (INCREDIBLE JJ), 3. GO (Drizilik), 4. Sabi Road (Drizilik), 5. No Games (Drizilik)"
-            ],
-            [
-                "Top Cap-Vert",
-                "1. ERRO & ACERTO (Loose jr), 2. Passada (Garry), 3. Vou Ser Teu (feat. Landrick) (Loony Johnson), 4. Kumpanhero (Dynamo), 5. Obrigado (Helio Batalha)"
-            ],
-            [
-                "Top Guinée-Bissau",
-                "1. Mistin (As One 1820), 2. MON CHÉRI [2026] (Yasmine), 3. Ley Dy Byda (Justino Delgado), 4. Chatice (As One 1820), 5. SORRISO DE LUZ DE SOL (Chito Kaharam)"
-            ],
-            [
-                "Top Mauritanie",
-                "1. Mbiida Yonaani (feat. Sidi Eleya) (Bab's OG), 2. Welema (Bab's OG), 3. Ko Ni'i (BRMX), 4. Somi Dani (feat. Sidi Eleya) (Bab's OG), 5. Hollam (feat. Ceepee) (BRMX)"
-            ],
-            [
-                "Classements par genre",
-                "Top Rap, Top Mbalax, Top Afrobeats, Top R&B, Top Gospel et Top Coupé-décalé & Zouglou, sur toute l'Afrique de l'Ouest."
-            ]
-        ]
-    },
     {
         "slug": "le-voyage-d-un-titre",
         "categorie": "Comprendre",
@@ -150,12 +77,35 @@ def date_fr(d: str) -> str:
     return f"{int(j)} {mois[int(m) - 1]} {a}"
 
 
+def _magazines() -> list:
+    """Les numéros fabriqués par outils/magazine/fabriquer.py (une fiche JSON par numéro), du plus récent au plus ancien."""
+    import json as _json
+    import os
+    dossier = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "magazines")
+    out = []
+    if os.path.isdir(dossier):
+        for f in os.listdir(dossier):
+            if f.endswith(".json"):
+                with open(os.path.join(dossier, f), encoding="utf-8") as fh:
+                    m = _json.load(fh)
+                PLUS.setdefault(m["slug"], m.pop("plus", {}))
+                m.pop("plus", None)
+                out.append(m)
+    return sorted(out, key=lambda m: m["date"], reverse=True)
+
+
+def _liste() -> list:
+    vus = {d["slug"] for d in DOCUMENTS}
+    nouveaux = [m for m in _magazines() if m["slug"] not in vus]
+    return nouveaux + DOCUMENTS
+
+
 def tous() -> list:
-    return [_complet(d) for d in DOCUMENTS]
+    return [_complet(d) for d in _liste()]
 
 
 def par_slug(slug: str) -> dict | None:
-    d = next((_complet(d) for d in DOCUMENTS if d["slug"] == slug), None)
+    d = next((_complet(d) for d in _liste() if d["slug"] == slug), None)
     return enrichi(d) if d else None
 
 
@@ -181,22 +131,7 @@ ICONES = {
     "horloge": '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     "couches": '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
 }
-PAYS_MAG = [("tg", "Togo", "Migbo (Remix) · Sethlo"), ("ng", "Nigeria", "Heaven Baby · Ayra Starr"), ("ci", "Côte d'Ivoire", "Taper Créer · Himra"),
-            ("gh", "Ghana", "Faith · Kweku Smoke"), ("sn", "Sénégal", "Dugi-dugi · Amadeus"), ("bj", "Bénin", "Dans la poussière · Axel Merryl"),
-            ("bf", "Burkina Faso", "Velar · Babi Tape"), ("ml", "Mali", "Dali · Seydou Chée"), ("gn", "Guinée", "Fidjou · Saifond"),
-            ("sl", "Sierra Leone", "Scatter · Bakitenno"), ("cv", "Cap-Vert", "Erro & Acerto · Loose jr"), ("gw", "Guinée-Bissau", "Mistin · As One 1820"),
-            ("mr", "Mauritanie", "Mbiida Yonaani · Bab's OG")]
 PLUS = {
-    "cauri-charts-magazine-n46": {
-        "taille": "15 Mo", "coupe": ("Cauri Charts", "Magazine N°46"), "badge": "Le magazine de la semaine", "accroche": ("N°1 Afrique de l'Ouest", "Heaven Baby · Ayra Starr"),
-        "tuiles": [("trophee", "Top 20", "Afrique de l'Ouest"), ("globe", "13 pays", "classés cette semaine"),
-                   ("note", "6 genres", "du rap au coupé-décalé"), ("calc", "3 pages", "pour comprendre les points")],
-        "chapitres": [("Couverture", "Ayra Starr & ZAYN", 1, 1, ""), ("Les N°1 de la semaine", "un titre par pays", 2, 2, ""),
-                      ("Top 20 Afrique de l'Ouest", "tous les pays ensemble", 3, 4, "")]
-                     + [(f"Top {nom}", n1, 5 + 2 * k, 6 + 2 * k, c) for k, (c, nom, n1) in enumerate(PAYS_MAG)]
-                     + [("Par genre", "rap, mbalax, afrobeats…", 31, 32, ""), ("Comment on compte les points", "le gâteau de 10 000 points", 33, 35, ""),
-                        ("Prochain numéro", "vendredi soir, 19 h GMT", 36, 36, "")],
-    },
     "le-voyage-d-un-titre": {
         "taille": "7 Mo", "coupe": ("Le voyage", "d'un titre"), "badge": "Guide illustré", "accroche": ("Le guide", "du clic au classement"),
         "tuiles": [("route", "9 étapes", "du clic au classement"), ("couches", "6 plateformes", "relevées"),
