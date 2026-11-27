@@ -265,7 +265,7 @@ async function charge(nomDeck, piste) {
     const octets = piste.fichier ? await piste.fichier.arrayBuffer() : await (await fetch(piste.url)).arrayBuffer();
     d.buffer = await ctx.decodeAudioData(octets); d.piste = piste; d.offset = 0; d.cues = [null, null, null, null]; d.peaks = pics(d.buffer);
     $("titre" + nomDeck).textContent = piste.titre; $("art" + nomDeck).textContent = piste.artiste || "Mes musiques";
-    const photo = piste.photo || "/assets/live/logo.png"; $("img" + nomDeck).src = photo; $("lab" + nomDeck).src = photo;
+    const photo = piste.photo || "{{ logo_live }}"; $("img" + nomDeck).src = photo; $("lab" + nomDeck).src = photo;
     rendDeck(d); rendListe(); dessineApercu(d);
   } catch (e) { $("titre" + nomDeck).textContent = "Impossible de lire ce fichier"; }
 }

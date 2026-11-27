@@ -877,8 +877,9 @@ def google_verification(request, token: str):
 
 def favicon(request):
     from django.http import FileResponse
-    resp = FileResponse(open(storage.REPO / "public" / "favicon.ico", "rb"), content_type="image/x-icon")
-    resp["Cache-Control"] = "public, max-age=604800"
+    from core import saison   # favicon de saison (bonnet de Noël du 27/11 au 06/01)
+    resp = FileResponse(open(saison.chemin(storage.REPO / "public", "favicon.ico"), "rb"), content_type="image/x-icon")
+    resp["Cache-Control"] = "public, max-age=86400"   # un jour (et non une semaine) : le logo de saison change à date fixe
     return resp
 
 

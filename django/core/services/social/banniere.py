@@ -80,8 +80,8 @@ def medaillon(c: Image.Image, cx: int, cy: int, r: int) -> None:
     dr = int(r * .62)
     disque = Image.new("RGBA", (dr, dr), (0, 0, 0, 0))
     ImageDraw.Draw(disque).ellipse((0, 0, dr - 1, dr - 1), fill=(122, 60, 245, 255))
-    lg = Image.open(RES / "marque" / "logo-blanc.png").convert("RGBA"); lg = lg.crop(lg.getbbox())
-    lg = lg.crop((0, 0, lg.height, lg.height)).resize((int(dr * .56), int(dr * .56)), Image.LANCZOS)
+    from core import saison   # monogramme de saison (bonnet de Noël du 27/11 au 06/01)
+    lg = saison.monogramme_blanc(RES / "marque").resize((int(dr * .56), int(dr * .56)), Image.LANCZOS)
     disque.paste(lg, ((dr - lg.width) // 2, (dr - lg.height) // 2), lg)
     base.alpha_composite(disque, (cx - dr // 2, cy - int(r * .62)))
     f = C.police("DMSerifDisplay-Regular.ttf", int(r * .24))
@@ -97,6 +97,11 @@ def medaillon(c: Image.Image, cx: int, cy: int, r: int) -> None:
 
 def _monogramme(taille: int) -> Image.Image:
     """Le monogramme seul (sans le mot « Cauri » qui suit : il faisait une tache blanche devant le C)."""
+    from core import saison
+    if saison.noel():   # le C coiffé du bonnet (27/11 au 06/01)
+        lg = saison.monogramme_blanc(RES / "marque"); lg = lg.crop(lg.getbbox())
+        k = taille / max(lg.size)
+        return lg.resize((max(1, int(lg.width * k)), max(1, int(lg.height * k))), Image.LANCZOS)
     lg = Image.open(RES / "marque" / "logo-blanc.png").convert("RGBA"); lg = lg.crop(lg.getbbox())
     a = lg.getchannel("A")
     fin = next((x for x in range(int(lg.height * .6), lg.width)

@@ -525,7 +525,7 @@ const dec = (s) => { const x = document.createElement("textarea"); x.innerHTML =
 function rendResultats() {
   const q = norm($("recherche").value);
   const loc = (q ? pistes.filter((p) => p.cle.includes(q)) : pistes).slice(0, q ? 30 : 12);
-  let h = `<div class="groupe">CLASSEMENT CAURI${q ? "" : " · quelques titres"}</div>` + (loc.map((p, i) => `<div class="res"><img src="${esc(p.photo || "/assets/live/logo.png")}" alt=""><div class="t"><b>${esc(p.artiste)}</b><small>${esc(p.titre)}${p.video ? " · clip" : ""}</small></div>
+  let h = `<div class="groupe">CLASSEMENT CAURI${q ? "" : " · quelques titres"}</div>` + (loc.map((p, i) => `<div class="res"><img src="${esc(p.photo || "{{ logo_live }}")}" alt=""><div class="t"><b>${esc(p.artiste)}</b><small>${esc(p.titre)}${p.video ? " · clip" : ""}</small></div>
       <span class="tag">Classé</span><button class="v" data-loc="${pistes.indexOf(p)}">▶</button><button data-fiche="${p.artisteId}">Fiche</button></div>`).join("") || `<div class="petit" style="padding:6px">Pas dans notre classement.</div>`);
   if (q.length >= 2) {
     h += `<div class="groupe">HORS CLASSEMENT</div>`;

@@ -36,11 +36,11 @@
     {% if env('BING_SITE_VERIFICATION') %}<meta name="msvalidate.01" content="{{ env('BING_SITE_VERIFICATION') }}">{% endif %}
     {% if meta.jsonld %}<script type="application/ld+json">{{ meta.jsonld }}</script>{% endif %}
     <link rel="icon" href="{{ asset('img/brand/monogram.svg') }}" type="image/svg+xml">
-    <link rel="icon" href="{{ asset('img/brand/favicon-32.png') }}" type="image/png" sizes="32x32">
-    <link rel="icon" href="{{ asset('img/brand/favicon-48.png') }}" type="image/png" sizes="48x48">
-    <link rel="icon" href="{{ asset('img/brand/favicon-192.png') }}" type="image/png" sizes="192x192">
+    <link rel="icon" href="{{ asset('img/brand/' ~ saison('favicon-32.png')) }}" type="image/png" sizes="32x32">
+    <link rel="icon" href="{{ asset('img/brand/' ~ saison('favicon-48.png')) }}" type="image/png" sizes="48x48">
+    <link rel="icon" href="{{ asset('img/brand/' ~ saison('favicon-192.png')) }}" type="image/png" sizes="192x192">
     <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" href="{{ asset('img/brand/apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('img/brand/' ~ saison('apple-touch-icon.png')) }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>
 <body data-ga="{{ tracking.ga_id }}" data-pixel="{{ tracking.meta_pixel_id }}" data-consent-months="{{ tracking.consent_months|int }}">

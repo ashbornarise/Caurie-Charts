@@ -326,8 +326,8 @@ def _fond_projecteur(w: int, h: int, teinte=(255, 190, 90)) -> Image.Image:
 
 def _logo(c: Image.Image, x: int, y: int, d_: int) -> None:
     disque = Image.new("RGBA", (d_, d_), (0, 0, 0, 0)); ImageDraw.Draw(disque).ellipse((0, 0, d_ - 1, d_ - 1), fill=VIOLET + (255,))
-    lg = Image.open(RES / "marque" / "logo-blanc.png").convert("RGBA"); lg = lg.crop(lg.getbbox())
-    lg = lg.crop((0, 0, lg.height, lg.height)).resize((int(d_ * .55), int(d_ * .55)), Image.LANCZOS)
+    from core import saison   # monogramme de saison (bonnet de Noël du 27/11 au 06/01)
+    lg = saison.monogramme_blanc(RES / "marque").resize((int(d_ * .55), int(d_ * .55)), Image.LANCZOS)
     disque.paste(lg, ((d_ - lg.width) // 2, (d_ - lg.height) // 2), lg); c.paste(disque, (x, y), disque)
     ImageDraw.Draw(c).text((x + d_ + 16, y + d_ * .28), "cauricharts", font=police("Jost.ttf", int(d_ * .42), "SemiBold"), fill=BLANC)
 

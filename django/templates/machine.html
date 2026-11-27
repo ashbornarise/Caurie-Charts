@@ -14,7 +14,7 @@
 <meta property="og:image" content="{{ meta.image }}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="{{ asset('img/brand/monogram.svg') }}" type="image/svg+xml">
-<link rel="icon" href="{{ asset('img/brand/favicon-32.png') }}" type="image/png" sizes="32x32">
+<link rel="icon" href="{{ asset('img/brand/' ~ saison('favicon-32.png')) }}" type="image/png" sizes="32x32">
 <link rel="stylesheet" href="{{ asset('css/machine.css') }}">
 {% if meta.jsonld %}<script type="application/ld+json">{{ meta.jsonld }}</script>{% endif %}
 </head>

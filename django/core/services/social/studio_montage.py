@@ -446,8 +446,9 @@ def _icone_carree(taille_px: int) -> Image.Image:
     r = int(d * 0.18)
     img = Image.new("RGBA", (d, d), (0, 0, 0, 0))
     ImageDraw.Draw(img).rounded_rectangle((0, 0, d - 1, d - 1), radius=r, fill=VIOLET + (255,))
-    lg = Image.open(RES / "marque" / "logo-blanc.png").convert("RGBA")
-    lg = lg.crop(lg.getbbox())
+    # 27/11/2026 : le monogramme seul (avant : tout le logo horizontal écrasé dans un carré), coiffé du bonnet en saison
+    from core import saison
+    lg = saison.monogramme_blanc(RES / "marque")
     s = int(d * 0.72)
     lg = lg.resize((s, s), Image.LANCZOS)
     img.paste(lg, ((d - s) // 2, (d - s) // 2), lg)

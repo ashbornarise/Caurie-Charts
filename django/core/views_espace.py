@@ -372,7 +372,7 @@ def _css(p: dict, pays: str) -> str:
 
 def _tete(p: dict, titre: str, pays: str) -> str:
     return f"""<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow"><title>{e(titre)}</title><link rel="icon" href="/assets/img/brand/favicon-32.png">
+<meta name="robots" content="noindex, nofollow"><title>{e(titre)}</title><link rel="icon" href="/assets/img/brand/{__import__('core.saison', fromlist=['nom']).nom('favicon-32.png')}">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>{_css(p, pays)}</style></head><body><div class="fond" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>"""

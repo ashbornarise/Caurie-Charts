@@ -103,7 +103,8 @@ def _titre(d: ImageDraw.ImageDraw, titre: str, accent: str | None, couleur, x: i
 
 
 def _marque(img: Image.Image, x: int, y: int, taille: int = 330) -> None:
-    logo = Image.open(RES / "marque" / "logo-blanc.png").convert("RGBA")
+    from core import saison   # logo de saison (bonnet de Noël du 27/11 au 06/01)
+    logo = Image.open(saison.chemin(RES / "marque", "logo-blanc.png")).convert("RGBA")
     logo = logo.resize((taille, round(logo.height * taille / logo.width)), Image.LANCZOS)
     alpha = logo.getchannel("A")
     zone = img.crop((x, y, x + logo.width, y + logo.height)).convert("L")

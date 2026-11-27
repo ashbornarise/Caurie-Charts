@@ -452,7 +452,9 @@ def _verifie_jeton(jeton: str) -> None:
 def ecran(request, jeton):
     _verifie_jeton(jeton)
     nonce = secrets.token_urlsafe(18)
-    html = S._JINJA.get_template("live-ecran.html").render(base=f"/live/{jeton}", nonce=nonce, mode=_mode(request))
+    from core import saison   # logo de saison (bonnet de Noël du 27/11 au 06/01)
+    html = S._JINJA.get_template("live-ecran.html").render(base=f"/live/{jeton}", nonce=nonce, mode=_mode(request),
+                                                           logo_live="/assets/live/" + saison.nom("logo.png"))
     r = S._reponse(HttpResponse(html), nonce)
     # clips YouTube (artistes hors classement) : lecteur officiel intégré
     r["Content-Security-Policy"] = (r["Content-Security-Policy"].replace("frame-ancestors 'none'", "frame-ancestors 'self'")
@@ -497,7 +499,9 @@ def _verifie_regie(jeton: str) -> None:
 def _page_regie(request, api: str):
     nonce = secrets.token_urlsafe(18)
     gabarit = "live-regie-dj.html" if request.path.endswith("/dj") else "live-regie.html"
-    html = S._JINJA.get_template(gabarit).render(api=api, nonce=nonce, csrf=get_token(request), ecran=f"/live/{jeton_ecran()}/ecran")
+    from core import saison
+    html = S._JINJA.get_template(gabarit).render(api=api, nonce=nonce, csrf=get_token(request), ecran=f"/live/{jeton_ecran()}/ecran",
+                                                 logo_live="/assets/live/" + saison.nom("logo.png"))
     r = S._reponse(HttpResponse(html), nonce)
     r["Content-Security-Policy"] = (r["Content-Security-Policy"]
         .replace("connect-src 'self'", "connect-src 'self' https://*.public.blob.vercel-storage.com https://*.dzcdn.net")
