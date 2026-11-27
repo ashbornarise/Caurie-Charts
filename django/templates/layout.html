@@ -50,7 +50,7 @@
     <div class="wrap site-header__inner">
         <a class="brand" href="{{ path('/') }}" aria-label="{{ brand() }}">
             <!-- Logo : public/assets/img/brand/logo.svg (généré par bin/build-brand-assets.php) -->
-            <img class="brand__logo" src="{{ asset('img/brand/logo.svg') }}" alt="{{ brand() }}" width="100" height="44">
+            <img class="brand__logo{{ ' brand__logo--noel' if noel() else '' }}" src="{{ asset('img/brand/' ~ saison('logo.svg')) }}" alt="{{ brand() }}" width="100" height="44">
         </a>
         <nav class="site-nav" id="site-nav" aria-label="{{ t('nav.main') }}">
             <a href="{{ chart_path('WA', 'prime-wa') }}" {{ Markup('aria-current="page"') if current.startswith('/classements') }}>{{ t('nav.charts') }}</a>

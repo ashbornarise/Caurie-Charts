@@ -141,6 +141,11 @@ def gradient(img: Image.Image, y1: int, y2: int, rgb, a_from: int, a_to: int, w:
 
 
 def white_logo():
+    from core import saison
+    if saison.noel():   # 27/11/2026 : logo blanc avec le bonnet EN COULEUR (même format 900 x 396 : rien ne déborde)
+        f = REPO / "resources" / "marque" / "logo-blanc-noel-900.png"
+        if f.is_file():
+            return Image.open(f).convert("RGBA")
     f = share_image.logo_file()
     if not f:
         return None

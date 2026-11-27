@@ -2,7 +2,7 @@
     visuels réellement publiés. Rien d'inventé : chaque affirmation correspond à ce qui tourne aujourd'hui. -#}
 <article class="apropos">
     <header class="apropos__une">
-        <img class="apropos__logo" src="{{ asset('img/brand/logo-white.svg') }}" alt="{{ brand() }}" width="200" height="88">
+        <img class="apropos__logo{{ ' apropos__logo--noel' if noel() else '' }}" src="{{ asset('img/brand/' ~ saison('logo-white.svg')) }}" alt="{{ brand() }}" width="200" height="88">
         <p class="apropos__sur">{{ t('about.eyebrow') }}</p>
         <h1>{{ tr("La référence de la musique ouest-africaine") }}</h1>
         <p class="apropos__lead">{{ tr("Cauri Charts mesure ce que l’Afrique de l’Ouest écoute vraiment. Chaque semaine, nous publions des classements par pays et pour toute la région, calculés à partir des données publiques des plateformes, selon une méthode publique que chacun peut vérifier.") }}</p>

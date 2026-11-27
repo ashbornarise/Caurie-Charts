@@ -1420,3 +1420,9 @@ a.source--link:hover { border-color: var(--src); box-shadow: 0 0 0 2px color-mix
 .method-block p { color: var(--ink-2); line-height: 1.7; }
 .method-block .link-arrow { display: inline-flex; margin-top: 4px; padding: 9px 18px; border-radius: 999px; text-decoration: none; color: #fff;
                             background: linear-gradient(135deg, #3FA9F5, #7A3CF5); box-shadow: 0 10px 22px -12px rgba(91,43,214,.8); }
+
+/* Logos de saison (27/11/2026) : le bonnet de Noël dépasse au-dessus du logo sans décaler la page ni rapetisser le texte */
+.brand__logo--noel { height: 58px; margin-top: -14px; }
+@media (max-width: 480px) { .brand__logo--noel { height: 50px; margin-top: -12px; } }
+.pied__logo--noel, .pied--nuit .pied__logo--noel { height: 66px; margin-top: -16px; filter: none; }
+.apropos__logo--noel { height: 74px; margin-top: -18px; }

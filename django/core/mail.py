@@ -34,7 +34,7 @@ def habiller(text: str) -> str:
     return f"""<!doctype html><html lang="fr"><body style="margin:0;padding:0;background:#F4F6FB">
 <div style="max-width:600px;margin:0 auto;padding:24px 16px;font-family:Helvetica,Arial,sans-serif;color:#1B1150;font-size:15px">
 <div style="background:#FFFFFF;border:1px solid #E4E2F0;border-bottom:0;border-radius:18px 18px 0 0;padding:22px 24px 18px">
-<a href="{SITE}"><img src="{LOGO}" alt="{BRAND}" width="150" style="display:block;max-width:150px;height:auto;border:0"></a></div>
+<a href="{SITE}"><img src="{SITE}/assets/img/brand/{__import__('core.saison', fromlist=['nom']).nom('logo-share.png')}" alt="{BRAND}" width="150" style="display:block;max-width:150px;height:auto;border:0"></a></div>
 <div style="height:5px;background-color:#7A3CF5;background:linear-gradient(90deg,#3FA9F5,#7A3CF5)"></div>
 <div style="background:#FFFFFF;border-radius:0 0 18px 18px;padding:24px 24px 16px;border:1px solid #E4E2F0;border-top:0">{"".join(corps)}</div>
 <p style="text-align:center;font-size:12px;color:#7A7896;margin:16px 0 0">{BRAND} · la référence de la musique ouest-africaine<br>

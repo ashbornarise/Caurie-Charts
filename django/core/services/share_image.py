@@ -37,7 +37,8 @@ def png_available() -> bool:
 
 
 def logo_file() -> Path | None:
-    f = REPO / "public" / "assets" / "img" / "brand" / "logo-share.png"
+    from core import saison   # logo de saison (bonnet de Noël du 27/11 au 06/01), même format 900 x 396
+    f = saison.chemin(REPO / "public" / "assets" / "img" / "brand", "logo-share.png")
     return f if f.is_file() else None
 
 

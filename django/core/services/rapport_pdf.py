@@ -21,7 +21,7 @@ e = html.escape
 
 def _logo() -> str:
     try:
-        return "data:image/svg+xml;base64," + base64.b64encode((ROOT / "public/assets/img/brand/logo.svg").read_bytes()).decode("ascii")
+        return "data:image/svg+xml;base64," + base64.b64encode(__import__("core.saison", fromlist=["chemin"]).chemin(ROOT / "public/assets/img/brand", "logo.svg").read_bytes()).decode("ascii")
     except OSError:
         return ""
 

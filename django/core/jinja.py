@@ -52,6 +52,7 @@ def environment(**options) -> Environment:
         "request_path": request_path, "request_uri": request_uri,
         "e": helpers.e, "url": helpers.url, "path": helpers.path, "asset": helpers.asset, "brand": helpers.brand,
         "saison": __import__("core.saison", fromlist=["nom"]).nom,   # logos de saison (Noël du 27/11 au 06/01)
+        "noel": __import__("core.saison", fromlist=["noel"]).noel,
         "fmt_number": helpers.fmt_number, "fmt_date": helpers.fmt_date, "jour_date": helpers.jour_date, "month_name": helpers.month_name,
         "slugify": helpers.slugify, "initials": helpers.initials, "country_name": helpers.country_name,
         "chart_name": helpers.chart_name, "period_label": helpers.period_label, "movement": helpers.movement,
