@@ -47,3 +47,14 @@ outils/magazine/magazine.html
 outils/magazine/m*.png
 outils/guides/originaux/
 outils/guides/_calque.html
+
+# atelier vidéo : dépendances et fichiers de travail
+outils/studio-av/remotion/node_modules/
+outils/studio-av/remotion/out/
+outils/studio-av/remotion/public/raconte/job-*/
+outils/studio-av/remotion/public/raconte/cache/
+outils/studio-av/remotion/public/raconte/essai/
+outils/studio-av/remotion/public/guide/
+outils/studio-av/remotion/live/
+outils/studio-av/essai.mp4
+outils/studio-av/essai.jpg

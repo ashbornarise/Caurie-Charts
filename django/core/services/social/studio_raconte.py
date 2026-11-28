@@ -12,6 +12,7 @@ Deux temps, sur le PC (relais : YouTube refuse les serveurs, le rendu Remotion e
 import asyncio
 import json
 import os
+import sys
 import re
 import shutil
 import subprocess
@@ -21,9 +22,10 @@ from datetime import date
 from core import db, storage
 from core.services.platforms import log_write
 
-REMOTION = r"C:\Users\agbal\Studio-AV\remotion"
-PYTHON_STUDIO = "python"        # Python du Studio-AV (pedalboard, plugins VST3)
-AV = r"C:\Users\agbal\Studio-AV\av.py"
+STUDIO_AV = os.environ.get("STUDIO_AV") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "outils", "studio-av"))   # 28/11/2026 : l'atelier vit dans le dépôt (C:\Users\agbal\Studio-AV est parti avec l'ancien PC)
+REMOTION = os.path.join(STUDIO_AV, "remotion")
+PYTHON_STUDIO = sys.executable   # Python du Studio (pedalboard pour les plugins VST3, s'ils sont là)
+AV = os.path.join(STUDIO_AV, "av.py")
 VOIX = "fr-FR-HenriNeural"
 DEBIT = "+6%"
 POSES = {"question": "raconte/m1-question.png", "presente": "raconte/m2-presente.png",

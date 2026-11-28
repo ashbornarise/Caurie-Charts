@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 from core.services import meta
 
-FICHIER_CLE = os.environ.get("FACEBOOK_LIVE_FICHIER", r"C:\Users\agbal\Studio-AV\remotion\live\facebook-live.json")
+FICHIER_CLE = os.environ.get("FACEBOOK_LIVE_FICHIER") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "outils", "studio-av", "remotion", "live", "facebook-live.json"))
 
 
 def creer(quand: datetime, titre: str, description: str) -> dict:

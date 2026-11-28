@@ -18,6 +18,7 @@ le mythe (le spectateur sait que quelque chose arrive) ».
 """
 import json
 import os
+import sys
 import re
 import shutil
 import subprocess
@@ -30,10 +31,11 @@ from core.services.platforms import log_write
 from core.services.social import raconte_v3 as V3
 from core.services.social.raconte_v3 import _cle, _duree, _ffmpeg
 
-REMOTION = r"C:\Users\agbal\Studio-AV\remotion"
+STUDIO_AV = os.environ.get("STUDIO_AV") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "outils", "studio-av"))   # 28/11/2026 : l'atelier vit dans le dépôt (C:\Users\agbal\Studio-AV est parti avec l'ancien PC)
+REMOTION = os.path.join(STUDIO_AV, "remotion")
 CACHE = os.path.join(REMOTION, "public", "raconte", "cache")
 PUBLIC = os.path.join(REMOTION, "public")   # 19/11 : banque des plans d'enquête (raconte/enquete/…)
-PYTHON_STUDIO = "python"
+PYTHON_STUDIO = sys.executable
 RX = r"C:\Program Files\Common Files\VST3\iZotope\RX 12 Music Rebalance.vst3"
 DUREE_PROJET = 9.0
 DUREE_CHANTE = 3.6   # s de refrain quand un titre est cité (16/11 : « pour la nostalgie et l'intrigue »)
