@@ -15,6 +15,7 @@ Reconstruit le 28/11/2026 dans le dépôt : l'ancien atelier (`C:\Users\agbal\St
 cd outils/studio-av/remotion
 npm install
 cd ../../..
+pip install pedalboard        # pour charger iZotope RX 12 (VST3) depuis Python
 python outils/studio-av/assets.py
 python outils/studio-av/essai.py
 ```
@@ -23,5 +24,5 @@ Pour mettre l'atelier ailleurs, définir la variable d'environnement `STUDIO_AV`
 
 ## Ce qui manque encore
 
-- iZotope RX 12 (retire le chant des musiques de fond) : sans lui, le chant reste, mais très bas.
-- FabFilter Pro-L 2 : sans lui, `av.py` fait le niveau final avec ffmpeg.
+- iZotope RX 12 est installé et branché depuis le 28/11/2026 (Music Rebalance retire le chant des musiques de fond).
+- FabFilter Pro-L 2 : il faut la version 64 bits sous licence officielle, installée dans « C:\Program Files\Common Files\VST3 ». Sans elle, `av.py` fait le niveau final avec ffmpeg (-14 LUFS, même cible).
