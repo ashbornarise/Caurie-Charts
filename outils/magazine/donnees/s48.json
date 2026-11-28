@@ -209,6 +209,18 @@
   },
   {
    "position": 18,
+   "previous_position": null,
+   "peak_position": 18,
+   "weeks_on_chart": 1,
+   "title": "DJOROBITE",
+   "featuring": "",
+   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/47/bc/ed/47bced9a-30de-4ba5-f2ff-f9d3e0d2c0f4/196874423622.jpg/600x600bb.jpg",
+   "artist_name": "Himra",
+   "artist_id": 5,
+   "photo": "https://aapuxws610zib6li.public.blob.vercel-storage.com/media/artists/plans/himra-profil-366-08.jpg"
+  },
+  {
+   "position": 19,
    "previous_position": 13,
    "peak_position": 13,
    "weeks_on_chart": 2,
@@ -220,7 +232,7 @@
    "photo": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/80/a4/1f/80a41ff6-27b6-dbec-6fcd-993b6ee3f7e8/artwork.jpg/2400x2400bb.jpg"
   },
   {
-   "position": 19,
+   "position": 20,
    "previous_position": 16,
    "peak_position": 16,
    "weeks_on_chart": 2,
@@ -230,18 +242,6 @@
    "artist_name": "First King",
    "artist_id": 12,
    "photo": "https://is1-ssl.mzstatic.com/image/thumb/Features112/v4/af/27/17/af27175e-2e16-b477-82ce-b656922c8aee/mzl.rsndqnce.jpg/2400x2400bb.jpg"
-  },
-  {
-   "position": 20,
-   "previous_position": null,
-   "peak_position": 20,
-   "weeks_on_chart": 1,
-   "title": "DIEUDONNÉ",
-   "featuring": "",
-   "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cd/50/1c/cd501c9c-a542-9006-0cee-f6ec443e8981/artwork.jpg/600x600bb.jpg",
-   "artist_name": "LA B7",
-   "artist_id": 4258,
-   "photo": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cd/50/1c/cd501c9c-a542-9006-0cee-f6ec443e8981/artwork.jpg/2400x2400bb.jpg"
   }
  ],
  "pays": [
@@ -1068,8 +1068,20 @@
     },
     {
      "position": 5,
-     "previous_position": 7,
+     "previous_position": 8,
      "peak_position": 5,
+     "weeks_on_chart": 2,
+     "title": "DJOROBITE",
+     "featuring": "",
+     "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/47/bc/ed/47bced9a-30de-4ba5-f2ff-f9d3e0d2c0f4/196874423622.jpg/600x600bb.jpg",
+     "artist_name": "Himra",
+     "artist_id": 5,
+     "photo": "https://aapuxws610zib6li.public.blob.vercel-storage.com/media/artists/plans/himra-profil-366-08.jpg"
+    },
+    {
+     "position": 6,
+     "previous_position": 7,
+     "peak_position": 6,
      "weeks_on_chart": 2,
      "title": "DIEUDONNÉ",
      "featuring": "",
@@ -1079,7 +1091,7 @@
      "photo": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/cd/50/1c/cd501c9c-a542-9006-0cee-f6ec443e8981/artwork.jpg/2400x2400bb.jpg"
     },
     {
-     "position": 6,
+     "position": 7,
      "previous_position": 5,
      "peak_position": 5,
      "weeks_on_chart": 2,
@@ -1091,7 +1103,7 @@
      "photo": "https://aapuxws610zib6li.public.blob.vercel-storage.com/media/artists/plans/didi-b-profil-217-04.jpg"
     },
     {
-     "position": 7,
+     "position": 8,
      "previous_position": 4,
      "peak_position": 4,
      "weeks_on_chart": 2,
@@ -1103,23 +1115,11 @@
      "photo": "https://aapuxws610zib6li.public.blob.vercel-storage.com/media/artists/plans/himra-profil-366-08.jpg"
     },
     {
-     "position": 8,
+     "position": 9,
      "previous_position": 6,
      "peak_position": 1,
      "weeks_on_chart": 8,
      "title": "PLUS DE LOVE",
-     "featuring": "",
-     "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/47/bc/ed/47bced9a-30de-4ba5-f2ff-f9d3e0d2c0f4/196874423622.jpg/600x600bb.jpg",
-     "artist_name": "Himra",
-     "artist_id": 5,
-     "photo": "https://aapuxws610zib6li.public.blob.vercel-storage.com/media/artists/plans/himra-profil-366-08.jpg"
-    },
-    {
-     "position": 9,
-     "previous_position": null,
-     "peak_position": 4,
-     "weeks_on_chart": 6,
-     "title": "CANALISER",
      "featuring": "",
      "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/47/bc/ed/47bced9a-30de-4ba5-f2ff-f9d3e0d2c0f4/196874423622.jpg/600x600bb.jpg",
      "artist_name": "Himra",
