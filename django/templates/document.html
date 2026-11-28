@@ -72,7 +72,7 @@
         <section class="dc-carte">
             <span class="dc-chip">{{ ico('calc') }}{{ tr("Comprendre") }}</span>
             <h3>{{ tr("Comment est fait ce classement ?") }}</h3>
-            <p>{{ tr("Chaque semaine, chaque pays a 10 000 points à partager : la moitié selon les vues YouTube des clips officiels, l’autre selon les écoutes (Spotify, Apple Music, Boomplay). Pour un pays, seuls ses propres tops comptent.") }}</p>
+            <p>{{ tr("Chaque semaine, chaque place dans les tops des plateformes du pays (Spotify, Apple Music, Boomplay, Deezer, Shazam) devient une part d’écoute, et les vues du clip officiel YouTube s’y ajoutent, avec moins de poids là où les écoutes sont bien mesurées. Le N°1 vaut 100. Pour un pays, seuls ses propres tops comptent.") }}</p>
             <p><a class="dc-b sec" href="{{ path('methodologie') }}">{{ tr("Lire la méthode complète") }}</a></p>
             <details class="dc-details"><summary>{{ tr("Tout le contenu en texte") }}</summary>
             {% for titre, texte in d.sections %}<h4>{{ titre }}</h4><p class="dc-txt">{{ texte }}</p>{% endfor %}

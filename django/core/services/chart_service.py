@@ -524,7 +524,8 @@ class ChartService:
         totals: dict = {}
         for r in runs:
             rows = db.all("""SELECT e.track_id, e.score, e.sources_count, t.artist_id, t.release_date FROM chart_entries e
-                             JOIN tracks t ON t.id = e.track_id WHERE e.chart_run_id = ? AND e.track_id IS NOT NULL""", [r["id"]])
+                             JOIN tracks t ON t.id = e.track_id JOIN artists a ON a.id = t.artist_id
+                             WHERE e.chart_run_id = ? AND e.track_id IS NOT NULL AND a.status <> 'out_of_scope'""", [r["id"]])
             top = max((float(x["score"] or 0) for x in rows), default=0.0)
             if top <= 0:
                 continue
@@ -550,8 +551,9 @@ class ChartService:
                    SUM(ws.score) AS score, MAX(ws.sources_count) AS sources_count,
                    SUM(CASE WHEN ws.week_start = ? THEN ws.score ELSE 0 END) AS last_week,
                    MAX(CASE WHEN ws.review_status = 'pending' THEN 1 ELSE 0 END) AS has_pending
-                FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id
+                FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id JOIN artists a ON a.id = t.artist_id
                 WHERE ws.country_id = ? AND ws.week_start IN ({', '.join(['?'] * len(weeks))}) AND ws.review_status <> 'excluded'
+                  AND a.status <> 'out_of_scope'   -- 28/11/2026 : Orochi (Brésil) restait N°1 du Legend de Guinée-Bissau
                 GROUP BY ws.track_id, t.artist_id, t.release_date""", [last_week, cid] + weeks)
         return [{"track_id": int(r["track_id"]), "artist_id": int(r["artist_id"]), "score": php_round(float(r["score"]), 2),
                  "sources_count": int(r["sources_count"]), "prev_score": php_round(float(r["score"]) - float(r["last_week"]), 2),
@@ -758,7 +760,7 @@ class ChartService:
                          FROM weekly_scores ws JOIN tracks t ON t.id = ws.track_id JOIN artists a ON a.id = t.artist_id
                          JOIN chart_runs r ON r.chart_type_id = ? AND r.country_id IS NULL AND r.period_type = 'week'
                             AND r.status = 'published' AND r.period_start = ws.week_start
-                         WHERE ws.week_start BETWEEN ? AND ? AND ws.review_status <> 'excluded'
+                         WHERE ws.week_start BETWEEN ? AND ? AND ws.review_status <> 'excluded' AND a.status <> 'out_of_scope'
                          GROUP BY ws.track_id, t.artist_id, a.base_country""", [type_id, period.start, period.end])
         weeks = int(db.value("""SELECT COUNT(*) FROM chart_runs WHERE chart_type_id = ? AND country_id IS NULL AND period_type = 'week'
                                 AND status = 'published' AND period_start BETWEEN ? AND ?""", [type_id, period.start, period.end]))

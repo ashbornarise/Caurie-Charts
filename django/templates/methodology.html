@@ -119,6 +119,7 @@
                     <li><strong>{{ tr("Le poids de YouTube dépend du pays.") }}</strong> {{ tr("Poids de YouTube = 50 % ÷ (1 + 0,8 × L), où L mesure la couverture des plateformes d’écoute du pays. Les vues YouTube sont mondiales : plus un pays a de vrais classements d’écoute, moins elles pèsent (environ 10 % au Nigeria, 29 % au Togo).") }}</li>
                     <li><strong>{{ tr("La couverture de chaque source.") }}</strong> {{ tr("Couverture q = n ÷ (n + 5), où n est le nombre de nos titres présents dans ce Top. Une source qui ne voit que deux ou trois titres pèse peu. Le classement Spotify du pays compte double.") }}</li>
                     <li><strong>{{ tr("Sur 10 000 points, affiché sur 100.") }}</strong> {{ tr("Les scores du pays font 10 000 points. Sur chaque classement, le score est affiché en indice Cauri de 0 à 100 : le N°1 vaut 100, les autres en proportion de leur score.") }}</li>
+                    <li><strong>{{ tr("Un tube vu seulement sur YouTube.") }}</strong> {{ tr("Depuis le 27 novembre 2026 (formule v8), un titre absent de tous les tops d’écoute du pays est classé sur sa seule part YouTube, multipliée par 0,25 : une seule source, donc moins sûre. Il faut que son premier clip officiel ait moins d’un an et que l’artiste soit sûrement du pays, car les vues YouTube sont mondiales.") }}</li>
                 </ol>
                 <p class="fineprint">{{ tr("Paramètres de la v7 : α = 0,5 et β = 2,25 (Zipf-Mandelbrot, ajustement R² = 0,996), racine carrée pour YouTube, κ = 5, poids double pour Spotify, π max = 50 %, λ = 0,8. Essai sur la semaine 47 (13 pays) : l’accord avec le classement nigérian TurnTable passe de 0,21 à 0,55.") }}</p>
                 {% elif formula.normalisation %}
@@ -201,7 +202,8 @@
                         </tbody>
                     </table>
                 </div>
-                {% if v7 %}<p>{{ tr("Depuis la v7, les pics de vues et le rapport « j’aime » / vues sont jugés par un test statistique : le pic par un écart robuste (médiane des semaines précédentes), l’engagement par une loi bêta ajustée sur les clips de la semaine, les deux combinés par la méthode de Fisher, avec un seuil de 1 % corrigé du nombre de clips testés (Bonferroni). Un clip suspect est retiré du score du titre jusqu’à la vérification ; le titre reste mesuré sur ses plateformes d’écoute.") }}</p>{% endif %}
+                {% if v7 %}<p>{{ tr("Depuis la v7, les pics de vues et le rapport « j’aime » / vues sont jugés par un test statistique : le pic par un écart robuste (médiane des semaines précédentes), l’engagement par une loi bêta ajustée sur les clips de la semaine, les deux combinés par la méthode de Fisher, avec un seuil de 1 % corrigé du nombre de clips testés (Bonferroni). Un clip suspect est retiré du score du titre jusqu’à la vérification ; le titre reste mesuré sur ses plateformes d’écoute.") }}</p>
+                <p>{{ tr("Depuis le 28 novembre 2026, le test de pic est levé pour un clip officiel mis en ligne dans la semaine ou la semaine d’avant : un nouveau clip fait normalement un bond de vues (DJOROBITE de Himra, nouveau clip le 21 novembre). Le test des « j’aime » / vues reste appliqué.") }}</p>{% endif %}
                 <h3 class="methode__h3">{{ t('methodology.exclusions_title') }}</h3>
                 {% if exclusions %}
                 <div class="methode__tableau">

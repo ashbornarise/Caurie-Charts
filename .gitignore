@@ -45,3 +45,5 @@ outils/magazine/cache/
 outils/magazine/gen2.py
 outils/magazine/magazine.html
 outils/magazine/m*.png
+outils/guides/originaux/
+outils/guides/_calque.html

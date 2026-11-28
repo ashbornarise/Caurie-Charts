@@ -8,7 +8,7 @@ DOCUMENTS = [
         "slug": "le-voyage-d-un-titre",
         "categorie": "Comprendre",
         "fichier": "cauri-charts-le-voyage-d-un-titre",
-        "date": "2026-11-14",
+        "date": "2026-11-28",
         "pages": 10,
         "titre": "Le voyage d'un titre",
         "sous_titre": "Du premier clic au classement du vendredi soir : la méthode Cauri Charts en 9 étapes illustrées",
@@ -25,10 +25,12 @@ DOCUMENTS = [
              "les chaînes « Topic »), les doublons sont fusionnés chaque dimanche et le pays de chaque artiste est vérifié sur Google."),
             ("La vérification", "Un chiffre inhabituel déclenche une alerte : pic soudain, rapport j'aime / vues anormal, moins de 10 000 vues "
              "ou progression négative. Avant publication, les titres en alerte sont vérifiés par une recherche Google."),
-            ("Le calcul", "Le score d'un titre est fait pour moitié des vues YouTube gagnées dans la semaine et pour moitié des écoutes, "
-             "partagées à parts égales entre Spotify, Apple Music et Boomplay. Une plateforme absente d'un pays laisse sa part aux autres."),
-            ("Le classement", "Six classements : Prime, Buzz, Fresh, Icon, Legend et Afrique de l'Ouest. Pour le Top 5, un titre doit être vu "
-             "sur au moins deux plateformes ; trois titres au plus par artiste dans chaque top."),
+            ("Le calcul", "Chaque place dans les tops des plateformes du pays (Spotify, Apple Music, Boomplay, Deezer, Shazam) devient "
+             "une part d'écoute ; Spotify compte double. Les vues du clip officiel YouTube s'y ajoutent, avec moins de poids là où les "
+             "écoutes sont bien mesurées. Le N°1 vaut 100 (indice Cauri), les autres en proportion. Un tube vu seulement sur YouTube "
+             "compte aussi, avec un poids réduit (depuis le 27 novembre 2026)."),
+            ("Le classement", "Six classements : Prime, Buzz, Fresh, Icon, Legend et Afrique de l'Ouest. Trois titres au plus par artiste "
+             "dans chaque top ; un titre de plus d'un an sort, sauf vrai regain ; un titre vu seulement sur YouTube entre avec un poids réduit."),
             ("La publication", "La semaine va du vendredi au jeudi ; le classement sort automatiquement chaque vendredi à 19 h GMT sur le site, "
              "Instagram, Facebook, TikTok, Telegram et la newsletter. Un classement publié n'est jamais recalculé en silence."),
             ("La carte et la confiance", "13 pays ont un classement officiel chaque semaine ; chaque classement affiche une note de fiabilité "
@@ -41,20 +43,21 @@ DOCUMENTS = [
         "slug": "comprendre-nos-classements",
         "categorie": "Comprendre",
         "fichier": "cauri-charts-comprendre-nos-classements",
-        "date": "2026-11-14",
+        "date": "2026-11-28",
         "pages": 2,
         "titre": "Comprendre nos classements",
         "sous_titre": "Comment Cauri Charts collecte, vérifie et classe les titres en Afrique de l'Ouest, et ses perspectives",
-        "description": "Le parcours d'un titre en cinq étapes, le score moitié YouTube moitié écoutes, la semaine du vendredi au jeudi, "
+        "description": "Le parcours d'un titre en cinq étapes, le score (écoutes et vues pesées pays par pays, indice Cauri de 0 à 100), la semaine du vendredi au jeudi, "
                        "les règles du classement, les six classements, la note de fiabilité et les perspectives de Cauri Charts.",
         "format": "PDF · A3 paysage · 2 pages",
         "sections": [
             ("Le parcours d'un titre", "On relève chaque nuit, on range (un titre = son clip officiel), on vérifie, on calcule, puis on publie "
              "chaque vendredi soir."),
-            ("Le score d'un titre", "50 % pour les vues YouTube gagnées dans la semaine, 50 % pour les écoutes sur Spotify, Apple Music et "
-             "Boomplay à parts égales."),
+            ("Le score d'un titre", "Chaque place dans les tops des plateformes du pays devient une part d'écoute (Spotify compte double) ; "
+             "les vues du clip officiel YouTube s'y ajoutent. Le N°1 vaut 100, les autres en proportion. Un tube vu seulement sur YouTube "
+             "entre aussi, avec un poids réduit."),
             ("Les règles", "8 artistes suivis au minimum pour qu'un pays ait son classement, seulement les artistes du pays, 3 titres au plus "
-             "par artiste, 2 sources pour entrer dans le Top 5."),
+             "par artiste, et un tube vu seulement sur YouTube entre avec un poids réduit."),
             ("Nos classements", "Prime, Buzz, Fresh, Icon, Legend et le Top Afrique de l'Ouest, avec une note de fiabilité sur chaque classement."),
             ("Nos perspectives", "La Nuit Cauri Charts, « Pourquoi ce rang ? », Audiomack et TikTok, la radio et la télévision avec nos partenaires."),
         ],
@@ -135,15 +138,15 @@ PLUS = {
     "le-voyage-d-un-titre": {
         "taille": "7 Mo", "coupe": ("Le voyage", "d'un titre"), "badge": "Guide illustré", "accroche": ("Le guide", "du clic au classement"),
         "tuiles": [("route", "9 étapes", "du clic au classement"), ("couches", "6 plateformes", "relevées"),
-                   ("calc", "10 000 points", "par pays et par semaine"), ("horloge", "Vendredi 19 h", "publication automatique")],
+                   ("calc", "Indice 0-100", "le N°1 vaut 100"), ("horloge", "Vendredi 19 h", "publication automatique")],
         "chapitres": [("Couverture", "le départ", 1, 1, ""), ("Les sources", "six plateformes", 2, 2, ""), ("La nuit", "les relevés", 3, 3, ""),
                       ("Le tri", "un titre = son clip officiel", 4, 4, ""), ("La vérification", "les alertes", 5, 5, ""),
-                      ("Le calcul", "moitié vues, moitié écoutes", 6, 6, ""), ("Le classement", "règles et six classements", 7, 7, ""),
+                      ("Le calcul", "écoutes et vues, pays par pays", 6, 6, ""), ("Le classement", "règles et six classements", 7, 7, ""),
                       ("La publication", "vendredi soir", 8, 8, ""), ("La carte", "pays et fiabilité", 9, 9, ""), ("L'horizon", "nos perspectives", 10, 10, "")],
     },
     "comprendre-nos-classements": {
         "taille": "4,5 Mo", "coupe": ("Comprendre", "nos classements"), "badge": "Guide express", "accroche": ("En 2 pages", "la méthode en clair"),
-        "tuiles": [("route", "5 étapes", "le parcours d'un titre"), ("calc", "50 / 50", "vues et écoutes"),
+        "tuiles": [("route", "5 étapes", "le parcours d'un titre"), ("calc", "Indice 0-100", "écoutes et vues"),
                    ("trophee", "6 classements", "Prime, Buzz, Fresh…"), ("globe", "13 pays", "classés")],
         "chapitres": [("La méthode, en clair", "parcours, score, semaine", 1, 1, ""), ("Règles et perspectives", "classements, pays, la suite", 2, 2, "")],
     },
