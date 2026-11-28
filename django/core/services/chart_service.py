@@ -285,7 +285,23 @@ class ChartService:
             [(date.fromisoformat(period.start) - timedelta(days=7)).isoformat(), period.end])} & ids
         suspects = F7.fraude(vues, likes, histo, nouveaux=nouveaux)
         yt = F7.parts_youtube(vues, clips, float(p.get("gamma", 0.5)))
-        detail, pays = F7.scores(sorted(ids), x, infos, yt, set(suspects), p)
+        # absents de tous les classements d'écoute du pays cette semaine, et dont le PREMIER clip officiel a moins d'un an
+        # (Tere Tere de Toofan : clips de 2016, date de sortie enregistrée en 2024 ; sans cette condition, les vieux tubes
+        # aux dates fausses entraient par YouTube)
+        seul_yt = set()
+        if p.get("youtube_seul"):
+            # les vues YouTube sont MONDIALES : l'artiste doit être sûrement du pays (essai S48 : Orochi, rappeur brésilien
+            # rangé en Guinée-Bissau, et Bjorn Bonebreaker, pays deviné différent, entraient par leurs vues)
+            recents = {int(r["track_id"]) for r in db.all(
+                """SELECT tpi.track_id FROM track_platform_ids tpi JOIN tracks t ON t.id = tpi.track_id JOIN artists a ON a.id = t.artist_id
+                   JOIN countries c ON c.id = ?
+                   WHERE tpi.platform = 'youtube' AND tpi.is_official = 1 AND tpi.published_at IS NOT NULL
+                     AND a.submission_country_id = c.id AND (a.origin_country IS NULL OR a.origin_country = c.code)
+                     AND (a.guessed_country_id IS NULL OR a.guessed_country_id = c.id)
+                   GROUP BY tpi.track_id HAVING MIN(tpi.published_at) >= ?""",
+                [cid, (date.fromisoformat(period.end) - timedelta(days=365)).isoformat()])}
+            seul_yt = (ids - {o[0] for o in obs}) & recents
+        detail, pays = F7.scores(sorted(ids), x, infos, yt, set(suspects), p, seul_yt)
         prev = {int(r["track_id"]): r["breakdown"] for r in db.all(
             "SELECT track_id, breakdown FROM weekly_scores WHERE country_id = ? AND week_start = ?", [cid, Period.week_of(period.start).previous().start])}
         for i in items:

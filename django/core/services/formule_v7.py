@@ -178,9 +178,14 @@ def fraude(vues: dict, likes: dict, histo: dict, seuil_vues: int = 10000, alpha:
 
 # ---------------------------------------------------------------- étapes 2 à 4 et 8 : score du pays
 
-def scores(ids: list, x: dict, infos: dict, yt: dict, suspects: set, p: dict) -> tuple[dict, dict]:
+def scores(ids: list, x: dict, infos: dict, yt: dict, suspects: set, p: dict, seul_yt: set | None = None) -> tuple[dict, dict]:
     """Score de chaque titre sur 10 000 points dans le pays, détail par titre, fiabilité du pays.
-    p : paramètres (omega, kappa, pi_max, lambda). Renvoie ({track_id: détail}, {fiabilite, poids, pi_yt})."""
+    p : paramètres (omega, kappa, pi_max, lambda, youtube_seul). Renvoie ({track_id: détail}, {fiabilite, poids, pi_yt}).
+    seul_yt : titres absents de TOUS les classements d'écoute du pays pendant la semaine. Décision du fondateur (28/11/2026) :
+    un tube qui ne vit que sur YouTube a sa place. Avec p["youtube_seul"] = f, son score vient de sa seule part YouTube,
+    multipliée par f (une seule source, donc moins sûre) ; sans ce réglage, ses écoutes valent la note plancher partout
+    et ses vues ne pèsent que π_YT (il ne pouvait jamais monter). Un clip suspect (anti-fraude) n'a pas cette voie."""
+    f_seul = float(p.get("youtube_seul") or 0)
     kappa, omega = float(p.get("kappa", 5)), p.get("omega") or {}
     q = {s: m["n"] / (m["n"] + kappa) for s, m in infos.items() if m["jours"] > 0}
     wq = {s: float(omega.get(s, 1)) * q[s] for s in q}
@@ -191,6 +196,10 @@ def scores(ids: list, x: dict, infos: dict, yt: dict, suspects: set, p: dict) ->
     fiab = somme / (1 + somme)
     out, S = {}, {}
     for t in ids:
+        if f_seul > 0 and t in (seul_yt or ()) and t in yt and t not in suspects:
+            S[t] = f_seul * yt[t]
+            out[t] = {"geo": S[t], "poids": {"youtube": 1.0}, "parts": {"youtube": round(yt[t], 8)}, "youtube_seul": f_seul}
+            continue
         b = dict(b_audio)
         if t in yt and t not in suspects:
             b["youtube"] = pi_yt

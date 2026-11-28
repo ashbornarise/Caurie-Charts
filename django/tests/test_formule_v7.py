@@ -188,6 +188,22 @@ def test_fraude_pas_de_faux_suspects():
     assert F7.fraude(vues, likes, histo) == {}
 
 
+def test_titre_youtube_seul():
+    """28/11/2026 : un titre absent de tous les classements d'écoute est noté sur sa seule part YouTube × youtube_seul ;
+    sans le réglage, il garde l'ancien calcul ; un clip suspect n'a pas cette voie."""
+    x = {1: {"spotify": 0.05}, 2: {"spotify": 0.001}}
+    infos = {"spotify": {"n": 50, "jours": 7, "N": 50}}
+    yt = {1: 0.02, 2: 0.2}
+    p = {"kappa": 5, "pi_max": 0.5, "lambda": 0.8}
+    avant, _ = F7.scores([1, 2], x, infos, yt, set(), p, {2})
+    apres, _ = F7.scores([1, 2], x, infos, yt, set(), {**p, "youtube_seul": 0.25}, {2})
+    assert avant[2]["score"] < avant[1]["score"]
+    assert apres[2]["poids"] == {"youtube": 1.0} and abs(apres[2]["geo"] - 0.05) < 1e-12
+    assert apres[2]["score"] > avant[2]["score"]
+    suspect, _ = F7.scores([1, 2], x, infos, yt, {2}, {**p, "youtube_seul": 0.25}, {2})
+    assert "youtube" not in suspect[2]["poids"]
+
+
 def test_fraude_nouveau_clip_officiel():
     """DJOROBITE (Himra), S48 : nouveau clip le 21/11, 33 000 -> 2,6 millions de vues avec des j'aime normaux. Pic levé ;
     un nouveau clip SANS j'aime reste suspect (le test des j'aime / vues tient toujours)."""
