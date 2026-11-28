@@ -84,7 +84,7 @@ def _maj(job_id: int, **champs) -> None:
     if "params" in champs and not isinstance(champs["params"], str):
         champs["params"] = json.dumps(champs["params"], ensure_ascii=False)
     db.update("studio_jobs", champs, "id = :id", {"id": job_id})
-    if champs.get("statut") in ("a_valider", "a_choisir", "pret", "erreur"):   # notification sur le téléphone (10/11/2026)
+    if champs.get("statut") in ("a_valider", "a_choisir", "pret", "erreur", "range"):   # notification sur le téléphone (10/11/2026 ; « range » 28/11)
         from core.services import notif
         notif.projet(job_id, champs["statut"])
 

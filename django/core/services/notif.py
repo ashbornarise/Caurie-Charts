@@ -82,11 +82,25 @@ ETATS = {"a_valider": ("À valider", "L'aperçu est prêt : relis et valide."),
 
 def projet(job_id: int, statut: str) -> None:
     """Un projet du Studio change d'état : notification si l'état demande une action."""
-    if statut not in ETATS:
-        return
     try:
         j = db.one("SELECT params FROM studio_jobs WHERE id = ?", [job_id])
         p = json.loads((j or {}).get("params") or "{}")
+        if p.get("type") == "medias":
+            # 28/11/2026 (rapport de Yao) : une récupération de médias a son onglet « Médias » ; la notification ne doit pas
+            # ouvrir l'écran d'un projet vidéo (aucun numéro de projet), et « rangé » prévient que les médias sont arrivés
+            if statut not in ("range", "erreur"):
+                return
+            if p.get("dossier_id"):
+                ou = db.value("SELECT nom FROM studio_dossiers WHERE id = ?", [p["dossier_id"]]) or "ton dossier"
+            else:
+                ou = db.value("SELECT name FROM artists WHERE id = ?", [p.get("artiste_id")]) or "ton dossier"
+            if statut == "range":
+                envoie(f"Médias rangés : {ou}"[:120], "Les médias récupérés sont arrivés dans leur dossier.", None, f"medias-{job_id}")
+            else:
+                envoie(f"Récupération ratée : {ou}"[:120], "Un lien n'a pas pu être récupéré : ouvre l'onglet Médias.", None, f"medias-{job_id}")
+            return
+        if statut not in ETATS:
+            return
         nom = (f"{p.get('titre')} · {p.get('artistes')}" if p.get("type") == "paroles" else
                p.get("artiste_nom") if p.get("type") == "vedette" else p.get("accroche") or p.get("artiste") or "Vidéo")
         titre, texte = ETATS[statut]

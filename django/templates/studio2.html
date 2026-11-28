@@ -620,6 +620,7 @@ h2 { margin: 0 0 10px; font: 700 17px/1.3 Unbounded, sans-serif }
             <p class="msg" id="dm-msg"></p>
           </div>
           <div class="dm-barre"><button class="btn second" id="dm-tout" type="button">Tout sélectionner</button><button class="btn" id="dm-telecharger" type="button" disabled>Télécharger</button></div>
+          <div class="carte" id="dm-dl" hidden></div>
           <div class="dm-grille" id="dos-grille"></div>
         </div>
       </div>
@@ -1575,7 +1576,7 @@ async function enRoute() {
   } catch (e) {}
 }
 async function ouvreDossier(cle) {
-  if (dm.cle !== cle) dm.choix.clear();   // la sélection (par média) survit aux rafraîchissements du même dossier
+  if (dm.cle !== cle) { dm.choix.clear(); $('#dm-dl').hidden = true; }   // la sélection (par média) survit aux rafraîchissements du même dossier
   dm.cle = cle; clearTimeout(dm.minuteur);
   $('#dos-accueil').hidden = true; $('#dos-ouvert').hidden = false;
   $('#dos-ajout').hidden = !/^[da]\d+$/.test(cle);   // on n'ajoute pas dans « Mes créations »
@@ -1610,7 +1611,19 @@ function compteMedias() {
 $('#dm-tout').onclick = () => { vibre(); const prets = dm.medias.filter(m => m.statut === 'pret').map(m => String(m.id));
   if (dm.choix.size === prets.length) dm.choix.clear(); else prets.forEach(id => dm.choix.add(id)); dessineMedias(); };
 // plusieurs médias : un vrai téléchargement par fichier (Chrome demande une fois « autoriser plusieurs téléchargements »)
+// 28/11/2026 (rapport de Yao) : sur iPhone, Safari ne laisse partir qu'UN téléchargement par toucher ; pour plusieurs fichiers,
+// une liste de liens à toucher un par un (chaque toucher = un vrai geste), en plus des téléchargements automatiques ailleurs
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 $('#dm-telecharger').onclick = async () => { vibre(); const l = dm.medias.filter(m => m.statut === 'pret' && dm.choix.has(String(m.id)));
+  const boite = $('#dm-dl');
+  if (l.length > 1) {
+    boite.hidden = false;
+    boite.innerHTML = `<h2 style="margin-top:0">Tes ${l.length} fichiers</h2><p class="msg">${IOS ? 'Sur iPhone, touche chaque fichier pour le télécharger.' : 'Si un fichier ne part pas, touche-le ici.'}</p>`
+      + l.map(m => `<div class="ligne-l"><span class="txt"><b>${esc(m.nom)}</b></span><a class="lien" href="${esc(m.telecharger)}" download rel="noopener" data-dl>Télécharger</a></div>`).join('');
+    $$('[data-dl]').forEach(x => x.addEventListener('click', () => { x.textContent = '✓ Lancé'; }));
+    boite.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    if (IOS) return;
+  } else { boite.hidden = true; }
   toast(`${l.length} téléchargement(s)…`);
   for (const m of l) { const a = document.createElement('a'); a.href = m.telecharger; a.download = ''; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); await new Promise(r => setTimeout(r, 900)); }
 };
