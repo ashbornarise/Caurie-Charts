@@ -133,7 +133,8 @@ def chi2_4_queue(t: float) -> float:
     return math.exp(-t / 2) * (1 + t / 2) if t > 0 else 1.0
 
 
-def fraude(vues: dict, likes: dict, histo: dict, seuil_vues: int = 10000, alpha: float = 0.01, sigma_min: float = 0.5) -> dict:
+def fraude(vues: dict, likes: dict, histo: dict, seuil_vues: int = 10000, alpha: float = 0.01, sigma_min: float = 0.5,
+           nouveaux: set | None = None) -> dict:
     """Clips suspects : {track_id: p} pour ceux dont la p-value combinée est sous 0,01/N (Bonferroni).
     vues / likes : semaine en cours ; histo : {track_id: [vues des semaines précédentes, de la plus récente à la plus ancienne]}.
     Pic : testé seulement avec au moins 4 semaines d'historique (MAD sur 8 au plus, écart plancher σ_min = 0,5) ; engagement : loi bêta ajustée par la
@@ -152,7 +153,7 @@ def fraude(vues: dict, likes: dict, histo: dict, seuil_vues: int = 10000, alpha:
     for t in testes:
         p_pic = 1.0
         h = [v for v in (histo.get(t) or []) if v and v > 0][:8]
-        if len(h) >= 4:
+        if len(h) >= 4 and t not in (nouveaux or ()):  # nouveau clip officiel : le bond de vues est attendu
             lh = [math.log(v) for v in h]
             med4 = median(lh[:4])
             med8 = median(lh)

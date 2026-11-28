@@ -186,3 +186,18 @@ def test_fraude_pas_de_faux_suspects():
     histo[2] = [2_000_000, 7_000, 9_000, 11_000, 13_000, 5_000]   # clip remplacé par le bon clip officiel la semaine d'avant
     vues[2], likes[2] = 3_200_000, 64_000   # j'aime à 2 %, dans la norme
     assert F7.fraude(vues, likes, histo) == {}
+
+
+def test_fraude_nouveau_clip_officiel():
+    """DJOROBITE (Himra), S48 : nouveau clip le 21/11, 33 000 -> 2,6 millions de vues avec des j'aime normaux. Pic levé ;
+    un nouveau clip SANS j'aime reste suspect (le test des j'aime / vues tient toujours)."""
+    import random
+    random.seed(3)
+    vues = {t: 100_000 for t in range(60)}
+    likes = {t: int(100_000 * random.uniform(0.03, 0.05)) for t in range(60)}
+    histo = {t: [100_000 * random.uniform(0.9, 1.1) for _ in range(8)] for t in range(60)}
+    vues[7], likes[7], histo[7] = 2_600_000, 100_000, [33_000, 30_000, 31_000, 29_000, 28_000]
+    assert 7 in F7.fraude(vues, likes, histo)
+    assert 7 not in F7.fraude(vues, likes, histo, nouveaux={7})
+    likes[7] = 500
+    assert 7 in F7.fraude(vues, likes, histo, nouveaux={7})

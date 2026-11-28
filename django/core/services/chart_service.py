@@ -107,7 +107,9 @@ class ChartService:
             # v7 : le pic et le ratio j'aime/vues sont jugés par le test statistique (étape 6), qui retire YouTube du score
             # d'un clip suspect ; seuls les autres signalements (déclaration qui ne colle pas) attendent la revue
             for i in items:
-                if i.get("review_status") == "pending" and not (set(i.get("flags") or []) - {"spike", "youtube_ratio"}):
+                # 28/11/2026 : « fraude_youtube » ajouté. Le test retire déjà YouTube du score ; il écartait EN PLUS le titre
+                # entier (DJOROBITE, S48 : absent du Top Côte d'Ivoire alors que ses seules écoutes le plaçaient 6e)
+                if i.get("review_status") == "pending" and not (set(i.get("flags") or []) - {"spike", "youtube_ratio", "fraude_youtube"}):
                     i["review_status"] = "ok"
         if formula.get("exclure_signales"):
             items = [i for i in items if (i.get("review_status") or "ok") != "pending"]
@@ -274,7 +276,14 @@ class ChartService:
                 pw = Period.week_of(str(r["week_start"])[:10])
                 jours = (date.fromisoformat(pw.end) - date.fromisoformat(pw.start)).days + 1
                 histo.setdefault(int(r["track_id"]), []).append(float(v) * 7 / max(1, jours))
-        suspects = F7.fraude(vues, likes, histo)
+        # 28/11/2026 (revue de la formule avec le fondateur) : un clip officiel mis en ligne dans la semaine ou la semaine
+        # d'avant fait normalement un bond de vues (DJOROBITE de Himra, nouveau clip le 21/11 : 33 000 -> 2,6 millions de
+        # vues, retiré à tort). Pour ces titres, le test de pic est levé ; le test des j'aime / vues reste.
+        nouveaux = {int(r["track_id"]) for r in db.all(
+            """SELECT DISTINCT track_id FROM track_platform_ids WHERE platform = 'youtube' AND is_official = 1
+               AND published_at >= ? AND published_at <= ?""",
+            [(date.fromisoformat(period.start) - timedelta(days=7)).isoformat(), period.end])} & ids
+        suspects = F7.fraude(vues, likes, histo, nouveaux=nouveaux)
         yt = F7.parts_youtube(vues, clips, float(p.get("gamma", 0.5)))
         detail, pays = F7.scores(sorted(ids), x, infos, yt, set(suspects), p)
         prev = {int(r["track_id"]): r["breakdown"] for r in db.all(
