@@ -23,6 +23,5 @@ Pour mettre l'atelier ailleurs, définir la variable d'environnement `STUDIO_AV`
 
 ## Ce qui manque encore
 
-- La pose « surpris » de la mascotte (`m3-surpris.png`) : la pose « question » la remplace pour l'instant.
 - iZotope RX 12 (retire le chant des musiques de fond) : sans lui, le chant reste, mais très bas.
 - FabFilter Pro-L 2 : sans lui, `av.py` fait le niveau final avec ffmpeg.

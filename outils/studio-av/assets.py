@@ -54,11 +54,9 @@ def main():
            os.path.join(DEST, "sfx2", "whoosh-impact.mp3"))
     ffmpeg("-i", b, "-af", "areverse,afade=t=in:d=0.3", "-ar", "44100", "-b:a", "192k", os.path.join(DEST, "sfx", "reverse-impact.mp3"))
     ffmpeg("-i", w, "-af", "atempo=1.6", "-ar", "44100", "-b:a", "192k", os.path.join(DEST, "sfx", "whoosh-fast.mp3"))
-    # mascotte (poses du live) ; « surpris » n'existe plus : la pose « question » la remplace en attendant une vraie image
-    for nom in ("m1-question.png", "m2-presente.png", "m4-appel.png"):
+    # mascotte : les 4 poses (« surpris » refaite par Gemini d'après les 3 autres le 28/11/2026, fond détouré par rembg)
+    for nom in ("m1-question.png", "m2-presente.png", "m3-surpris.png", "m4-appel.png"):
         shutil.copyfile(os.path.join(LIVE, nom), os.path.join(DEST, nom))
-    if not os.path.exists(os.path.join(DEST, "m3-surpris.png")):
-        shutil.copyfile(os.path.join(LIVE, "m1-question.png"), os.path.join(DEST, "m3-surpris.png"))
     shutil.copyfile(os.path.join(LIVE, "logo.png"), os.path.join(DEST, "logo.png"))
     print("pièces prêtes dans", DEST)
 
